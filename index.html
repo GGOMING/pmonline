@@ -6332,50 +6332,119 @@ function doContinue(){
 // ============================================================
 const ADMIN_ID = 'admin';
 const ADMIN_PW = '1234';
+const ADMIN_EMAIL = 'admin@pmonline.system';  // Supabase 운영자 계정 이메일 (RLS 정책에 매칭)
 let _adminSelectedUser = null;
 let _adminUsers = [];  // 임시 유저 목록
+let _adminCloudActive = false;  // Supabase 운영자 세션 활성 여부
 
-function showAdminAuth(){
+async function showAdminAuth(){
   const id = prompt('관리자 ID:');
   if (id === null) return;
   if (id !== ADMIN_ID){ alert('ID 오류'); return; }
   const pw = prompt('관리자 PW:');
   if (pw === null) return;
+
+  // 1) Supabase 운영자 계정으로 인증 (가능한 경우)
+  if (sb){
+    try {
+      // 기존 일반 사용자 세션이 있으면 우선 로그아웃
+      await sb.auth.signOut();
+      const { error } = await sb.auth.signInWithPassword({ email: ADMIN_EMAIL, password: pw });
+      if (error){
+        alert('관리자 인증 실패: ' + (error.message || error) + '\n(Supabase에 admin@pmonline.system 계정이 등록되어 있어야 합니다)');
+        return;
+      }
+      _adminCloudActive = true;
+      await enterAdmin();
+      return;
+    } catch(e){
+      console.warn('[admin cloud auth]', e);
+      // 네트워크 실패 시 로컬 fallback
+    }
+  }
+
+  // 2) 오프라인 fallback (로컬만 — 클라우드 변경 불가)
   if (pw !== ADMIN_PW){ alert('PW 오류'); return; }
-  enterAdmin();
+  _adminCloudActive = false;
+  await enterAdmin();
 }
 
-function enterAdmin(){
-  // 로컬 저장된 본인 + 가상 NPC 유저 로드
-  loadAdminUsers();
+async function enterAdmin(){
+  await loadAdminUsers();
   showPage('admin');
   renderAdminUserList();
   refreshAdminSystem();
 }
 
-function exitAdmin(){
+async function exitAdmin(){
+  if (_adminCloudActive && sb){
+    try { await sb.auth.signOut(); } catch(e){}
+  }
+  _adminCloudActive = false;
+  GAME.player = null;
+  GAME.myDeck = Array(15).fill(BASIC_ATTACK);
+  GAME.inventory = [];
   showPage('login');
 }
 
-function loadAdminUsers(){
+async function loadAdminUsers(){
   _adminUsers = [];
-  // 모든 가입 계정 로드 (각 계정별 슬롯에서)
-  const accounts = getAccounts();
-  for (const name of accounts){
-    const saved = localStorage.getItem(saveKeyFor(name));
-    if (!saved) continue;
+  // 1) 클라우드: 운영자 세션이면 모든 saves 행을 가져옴 (RLS 정책으로 허용)
+  if (_adminCloudActive && sb){
     try {
-      const d = JSON.parse(saved);
-      if (d.player){
-        _adminUsers.push({
-          source: 'local',
-          isMe: GAME.player && GAME.player.name === name,
-          ...d.player,
-          myDeck: d.myDeck || [],
-          inventory: d.inventory || [],
-        });
+      const { data: rows, error } = await sb.from('saves')
+        .select('user_id, nickname, data, updated_at')
+        .order('updated_at', { ascending: false });
+      if (error){
+        console.warn('[admin loadAll cloud]', error);
+      } else if (Array.isArray(rows)){
+        for (const row of rows){
+          const d = row.data || {};
+          const p = d.player || {};
+          _adminUsers.push({
+            source: 'cloud',
+            user_id: row.user_id,
+            isMe: false,
+            name: row.nickname || p.name || '?',
+            level: p.level || 1, xp: p.xp || 0, xpUp: p.xpUp || 0,
+            hp: p.hp || 0, hpMax: p.hpMax || 0, mp: p.mp || 0, mpMax: p.mpMax || 0,
+            str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
+            gold: p.gold || 0,
+            weapon: p.weapon || { name:'몽둥이', atkBonus:1, id:'basic_club' },
+            armor:  p.armor  || { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
+            weapons: p.weapons || [],
+            armors: p.armors || [],
+            rank: p.rank || '평민',
+            gp: p.gp || 0,
+            rankPos: p.rankPos || 0,
+            pw: p.pw,
+            myDeck: d.myDeck || [],
+            inventory: d.inventory || [],
+            updated_at: row.updated_at,
+          });
+        }
       }
-    } catch(e){}
+    } catch(e){ console.warn('[admin loadAll cloud]', e); }
+  }
+  // 2) 로컬: 클라우드 미사용 시 localStorage 인덱스 기반
+  if (_adminUsers.length === 0){
+    const accounts = getAccounts();
+    for (const name of accounts){
+      const saved = localStorage.getItem(saveKeyFor(name));
+      if (!saved) continue;
+      try {
+        const d = JSON.parse(saved);
+        if (d.player){
+          _adminUsers.push({
+            source: 'local',
+            isMe: GAME.player && GAME.player.name === name,
+            ...d.player,
+            myDeck: d.myDeck || [],
+            inventory: d.inventory || [],
+          });
+        }
+      } catch(e){}
+    }
   }
   // 가상 NPC 추가 (서버 연동 시뮬레이션)
   const npcNames = ['Scandal','Idgun','더울이','로보스팟','반지요정','아그네시카','세이비아','선의기운'];
@@ -6401,7 +6470,9 @@ function loadAdminUsers(){
 function renderAdminUserList(){
   $('adminUserList').innerHTML = _adminUsers.map((u, i) => {
     const active = _adminSelectedUser === i ? 'active' : '';
-    const tag = u.isMe ? '<span style="color:#ffcc00;">★ 본인</span>' : '<span style="color:#888;">NPC</span>';
+    const tag = u.source === 'cloud' ? '<span style="color:#66ccff;">☁ 클라우드</span>'
+              : u.source === 'local' ? '<span style="color:#ffcc00;">★ 로컬</span>'
+              : '<span style="color:#888;">NPC</span>';
     return `<div class="admin-user-item ${active}" onclick="adminSelectUser(${i})">
       <div class="nick">${u.name} ${tag}</div>
       <div class="meta">Lv ${u.level} · ${u.gold||0}G · 카드 ${(u.inventory||[]).length}장</div>
@@ -6445,7 +6516,7 @@ function renderAdminEdit(){
   let html = `
     <div class="edit-row"><span class="lbl">소스</span> ${u.source === 'local' ? '<b style="color:#060;">로컬 저장</b>' : '가상 NPC (서버 연동 전 더미)'} ${u.isMe ? '<span style="color:#a00;font-weight:bold;">(현재 로그인 중)</span>' : ''}</div>
     <div class="edit-row"><span class="lbl">닉네임</span> <input id="ed_name" value="${u.name}"></div>
-    ${u.source === 'local' ? `<div class="edit-row"><span class="lbl">비밀번호</span> <input id="ed_pw" value="${u.pw||''}" placeholder="(비워두면 변경 없음)"></div>` : ''}
+    ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row"><span class="lbl">비밀번호</span> <input id="ed_pw" value="${u.pw||''}" placeholder="(비워두면 변경 없음)"></div>` : ''}
 
     <div style="background:#f4f4ff;border:1px solid #ccd;padding:6px 8px;margin:6px 0;">
       <b style="display:block;color:#5a1a6b;margin-bottom:4px;">⚡ 퀵 액션</b>
@@ -6556,13 +6627,13 @@ function renderAdminEdit(){
 
     <div style="padding:12px;text-align:center;border-top:1px solid #ccc;">
       <button class="admin-btn ok" onclick="adminSaveUser()">💾 저장</button>
-      ${u.source === 'local' ? `<button class="admin-btn danger" onclick="adminDeleteUser()">🗑 계정 삭제</button>` : ''}
+      ${(u.source === 'local' || u.source === 'cloud') ? `<button class="admin-btn danger" onclick="adminDeleteUser()">🗑 계정 삭제</button>` : ''}
     </div>
   `;
   $('adminEditPane').innerHTML = html;
 }
 
-function adminSaveUser(){
+async function adminSaveUser(){
   const u = _adminUsers[_adminSelectedUser];
   if (!u) return;
   const oldName = u.name;
@@ -6581,8 +6652,8 @@ function adminSaveUser(){
   u.mp = parseInt($('ed_mp').value) || 0;
   u.mpMax = parseInt($('ed_mpMax').value) || 0;
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
-  // 비밀번호: 비워두면 기존 유지
-  if (u.source === 'local'){
+  // 비밀번호: 비워두면 기존 유지 (로컬 또는 클라우드 source 둘 다 player.pw로 보관)
+  if (u.source === 'local' || u.source === 'cloud'){
     const pwInput = $('ed_pw');
     if (pwInput && pwInput.value.trim()) u.pw = pwInput.value.trim();
   }
@@ -6682,6 +6753,40 @@ function adminSaveUser(){
       } catch(e){ console.warn('[admin cloud sync]', e); }
     })();
     alert(`✔ 계정(${newName}) 데이터 저장 완료\n(본인 계정이면 클라우드에도 자동 반영됩니다)`);
+  } else if (u.source === 'cloud'){
+    // ── 운영자 권한으로 클라우드 saves 행 직접 update ──
+    if (!sb || !_adminCloudActive){
+      alert('운영자 세션이 만료되었습니다. 다시 로그인하세요.');
+      return;
+    }
+    // 데이터 payload 조립
+    const payloadData = {
+      player: {
+        name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
+        hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
+        str:u.str, dex:u.dex, int:u.int, con:u.con,
+        gold:u.gold, weapon:u.weapon, armor:u.armor,
+        weapons: u.weapons || [],
+        armors: u.armors || [],
+        rank: u.rank || '평민',
+        gp: u.gp || 0,
+        rankPos: u.rankPos,
+        pw: u.pw,
+        atk:[2,5], def:0, atkType:'근접',
+      },
+      myDeck:    u.myDeck.slice(),
+      inventory: (u.inventory || []).map(c => typeof c === 'string' ? c : c.id),
+      ranking:   { lastResetDate: null, slots: [], myRank: u.rankPos || 0 },
+      raid:      undefined,
+      savedAt:   Date.now(),
+    };
+    const update = { nickname: newName, data: payloadData };
+    const { error } = await sb.from('saves').update(update).eq('user_id', u.user_id);
+    if (error){
+      alert('클라우드 저장 실패: ' + (error.message || error));
+      return;
+    }
+    alert(`✔ 클라우드 계정(${newName}) 저장 완료`);
   } else {
     alert('✔ NPC 데이터 임시 저장 (메모리). 서버 연동 후 영구 반영됩니다.');
   }
@@ -6689,9 +6794,21 @@ function adminSaveUser(){
   renderAdminEdit();
 }
 
-function adminDeleteUser(){
+async function adminDeleteUser(){
   const u = _adminUsers[_adminSelectedUser];
-  if (!u || u.source !== 'local') return;
+  if (!u) return;
+  if (u.source === 'cloud'){
+    if (!sb || !_adminCloudActive){ alert('운영자 세션이 만료되었습니다.'); return; }
+    if (!confirm(`클라우드 계정(${u.name})을 삭제할까요?\n• saves 테이블의 행 삭제\n• Auth 계정은 그대로 남습니다 (수동 삭제 필요)`)) return;
+    const { error } = await sb.from('saves').delete().eq('user_id', u.user_id);
+    if (error){ alert('클라우드 삭제 실패: ' + error.message); return; }
+    alert('클라우드 saves 행 삭제 완료. (Auth 계정은 Supabase 대시보드 → Authentication → Users에서 수동 삭제)');
+    await loadAdminUsers();
+    renderAdminUserList();
+    renderAdminEdit();
+    return;
+  }
+  if (u.source !== 'local') return;
   if (!confirm(`정말 계정(${u.name})을 삭제하시겠습니까?`)) return;
   localStorage.removeItem(saveKeyFor(u.name));
   backupKeysFor(u.name).forEach(k => localStorage.removeItem(k));
