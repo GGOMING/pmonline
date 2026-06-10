@@ -241,6 +241,14 @@
     color:#aaa; font-size:54px; font-weight:bold;
     text-align:center; line-height:100px;
     border:1px solid #888;
+    cursor:pointer; overflow:hidden; position:relative;
+  }
+  .avatar:hover::after {
+    content:'📷 변경'; position:absolute; left:0; right:0; bottom:0;
+    background:rgba(0,0,0,.7); color:#fff; font-size:11px; line-height:18px; font-weight:normal;
+  }
+  .avatar img {
+    width:100%; height:100%; object-fit:cover; display:block;
   }
   .avatar-name {
     width:100px; text-align:center;
@@ -371,6 +379,23 @@
     text-align:center;
     padding:0;
   }
+  /* 프로필 관리 페이지 */
+  .profile-page { background:#fff; border:1px solid #888; margin-top:5px; padding:0; }
+  .profile-banner {
+    background:linear-gradient(180deg, #2e53b2 0%, #1a3580 100%);
+    color:#ffd700; padding:14px 16px; font-size:18px; font-weight:bold;
+    border-bottom:2px solid #ffd700; text-shadow:1px 1px 2px rgba(0,0,0,.7);
+  }
+  .profile-section {
+    padding:12px 16px; border-bottom:1px solid #ddd; text-align:left;
+  }
+  .profile-section h4 { margin:0 0 8px; color:#7E181E; font-size:14px; }
+  .profile-photo-box {
+    width:120px; height:120px; background:#000; color:#aaa;
+    border:1px solid #888; overflow:hidden; text-align:center;
+    flex:none;
+  }
+  .profile-photo-box img { width:100%; height:100%; object-fit:cover; display:block; }
   .heal-banner {
     height:140px;
     background:
@@ -530,10 +555,10 @@
   table.deck.mini tr.icons td.fired { opacity:.35; }
 
   /* 등급별 테두리 (수행 화면 mini deck) */
-  table.deck.mini tr.icons td.grade-rare   { border:2px solid #3399ff; background:#001833; }
-  table.deck.mini tr.icons td.grade-unique { border:2px solid #ffd700; background:#1a1200; box-shadow:inset 0 0 6px rgba(255,215,0,.3); }
-  table.deck.mini tr.icons td.grade-hero   { border:2px solid #ff6699; background:#2a0010; box-shadow:inset 0 0 8px rgba(255,102,153,.5); }
-  table.deck.mini tr.icons td.grade-normal { border:1px solid #555; }
+  table.deck tr.icons td.grade-rare   { border:2px solid #3399ff; background:#001833; }
+  table.deck tr.icons td.grade-unique { border:2px solid #ffd700; background:#1a1200; box-shadow:inset 0 0 6px rgba(255,215,0,.3); }
+  table.deck tr.icons td.grade-hero   { border:2px solid #ff6699; background:#2a0010; box-shadow:inset 0 0 8px rgba(255,102,153,.5); }
+  table.deck tr.icons td.grade-normal { border:1px solid #555; }
   table.deck.mini tr.icons td .card-ico { width:66px; height:63px; }
 
   /* ===== 무기/방어구 상점 ===== */
@@ -1012,7 +1037,7 @@
     <!-- 캐릭터 정보 -->
     <div class="topbox">
       <div class="avatar-col">
-        <div class="avatar" id="avatar">?</div>
+        <div class="avatar" id="avatar" onclick="openAvatarPicker()" title="클릭하여 프로필 사진 변경">?</div>
         <div class="avatar-name" id="s_name">-</div>
       </div>
       <div style="display:flex;flex-direction:column;flex:1;">
@@ -1091,6 +1116,7 @@
           <td class="row2" onclick="openRaid('mist')">공격대<small>(안개의숲)</small></td>
         </tr></table>
         <table><tr>
+          <td class="row3" onclick="openProfilePage()">프로필 관리</td>
           <td class="row3" onclick="todo('여전 카페')">여전 카페</td>
         </tr></table>
       </div>
@@ -1711,6 +1737,77 @@
         </table>
         <div style="text-align:center; padding:6px;">
           <button class="mini-btn" onclick="openSellModal()" style="background:#2e53b2;">개별 판매 (보유 카드에서 선택)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 프로필 관리 컨텐츠 -->
+    <div class="content-pane" id="content-profile" hidden>
+      <div class="profile-page">
+        <div class="profile-banner">프로필 관리</div>
+
+        <!-- 1) 프로필 사진 -->
+        <div class="profile-section">
+          <h4>📷 프로필 사진</h4>
+          <div style="display:flex;gap:14px;align-items:flex-start;">
+            <div id="profilePhotoBox" class="profile-photo-box"><span style="color:#aaa;font-size:42px;line-height:120px;">?</span></div>
+            <div style="flex:1;">
+              <div style="font-size:11px;color:#555;line-height:1.6;">
+                • PNG / JPEG / WebP / GIF, 원본 최대 <b>1 MB</b><br>
+                • 자동으로 <b>256×256</b>으로 축소 + JPEG 압축<br>
+                • 변경 비용: <b style="color:#7E181E;">10,000 G</b> (첫 설정은 무료)
+              </div>
+              <div style="margin-top:8px;">
+                <button class="btn-go" onclick="openAvatarPicker()" style="background:#2e7d32;">사진 선택·변경</button>
+                <button class="btn-go" onclick="profileRemoveAvatar()" style="background:#888;">삭제 (무료)</button>
+              </div>
+              <div style="margin-top:8px;font-size:11px;color:#a02050;">
+                ⚠ 부적절한 프로필 사진(선정성·혐오·타인 도용 등)이 적발될 경우 계정이 삭제될 수 있습니다.
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2) 닉네임 변경 -->
+        <div class="profile-section">
+          <h4>📝 닉네임 변경</h4>
+          <div style="font-size:11px;color:#555;line-height:1.6;">
+            • 6자 이내 (한글·영문·숫자)<br>
+            • 변경 비용: <b style="color:#7E181E;">50,000 G</b><br>
+            • 중복 닉네임은 설정할 수 없습니다.
+          </div>
+          <div style="margin-top:8px;">
+            <input id="profileNewNick" maxlength="6" placeholder="새 닉네임" style="width:120px;">
+            <button class="btn-go" onclick="profileCheckNick()" style="background:#3a3a8a;">중복 확인</button>
+            <span id="profileNickStatus" style="font-size:12px;margin-left:6px;"></span>
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn-go" onclick="profileChangeNick()" style="background:#7E181E;">닉네임 변경하기 (-50,000 G)</button>
+          </div>
+          <div style="margin-top:8px;font-size:11px;color:#a02050;">
+            ⚠ 부적절한 닉네임(욕설·차별·타인 사칭 등)이 적발될 경우 계정이 삭제될 수 있습니다.
+          </div>
+        </div>
+
+        <!-- 3) 비밀번호 변경 -->
+        <div class="profile-section">
+          <h4>🔑 비밀번호 변경</h4>
+          <div style="font-size:11px;color:#555;line-height:1.6;">
+            • 6자 이상 12자 이내<br>
+            • 비밀번호 변경은 <b>무료</b>입니다.
+          </div>
+          <div style="margin-top:8px;">
+            <input id="profileCurPw"  type="password" maxlength="12" placeholder="현재 비밀번호" style="width:140px;">
+            <input id="profileNewPw"  type="password" maxlength="12" placeholder="새 비밀번호" style="width:140px;">
+            <input id="profileNewPw2" type="password" maxlength="12" placeholder="새 비밀번호 확인" style="width:140px;">
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn-go" onclick="profileChangePw()" style="background:#7E181E;">비밀번호 변경</button>
+          </div>
+        </div>
+
+        <div style="text-align:center;margin-top:14px;">
+          <button class="btn-go" onclick="showContent('main')">← 메인으로</button>
         </div>
       </div>
     </div>
@@ -5911,9 +6008,234 @@ function calcDerived(p){
   p.def = p.con * 1 + (p.armor ? (p.armor.defBonus || 0) : 0);
 }
 
+// ─── 프로필 사진 업로드 ───
+const AVATAR_MAX_BYTES = 1024 * 1024;   // 원본 파일 1MB 제한
+const AVATAR_MAX_DIM   = 256;           // 리사이즈 후 최대 가로/세로 256px
+const AVATAR_JPEG_QUAL = 0.85;
+const AVATAR_CHANGE_COST = 10000;       // 변경 비용 (G). 첫 설정은 무료
+const NICK_CHANGE_COST   = 50000;       // 닉네임 변경 비용
+
+function openAvatarPicker(){
+  if (!GAME.player){ alert('로그인 후 사용하세요.'); return; }
+  const isChange = !!GAME.player.avatar;
+  if (isChange && GAME.player.gold < AVATAR_CHANGE_COST){
+    alert(`프로필 사진 변경에 ${AVATAR_CHANGE_COST.toLocaleString()}G가 필요합니다.\n현재 보유: ${GAME.player.gold.toLocaleString()}G`);
+    return;
+  }
+  if (isChange){
+    const ok = confirm(
+      `프로필 사진을 변경하시겠습니까?\n\n` +
+      `• 비용: ${AVATAR_CHANGE_COST.toLocaleString()}G\n` +
+      `• 부적절한 사진(선정성·혐오·타인 도용 등) 적발 시 계정이 삭제될 수 있습니다.`
+    );
+    if (!ok) return;
+  }
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/png,image/jpeg,image/webp,image/gif';
+  input.onchange = async (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    if (!/^image\//.test(file.type)){
+      alert('이미지 파일만 업로드 가능합니다.');
+      return;
+    }
+    if (file.size > AVATAR_MAX_BYTES){
+      alert(`이미지 용량은 1MB 이하만 가능합니다.\n현재: ${(file.size/1024/1024).toFixed(2)} MB`);
+      return;
+    }
+    try {
+      const dataUrl = await _resizeImageToDataUrl(file, AVATAR_MAX_DIM, AVATAR_JPEG_QUAL);
+      if (!dataUrl){ alert('이미지 처리 실패'); return; }
+      GAME.player.avatar = dataUrl;
+      if (isChange) GAME.player.gold -= AVATAR_CHANGE_COST;
+      renderSheet();
+      _renderProfilePage();
+      saveGame();
+      toast(isChange ? `프로필 사진 변경 완료 (-${AVATAR_CHANGE_COST.toLocaleString()}G)` : '프로필 사진이 설정되었습니다.');
+    } catch(err){
+      console.warn('avatar upload', err);
+      alert('이미지 처리 중 오류: ' + (err.message||err));
+    }
+  };
+  input.click();
+}
+
+function profileRemoveAvatar(){
+  if (!GAME.player || !GAME.player.avatar){ toast('삭제할 프로필 사진이 없습니다.'); return; }
+  if (!confirm('프로필 사진을 삭제하시겠습니까? (무료)')) return;
+  GAME.player.avatar = null;
+  renderSheet();
+  _renderProfilePage();
+  saveGame();
+  toast('프로필 사진이 삭제되었습니다.');
+}
+
+// ─── 프로필 관리 페이지 ───
+function openProfilePage(){
+  if (!GAME.player){ alert('로그인 후 사용하세요.'); return; }
+  showContent('profile');
+  _renderProfilePage();
+}
+function _renderProfilePage(){
+  const p = GAME.player; if (!p) return;
+  const box = $('profilePhotoBox');
+  if (box){
+    if (p.avatar && typeof p.avatar === 'string' && p.avatar.startsWith('data:image')){
+      box.innerHTML = `<img src="${p.avatar}" alt="">`;
+    } else {
+      box.innerHTML = `<span style="color:#aaa;font-size:42px;line-height:120px;">${(p.name||'?').charAt(0).toUpperCase()}</span>`;
+    }
+  }
+  // 입력 필드 비우기
+  ['profileNewNick','profileCurPw','profileNewPw','profileNewPw2'].forEach(id => { if ($(id)) $(id).value = ''; });
+  const st = $('profileNickStatus'); if (st) st.textContent = '';
+  _profileNickOk = false;
+  _profileNickChecked = '';
+}
+
+let _profileNickOk = false;
+let _profileNickChecked = '';
+
+async function profileCheckNick(){
+  if (!GAME.player) return;
+  const newNick = ($('profileNewNick').value || '').trim();
+  const st = $('profileNickStatus');
+  _profileNickOk = false; _profileNickChecked = '';
+  if (!newNick){ st.style.color='#a00'; st.textContent='닉네임을 입력하세요.'; return; }
+  if (newNick.length < 2){ st.style.color='#a00'; st.textContent='2자 이상 입력하세요.'; return; }
+  if (newNick.length > 6){ st.style.color='#a00'; st.textContent='6자 이내로 입력하세요.'; return; }
+  if (newNick === GAME.player.name){ st.style.color='#a00'; st.textContent='현재 닉네임과 같습니다.'; return; }
+  if (sb){
+    st.style.color='#666'; st.textContent='… 확인 중';
+    const taken = await cloudNicknameTaken(newNick);
+    if (taken){ st.style.color='#a00'; st.textContent='✗ 이미 사용 중인 닉네임입니다.'; return; }
+  } else {
+    if (accountExists(newNick)){ st.style.color='#a00'; st.textContent='✗ 이미 사용 중인 닉네임입니다.'; return; }
+  }
+  st.style.color='#060'; st.textContent='✓ 사용 가능한 닉네임입니다.';
+  _profileNickOk = true; _profileNickChecked = newNick;
+}
+
+async function profileChangeNick(){
+  const p = GAME.player; if (!p) return;
+  const newNick = ($('profileNewNick').value || '').trim();
+  if (!_profileNickOk || _profileNickChecked !== newNick){
+    alert('먼저 「중복 확인」을 진행해 주세요.');
+    return;
+  }
+  if (p.gold < NICK_CHANGE_COST){
+    alert(`닉네임 변경에 ${NICK_CHANGE_COST.toLocaleString()}G가 필요합니다.\n현재 보유: ${p.gold.toLocaleString()}G`);
+    return;
+  }
+  const ok = confirm(
+    `닉네임을 「${p.name}」 → 「${newNick}」 으로 변경합니다.\n\n` +
+    `• 비용: ${NICK_CHANGE_COST.toLocaleString()}G\n` +
+    `• 부적절한 닉네임(욕설·차별·타인 사칭 등) 적발 시 계정이 삭제될 수 있습니다.\n\n` +
+    `진행할까요?`
+  );
+  if (!ok) return;
+
+  const oldName = p.name;
+  // 1) Auth email도 함께 변경 (가짜 이메일 매핑)
+  if (sb){
+    const { error } = await sb.auth.updateUser({ email: nickToEmail(newNick) });
+    if (error){
+      alert('닉네임 변경 실패 (인증 정보 갱신 오류): ' + error.message);
+      return;
+    }
+  }
+  // 2) 골드 차감 + 로컬 적용
+  p.gold -= NICK_CHANGE_COST;
+  p.name = newNick;
+  // localStorage 슬롯 키도 이동
+  try {
+    const oldKey = saveKeyFor(oldName);
+    const newKey = saveKeyFor(newNick);
+    const prev = localStorage.getItem(oldKey);
+    if (prev) localStorage.setItem(newKey, prev);
+    localStorage.removeItem(oldKey);
+    const oldBks = backupKeysFor(oldName);
+    const newBks = backupKeysFor(newNick);
+    oldBks.forEach((k,i) => {
+      const v = localStorage.getItem(k);
+      if (v){ localStorage.setItem(newBks[i], v); localStorage.removeItem(k); }
+    });
+    removeAccountEntry(oldName);
+    addAccount(newNick);
+  } catch(e){ console.warn('rename localStorage', e); }
+  saveGame();
+  renderSheet();
+  _renderProfilePage();
+  toast(`닉네임이 「${newNick}」(으)로 변경되었습니다. (-${NICK_CHANGE_COST.toLocaleString()}G)`);
+}
+
+async function profileChangePw(){
+  const p = GAME.player; if (!p) return;
+  const cur  = ($('profileCurPw').value  || '').trim();
+  const npw  = ($('profileNewPw').value  || '').trim();
+  const npw2 = ($('profileNewPw2').value || '').trim();
+  if (!cur){ alert('현재 비밀번호를 입력해 주세요.'); return; }
+  if (!npw || npw.length < 6){ alert('새 비밀번호는 6자 이상 입력해 주세요.'); return; }
+  if (npw.length > 12){ alert('새 비밀번호는 12자 이내로 입력해 주세요.'); return; }
+  if (npw !== npw2){ alert('새 비밀번호 확인이 일치하지 않습니다.'); return; }
+  if (cur === npw){ alert('현재 비밀번호와 동일합니다.'); return; }
+
+  if (sb){
+    // 1) 현재 비번 검증을 위해 reauth
+    const { error: aErr } = await sb.auth.signInWithPassword({ email: nickToEmail(p.name), password: cur });
+    if (aErr){ alert('현재 비밀번호가 올바르지 않습니다.'); return; }
+    // 2) 새 비번 적용
+    const { error: uErr } = await sb.auth.updateUser({ password: npw });
+    if (uErr){ alert('비밀번호 변경 실패: ' + uErr.message); return; }
+  } else {
+    // 오프라인 fallback: localStorage의 player.pw 비교
+    if (p.pw && p.pw !== cur){ alert('현재 비밀번호가 올바르지 않습니다.'); return; }
+  }
+  p.pw = npw;
+  saveGame();
+  alert('비밀번호가 변경되었습니다.');
+  _renderProfilePage();
+}
+
+function _resizeImageToDataUrl(file, maxDim, quality){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(new Error('파일 읽기 실패'));
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('이미지 디코딩 실패'));
+      img.onload = () => {
+        let w = img.naturalWidth, h = img.naturalHeight;
+        if (!w || !h){ reject(new Error('이미지 크기 0')); return; }
+        // 비율 유지하며 최대 변 maxDim으로 축소
+        if (w > h && w > maxDim){ h = Math.round(h * maxDim / w); w = maxDim; }
+        else if (h > maxDim){ w = Math.round(w * maxDim / h); h = maxDim; }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        // JPEG로 압축 (PNG보다 훨씬 작음)
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
 function renderSheet(){
   const p = GAME.player; if (!p) return;
   calcDerived(p);
+  // 프로필 사진 영역: avatar dataUrl이 있으면 이미지, 없으면 첫 글자
+  const av = $('avatar');
+  if (av){
+    if (p.avatar && typeof p.avatar === 'string' && p.avatar.startsWith('data:image')){
+      av.innerHTML = `<img src="${p.avatar}" alt="">`;
+    } else {
+      av.textContent = (p.name||'?').charAt(0).toUpperCase();
+    }
+  }
   const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   setText('s_name', p.name);
   setText('s_level', p.level);
@@ -6008,6 +6330,8 @@ function renderDeck(){
   for (let i=0;i<15;i++){
     const td = document.querySelector(`[data-slot="${i}"]`);
     if (!td) continue;
+    // 매번 grade-* 클래스 초기화
+    td.classList.remove('grade-normal','grade-rare','grade-unique','grade-hero');
     const locked = i >= maxSlots;
     const lblRow = td.parentNode.nextElementSibling;
     if (locked){
@@ -6018,6 +6342,7 @@ function renderDeck(){
     } else {
       const c = GAME.myDeck[i] || BASIC_ATTACK;
       td.classList.remove('locked');
+      td.classList.add('grade-' + (c.grade || 'normal'));
       td.innerHTML = `<div class="card-ico">${cardIcon(c)}</div>
         <div class="ctip"><b>${c.name}</b> [${gradeKr(c.grade)}]<br>${c.text}</div>`;
       if (lblRow) lblRow.children[i%5].textContent = c.name;
@@ -6418,6 +6743,7 @@ async function loadAdminUsers(){
             gp: p.gp || 0,
             rankPos: p.rankPos || 0,
             pw: p.pw,
+            avatar: p.avatar || null,
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
             updated_at: row.updated_at,
@@ -6513,8 +6839,25 @@ function renderAdminEdit(){
     ...CARDS.filter(c => c.id !== 'basic_atk' && ownedCardIds.indexOf(c.id) >= 0),
   ];
 
+  // 프로필 사진 미리보기
+  const avatarSrc = (u.avatar && typeof u.avatar === 'string' && u.avatar.startsWith('data:image')) ? u.avatar : '';
   let html = `
-    <div class="edit-row"><span class="lbl">소스</span> ${u.source === 'local' ? '<b style="color:#060;">로컬 저장</b>' : '가상 NPC (서버 연동 전 더미)'} ${u.isMe ? '<span style="color:#a00;font-weight:bold;">(현재 로그인 중)</span>' : ''}</div>
+    <div class="edit-row"><span class="lbl">소스</span> ${u.source === 'cloud' ? '<b style="color:#0a8;">클라우드</b>' : u.source === 'local' ? '<b style="color:#060;">로컬 저장</b>' : '가상 NPC (서버 연동 전 더미)'} ${u.isMe ? '<span style="color:#a00;font-weight:bold;">(현재 로그인 중)</span>' : ''}</div>
+    ${(u.source === 'local' || u.source === 'cloud') ? `
+    <div class="edit-row" style="display:block;">
+      <span class="lbl" style="display:block;margin-bottom:4px;">프로필 사진</span>
+      <div style="display:flex;gap:10px;align-items:center;">
+        <div style="width:80px;height:80px;background:#000;border:1px solid #888;overflow:hidden;flex:none;">
+          ${avatarSrc ? `<img src="${avatarSrc}" style="width:100%;height:100%;object-fit:cover;display:block;">` : `<div style="text-align:center;color:#aaa;font-size:32px;line-height:80px;">${(u.name||'?').charAt(0).toUpperCase()}</div>`}
+        </div>
+        <div>
+          <input type="file" id="ed_avatar_file" accept="image/*" style="font-size:11px;display:block;margin-bottom:4px;">
+          <button class="admin-btn small" onclick="adminApplyAvatarFile()">선택한 파일 적용</button>
+          <button class="admin-btn small danger" onclick="adminClearAvatar()">사진 삭제</button>
+          <div style="font-size:10px;color:#666;margin-top:4px;">변경 비용·검열 정책은 일반 사용자만 적용. 운영자는 즉시 반영.</div>
+        </div>
+      </div>
+    </div>` : ''}
     <div class="edit-row"><span class="lbl">닉네임</span> <input id="ed_name" value="${u.name}"></div>
     ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row"><span class="lbl">비밀번호</span> <input id="ed_pw" value="${u.pw||''}" placeholder="(비워두면 변경 없음)"></div>` : ''}
 
@@ -6718,6 +7061,7 @@ async function adminSaveUser(){
       gp: saved.player ? saved.player.gp : 0,
       rankPos: u.rankPos,
       pw: u.pw,
+      avatar: u.avatar || null,
       atk:[2,5], def:0, atkType:'근접',
     };
     saved.inventory = (u.inventory || []).map(c => typeof c === 'string' ? c : c.id);
@@ -6772,6 +7116,7 @@ async function adminSaveUser(){
         gp: u.gp || 0,
         rankPos: u.rankPos,
         pw: u.pw,
+        avatar: u.avatar || null,
         atk:[2,5], def:0, atkType:'근접',
       },
       myDeck:    u.myDeck.slice(),
@@ -6835,6 +7180,36 @@ function adminAddCardFromSelect(){
   const sel = $('ed_addCardSel');
   if (!sel.value) return;
   adminAddCard(sel.value);
+}
+
+// ── 운영자: 프로필 사진 파일 적용/삭제 ──
+async function adminApplyAvatarFile(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  const fileEl = $('ed_avatar_file');
+  const file = fileEl && fileEl.files && fileEl.files[0];
+  if (!file){ alert('파일을 먼저 선택하세요.'); return; }
+  if (!/^image\//.test(file.type)){ alert('이미지 파일만 가능합니다.'); return; }
+  if (file.size > AVATAR_MAX_BYTES){
+    alert(`1MB 이하 이미지만 가능합니다. 현재: ${(file.size/1024/1024).toFixed(2)} MB`);
+    return;
+  }
+  try {
+    const dataUrl = await _resizeImageToDataUrl(file, AVATAR_MAX_DIM, AVATAR_JPEG_QUAL);
+    if (!dataUrl){ alert('이미지 처리 실패'); return; }
+    u.avatar = dataUrl;
+    renderAdminEdit();
+    toast('프로필 사진 적용 완료 (저장하려면 「💾 저장」)');
+  } catch(e){
+    alert('이미지 처리 오류: ' + (e.message||e));
+  }
+}
+function adminClearAvatar(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  if (!confirm('프로필 사진을 삭제할까요?')) return;
+  u.avatar = null;
+  renderAdminEdit();
 }
 
 // ── 등급별 일괄 카드 작업 ──
