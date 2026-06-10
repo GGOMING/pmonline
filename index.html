@@ -1838,7 +1838,7 @@
 
         <div class="heal-actions">
           <button class="btn-heal" onclick="doHeal()">회복</button>
-          <button class="btn-back" onclick="showContent('main')">돌아가기</button>
+          <button class="btn-back" onclick="exitHealToMain()">돌아가기</button>
         </div>
 
         <div id="heal_msg" class="heal-result"></div>
@@ -2443,6 +2443,7 @@ function setHealMsg(text, cls){
   el.textContent = text;
   el.className = 'heal-result' + (cls?' '+cls:'');
 }
+let _pendingDefenseFromHeal = false;
 function doHeal(){
   const p = GAME.player;
   if (p.hp === p.hpMax && p.mp === p.mpMax){
@@ -2461,6 +2462,22 @@ function doHeal(){
   updateHealUI();
   setHealMsg(`✔ 샘물의 힘으로 HP/MP가 완전히 회복되었습니다. (-${cost} G)`, 'ok');
   chatSys(`★ ${p.name}님이 회복의 샘물에서 회복하셨습니다.`);
+  // 방어전 트리거 굴림 — 랭킹 5위 이상(1~5위)에게만 5% 확률
+  const myRank = (GAME.ranking && GAME.ranking.myRank) || 0;
+  if (myRank >= 1 && myRank <= 5 && Math.random() < 0.05){
+    _pendingDefenseFromHeal = true;
+  }
+}
+
+function exitHealToMain(){
+  showContent('main');
+  if (_pendingDefenseFromHeal){
+    _pendingDefenseFromHeal = false;
+    setTimeout(() => {
+      openRank();   // 랭킹전 페이지로 이동
+      setTimeout(() => triggerDefenseBattle(), 600);
+    }, 400);
+  }
 }
 
 // ============================================================
@@ -3510,7 +3527,13 @@ function exitRaid(){
 // ============================================================
 //   랭킹전 (Ranking)
 // ============================================================
-const RANK_NPC_NAMES = ['Scandal','Idgun','더울이','로보스팟','반지요정','카드소','아그네시카','세이비아','머할려구','선의기운'];
+// 그리스·로마 신화의 여신·님프 이름 풀
+const RANK_NPC_NAMES = [
+  '헤라','아테나','아프로디테','아르테미스','데메테르','헤스티아','페르세포네',
+  '헤카테','니케','헤베','이리스','셀레네','에오스','가이아','닉스','레아',
+  '테미스','므네모시네','티케','칼리오페','클리오','에라토','에우테르페',
+  '멜포메네','폴리히므니아','테르프시코레','탈리아','우라니아','다프네','에우리노메'
+];
 
 function makeRankNPC(name){
   return {
@@ -3556,6 +3579,13 @@ function checkRankingReset(){
     const wasReset = !!GAME.ranking.lastResetDate;
     resetRanking();
     if (wasReset) chatSys('★ 일일 랭킹전이 초기화되었습니다.');
+    return;
+  }
+  // 마이그레이션: 옛 NPC 이름이 남아있으면 새 여신 이름 풀로 강제 리셋
+  const validNames = new Set(RANK_NPC_NAMES);
+  const npcSlots = (GAME.ranking.slots || []).filter(s => s && s.isNPC);
+  if (npcSlots.some(s => !validNames.has(s.name))){
+    resetRanking();
   }
 }
 
@@ -3572,14 +3602,14 @@ function openRank(){
   $('rank-battle').hidden = true;
   $('rank-result').hidden = true;
   renderRankList();
-  // 사용자가 랭킹에 등록된 경우 30% 확률로 방어전 발생
-  if (GAME.ranking.myRank >= 1 && Math.random() < 0.30){
-    setTimeout(() => triggerDefenseBattle(), 800);
-  }
 }
 
 function renderRankList(){
   const myRank = GAME.ranking.myRank;
+  // 본인 슬롯이 등록 시점의 옛 데이터로 멈춰있지 않도록 최신 player 정보로 동기화
+  if (myRank >= 1 && myRank <= 10 && GAME.player){
+    GAME.ranking.slots[myRank - 1] = makeUserRankSlot();
+  }
   $('rank_myrank').textContent = myRank === 0 ? '미등록' : `${myRank}위`;
   $('rank_bonus').textContent = getRankBonus();
   if ($('rank_attempts')) $('rank_attempts').textContent = `${getRankRewardsLeft()} / ${RANK_DAILY_REWARDS}`;
@@ -3631,17 +3661,52 @@ function challengeRank(targetRank){
   startRankBattle(opponent, targetRank, 'attack');
 }
 
+// 방어전 도전자 — 플레이어와 동일 레벨, 레벨에 맞는 스탯·덱
+function makeDefenseChallenger(name, lv){
+  lv = Math.max(1, lv|0);
+  const statBase = 5 + Math.floor((lv - 1) * 0.6);     // Lv1=5, Lv30≈22
+  const str = statBase, dex = statBase, intl = statBase, con = statBase;
+  const hpMax = 26 + (lv - 1) * 2 + (con - 5);
+  const mpMax = 25 + (lv - 1) * 1 + (intl - 5);
+  const wBonus = Math.floor(lv / 3);
+  const aBonus = Math.floor(lv / 4);
+  const atkBase = str + wBonus;
+  // 카드 덱: 레벨에 따라 일반/레어 비율 (Lv1=레어 0%, Lv30=레어 45%)
+  const rareWeight = Math.min(0.45, lv * 0.015);
+  const normalPool = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk');
+  const rarePool   = CARDS.filter(c => c.grade === 'rare');
+  const deck = [];
+  for (let i = 0; i < 10; i++){
+    const pool = (Math.random() < rareWeight && rarePool.length > 0) ? rarePool : normalPool;
+    const c = pool[Math.floor(Math.random() * pool.length)];
+    deck.push(c || BASIC_ATTACK);
+  }
+  return {
+    isNPC: true,
+    name,
+    level: lv,
+    str, dex, int: intl, con,
+    hp: hpMax, hpMax, mp: mpMax, mpMax,
+    atk: [Math.max(2, Math.floor(atkBase * 0.4)), Math.max(5, Math.floor(atkBase * 1.0))],
+    def: Math.floor(lv / 2) + aBonus,
+    weapon: { atkBonus: wBonus },
+    armor:  { defBonus: aBonus },
+    deck,
+    atkType: '근접',
+  };
+}
+
 function triggerDefenseBattle(){
-  // 사용자보다 낮은 순위 또는 미등록 NPC가 도전 (모두 Lv 1 기본 캐릭터)
   const myRank = GAME.ranking.myRank;
-  // 미등록 NPC 풀에서 무작위
+  if (myRank < 1 || myRank > 5) return;   // 1~5위 한정
   const usedNames = new Set(GAME.ranking.slots.map(s => s.name));
   const availableNames = RANK_NPC_NAMES.filter(n => !usedNames.has(n));
   const challengerName = availableNames.length > 0
     ? availableNames[rnd(0, availableNames.length-1)]
     : RANK_NPC_NAMES[rnd(0, RANK_NPC_NAMES.length-1)];
-  const challenger = makeRankNPC(challengerName);
-  toast(`⚔ ${challengerName}님이 방어전을 신청했습니다!`);
+  const myLv = (GAME.player && GAME.player.level) || 1;
+  const challenger = makeDefenseChallenger(challengerName, myLv);
+  toast(`⚔ ${challengerName}님(Lv ${myLv})이 방어전을 신청했습니다!`);
   startRankBattle(challenger, myRank, 'defense');
 }
 
@@ -3843,20 +3908,38 @@ function rankEnd(result){
     }
   } else { // defense
     if (outcome === 'win'){
+      let bonusLine = '';
+      // 보상 한도 초과 시 10% 확률로 카드 1뽑 보너스
+      if (rewardCapped && Math.random() < 0.10){
+        const grade = pickGachaGrade();
+        const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk');
+        const card = pool[Math.floor(Math.random() * pool.length)];
+        if (card){
+          GAME.inventory.push(card);
+          bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
+          chatSys(`★ ${p.name}님이 방어전 보너스로 ${card.name}[${gradeKr(card.grade)}]을(를) 획득했습니다.`);
+        }
+      }
       bodyHtml = `<p style="color:#060;">🛡 방어 성공! 랭킹 <b>${c.targetRank}위</b> 유지</p>
-        ${rewardLine}`;
+        ${rewardLine}
+        ${bonusLine}`;
       chatSys(`★ ${p.name}님이 ${m.name}의 도전을 방어해냈습니다.${rewardCapped ? ' (보상 한도 도달)' : ` (경험치 +${expGained}, 골드 +${goldGained})`}`);
     } else {
-      // 사용자 랭킹 박탈
-      demoteFromRank();
-      bodyHtml = `<p style="color:#a00;">💀 방어 실패... 랭킹에서 강등되었습니다 (미등록 상태)</p>
-        <p style="font-size:11px;color:#666;">10위부터 다시 도전할 수 있습니다.</p>`;
-      chatSys(`★ ${p.name}님이 ${m.name}에게 패배해 랭킹에서 강등되었습니다.`);
+      // 방어 실패 — 랭킹 전체 초기화 (모든 슬롯을 Lv1 NPC로 새로 채움, 본인 미등록)
+      // 일일 보상 한도는 패배해도 복원되지 않도록 보존
+      const _keepRewards = GAME.ranking.rewardsLeft;
+      resetRanking();
+      if (typeof _keepRewards === 'number') GAME.ranking.rewardsLeft = _keepRewards;
+      bodyHtml = `<p style="color:#a00;">💀 방어 실패... 랭킹이 전체 초기화되었습니다.</p>
+        <p style="font-size:11px;color:#666;">모든 자리가 Lv1 NPC로 다시 채워졌습니다. 10위부터 다시 도전할 수 있습니다.</p>`;
+      chatSys(`★ ${p.name}님이 ${m.name}에게 패배해 랭킹이 초기화되었습니다.`);
     }
   }
   if (outcome === 'win'){
     if (expGained > 0) checkLevelUp();
     saveGame();
+  } else if (c.mode === 'defense'){
+    saveGame();  // 패배 시 랭킹 초기화 결과도 저장
   }
   renderSheet();
   $('rank_result_title').textContent = `랭킹전 결과 — ${c.mode==='attack'?'도전':'방어전'}`;
