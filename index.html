@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
-<title>여신전쟁 - PreMake 복각판 v3</title>
+<title>RE: 여신전쟁</title>
 <style>
   * { box-sizing:border-box; }
   body { background:#7B7B7B; color:#000; font-family:"굴림",Gulim,sans-serif; font-size:12px; margin:0; padding:14px; }
@@ -5046,7 +5046,6 @@ function huntEnd(result){
       }
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
-    chatSys(`★ ${p.name}님이 ${m.name}을(를) 처치하셨습니다.`);
   } else if (outcome === 'lose'){
     lostGold = Math.floor(p.gold * 0.05);
     p.gold = Math.max(0, p.gold - lostGold);
