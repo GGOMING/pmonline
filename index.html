@@ -6658,7 +6658,30 @@ function adminSaveUser(){
       try { renderSheet(); } catch(e){}
       try { renderDeck(); } catch(e){}
     }
-    alert(`✔ 계정(${newName}) 데이터 저장 완료`);
+    // 클라우드 동기화 — 현재 세션 사용자 본인 계정만 가능 (RLS)
+    (async () => {
+      try {
+        if (!sb) return;
+        const { data: ud } = await sb.auth.getUser();
+        if (!ud || !ud.user) return;
+        const { data: row } = await sb.from('saves')
+          .select('nickname').eq('user_id', ud.user.id).maybeSingle();
+        if (!row) return;
+        // 본인 행만 update (RLS가 막아주지만 명시적으로도 확인)
+        if (row.nickname !== oldName && row.nickname !== newName) return;
+        const update = { data: saved };
+        if (row.nickname !== newName) update.nickname = newName;
+        const { error: upErr } = await sb.from('saves').update(update).eq('user_id', ud.user.id);
+        if (upErr){ console.warn('[admin cloud update]', upErr); return; }
+        // 비밀번호 변경 시 Auth 비번도 갱신
+        const pwInput = document.getElementById('ed_pw');
+        if (pwInput && pwInput.value && pwInput.value.trim()){
+          try { await sb.auth.updateUser({ password: pwInput.value.trim() }); } catch(e){ console.warn('[admin pw update]', e); }
+        }
+        console.log('[admin] cloud synced for', newName);
+      } catch(e){ console.warn('[admin cloud sync]', e); }
+    })();
+    alert(`✔ 계정(${newName}) 데이터 저장 완료\n(본인 계정이면 클라우드에도 자동 반영됩니다)`);
   } else {
     alert('✔ NPC 데이터 임시 저장 (메모리). 서버 연동 후 영구 반영됩니다.');
   }
