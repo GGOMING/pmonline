@@ -2483,30 +2483,32 @@ function exitHealToMain(){
 // ============================================================
 //   무기/방어구 상점 (영구 장비)
 // ============================================================
+// tier: 보스 드랍 등급 (hero/unique/rare/normal). shopHidden: 상점 미노출
 const WEAPONS = [
-  { id:'dagger',        name:'단도',         atkBonus:2,  price:100,    reqLv:1,  icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'bronze_sword',  name:'청동검',       atkBonus:3,  price:300,    reqLv:2,  icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'iron_sword',    name:'철제검',       atkBonus:5,  price:800,    reqLv:5,  icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'steel_sword',   name:'강철검',       atkBonus:7,  price:1800,   reqLv:8,  icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
-  { id:'iron_boomstick',name:'철제붐스틱',   atkBonus:8,  price:2500,   reqLv:10, icon:'assets/wc3_icons/steelrangedweapons.png' },
-  { id:'long_bow',      name:'장궁',         atkBonus:9,  price:3200,   reqLv:12, icon:'assets/wc3_icons/steelrangedweapons.png' },
-  { id:'wizard_wand',   name:'마법사의 완드',atkBonus:11, price:6500,   reqLv:18, icon:'assets/wc3_icons/staffofteleportation.gif' },
-  { id:'mithril_sword', name:'미스릴검',     atkBonus:12, price:8000,   reqLv:20, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'great_sword',   name:'그레이트소드', atkBonus:15, price:14000,  reqLv:25, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'baren_sword',   name:'명검 비르겐',  atkBonus:18, price:20000,  reqLv:30, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'mythic_sword',  name:'신화의 검',    atkBonus:25, price:50000,  reqLv:40, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'dagger',        name:'단도',         atkBonus:2,  price:100,    reqLv:1,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'bronze_sword',  name:'청동검',       atkBonus:3,  price:300,    reqLv:2,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'iron_sword',    name:'철제검',       atkBonus:5,  price:800,    reqLv:5,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'steel_sword',   name:'강철검',       atkBonus:7,  price:1800,   reqLv:8,  tier:'normal', icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
+  { id:'iron_boomstick',name:'철제붐스틱',   atkBonus:8,  price:2500,   reqLv:10, tier:'normal', icon:'assets/wc3_icons/steelrangedweapons.png' },
+  { id:'long_bow',      name:'장궁',         atkBonus:9,  price:3200,   reqLv:12, tier:'normal', icon:'assets/wc3_icons/steelrangedweapons.png' },
+  { id:'wizard_wand',   name:'마법사의 완드',atkBonus:11, price:6500,   reqLv:18, tier:'rare',   icon:'assets/wc3_icons/staffofteleportation.gif' },
+  { id:'mithril_sword', name:'미스릴검',     atkBonus:12, price:8000,   reqLv:20, tier:'rare',   icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'great_sword',   name:'그레이트소드', atkBonus:15, price:14000,  reqLv:25, tier:'unique', icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'baren_sword',   name:'명검 비르겐',  atkBonus:18, price:20000,  reqLv:30, tier:'unique', icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'mythic_sword',  name:'신화의 검',    atkBonus:25, price:50000,  reqLv:40, tier:'hero', shopHidden:true, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
 ];
 
 const ARMORS = [
-  { id:'leather',       name:'가죽갑옷',     defBonus:2,  price:300,   reqLv:2,  icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'scale',         name:'비늘갑옷',     defBonus:3,  price:600,   reqLv:3,  icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'chain',         name:'사슬갑옷',     defBonus:5,  price:1500,  reqLv:8,  icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'steel_armor',   name:'강철갑옷',     defBonus:7,  price:3000,  reqLv:13, icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'light_armor',   name:'경갑흥갑',     defBonus:8,  price:3500,  reqLv:15, icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'plate',         name:'판금갑옷',     defBonus:10, price:5500,  reqLv:18, icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'mithril_armor', name:'미스릴방어구', defBonus:12, price:10000, reqLv:25, icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'heavy_armor',   name:'중갑',         defBonus:15, price:15000, reqLv:30, icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'holy_armor',    name:'신성 방어구',  defBonus:18, price:25000, reqLv:35, icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'leather',       name:'가죽갑옷',     defBonus:2,  price:300,   reqLv:2,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'scale',         name:'비늘갑옷',     defBonus:3,  price:600,   reqLv:3,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'chain',         name:'사슬갑옷',     defBonus:5,  price:1500,  reqLv:8,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'steel_armor',   name:'강철갑옷',     defBonus:7,  price:3000,  reqLv:13, tier:'normal', icon:'assets/wc3_icons/arcanitearmor.png' },
+  { id:'light_armor',   name:'경갑흥갑',     defBonus:8,  price:3500,  reqLv:15, tier:'normal', icon:'assets/wc3_icons/arcanitearmor.png' },
+  { id:'plate',         name:'판금갑옷',     defBonus:10, price:5500,  reqLv:18, tier:'rare',   icon:'assets/wc3_icons/arcanitearmor.png' },
+  { id:'mithril_armor', name:'미스릴방어구', defBonus:12, price:10000, reqLv:25, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'heavy_armor',   name:'중갑',         defBonus:15, price:15000, reqLv:30, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'holy_armor',    name:'신성 방어구',  defBonus:18, price:25000, reqLv:35, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'mythic_armor',  name:'천신의 갑옷',  defBonus:25, price:60000, reqLv:45, tier:'hero', shopHidden:true, icon:'assets/wc3_icons/thoriumarmor.png' },
 ];
 
 function openWeaponShop(){
@@ -2527,7 +2529,7 @@ function refreshWeaponShop(){
   $('wshop_current').innerHTML = eqText;
 
   let html = '<div class="shop-section-title">━ 매물 (구매) ━</div>';
-  html += WEAPONS.map(w => {
+  html += WEAPONS.filter(w => !w.shopHidden).map(w => {
     const isEquipped = p.weapon && p.weapon.id === w.id;
     const inInv = p.weapons.some(x => x.id === w.id);
     const lvOk = p.level >= w.reqLv;
@@ -2585,7 +2587,7 @@ function refreshArmorShop(){
   $('ashop_current').innerHTML = eqText;
 
   let html = '<div class="shop-section-title">━ 매물 (구매) ━</div>';
-  html += ARMORS.map(a => {
+  html += ARMORS.filter(a => !a.shopHidden).map(a => {
     const isEquipped = p.armor && p.armor.id === a.id;
     const inInv = p.armors.some(x => x.id === a.id);
     const lvOk = p.level >= a.reqLv;
@@ -3471,9 +3473,37 @@ function raidEnd(result){
       } else {
         cardLine = `<p style="color:#666;">카드 드랍 없음.</p>`;
       }
+      // 장비 드랍 (카드와 동일한 등급별 확률 구조)
+      let equipLine = '';
+      const eRoll = Math.random();
+      let equipTier = null;
+      if (eRoll < pHero) equipTier = 'hero';
+      else if (eRoll < pHero + pUnique) equipTier = 'unique';
+      else if (eRoll < pHero + pUnique + pRare) equipTier = 'rare';
+      else if (eRoll < pHero + pUnique + pRare + pNormal) equipTier = 'normal';
+      if (equipTier){
+        // 무기 vs 방어구 50:50
+        const isWeapon = Math.random() < 0.5;
+        const pool = (isWeapon ? WEAPONS : ARMORS).filter(it => it.tier === equipTier);
+        if (pool.length){
+          const item = pool[Math.floor(Math.random() * pool.length)];
+          if (isWeapon){
+            if (!p.weapons) p.weapons = [];
+            p.weapons.push({ id:item.id, name:item.name, atkBonus:item.atkBonus });
+            equipLine = `<p>⚔ 장비 드랍: <b>${item.name}</b> (+${item.atkBonus}, ${gradeKr(equipTier)})</p>`;
+          } else {
+            if (!p.armors) p.armors = [];
+            p.armors.push({ id:item.id, name:item.name, defBonus:item.defBonus });
+            equipLine = `<p>🛡 장비 드랍: <b>${item.name}</b> (+${item.defBonus}, ${gradeKr(equipTier)})</p>`;
+          }
+          chatSys(`★ ${p.name}님이 보스에게서 ${item.name}을(를) 획득했습니다!`);
+        }
+      }
+      if (!equipLine) equipLine = `<p style="color:#666;">장비 드랍 없음.</p>`;
       bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossDef.name} 처치 최종 타격! 🏆🏆</p>
         <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
         ${cardLine}
+        ${equipLine}
         <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${bossDef.hpMax}</p>`;
       let raidBossLvUp = false;
       while (p.xp >= xpForNextLevel(p.level)){
@@ -6491,8 +6521,44 @@ async function doLogin(){
   enterMain();
 }
 
+// ─── 비활성 자동 로그아웃 (10분) ───
+const IDLE_LOGOUT_MS = 10 * 60 * 1000;
+let _idleTimer = null;
+function resetIdleTimer(){
+  if (_idleTimer) clearTimeout(_idleTimer);
+  if (!GAME.player) return;
+  _idleTimer = setTimeout(autoLogoutOnIdle, IDLE_LOGOUT_MS);
+}
+async function autoLogoutOnIdle(){
+  if (!GAME.player) return;
+  try { toast('10분간 활동이 없어 자동 로그아웃됩니다.'); } catch(e){}
+  // 랭킹 등록 상태면 자리 박탈
+  if (GAME.ranking && GAME.ranking.myRank >= 1){
+    try { demoteFromRank(); } catch(e){ console.warn('idle demote', e); }
+  }
+  try { await cloudSaveNow(); } catch(e){}
+  await cloudSignOut();
+  GAME.player = null;
+  GAME.myDeck = Array(15).fill(BASIC_ATTACK);
+  GAME.inventory = [];
+  setCombatMode(false);
+  showPage('login');
+  const lb = document.getElementById('logoutBtn');
+  if (lb) lb.style.display = 'none';
+  alert('10분간 활동이 없어 자동 로그아웃되었습니다.\n다시 로그인해 주세요.');
+}
+// 사용자 활동 감지 — 한 번이라도 발생하면 타이머 재시작
+['mousedown','mousemove','keydown','touchstart','wheel','scroll','click'].forEach(ev => {
+  document.addEventListener(ev, resetIdleTimer, { passive: true });
+});
+
 async function doLogout(){
-  if (!confirm('로그아웃 하시겠습니까?\n(저장된 데이터는 클라우드에 그대로 유지됩니다)')) return;
+  if (!confirm('로그아웃 하시겠습니까?\n(저장된 데이터는 클라우드에 그대로 유지됩니다.\n랭킹에 등록되어 있다면 로그아웃 시 랭킹에서 사라집니다.)')) return;
+  if (_idleTimer){ clearTimeout(_idleTimer); _idleTimer = null; }
+  // 본인이 랭킹에 등록되어 있다면 자리에서 빠짐 — 빈 자리는 Lv1 NPC로 채움
+  if (GAME.player && GAME.ranking && GAME.ranking.myRank >= 1){
+    try { demoteFromRank(); } catch(e){ console.warn('logout demote', e); }
+  }
   // 디바운스된 클라우드 저장을 마저 확정
   try { await cloudSaveNow(); } catch(e){}
   await cloudSignOut();
@@ -6653,6 +6719,8 @@ function enterMain(){
   showPage('main');
   const lb = document.getElementById('logoutBtn');
   if (lb) lb.style.display = 'block';
+  // 비활성 자동 로그아웃 타이머 시작
+  resetIdleTimer();
   checkRankingReset();  // 랭킹 일일 리셋 체크
   checkRaidReset('dawn');
   checkRaidReset('mist');
@@ -7647,6 +7715,20 @@ function doDeleteSave(){
 }
 
 // ─── 부팅 ───
+// 0) 매 1분마다 랭킹 일일 리셋 체크 — 사용자가 자정을 페이지에 머문 채 넘겨도 자동 리셋
+setInterval(() => {
+  try {
+    if (GAME.player && GAME.ranking){
+      const before = GAME.ranking.lastResetDate;
+      checkRankingReset();
+      if (before !== GAME.ranking.lastResetDate){
+        try { renderSheet(); } catch(e){}
+        try { if (!$('content-rank').hidden) renderRankList(); } catch(e){}
+        try { saveGame(); } catch(e){}
+      }
+    }
+  } catch(e){ console.warn('[daily reset tick]', e); }
+}, 60 * 1000);
 // 1) 구버전 단일 슬롯 → 신버전 계정별 슬롯 마이그레이션
 migrateLegacySave();
 // 1-b) rr 계정 카드 일회성 초기화 (요청에 의함 — 한 번만 실행)
