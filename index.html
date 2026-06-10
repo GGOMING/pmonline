@@ -3200,12 +3200,15 @@ function raidEnd(result){
       bodyHtml = `<p style="color:#060;">🏆 잡몹 처치 성공!</p>
         <p>보상: <b>+${gold}G, +${xp}XP</b></p>
         <p>남은 잡몹: <b>${r.monsterCount}/99</b></p>`;
+      let raidMobLvUp = false;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
-        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level}</p>`;
+        raidMobLvUp = true;
+        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level} (HP·MP 완전 회복)</p>`;
       }
+      if (raidMobLvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
       if (r.monsterCount === 0){
         bodyHtml += `<p style="color:#a02050; font-size:14px;">⚡ 잡몹 정리 완료! 보스 단계 진입!</p>`;
         chatSys(`★ 공격대 보스 단계 진입! 최종 타격를 노려보세요.`);
@@ -3257,12 +3260,15 @@ function raidEnd(result){
         <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
         ${cardLine}
         <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${bossDef.hpMax}</p>`;
+      let raidBossLvUp = false;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
-        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level}</p>`;
+        raidBossLvUp = true;
+        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level} (HP·MP 완전 회복)</p>`;
       }
+      if (raidBossLvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
       chatSys(`★ 보스 ${bossDef.name} 처치! 최종 타격: ${p.name}님 🏆`);
     } else if (result === 'lose'){
       p.hp = 1;
@@ -4752,12 +4758,13 @@ function huntEnd(result){
       p.level++;
       p.xpUp += 1;
       lvUp = true;
-      huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 (메인 화면에서 분배)`, 'sys');
+      huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복`, 'sys');
       // Lv 26 도달 시 슬롯 11~15 해금 안내
       if (p.level === 26){
         chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다.`);
       }
     }
+    if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
     chatSys(`★ ${p.name}님이 ${m.name}을(를) 처치하셨습니다.`);
   } else if (outcome === 'lose'){
     lostGold = Math.floor(p.gold * 0.05);
