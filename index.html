@@ -2197,10 +2197,14 @@ function applySavePayload(d){
   if (!GAME.player.weapons) GAME.player.weapons = [];
   if (!GAME.player.armors)  GAME.player.armors  = [];
   if (!GAME.player.weapon || !GAME.player.weapon.name || GAME.player.weapon.name === '맨손'){
-    GAME.player.weapon = {name:'몽둥이',atkBonus:1,id:'basic_club'};
+    GAME.player.weapon = {name:'훈련용 목검',atkBonus:1,id:'basic_club'};
   }
   if (!GAME.player.armor || !GAME.player.armor.name || GAME.player.armor.name === '없음'){
     GAME.player.armor  = {name:'천 갑옷',defBonus:1,id:'basic_cloth'};
+  }
+  // 옛 '몽둥이' → '훈련용 목검' 마이그레이션
+  if (GAME.player.weapon.id === 'basic_club' && GAME.player.weapon.name === '몽둥이'){
+    GAME.player.weapon.name = '훈련용 목검';
   }
   return true;
 }
@@ -2327,10 +2331,13 @@ function loadGame(name){
     if (!GAME.player.weapons) GAME.player.weapons = [];
     if (!GAME.player.armors)  GAME.player.armors  = [];
     if (!GAME.player.weapon || !GAME.player.weapon.name || GAME.player.weapon.name === '맨손'){
-      GAME.player.weapon = {name:'몽둥이',atkBonus:1,id:'basic_club'};
+      GAME.player.weapon = {name:'훈련용 목검',atkBonus:1,id:'basic_club'};
     }
     if (!GAME.player.armor || !GAME.player.armor.name || GAME.player.armor.name === '없음'){
       GAME.player.armor  = {name:'천 갑옷',defBonus:1,id:'basic_cloth'};
+    }
+    if (GAME.player.weapon.id === 'basic_club' && GAME.player.weapon.name === '몽둥이'){
+      GAME.player.weapon.name = '훈련용 목검';
     }
     // 무기 type 필드 제거 (구버전 호환)
     if (GAME.player.weapon.type) delete GAME.player.weapon.type;
@@ -2483,32 +2490,33 @@ function exitHealToMain(){
 // ============================================================
 //   무기/방어구 상점 (영구 장비)
 // ============================================================
-// tier: 보스 드랍 등급 (hero/unique/rare/normal). shopHidden: 상점 미노출
+// tier: 보스 드랍 등급. dropRate: 보스 처치 시 % 확률 (× dmgRatio). shopHidden: 상점 미노출
 const WEAPONS = [
-  { id:'dagger',        name:'단도',         atkBonus:2,  price:100,    reqLv:1,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'bronze_sword',  name:'청동검',       atkBonus:3,  price:300,    reqLv:2,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'iron_sword',    name:'철제검',       atkBonus:5,  price:800,    reqLv:5,  tier:'normal', icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'steel_sword',   name:'강철검',       atkBonus:7,  price:1800,   reqLv:8,  tier:'normal', icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
-  { id:'iron_boomstick',name:'철제붐스틱',   atkBonus:8,  price:2500,   reqLv:10, tier:'normal', icon:'assets/wc3_icons/steelrangedweapons.png' },
-  { id:'long_bow',      name:'장궁',         atkBonus:9,  price:3200,   reqLv:12, tier:'normal', icon:'assets/wc3_icons/steelrangedweapons.png' },
-  { id:'wizard_wand',   name:'마법사의 완드',atkBonus:11, price:6500,   reqLv:18, tier:'rare',   icon:'assets/wc3_icons/staffofteleportation.gif' },
-  { id:'mithril_sword', name:'미스릴검',     atkBonus:12, price:8000,   reqLv:20, tier:'rare',   icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'great_sword',   name:'그레이트소드', atkBonus:15, price:14000,  reqLv:25, tier:'unique', icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'baren_sword',   name:'명검 비르겐',  atkBonus:18, price:20000,  reqLv:30, tier:'unique', icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'mythic_sword',  name:'신화의 검',    atkBonus:25, price:50000,  reqLv:40, tier:'hero', shopHidden:true, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'old_dagger',        name:'낡은 단도',                  atkBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.4, icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'bronze_glaive',     name:'청동 글레이브',              atkBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.0, icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'iron_spatha',       name:'철제 스파타',                atkBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/wc3_icons/steelmeleeweapons.png' },
+  { id:'steel_longsword',   name:'강철 롱소드',                atkBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
+  { id:'knight_sword',      name:'기사단의 의전검',            atkBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
+  { id:'gladius',           name:'글라디우스 히스파니엔시스',  atkBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'mithril_ascalon',   name:'미스릴 아스칼론',            atkBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'saint_elaha',       name:'성왕의 엘라하',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'lord_requiem',      name:'명왕의 레퀴엠',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'ancient_excalibur', name:'고대 군주의 엑스칼리버',     atkBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'divine_elaha',      name:'천신의 엘라하',              atkBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
 ];
 
 const ARMORS = [
-  { id:'leather',       name:'가죽갑옷',     defBonus:2,  price:300,   reqLv:2,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'scale',         name:'비늘갑옷',     defBonus:3,  price:600,   reqLv:3,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'chain',         name:'사슬갑옷',     defBonus:5,  price:1500,  reqLv:8,  tier:'normal', icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'steel_armor',   name:'강철갑옷',     defBonus:7,  price:3000,  reqLv:13, tier:'normal', icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'light_armor',   name:'경갑흥갑',     defBonus:8,  price:3500,  reqLv:15, tier:'normal', icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'plate',         name:'판금갑옷',     defBonus:10, price:5500,  reqLv:18, tier:'rare',   icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'mithril_armor', name:'미스릴방어구', defBonus:12, price:10000, reqLv:25, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'heavy_armor',   name:'중갑',         defBonus:15, price:15000, reqLv:30, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'holy_armor',    name:'신성 방어구',  defBonus:18, price:25000, reqLv:35, tier:'unique', icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'mythic_armor',  name:'천신의 갑옷',  defBonus:25, price:60000, reqLv:45, tier:'hero', shopHidden:true, icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'leather_guard',      name:'가죽 보호구',          defBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.9, icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'bronze_scale',       name:'청동 스케일 메일',     defBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.5, icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'iron_lamellar',      name:'철제 라멜라 아머',     defBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/wc3_icons/steelarmor.png' },
+  { id:'steel_hauberk',      name:'강철 하버크',          defBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/wc3_icons/arcanitearmor.png' },
+  { id:'knight_armor',       name:'기사단의 갑옷',        defBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/wc3_icons/arcanitearmor.png' },
+  { id:'lorica_segment',     name:'로리카 세그멘타타',    defBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'mithril_plate',      name:'미스릴 풀 플레이트',   defBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'saint_cuirass',      name:'성왕의 큐이라스',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'lord_cruor',         name:'명왕의 크루오르',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'ancient_brigandine', name:'고대 군주의 브리간딘', defBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'divine_fluted',      name:'천신의 플루티드 아머', defBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/wc3_icons/thoriumarmor.png' },
 ];
 
 function openWeaponShop(){
@@ -2661,7 +2669,7 @@ function equipWeapon(id){
   const idx = p.weapons.findIndex(x => x.id === id);
   if (idx < 0) return;
   const newW = p.weapons.splice(idx, 1)[0];
-  // 기존 장착 무기 → 보관함으로 (기본 몽둥이는 보관함에 안 들어감)
+  // 기존 장착 무기 → 보관함으로 (기본 훈련용 목검은 보관함에 안 들어감)
   if (p.weapon && p.weapon.id && p.weapon.id !== 'basic_club'){
     p.weapons.push({ id:p.weapon.id, name:p.weapon.name, atkBonus:p.weapon.atkBonus });
   }
@@ -2676,15 +2684,15 @@ function equipWeapon(id){
 function unequipWeapon(){
   const p = GAME.player;
   if (!p.weapon || !p.weapon.id || p.weapon.id === 'basic_club'){
-    toast('기본 몽둥이는 해제할 수 없습니다.');
+    toast('기본 훈련용 목검은 해제할 수 없습니다.');
     return;
   }
   p.weapons.push({ id:p.weapon.id, name:p.weapon.name, atkBonus:p.weapon.atkBonus });
-  p.weapon = { name:'몽둥이', atkBonus:1, id:'basic_club' };
+  p.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
   calcDerived(p);
   renderSheet();
   refreshWeaponShop();
-  $('wshop_msg').textContent = `✔ 무기 보관 — 기본 몽둥이 장착`;
+  $('wshop_msg').textContent = `✔ 무기 보관 — 기본 훈련용 목검 장착`;
   $('wshop_msg').className = 'heal-result warn';
   saveGame();
 }
@@ -3473,31 +3481,30 @@ function raidEnd(result){
       } else {
         cardLine = `<p style="color:#666;">카드 드랍 없음.</p>`;
       }
-      // 장비 드랍 (카드와 동일한 등급별 확률 구조)
-      let equipLine = '';
-      const eRoll = Math.random();
-      let equipTier = null;
-      if (eRoll < pHero) equipTier = 'hero';
-      else if (eRoll < pHero + pUnique) equipTier = 'unique';
-      else if (eRoll < pHero + pUnique + pRare) equipTier = 'rare';
-      else if (eRoll < pHero + pUnique + pRare + pNormal) equipTier = 'normal';
-      if (equipTier){
-        // 무기 vs 방어구 50:50
-        const isWeapon = Math.random() < 0.5;
-        const pool = (isWeapon ? WEAPONS : ARMORS).filter(it => it.tier === equipTier);
-        if (pool.length){
-          const item = pool[Math.floor(Math.random() * pool.length)];
-          if (isWeapon){
-            if (!p.weapons) p.weapons = [];
-            p.weapons.push({ id:item.id, name:item.name, atkBonus:item.atkBonus });
-            equipLine = `<p>⚔ 장비 드랍: <b>${item.name}</b> (+${item.atkBonus}, ${gradeKr(equipTier)})</p>`;
-          } else {
-            if (!p.armors) p.armors = [];
-            p.armors.push({ id:item.id, name:item.name, defBonus:item.defBonus });
-            equipLine = `<p>🛡 장비 드랍: <b>${item.name}</b> (+${item.defBonus}, ${gradeKr(equipTier)})</p>`;
-          }
-          chatSys(`★ ${p.name}님이 보스에게서 ${item.name}을(를) 획득했습니다!`);
+      // 장비 드랍 — 각 장비의 dropRate(%)에 dmgRatio를 곱해 누적 굴림
+      function _rollEquipDrop(pool, dmgRatio){
+        let roll = Math.random() * 100;
+        for (const item of pool){
+          const eff = (item.dropRate || 0) * dmgRatio;
+          if (roll < eff) return item;
+          roll -= eff;
         }
+        return null;
+      }
+      let equipLine = '';
+      const wDrop = _rollEquipDrop(WEAPONS, dmgRatio);
+      if (wDrop){
+        if (!p.weapons) p.weapons = [];
+        p.weapons.push({ id:wDrop.id, name:wDrop.name, atkBonus:wDrop.atkBonus });
+        equipLine += `<p>⚔ 무기 드랍: <b>${wDrop.name}</b> (+${wDrop.atkBonus}, ${gradeKr(wDrop.tier)})</p>`;
+        chatSys(`★ ${p.name}님이 보스에게서 ${wDrop.name}을(를) 획득했습니다!`);
+      }
+      const aDrop = _rollEquipDrop(ARMORS, dmgRatio);
+      if (aDrop){
+        if (!p.armors) p.armors = [];
+        p.armors.push({ id:aDrop.id, name:aDrop.name, defBonus:aDrop.defBonus });
+        equipLine += `<p>🛡 방어구 드랍: <b>${aDrop.name}</b> (+${aDrop.defBonus}, ${gradeKr(aDrop.tier)})</p>`;
+        chatSys(`★ ${p.name}님이 보스에게서 ${aDrop.name}을(를) 획득했습니다!`);
       }
       if (!equipLine) equipLine = `<p style="color:#666;">장비 드랍 없음.</p>`;
       bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossDef.name} 처치 최종 타격! 🏆🏆</p>
@@ -6063,7 +6070,7 @@ function newCharacter(name, comment, pw){
     level:1, xp:0, xpUp:1,
     hp:25, hpMax:26, mp:25, mpMax:25,
     str:5, dex:5, int:5, con:5,
-    weapon:{name:'몽둥이',atkBonus:1,id:'basic_club'},
+    weapon:{name:'훈련용 목검',atkBonus:1,id:'basic_club'},
     armor:{name:'천 갑옷',defBonus:1,id:'basic_cloth'},
     weapons:[],  // 보유 무기 인벤토리
     armors:[],   // 보유 방어구 인벤토리
@@ -6881,7 +6888,7 @@ async function loadAdminUsers(){
             hp: p.hp || 0, hpMax: p.hpMax || 0, mp: p.mp || 0, mpMax: p.mpMax || 0,
             str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
             gold: p.gold || 0,
-            weapon: p.weapon || { name:'몽둥이', atkBonus:1, id:'basic_club' },
+            weapon: p.weapon || { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
             armor:  p.armor  || { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
             weapons: p.weapons || [],
             armors: p.armors || [],
@@ -6931,7 +6938,7 @@ async function loadAdminUsers(){
       con: 5 + Math.floor(Math.random()*5),
       hp: 30, hpMax: 30, mp: 25, mpMax: 25,
       gold: Math.floor(Math.random()*5000),
-      weapon: { name:'몽둥이', atkBonus:1, id:'basic_club' },
+      weapon: { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
       armor: { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
       weapons: [], armors: [],
       myDeck: [], inventory: [],
@@ -7032,7 +7039,7 @@ function renderAdminEdit(){
 
     <div class="edit-row"><span class="lbl">장착 무기</span>
       <select id="ed_weapon" style="width:200px;">
-        <option value="basic_club">몽둥이 (+1)</option>
+        <option value="basic_club">훈련용 목검 (+1)</option>
         ${WEAPONS.map(w => `<option value="${w.id}" ${u.weapon && u.weapon.id === w.id ? 'selected' : ''}>${w.name} (+${w.atkBonus})</option>`).join('')}
       </select>
     </div>
@@ -7148,7 +7155,7 @@ async function adminSaveUser(){
   }
 
   const wId = $('ed_weapon').value;
-  if (wId === 'basic_club') u.weapon = { name:'몽둥이', atkBonus:1, id:'basic_club' };
+  if (wId === 'basic_club') u.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
   else {
     const w = WEAPONS.find(x => x.id === wId);
     if (w) u.weapon = { id:w.id, name:w.name, atkBonus:w.atkBonus };
@@ -7465,7 +7472,7 @@ function adminAddUser(){
     str:5, dex:5, int:5, con:5,
     hp:26, hpMax:26, mp:25, mpMax:25,
     gold:100,
-    weapon:{name:'몽둥이',atkBonus:1,id:'basic_club'},
+    weapon:{name:'훈련용 목검',atkBonus:1,id:'basic_club'},
     armor:{name:'천 갑옷',defBonus:1,id:'basic_cloth'},
     weapons:[], armors:[],
     myDeck:[], inventory:[],
