@@ -560,8 +560,8 @@
   /* ===== 무기/방어구 상점 ===== */
   .equip-list { padding:10px; max-height:380px; overflow-y:auto; }
   .equip-row {
-    display:grid; grid-template-columns:60px 1.2fr 1fr 1fr 0.8fr 100px;
-    align-items:center; gap:8px;
+    display:grid; grid-template-columns:52px 2.1fr 0.85fr 0.75fr 1fr 90px;
+    align-items:center; gap:6px;
     background:#fff; border:1px solid #aaa; padding:8px 10px; margin-bottom:4px;
     font-size:12px;
   }
@@ -569,10 +569,10 @@
   .equip-row.equipped { background:#e8f5e8; border-color:#9ccd9c; }
   .equip-row .ico { width:48px; height:48px; background:#000; }
   .equip-row .ico img { width:100%; height:100%; image-rendering:pixelated; }
-  .equip-row .nm { font-weight:bold; font-size:13px; color:#7E181E; }
-  .equip-row .bonus { color:#003a7a; font-weight:bold; }
-  .equip-row .price { color:#a02050; font-weight:bold; text-align:right; }
-  .equip-row .lv { color:#666; font-size:11px; }
+  .equip-row .nm { font-weight:bold; font-size:13px; color:#7E181E; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .equip-row .bonus { color:#003a7a; font-weight:bold; white-space:nowrap; }
+  .equip-row .price { color:#a02050; font-weight:bold; text-align:right; white-space:nowrap; }
+  .equip-row .lv { color:#666; font-size:11px; white-space:nowrap; }
   .equip-row button {
     padding:5px 10px; background:#2e53b2; color:#fff; border:0; cursor:pointer;
     font-size:11px; font-weight:bold;
