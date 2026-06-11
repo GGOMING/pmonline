@@ -6544,6 +6544,7 @@ async function autoLogoutOnIdle(){
     try { demoteFromRank(); } catch(e){ console.warn('idle demote', e); }
   }
   try { await cloudSaveNow(); } catch(e){}
+  await _teardownChat();
   await cloudSignOut();
   GAME.player = null;
   GAME.myDeck = Array(15).fill(BASIC_ATTACK);
@@ -6562,6 +6563,7 @@ async function autoLogoutOnIdle(){
 async function doLogout(){
   if (!confirm('로그아웃 하시겠습니까?\n(저장된 데이터는 클라우드에 그대로 유지됩니다.\n랭킹에 등록되어 있다면 로그아웃 시 랭킹에서 사라집니다.)')) return;
   if (_idleTimer){ clearTimeout(_idleTimer); _idleTimer = null; }
+  await _teardownChat();
   // 본인이 랭킹에 등록되어 있다면 자리에서 빠짐 — 빈 자리는 Lv1 NPC로 채움
   if (GAME.player && GAME.ranking && GAME.ranking.myRank >= 1){
     try { demoteFromRank(); } catch(e){ console.warn('logout demote', e); }
@@ -6742,40 +6744,109 @@ function enterMain(){
 }
 
 // ─── 채팅 ───
-function chat(nick, msg, cls=''){
+function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+// ─── 실시간 채팅 (Supabase Realtime) ───
+let _chatChannel = null;
+const _chatRendered = new Set();   // Realtime 중복 표시 방지 (id 기반)
+
+function _renderChatRow(row){
+  const msgsEl = document.getElementById('chatMsgs');
+  if (!msgsEl) return;
+  if (row.id && _chatRendered.has(row.id)) return;
+  if (row.id) _chatRendered.add(row.id);
   const d = document.createElement('div');
-  d.innerHTML = `<span class="nick ${cls}">${nick}:</span> <span class="msg">${escapeHtml(msg)}</span>`;
-  $('chatMsgs').appendChild(d);
-  $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+  if (row.kind === 'system'){
+    d.className = 'sys';
+    d.textContent = row.message;
+  } else {
+    const meCls = (GAME.player && row.nickname === GAME.player.name) ? 'me' : '';
+    d.innerHTML = `<span class="nick ${meCls}">${escapeHtml(row.nickname)}:</span> <span class="msg">${escapeHtml(row.message)}</span>`;
+  }
+  msgsEl.appendChild(d);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
 }
+
+function chat(nick, msg, cls=''){
+  // 호환용 즉시 표시 (id 없는 로컬 메시지)
+  const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
+  const d = document.createElement('div');
+  d.innerHTML = `<span class="nick ${cls}">${escapeHtml(nick)}:</span> <span class="msg">${escapeHtml(msg)}</span>`;
+  msgsEl.appendChild(d);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
+}
+
 function chatSys(msg){
+  // 클라우드 broadcast 우선 (fire-and-forget)
+  if (sb && GAME.player){
+    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind:'system' })
+      .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
+    return;
+  }
+  // 오프라인 fallback — 로컬만
+  const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
   const d = document.createElement('div');
   d.className = 'sys';
   d.textContent = msg;
-  $('chatMsgs').appendChild(d);
-  $('chatMsgs').scrollTop = $('chatMsgs').scrollHeight;
+  msgsEl.appendChild(d);
+  msgsEl.scrollTop = msgsEl.scrollHeight;
 }
-function escapeHtml(s){ return s.replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function sendChat(){
   const input = $('chatInput');
-  const msg = input.value.trim();
+  const msg = (input.value || '').trim();
   if (!msg) return;
-  chat(GAME.player.name, msg, 'me');
   input.value = '';
-  // 서버 연동 후 라이브 채팅 예정 (NPC 자동 응답 제거됨)
+  if (sb && GAME.player){
+    sb.from('chat_messages').insert({ nickname:GAME.player.name, message:msg, kind:'user' })
+      .then(({ error }) => {
+        if (error){
+          console.warn('[sendChat cloud]', error);
+          chat(GAME.player.name, msg + ' (전송 실패)', 'me');
+        }
+      });
+    return;
+  }
+  chat(GAME.player.name, msg, 'me');
 }
 
-function initChat(){
-  // 사용자 본인만 접속자 리스트에 표시
+async function initChat(){
   const myName = GAME.player ? GAME.player.name : '';
-  const users = myName ? [myName] : [];
-  $('chatUserList').innerHTML = users.map(u =>
-    `<span class="u">${u}</span>`
-  ).join('');
-  $('chatUsers').textContent = users.length;
-  // 채팅 메시지 영역 초기화 (서버 연동 예정 안내)
-  $('chatMsgs').innerHTML = '<div class="sys">★ 채팅·접속자 목록은 서버 연동 후 라이브로 반영됩니다.</div>';
+  $('chatUserList').innerHTML = myName ? `<span class="u">${escapeHtml(myName)}</span>` : '';
+  $('chatUsers').textContent = myName ? 1 : 0;
+  $('chatMsgs').innerHTML = '';
+  _chatRendered.clear();
+
+  if (!sb){
+    $('chatMsgs').innerHTML = '<div class="sys">★ 오프라인 모드 — 채팅은 로컬에만 표시됩니다.</div>';
+    return;
+  }
+  // 1) 최근 50개 메시지 가져오기 (오래된 → 최신 순)
+  try {
+    const { data, error } = await sb.from('chat_messages')
+      .select('id, nickname, message, kind, created_at')
+      .order('created_at', { ascending: false }).limit(50);
+    if (!error && Array.isArray(data)){
+      data.reverse().forEach(_renderChatRow);
+    }
+  } catch(e){ console.warn('[initChat fetch]', e); }
+
+  // 2) 기존 채널 정리 후 신규 구독
+  try {
+    if (_chatChannel){ await sb.removeChannel(_chatChannel); _chatChannel = null; }
+  } catch(e){}
+  _chatChannel = sb.channel('chat-room')
+    .on('postgres_changes',
+        { event: 'INSERT', schema: 'public', table: 'chat_messages' },
+        (payload) => _renderChatRow(payload.new))
+    .subscribe();
+}
+
+async function _teardownChat(){
+  if (sb && _chatChannel){
+    try { await sb.removeChannel(_chatChannel); } catch(e){}
+    _chatChannel = null;
+  }
 }
 
 // ─── 공격대 타이머 (메인 화면에서 작동) ───
