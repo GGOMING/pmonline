@@ -3587,7 +3587,9 @@ async function raidEnd(result){
     if (sb && dealtTotal > 0){
       try {
         const { data: dmgRows, error } = await sb.rpc('raid_deal_damage', { p_damage: dealtTotal });
-        console.log('[raid_deal_damage]', { sent: dealtTotal, error, dmgRows });
+        console.log('[raid_deal_damage] sent=' + dealtTotal,
+                    'error=', error ? JSON.stringify(error) : 'null',
+                    'data=', dmgRows ? JSON.stringify(dmgRows) : 'null');
         if (error){
           toast('보스 데미지 동기화 실패: ' + (error.message || error));
         } else if (Array.isArray(dmgRows) && dmgRows.length > 0){
