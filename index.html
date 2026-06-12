@@ -336,6 +336,12 @@
   .menubar td.row3 { background:#E0F0FF; }
   .menubar td.row3:hover { background:#FFFF99; }
   .menubar td.row2 small { display:block; font-size:10px; color:#666; }
+  /* 수행 버튼 강조 — 다른 메뉴보다 크게 */
+  .menubar td.menu-hunt {
+    background:#FFE0B0; font-size:18px; font-weight:bold; color:#7E181E;
+    padding:14px 6px; text-shadow:1px 1px 0 #fff;
+  }
+  .menubar td.menu-hunt:hover { background:#FFD080; }
 
   /* 하단 정보 */
   .infoline {
@@ -1098,29 +1104,24 @@
 
       <div class="menubar">
         <table><tr>
-          <td onclick="openHunt()">수행</td>
           <td onclick="openHeal()">회복의 샘물</td>
           <td onclick="openCardShop()">카드샵</td>
+          <td class="menu-hunt" onclick="openHunt()">수행</td>
           <td onclick="openWeaponShop()">무기상점</td>
           <td onclick="openArmorShop()">방어구상점</td>
-          <td onclick="openTrain()">훈련소</td>
         </tr></table>
         <table><tr>
-          <td class="row2" onclick="openRank()">랭킹전순위</td>
+          <td class="row2" onclick="openTrain()">훈련소</td>
           <td class="row2" onclick="openRank()">랭킹전</td>
-          <td class="row2" onclick="openRaid('dawn')">공격대<small>(새벽의언덕)</small></td>
-          <td class="row2" onclick="openRaid('mist')">공격대<small>(안개의숲)</small></td>
-        </tr></table>
-        <table><tr>
-          <td class="row3" onclick="openProfilePage()">프로필 관리</td>
-          <td class="row3" onclick="todo('여전 카페')">여전 카페</td>
+          <td class="row2" onclick="openActiveRaid()">공격대</td>
+          <td class="row2" onclick="openProfilePage()">프로필 관리</td>
+          <td class="row2" onclick="todo('여신전쟁 카페')">여신전쟁 카페</td>
         </tr></table>
       </div>
 
       <div class="infoline">
         현재 랭킹 : <b id="myRank">0</b> 위<br>
-        공격대 (새벽의언덕) 남은시간 <b id="raid_dawn_time">958</b> , 남은 몬스터 <b id="raid_dawn_mon">93</b><br>
-        공격대 (안개의숲)   남은시간 <span class="raid-close" id="raid_mist_time">Close</span> , 남은 몬스터 <b id="raid_mist_mon">86</b>
+        공격대 <b id="raid_active_label">-</b> 남은시간 <b id="raid_active_time">--:--:--</b> , 남은 몬스터 <b id="raid_active_mon">-</b>
       </div>
     </div>
 
@@ -3157,26 +3158,37 @@ function simulateRaidProgress(raidKey){
 }
 const RAND_NPC_NAMES = ['Scandal','Idgun','더울이','로보스팟','반지요정','선의기운','아그네시카','세이비아','머할려구','카드소'];
 
-// 메인 화면 raid 정보 갱신
+// 메인 화면 raid 정보 갱신 — 활성 공격대 한 줄만 표시
 function updateRaidUI(){
-  for (const key of ['dawn','mist']){
-    const r = GAME.raid[key];
-    if (!r.sessionStart) continue;
-    const remainMs = (r.sessionStart + 6*3600*1000) - Date.now();
-    const remainSec = Math.max(0, Math.floor(remainMs / 1000));
-    const h = Math.floor(remainSec / 3600);
-    const m = Math.floor((remainSec % 3600) / 60);
-    const s = remainSec % 60;
-    const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-    const tEl = $('raid_'+key+'_time');
-    const mEl = $('raid_'+key+'_mon');
-    if (tEl) tEl.textContent = timeStr;
-    if (mEl){
-      if (r.bossDefeated) mEl.textContent = '0 (보스 처치 완료)';
-      else if (r.monsterCount === 0) mEl.textContent = `0 / 보스 ${r.bossHp}/${r.bossHpMax}`;
-      else mEl.textContent = r.monsterCount;
-    }
+  const active = GAME.raid.activeKey || 'dawn';
+  const r = GAME.raid[active];
+  const labelEl = $('raid_active_label');
+  const timeEl  = $('raid_active_time');
+  const monEl   = $('raid_active_mon');
+  if (labelEl) labelEl.textContent = active === 'dawn' ? '(새벽의 언덕)' : '(안개의 숲)';
+  if (!r || !r.sessionStart){
+    if (timeEl) timeEl.textContent = '--:--:--';
+    if (monEl) monEl.textContent = '-';
+    return;
   }
+  const remainMs = (r.sessionStart + 6*3600*1000) - Date.now();
+  const remainSec = Math.max(0, Math.floor(remainMs / 1000));
+  const h = Math.floor(remainSec / 3600);
+  const m = Math.floor((remainSec % 3600) / 60);
+  const s = remainSec % 60;
+  if (timeEl) timeEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  if (monEl){
+    if (r.bossDefeated) monEl.textContent = '0 (보스 처치 완료)';
+    else if (r.monsterCount === 0) monEl.textContent = `0 / 보스 ${r.bossHp}/${r.bossHpMax}`;
+    else monEl.textContent = r.monsterCount;
+  }
+}
+
+// 메인 메뉴의 공격대 버튼 — 활성 raid로 자동 진입
+async function openActiveRaid(){
+  if (sb){ await loadRaidFromCloud(); }
+  const key = GAME.raid.activeKey || 'dawn';
+  await openRaid(key);
 }
 
 async function openRaid(raidKey){
