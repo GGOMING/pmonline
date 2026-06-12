@@ -1888,6 +1888,9 @@
 const $ = id => document.getElementById(id);
 const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 
+// 개구리 변신 portrait — 개구리만들기 카드 그림 그대로
+const FROG_PORTRAIT_URL = 'assets/pmcards/rare_125.png';
+
 // ─── 카드 풀 (pmlist2.jpg Ver.12/04/13 기반) ───
 const CARDS = [
   // 기본공격 (게임 시작 시 모든 슬롯 기본값)
@@ -2016,7 +2019,7 @@ const CARDS = [
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'자신의 레벨 × 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 적을 3턴간 행동불능 (개구리)', fx:{type:'cc',turns:3,chance:0.90} },
+  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 적을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.90,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5회 5-10 랜덤데미지 (방어력 무시, 소환의식 없음)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'30-80 랜덤 데미지 (효과 미정)', fx:{type:'dmg',min:30,max:80} },
@@ -3304,10 +3307,15 @@ function startRaidMobBattle(){
   raidLog(`⚔ ${monster.name} 등장! 잡몹 처치 시 카운트가 -1 됩니다.`, 'sys');
 }
 
-function startRaidBossBattle(){
+async function startRaidBossBattle(){
   const raidKey = GAME.currentRaid;
+  // 진입 직전에 클라우드 최신 boss_hp를 한 번 더 fetch (다른 사용자 누적 데미지 반영)
+  if (sb){
+    try { await loadRaidFromCloud(); } catch(e){ console.warn('[startRaidBoss reload]', e); }
+  }
   const r = GAME.raid[raidKey];
   const bossDef = RAID_BOSSES[raidKey].find(b => b.id === r.bossId);
+  console.log('[raid boss] start with hp', r.bossHp, '/', r.bossHpMax, 'defeated:', r.bossDefeated);
   // 보스는 누적 HP 유지 (r.bossHp 사용)
   const boss = {
     id: bossDef.id,
@@ -3381,8 +3389,8 @@ function renderRaidBattle(){
   if (!c) return;
   const m = c.monster;
   $('raid_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
-  $('rd_name').textContent = m.name;
-  $('rd_portrait').src = 'assets/wc3_icons/' + monsterIconFile(m);
+  $('rd_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
+  $('rd_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : ('assets/wc3_icons/' + monsterIconFile(m));
   $('rd_portrait').alt = m.name;
   $('rd_level').textContent = m.level;
   $('rd_str').textContent = m.str;
@@ -3575,16 +3583,23 @@ async function raidEnd(result){
     // 보스 모드 — 클라우드 RPC에 누적 데미지 위임
     const dealtTotal = c.statsMyDmg;
     let cloudKilled = false;
+    let cloudOk = false;
     if (sb && dealtTotal > 0){
       try {
         const { data: dmgRows, error } = await sb.rpc('raid_deal_damage', { p_damage: dealtTotal });
-        if (!error && Array.isArray(dmgRows) && dmgRows.length > 0){
+        console.log('[raid_deal_damage]', { sent: dealtTotal, error, dmgRows });
+        if (error){
+          toast('보스 데미지 동기화 실패: ' + (error.message || error));
+        } else if (Array.isArray(dmgRows) && dmgRows.length > 0){
           const row = dmgRows[0];
           r.bossHp = row.boss_hp;
           cloudKilled = row.killed === true;
+          cloudOk = true;
         }
       } catch(e){ console.warn('[raid_deal_damage]', e); }
-    } else {
+    }
+    if (!cloudOk){
+      // 클라우드 동기화 실패 또는 dealt=0 → 로컬 계산값 fallback
       r.bossHp = Math.max(0, m.hp);
     }
     const bossName = (RAID_BOSSES[c.raidKey].find(b => b.id === r.bossId) || {}).name || '보스';
@@ -3651,7 +3666,14 @@ function exitRaid(){
   GAME.raidCombat = null;
   GAME.currentRaid = null;
   setCombatMode(false);
+  // raid sub-pane을 lobby 상태로 reset (다음 진입 시 깨끗하게)
+  if ($('raid-lobby'))  $('raid-lobby').hidden  = false;
+  if ($('raid-battle')) $('raid-battle').hidden = true;
+  if ($('raid-result')) $('raid-result').hidden = true;
   showContent('main');
+  try { renderSheet(); } catch(e){}
+  try { renderDeck(); } catch(e){}
+  try { updateRaidUI(); } catch(e){}
 }
 
 // 공격대 결과창에서 같은 raid 한 번 더 도전
@@ -3673,6 +3695,9 @@ function exitRaidToHeal(){
   GAME.raidCombat = null;
   GAME.currentRaid = null;
   setCombatMode(false);
+  if ($('raid-lobby'))  $('raid-lobby').hidden  = false;
+  if ($('raid-battle')) $('raid-battle').hidden = true;
+  if ($('raid-result')) $('raid-result').hidden = true;
   openHeal();
 }
 
@@ -4489,8 +4514,8 @@ function renderHuntBattle(){
   const p = GAME.player;
   $('hunt_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
 
-  $('m_name').textContent = m.name;
-  $('m_portrait').src = 'assets/wc3_icons/' + monsterIconFile(m);
+  $('m_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
+  $('m_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : ('assets/wc3_icons/' + monsterIconFile(m));
   $('m_portrait').alt = m.name;
   $('m_level').textContent = m.level;
   $('m_str').textContent = m.str + (c.monBuffs.str?` (${c.monBuffs.str>0?'+':''}${c.monBuffs.str})`:'');
@@ -4655,6 +4680,7 @@ function _ensureCombatExt(c){
   c.mySelfDots ||= [];  c.monSelfDots ||= [];
   c.castedByMe ||= []; c.castedByMon ||= [];
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
+  c.myFrog ||= 0; c.monFrog ||= 0;
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -4720,6 +4746,7 @@ function _buildCombatCtx(kind, caster){
     clearTargReflect(){ if (isP) c.monReflect = null; else c.myReflect = null; },
     getCastDouble(){ return isP ? c.myDoubleCastReady : c.monDoubleCastReady; },
     setCastDouble(v){ if (isP) c.myDoubleCastReady = v; else c.monDoubleCastReady = v; },
+    setTargFrog(turns){ if (isP) c.monFrog = Math.max(c.monFrog, turns); else c.myFrog = Math.max(c.myFrog, turns); },
   };
 }
 function _addTurnBuff(buffs, turnBuffs, stat, value, turns){
@@ -4981,7 +5008,12 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'cc'){
       ctx.addTargStun(fx.turns);
-      ctx.log(`  ✱ ${ctx.targName} ${fx.turns}턴 행동불능`, ctx.castLogCls);
+      if (fx.frog && ctx.setTargFrog){
+        ctx.setTargFrog(fx.turns);
+        ctx.log(`  🐸 ${ctx.targName}가 ${fx.turns}턴간 개구리로 변신!`, ctx.castLogCls);
+      } else {
+        ctx.log(`  ✱ ${ctx.targName} ${fx.turns}턴 행동불능`, ctx.castLogCls);
+      }
       return;
     }
     if (t === 'selfCc'){
@@ -5157,6 +5189,9 @@ function processCombatTicks(kind){
   // 반사막 감소 (턴 기반만; hits 기반은 doDmg에서 소비)
   if (c.myReflect && c.myReflect.turns != null){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (c.monReflect && c.monReflect.turns != null){ c.monReflect.turns--; if (c.monReflect.turns<=0) c.monReflect = null; }
+  // 개구리 변신 카운터 감소
+  if (c.myFrog && c.myFrog > 0){ c.myFrog--; if (c.myFrog === 0) log(`  🐸 → 사람 모습으로 돌아왔습니다.`, 'sys'); }
+  if (c.monFrog && c.monFrog > 0){ c.monFrog--; if (c.monFrog === 0) log(`  🐸 → ${opp.name}이(가) 사람 모습으로 돌아왔습니다.`, 'sys'); }
 }
 
 // 행동불능 체크 — true 반환 시 stun 카운터 1 소비
@@ -5183,7 +5218,7 @@ function huntProcessTicks(){ processCombatTicks('hunt'); }
 // ───── 훈련소 (Train) 어댑터: applyCardEffect 통합 사용 ─────
 function _ensureTrainExt(){
   const c = GAME.trainCombat; if (!c) return;
-  c.myTurnBuffs ||= []; c.myMpHots ||= []; c.myStun ||= 0; c.myReflect ||= null; c.mySelfDots ||= [];
+  c.myTurnBuffs ||= []; c.myMpHots ||= []; c.myStun ||= 0; c.myReflect ||= null; c.mySelfDots ||= []; c.myFrog ||= 0; c.monFrog ||= 0;
   c.castedByMe ||= [];
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   const o = c.opp;
@@ -5224,6 +5259,7 @@ function _buildTrainCtx(caster){
     clearTargReflect(){ if (isMe) opp.reflect = null; else c.myReflect = null; },
     getCastDouble(){ return isMe ? c.myDoubleCastReady : c.monDoubleCastReady; },
     setCastDouble(v){ if (isMe) c.myDoubleCastReady = v; else c.monDoubleCastReady = v; },
+    setTargFrog(turns){ if (isMe) c.monFrog = Math.max(c.monFrog||0, turns); else c.myFrog = Math.max(c.myFrog||0, turns); },
   };
 }
 function isTrainStunned(caster){
