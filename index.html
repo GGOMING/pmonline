@@ -336,9 +336,9 @@
   .menubar td.row3 { background:#E0F0FF; }
   .menubar td.row3:hover { background:#FFFF99; }
   .menubar td.row2 small { display:block; font-size:10px; color:#666; }
-  /* 수행 버튼 — 주황색 배경 */
-  .menubar td.menu-hunt { background:#FF9933; color:#000; }
-  .menubar td.menu-hunt:hover { background:#FFB050; }
+  /* 수행 버튼 — 파스텔 살구 톤 */
+  .menubar td.menu-hunt { background:#FFCC99; color:#000; }
+  .menubar td.menu-hunt:hover { background:#FFE0B8; }
 
   /* 하단 정보 */
   .infoline {
@@ -2009,16 +2009,16 @@ const CARDS = [
 
   // ───── 유니크 카드 6종 ─────
   { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'(Str + 공격) x3', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
-  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1-10 랜덤데미지 x8 / 1-10 랜덤회복 x8', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10} },
+  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1-10 랜덤데미지 x8 / 1-10 랜덤회복 x8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
   { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'(Int + 공격) x3 / Int만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
   { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'(Dex + 공격) x3', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
-  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 20-40 랜덤 데미지 (10-20 × 2회) (소환의식 없음)', fx:{type:'dot',turns:10,min:20,max:40} },
+  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 20-40 랜덤 데미지 (방어력 무시, 소환의식 없음)', fx:{type:'dot',turns:10,min:20,max:40} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'자신의 레벨 × 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'25% 확률로 적을 3턴간 행동불능 (개구리)', fx:{type:'cc',turns:3,chance:0.25} },
+  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 적을 3턴간 행동불능 (개구리)', fx:{type:'cc',turns:3,chance:0.90} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
-  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'4회 5-10 랜덤데미지 (소환의식 없음)', fx:{type:'dmgHits',min:5,max:10,hits:4} },
+  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5회 5-10 랜덤데미지 (방어력 무시, 소환의식 없음)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'30-80 랜덤 데미지 (효과 미정)', fx:{type:'dmg',min:30,max:80} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'Str/Dex/Int/Con +10 / 무기 +10 / 방어구 +10', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
@@ -4798,8 +4798,18 @@ function applyCardEffect(card, ctx){
     if (t === 'dmgHits'){
       const doesDmg = (fx.max || 0) > 0;
       let totalHeal = 0;
+      // ignoreDef: 방어력 무시 — 굴린 raw 값을 그대로 적용
+      function doDmgRaw(raw){
+        const dmg = Math.max(1, Math.floor(raw));
+        ctx.targObj.hp -= dmg;
+        ctx.addDmg(dmg);
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시)</span>`, ctx.castLogCls);
+      }
       for (let i = 0; i < fx.hits; i++){
-        if (doesDmg) doDmg(rnd(fx.min, fx.max));
+        if (doesDmg){
+          const raw = rnd(fx.min, fx.max);
+          if (fx.ignoreDef) doDmgRaw(raw); else doDmg(raw);
+        }
         if (fx.healMin != null){
           const h = rnd(fx.healMin, fx.healMax);
           ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + h);
