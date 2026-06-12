@@ -2426,10 +2426,11 @@ function showContent(name){
 
 // ─── 회복의 샘물 ───
 function calcHealCost(){
-  // 회복료: 깎인 HP+MP의 10% (최소 5G, 최대 20G, 풀피면 0)
+  // 회복료: 깎인 HP+MP의 10% (최소 5G, 최대 20G). 풀피거나 보유 골드 100G 미만이면 무료.
   const p = GAME.player;
   const lost = (p.hpMax - p.hp) + (p.mpMax - p.mp);
   if (lost === 0) return 0;
+  if ((p.gold || 0) < 100) return 0;
   return Math.min(20, Math.max(5, Math.ceil(lost * 0.1)));
 }
 function openHeal(){
@@ -2468,7 +2469,6 @@ function doHeal(){
   renderSheet();
   updateHealUI();
   setHealMsg(`✔ 샘물의 힘으로 HP/MP가 완전히 회복되었습니다. (-${cost} G)`, 'ok');
-  chatSys(`★ ${p.name}님이 회복의 샘물에서 회복하셨습니다.`);
   // 방어전 트리거 굴림 — 랭킹 5위 이상(1~5위)에게만 5% 확률
   const myRank = (GAME.ranking && GAME.ranking.myRank) || 0;
   if (myRank >= 1 && myRank <= 5 && Math.random() < 0.05){
@@ -3037,11 +3037,105 @@ function getCurrentSessionStart(){
   return sessionStart.getTime();
 }
 
-function checkRaidReset(raidKey){
+// ─── 공격대 클라우드 (실시간 공유) ───
+let _raidChannel = null;
+
+async function loadRaidFromCloud(){
+  if (!sb) return false;
+  const sessionStart = getCurrentSessionStart();
+  try { await sb.rpc('raid_check_reset', { p_session_start: sessionStart }); }
+  catch(e){ console.warn('[raid_check_reset]', e); }
+  try {
+    const { data, error } = await sb.from('raid_state').select('*').eq('id', 1).maybeSingle();
+    if (error || !data){ console.warn('[loadRaid]', error); return false; }
+    const active = data.active_key;
+    const other  = active === 'dawn' ? 'mist' : 'dawn';
+    GAME.raid.activeKey = active;
+    GAME.raid[active] = {
+      sessionStart: Number(data.session_start),
+      monsterCount: data.monster_count,
+      bossId:       data.boss_id,
+      bossHpMax:    data.boss_hp_max,
+      bossHp:       data.boss_hp,
+      bossDefeated: data.boss_defeated,
+      lastKiller:   data.last_killer,
+      closed:       false,
+    };
+    GAME.raid[other] = {
+      sessionStart: Number(data.session_start),
+      monsterCount: 99, bossId:null, bossHpMax:10000, bossHp:10000,
+      bossDefeated:false, lastKiller:null,
+      closed: true,
+    };
+    return true;
+  } catch(e){ console.warn('[loadRaid]', e); return false; }
+}
+
+async function subscribeRaid(){
+  if (!sb) return;
+  if (_raidChannel){ try { await sb.removeChannel(_raidChannel); } catch(e){} _raidChannel = null; }
+  _raidChannel = sb.channel('raid-state')
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'raid_state' },
+      async () => {
+        await loadRaidFromCloud();
+        try { updateRaidUI(); } catch(e){}
+        try { if ($('content-raid') && !$('content-raid').hidden) renderRaidLobby(); } catch(e){}
+      })
+    .subscribe();
+}
+
+async function _teardownRaid(){
+  if (sb && _raidChannel){ try { await sb.removeChannel(_raidChannel); } catch(e){} _raidChannel = null; }
+}
+
+async function claimRaidRewards(){
+  if (!sb || !GAME.player) return;
+  try {
+    const { data, error } = await sb.rpc('raid_claim_rewards');
+    if (error || !Array.isArray(data) || data.length === 0) return;
+    const lines = [];
+    for (const row of data){
+      if (row.kind === 'card'){
+        const card = CARDS.find(c => c.id === row.item_id);
+        if (card){
+          GAME.inventory.push(card);
+          lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
+        }
+      } else if (row.kind === 'weapon'){
+        const w = WEAPONS.find(x => x.id === row.item_id);
+        if (w){
+          if (!GAME.player.weapons) GAME.player.weapons = [];
+          GAME.player.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
+          lines.push(`⚔ 무기 — ${w.name} (+${w.atkBonus})`);
+        }
+      } else if (row.kind === 'armor'){
+        const a = ARMORS.find(x => x.id === row.item_id);
+        if (a){
+          if (!GAME.player.armors) GAME.player.armors = [];
+          GAME.player.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+          lines.push(`🛡 방어구 — ${a.name} (+${a.defBonus})`);
+        }
+      }
+    }
+    if (lines.length > 0){
+      saveGame();
+      try { renderSheet(); } catch(e){}
+      try { renderDeck(); } catch(e){}
+      setTimeout(() => alert(`📦 공격대 보상 ${lines.length}건 수령\n\n${lines.join('\n')}`), 200);
+    }
+  } catch(e){ console.warn('[claimRaidRewards]', e); }
+}
+
+async function checkRaidReset(raidKey){
+  if (sb){
+    await loadRaidFromCloud();
+    return;
+  }
+  // 오프라인 fallback (로컬)
   const r = GAME.raid[raidKey];
   const currentSession = getCurrentSessionStart();
   if (r.sessionStart !== currentSession){
-    // 새 세션 시작
     const bossList = RAID_BOSSES[raidKey];
     const boss = bossList[Math.floor(Math.random() * bossList.length)];
     r.sessionStart = currentSession;
@@ -3085,15 +3179,24 @@ function updateRaidUI(){
   }
 }
 
-function openRaid(raidKey){
+async function openRaid(raidKey){
   const p = GAME.player;
   const minLv = raidKey === 'dawn' ? 15 : 25;
   if (p.level < minLv){
     toast(`공격대(${raidKey==='dawn'?'새벽의언덕':'안개의숲'})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
     return;
   }
-  checkRaidReset(raidKey);
-  simulateRaidProgress(raidKey);
+  if (sb){
+    await loadRaidFromCloud();
+    await subscribeRaid();
+    if (GAME.raid.activeKey && GAME.raid.activeKey !== raidKey){
+      const cur = GAME.raid.activeKey === 'dawn' ? '새벽의 언덕' : '안개의 숲';
+      toast(`이번 세션은 ${cur} 공격대가 진행 중입니다.`);
+      return;
+    }
+  } else {
+    checkRaidReset(raidKey);
+  }
   GAME.currentRaid = raidKey;
   showContent('raid');
   $('raid-lobby').hidden = false;
@@ -3397,7 +3500,7 @@ function raidFleeToMain(){
   showContent('main');
 }
 
-function raidEnd(result){
+async function raidEnd(result){
   const c = GAME.raidCombat;
   if (!c || c.finished) return;
   c.finished = true;
@@ -3416,15 +3519,24 @@ function raidEnd(result){
       else outcome = 'win';
     }
     if (outcome === 'win'){
-      // 잡몹 카운트 차감
-      if (r.monsterCount > 0) r.monsterCount--;
+      // 잡몹 카운트 차감 — 클라우드 RPC (참여자 등록 포함)
+      let remain = r.monsterCount;
+      if (sb){
+        try {
+          const { data, error } = await sb.rpc('raid_kill_mob');
+          if (!error && typeof data === 'number'){ remain = data; r.monsterCount = data; }
+        } catch(e){ console.warn('[raid_kill_mob]', e); }
+      } else {
+        if (r.monsterCount > 0) r.monsterCount--;
+        remain = r.monsterCount;
+      }
       const gold = m.gold + 50;
       const xp = m.xp + 30;
       p.gold += gold; p.xp += xp;
       raidLog(`🏆 잡몹 처치! +${gold}G, +${xp}XP`, 'sys');
       bodyHtml = `<p style="color:#060;">🏆 잡몹 처치 성공!</p>
         <p>보상: <b>+${gold}G, +${xp}XP</b></p>
-        <p>남은 잡몹: <b>${r.monsterCount}/99</b></p>`;
+        <p>남은 잡몹: <b>${remain}/99</b></p>`;
       let raidMobLvUp = false;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
@@ -3447,71 +3559,36 @@ function raidEnd(result){
       bodyHtml = `<p>도주 완료. 보상 없음.</p>`;
     }
   } else if (c.mode === 'boss'){
-    // 보스 모드
+    // 보스 모드 — 클라우드 RPC에 누적 데미지 위임
     const dealtTotal = c.statsMyDmg;
-    // 보스 HP를 입힌 데미지만큼 차감 (이미 m.hp는 차감됨 — r.bossHp에 반영)
-    r.bossHp = Math.max(0, m.hp);
+    let cloudKilled = false;
+    if (sb && dealtTotal > 0){
+      try {
+        const { data: dmgRows, error } = await sb.rpc('raid_deal_damage', { p_damage: dealtTotal });
+        if (!error && Array.isArray(dmgRows) && dmgRows.length > 0){
+          const row = dmgRows[0];
+          r.bossHp = row.boss_hp;
+          cloudKilled = row.killed === true;
+        }
+      } catch(e){ console.warn('[raid_deal_damage]', e); }
+    } else {
+      r.bossHp = Math.max(0, m.hp);
+    }
+    const bossName = (RAID_BOSSES[c.raidKey].find(b => b.id === r.bossId) || {}).name || '보스';
+    const goldReward = Math.floor(dealtTotal * 0.5);
+    const xpReward   = Math.floor(dealtTotal * 0.1);
 
-    if (result === 'boss_kill'){
-      // 보스 처치 (최종 타격!) — 누적 데미지 기반 보상 일괄 지급
+    if (result === 'boss_kill' || cloudKilled){
       r.bossDefeated = true;
       r.lastKiller = p.name;
-      const bossDef = RAID_BOSSES[c.raidKey].find(b => b.id === r.bossId);
-      const goldReward = Math.floor(dealtTotal * 0.5);
-      const xpReward = Math.floor(dealtTotal * 0.1);
       p.gold += goldReward;
       p.xp += xpReward;
-      // 카드 드랍: dmgRatio 비례 (영웅 0.1%, 유니크 1.0%, 레어 20.0%, 일반 28.9%, 50% 무드랍)
-      const dmgRatio = Math.min(1, dealtTotal / bossDef.hpMax);
-      const roll = Math.random();
-      const pHero   = 0.001 * dmgRatio;
-      const pUnique = 0.010 * dmgRatio;
-      const pRare   = 0.200 * dmgRatio;
-      const pNormal = 0.289 * dmgRatio;
-      let dropPool = null;
-      if (roll < pHero){ dropPool = CARDS.filter(card => card.grade === 'hero'); }
-      else if (roll < pHero + pUnique){ dropPool = CARDS.filter(card => card.grade === 'unique'); }
-      else if (roll < pHero + pUnique + pRare){ dropPool = CARDS.filter(card => card.grade === 'rare'); }
-      else if (roll < pHero + pUnique + pRare + pNormal){ dropPool = CARDS.filter(card => card.grade === 'normal' && card.id !== 'basic_atk'); }
-      let cardLine = '';
-      if (dropPool && dropPool.length){
-        const card = dropPool[Math.floor(Math.random() * dropPool.length)];
-        GAME.inventory.push(card);
-        cardLine = `<p>🎁 최종 타격 카드 획득: <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
-      } else {
-        cardLine = `<p style="color:#666;">카드 드랍 없음.</p>`;
-      }
-      // 장비 드랍 — 각 장비의 dropRate(%)에 dmgRatio를 곱해 누적 굴림
-      function _rollEquipDrop(pool, dmgRatio){
-        let roll = Math.random() * 100;
-        for (const item of pool){
-          const eff = (item.dropRate || 0) * dmgRatio;
-          if (roll < eff) return item;
-          roll -= eff;
-        }
-        return null;
-      }
-      let equipLine = '';
-      const wDrop = _rollEquipDrop(WEAPONS, dmgRatio);
-      if (wDrop){
-        if (!p.weapons) p.weapons = [];
-        p.weapons.push({ id:wDrop.id, name:wDrop.name, atkBonus:wDrop.atkBonus });
-        equipLine += `<p>⚔ 무기 드랍: <b>${wDrop.name}</b> (+${wDrop.atkBonus}, ${gradeKr(wDrop.tier)})</p>`;
-        chatSys(`★ ${p.name}님이 보스에게서 ${wDrop.name}을(를) 획득했습니다!`);
-      }
-      const aDrop = _rollEquipDrop(ARMORS, dmgRatio);
-      if (aDrop){
-        if (!p.armors) p.armors = [];
-        p.armors.push({ id:aDrop.id, name:aDrop.name, defBonus:aDrop.defBonus });
-        equipLine += `<p>🛡 방어구 드랍: <b>${aDrop.name}</b> (+${aDrop.defBonus}, ${gradeKr(aDrop.tier)})</p>`;
-        chatSys(`★ ${p.name}님이 보스에게서 ${aDrop.name}을(를) 획득했습니다!`);
-      }
-      if (!equipLine) equipLine = `<p style="color:#666;">장비 드랍 없음.</p>`;
-      bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossDef.name} 처치 최종 타격! 🏆🏆</p>
+      const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
+      const equipLine = '';
+      bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
         <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
         ${cardLine}
-        ${equipLine}
-        <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${bossDef.hpMax}</p>`;
+        <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
       let raidBossLvUp = false;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
@@ -3521,7 +3598,9 @@ function raidEnd(result){
         bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level} (HP·MP 완전 회복)</p>`;
       }
       if (raidBossLvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
-      chatSys(`★ 보스 ${bossDef.name} 처치! 최종 타격: ${p.name}님 🏆`);
+      chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆`);
+      // 본인 보상 즉시 수령 시도
+      if (sb){ setTimeout(() => claimRaidRewards(), 500); }
     } else if (result === 'lose'){
       p.hp = 1;
       bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP 1로 복구.</p>
@@ -3761,7 +3840,7 @@ function renderRankList(){
                                     : '<span style="color:#aaa; font-size:10px;">-</span>');
     html += `<tr class="${rowClass}">
       <td class="rk-num ${numCls}">${rank}위</td>
-      <td class="rk-name">${slot.name}${isMe?' ★':(slot.isNPC?'':' (유저)')}</td>
+      <td class="rk-name">${slot.name}${isMe?' ★':''}</td>
       <td style="text-align:center;">Lv ${slot.level}</td>
       <td class="rk-deck">${deckSummary}</td>
       <td class="rk-action">${actionBtn}</td>
@@ -4026,7 +4105,7 @@ function rankEnd(result){
       bodyHtml = `<p style="color:#060;">🏆 승리! <b>${c.targetRank}위</b>로 등록되었습니다.</p>
         ${rewardLine}
         <p>랭킹 보너스: <b>+${getRankBonus()} G</b> / 수행마다 자동 적용됩니다.</p>`;
-      chatSys(`★ ${p.name}님이 랭킹 ${c.targetRank}위에 등록되었습니다!${rewardCapped ? ' (보상 한도 도달)' : ` (경험치 +${expGained}, 골드 +${goldGained})`}`);
+      chatSys(`★ ${p.name}님이 랭킹 ${c.targetRank}위에 등록되었습니다!`);
     } else {
       bodyHtml = `<p style="color:#a00;">💀 패배... 랭킹 변동 없음</p>
         <p style="font-size:11px;color:#666;">팁: 회복의 샘물에서 회복 후 다시 도전하세요.</p>`;
@@ -4042,13 +4121,11 @@ function rankEnd(result){
         if (card){
           GAME.inventory.push(card);
           bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
-          chatSys(`★ ${p.name}님이 방어전 보너스로 ${card.name}[${gradeKr(card.grade)}]을(를) 획득했습니다.`);
         }
       }
       bodyHtml = `<p style="color:#060;">🛡 방어 성공! 랭킹 <b>${c.targetRank}위</b> 유지</p>
         ${rewardLine}
         ${bonusLine}`;
-      chatSys(`★ ${p.name}님이 ${m.name}의 도전을 방어해냈습니다.${rewardCapped ? ' (보상 한도 도달)' : ` (경험치 +${expGained}, 골드 +${goldGained})`}`);
     } else {
       // 방어 실패 — 랭킹 전체 초기화 (모든 슬롯을 Lv1 NPC로 새로 채움, 본인 미등록)
       // 일일 보상 한도는 패배해도 복원되지 않도록 보존
@@ -4057,7 +4134,6 @@ function rankEnd(result){
       if (typeof _keepRewards === 'number') GAME.ranking.rewardsLeft = _keepRewards;
       bodyHtml = `<p style="color:#a00;">💀 방어 실패... 랭킹이 전체 초기화되었습니다.</p>
         <p style="font-size:11px;color:#666;">모든 자리가 Lv1 NPC로 다시 채워졌습니다. 10위부터 다시 도전할 수 있습니다.</p>`;
-      chatSys(`★ ${p.name}님이 ${m.name}에게 패배해 랭킹이 초기화되었습니다.`);
     }
   }
   if (outcome === 'win'){
@@ -6654,6 +6730,7 @@ async function autoLogoutOnIdle(){
   try { await cloudSaveNow(); } catch(e){}
   await _teardownChat();
   await _teardownRanking();
+  await _teardownRaid();
   _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
@@ -6681,6 +6758,7 @@ async function doLogout(){
   // 디바운스된 클라우드 저장을 마저 확정
   try { await cloudSaveNow(); } catch(e){}
   await _teardownRanking();
+  await _teardownRaid();
   _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
@@ -6843,14 +6921,18 @@ function enterMain(){
   // 비활성 자동 로그아웃 타이머 시작
   resetIdleTimer();
   checkRankingReset();  // 랭킹 일일 리셋 체크 (async, fire-and-forget)
-  // 클라우드 랭킹 초기 로드 + Realtime 구독
+  // 클라우드 랭킹·공격대 초기 로드 + Realtime 구독 + 미수령 보상 수령
   if (sb){
     (async () => {
       try {
         await loadRankingFromCloud();
         await subscribeRanking();
+        await loadRaidFromCloud();
+        await subscribeRaid();
+        await claimRaidRewards();
         renderSheet();
-      } catch(e){ console.warn('rank init', e); }
+        try { updateRaidUI(); } catch(e){}
+      } catch(e){ console.warn('init cloud', e); }
     })();
   }
   checkRaidReset('dawn');
@@ -6972,11 +7054,15 @@ async function _teardownChat(){
 }
 
 // ─── 공격대 타이머 (메인 화면에서 작동) ───
+let _raidTickCount = 0;
 setInterval(()=>{
   if ($('pg-main').classList.contains('active')){
-    // 세션 리셋 + NPC 진행 시뮬레이션
-    checkRaidReset('dawn');
-    checkRaidReset('mist');
+    _raidTickCount++;
+    // 클라우드 모드에선 매 60초만 세션 리셋 RPC 호출 (Realtime이 변경분 전달)
+    if (!sb || _raidTickCount % 60 === 0){
+      checkRaidReset('dawn');
+      checkRaidReset('mist');
+    }
     simulateRaidProgress('dawn');
     simulateRaidProgress('mist');
     updateRaidUI();
