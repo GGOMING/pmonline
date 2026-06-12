@@ -336,12 +336,9 @@
   .menubar td.row3 { background:#E0F0FF; }
   .menubar td.row3:hover { background:#FFFF99; }
   .menubar td.row2 small { display:block; font-size:10px; color:#666; }
-  /* 수행 버튼 강조 — 다른 메뉴보다 크게 */
-  .menubar td.menu-hunt {
-    background:#FFE0B0; font-size:18px; font-weight:bold; color:#7E181E;
-    padding:14px 6px; text-shadow:1px 1px 0 #fff;
-  }
-  .menubar td.menu-hunt:hover { background:#FFD080; }
+  /* 수행 버튼 — 주황색 배경 */
+  .menubar td.menu-hunt { background:#FF9933; color:#000; }
+  .menubar td.menu-hunt:hover { background:#FFB050; }
 
   /* 하단 정보 */
   .infoline {
@@ -1387,8 +1384,9 @@
         <div class="raid-head" id="raid_result_title">결과</div>
         <div id="raid_result_body" style="padding:14px;font-size:13px;line-height:1.7;"></div>
         <div class="hunt-actions">
-          <button class="btn-go" onclick="goBackToRaidLobby()">로비로</button>
-          <button class="btn-back" onclick="exitRaid()">돌아가기</button>
+          <button class="btn-go" onclick="raidChallengeAgain()" style="background:#7E181E;">한 번 더</button>
+          <button class="btn-go" onclick="exitRaidToHeal()" style="background:#2e7d32;">💧 회복의 샘물</button>
+          <button class="btn-back" onclick="exitRaid()">메인으로</button>
         </div>
       </div>
     </div>
@@ -1607,9 +1605,9 @@
         <div style="padding:0 14px;font-size:11px;color:#666;font-weight:bold;">📜 전투 로그</div>
         <div class="train-log" id="huntResultLog" style="max-height:200px;margin:6px 14px;"></div>
         <div class="hunt-actions">
-          <button class="btn-go" onclick="huntAgain()">▶ 한 판 더</button>
+          <button class="btn-go" onclick="huntAgain()" style="background:#7E181E;">한 번 더</button>
           <button class="btn-go" onclick="exitHuntToHeal()" style="background:#2e7d32;">💧 회복의 샘물</button>
-          <button class="btn-back" onclick="exitHunt()">메인으로 돌아가기</button>
+          <button class="btn-back" onclick="exitHunt()">메인으로</button>
         </div>
       </div>
     </div>
@@ -3543,7 +3541,7 @@ async function raidEnd(result){
         remain = r.monsterCount;
       }
       const gold = m.gold + 50;
-      const xp = m.xp + 30;
+      const xp = m.xp + 15;
       p.gold += gold; p.xp += xp;
       raidLog(`🏆 잡몹 처치! +${gold}G, +${xp}XP`, 'sys');
       bodyHtml = `<p style="color:#060;">🏆 잡몹 처치 성공!</p>
@@ -3650,6 +3648,28 @@ function exitRaid(){
   GAME.currentRaid = null;
   setCombatMode(false);
   showContent('main');
+}
+
+// 공격대 결과창에서 같은 raid 한 번 더 도전
+async function raidChallengeAgain(){
+  if (!GAME.currentRaid){ exitRaid(); return; }
+  GAME.raidCombat = null;
+  setCombatMode(false);
+  $('raid-battle').hidden = true;
+  $('raid-result').hidden = true;
+  $('raid-lobby').hidden = false;
+  if (sb) await loadRaidFromCloud();
+  renderRaidLobby();
+  // 바로 도전
+  setTimeout(() => { try { raidChallenge(); } catch(e){ console.warn(e); } }, 200);
+}
+
+// 공격대 결과창에서 회복의 샘물로 이동
+function exitRaidToHeal(){
+  GAME.raidCombat = null;
+  GAME.currentRaid = null;
+  setCombatMode(false);
+  openHeal();
 }
 
 // ============================================================
@@ -4410,9 +4430,9 @@ function generateMonster(playerLv, tier){
     deck.push(pool[Math.floor(Math.random() * pool.length)]);
   }
 
-  // 보상
+  // 보상 (XP는 옛 공식의 약 50% 수준으로 조정 — 레벨업 속도 완화)
   const gold = Math.floor(mLv * (5 + Math.random() * 10));
-  const xp   = Math.floor(mLv * (8 + Math.random() * 5));
+  const xp   = Math.floor(mLv * (4 + Math.random() * 3));
 
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
@@ -5486,13 +5506,15 @@ function renderCardGrid(){
   // 모드별 카드 풀 결정
   let pool;
   if (_cardPickMode === 'my'){
-    // 내 덱 슬롯: 보유 카드 (중복 제거) + 기본공격
+    // 내 덱 슬롯: 보유 카드 (중복 제거 + 보유 수량) + 기본공격
+    const counts = {};
+    for (const c of GAME.inventory){ counts[c.id] = (counts[c.id]||0) + 1; }
     const uniqueIds = new Set();
     pool = [BASIC_ATTACK];
     for (const c of GAME.inventory){
       if (!uniqueIds.has(c.id)){
         uniqueIds.add(c.id);
-        pool.push(c);
+        pool.push({...c, _count: counts[c.id]});
       }
     }
   } else if (_cardPickMode === 'view'){
