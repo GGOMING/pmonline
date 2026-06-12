@@ -1337,7 +1337,7 @@
           <!-- 가운데: 로그 + 버튼 -->
           <div class="col-center">
             <div class="hunt-actions">
-              <button class="btn-go" onclick="raidNextTurn()">▶ 다음 턴</button>
+              <button class="btn-go" onclick="raidNextTurn()" id="raidNextBtn">▶ 다음 턴</button>
               <button class="btn-back" onclick="raidFleeToMain()">메인으로 돌아가기</button>
             </div>
             <div class="train-log" id="raidLog"></div>
@@ -1384,7 +1384,7 @@
         <div class="raid-head" id="raid_result_title">결과</div>
         <div id="raid_result_body" style="padding:14px;font-size:13px;line-height:1.7;"></div>
         <div class="hunt-actions">
-          <button class="btn-go" onclick="raidChallengeAgain()" style="background:#7E181E;">한 번 더</button>
+          <button class="btn-go" onclick="raidChallengeAgain()" id="raidAgainBtn" style="background:#7E181E;">한 번 더</button>
           <button class="btn-go" onclick="exitRaidToHeal()" style="background:#2e7d32;">💧 회복의 샘물</button>
           <button class="btn-back" onclick="exitRaid()">메인으로</button>
         </div>
@@ -1605,7 +1605,7 @@
         <div style="padding:0 14px;font-size:11px;color:#666;font-weight:bold;">📜 전투 로그</div>
         <div class="train-log" id="huntResultLog" style="max-height:200px;margin:6px 14px;"></div>
         <div class="hunt-actions">
-          <button class="btn-go" onclick="huntAgain()" style="background:#7E181E;">한 번 더</button>
+          <button class="btn-go" onclick="huntAgain()" id="huntAgainBtn" style="background:#7E181E;">한 번 더</button>
           <button class="btn-go" onclick="exitHuntToHeal()" style="background:#2e7d32;">💧 회복의 샘물</button>
           <button class="btn-back" onclick="exitHunt()">메인으로</button>
         </div>
@@ -3297,6 +3297,7 @@ function startRaidMobBattle(){
   $('raid-lobby').hidden = true;
   $('raid-battle').hidden = false;
   $('raid-result').hidden = true;
+  _autoFocusBtn('raidNextBtn');
   $('raid_battle_title').textContent = `공격대 잡몹 — ${monster.name} (Lv ${monster.level})`;
   if ($('raidLog')) $('raidLog').innerHTML = '';
   renderRaidBattle();
@@ -3342,6 +3343,7 @@ function startRaidBossBattle(){
   $('raid-lobby').hidden = true;
   $('raid-battle').hidden = false;
   $('raid-result').hidden = true;
+  _autoFocusBtn('raidNextBtn');
   $('raid_battle_title').textContent = `보스전 — ${boss.name} (시작 HP ${r.bossHp})`;
   if ($('raidLog')) $('raidLog').innerHTML = '';
   renderRaidBattle();
@@ -3444,6 +3446,7 @@ function raidNextTurn(){
   if (!checkRaidAlive()) return;
   renderSheet();
   renderRaidBattle();
+  _autoFocusBtn('raidNextBtn');
   if (c.turn >= c.maxTurns){ setTimeout(()=> raidEnd('time'), 500); }
 }
 
@@ -3629,6 +3632,7 @@ async function raidEnd(result){
   $('raid_result_body').innerHTML = bodyHtml;
   $('raid-battle').hidden = true;
   $('raid-result').hidden = false;
+  _autoFocusBtn('raidAgainBtn');
 }
 
 function goBackToRaidLobby(){
@@ -4468,6 +4472,7 @@ function openHunt(tier){
   calcDerived(p);
   showContent('hunt');
   $('hunt-battle').hidden = false;
+  _autoFocusBtn('huntNextBtn');
   $('hunt-result').hidden = true;
   if ($('huntLog')) $('huntLog').innerHTML = '';
   renderHuntBattle();
@@ -4601,6 +4606,7 @@ function huntNextTurn(){
 
   renderSheet();
   renderHuntBattle();
+  _autoFocusBtn('huntNextBtn');
 
   // 마지막 턴까지 처리했으면 자동 종료 판정
   if (c.turn >= c.maxTurns){
@@ -5319,6 +5325,7 @@ function showHuntResult(outcome, info){
   $('hunt_result_title').textContent = `수행 결과 — ${titles[outcome]} (${info.m.name})`;
   $('hunt-battle').hidden = true;
   $('hunt-result').hidden = false;
+  _autoFocusBtn('huntAgainBtn');
   const c = GAME.huntCombat;
   const p = GAME.player;
   let body = `
@@ -6295,7 +6302,20 @@ function newCharacter(name, comment, pw){
     gold:100, rank:'평민', donated:false,
     gp:0, rankPos:0,
     atk:[2,5], def:0, atkType:'근접',
+    autoFocus:false,  // 운영자 부여 시 다음턴·한번더 버튼이 자동 focus되어 스페이스바 연타 가능
   };
+}
+
+// 자동 focus 헬퍼 — autoFocus 권한이 있을 때만 동작
+function _autoFocusBtn(id){
+  try {
+    if (!GAME.player || !GAME.player.autoFocus) return;
+    const el = document.getElementById(id);
+    if (el && !el.disabled){
+      // 미세 지연으로 표시 직후 안정적으로 focus
+      setTimeout(() => { try { el.focus({preventScroll:true}); } catch(e){ el.focus(); } }, 30);
+    }
+  } catch(e){}
 }
 // 레벨업 경험치 곡선 (release 기준)
 function xpForNextLevel(lv){
@@ -7210,6 +7230,7 @@ async function loadAdminUsers(){
             rankPos: p.rankPos || 0,
             pw: p.pw,
             avatar: p.avatar || null,
+            autoFocus: !!p.autoFocus,
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
             updated_at: row.updated_at,
@@ -7326,6 +7347,12 @@ function renderAdminEdit(){
     </div>` : ''}
     <div class="edit-row"><span class="lbl">닉네임</span> <input id="ed_name" value="${u.name}"></div>
     ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row"><span class="lbl">비밀번호</span> <input id="ed_pw" value="${u.pw||''}" placeholder="(비워두면 변경 없음)"></div>` : ''}
+    ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row" style="display:block;background:#fffbe6;border:1px solid #fda;padding:6px 8px;margin:6px 0;">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
+        <input type="checkbox" id="ed_autoFocus" ${u.autoFocus ? 'checked' : ''} style="width:16px;height:16px;">
+        <b>자동 커서 이동 권한</b> <span style="color:#666;font-size:11px;">(수행·공격대에서 「다음 턴」/「한 번 더」 버튼에 자동 focus — 스페이스바 연타 가능)</span>
+      </label>
+    </div>` : ''}
 
     <div style="background:#f4f4ff;border:1px solid #ccd;padding:6px 8px;margin:6px 0;">
       <b style="display:block;color:#5a1a6b;margin-bottom:4px;">⚡ 퀵 액션</b>
@@ -7461,6 +7488,9 @@ async function adminSaveUser(){
   u.mp = parseInt($('ed_mp').value) || 0;
   u.mpMax = parseInt($('ed_mpMax').value) || 0;
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
+  // 자동 커서 이동 권한
+  const afEl = $('ed_autoFocus');
+  if (afEl) u.autoFocus = !!afEl.checked;
   // 비밀번호: 비워두면 기존 유지 (로컬 또는 클라우드 source 둘 다 player.pw로 보관)
   if (u.source === 'local' || u.source === 'cloud'){
     const pwInput = $('ed_pw');
@@ -7528,6 +7558,7 @@ async function adminSaveUser(){
       rankPos: u.rankPos,
       pw: u.pw,
       avatar: u.avatar || null,
+      autoFocus: !!u.autoFocus,
       atk:[2,5], def:0, atkType:'근접',
     };
     saved.inventory = (u.inventory || []).map(c => typeof c === 'string' ? c : c.id);
@@ -7583,6 +7614,7 @@ async function adminSaveUser(){
         rankPos: u.rankPos,
         pw: u.pw,
         avatar: u.avatar || null,
+      autoFocus: !!u.autoFocus,
         atk:[2,5], def:0, atkType:'근접',
       },
       myDeck:    u.myDeck.slice(),
