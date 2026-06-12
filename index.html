@@ -2424,6 +2424,16 @@ function showContent(name){
   document.querySelectorAll('.content-pane').forEach(p=>p.hidden = true);
   const target = $('content-'+name);
   if (target) target.hidden = false;
+  // 메인으로 돌아갈 때는 전투 모드 CSS와 sub-pane 상태를 강제 정리
+  if (name === 'main'){
+    try { document.body.classList.remove('combat-active'); } catch(e){}
+    ['hunt-battle','hunt-result','raid-battle','raid-result','rank-battle','rank-result'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.hidden = true;
+    });
+    ['raid-lobby','rank-list'].forEach(id => {
+      const el = document.getElementById(id); if (el) el.hidden = false;
+    });
+  }
 }
 
 // ─── 회복의 샘물 ───
@@ -3187,6 +3197,11 @@ function updateRaidUI(){
 
 // 메인 메뉴의 공격대 버튼 — 활성 raid로 자동 진입
 async function openActiveRaid(){
+  if (GAME.player && GAME.player.hp <= 0){
+    toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
+    openHeal();
+    return;
+  }
   if (sb){ await loadRaidFromCloud(); }
   const key = GAME.raid.activeKey || 'dawn';
   await openRaid(key);
@@ -3194,6 +3209,11 @@ async function openActiveRaid(){
 
 async function openRaid(raidKey){
   const p = GAME.player;
+  if (p.hp <= 0){
+    toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
+    openHeal();
+    return;
+  }
   const minLv = raidKey === 'dawn' ? 15 : 25;
   if (p.level < minLv){
     toast(`공격대(${raidKey==='dawn'?'새벽의언덕':'안개의숲'})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
@@ -3913,6 +3933,11 @@ function renderRankList(){
 }
 
 function challengeRank(targetRank){
+  if (GAME.player && GAME.player.hp <= 0){
+    toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
+    openHeal();
+    return;
+  }
   const myRank = GAME.ranking.myRank;
   let allowed = false;
   if (myRank === 0 && targetRank === 10) allowed = true;
@@ -4362,6 +4387,89 @@ const RACE_CARDS = {
   beast:    ['bear_summon','hawk_summon','sheep','carrion_swarm','gw_c95','gw_c251','life_up','holy_potion','armor_basic','cheongje_sword','heal','colbast_summon'],
 };
 
+// ─── 몬스터 덱 구성 ───
+// 종족별 특화 스탯·시너지 카드 (가중치 2배로 등장)
+const RACE_SYNERGY = {
+  orc:      new Set(['n01','n10','n32','n33','n44','n61','r09','r16']),                  // STR/공격 강화
+  human:    new Set(['n23','n78','n80','r02','r06','r07','r08','u06']),                 // 회복·방어·균형
+  undead:   new Set(['n13','n15','n17','n42','r05','r12','r26','r28','r29']),           // INT·도트·드레인
+  nightelf: new Set(['n28','n65','r15','r18','r24','u04']),                              // DEX·정밀 공격
+  beast:    new Set(['n04','n66','n69','n77','r10','r19','u01']),                        // 소환·회복·CON 시너지
+};
+// 일반 몬스터에 등장 금지 — "너무 강한 카드는 보스에서만"
+const MONSTER_BANNED = new Set([
+  'h01','h02','h03','h04','h05',   // 영웅 전체
+  'u02','u05',                       // 로커스트스웜, 썬더리저드 (방어 무시 광역)
+  'r34','r37','r40',                 // 스피드스크롤, 엔지니어링업그레이드, 팬오브나이프
+]);
+// 의존 선행 카드: 이 카드들은 선행이 덱에 먼저 등장해야 사용 가능
+//   소환 카드 → n41 (소환의식),  은신 의존 → r21 (은신)
+function _cardRequires(card){ return card.requires; }
+
+function _pickWeighted(pool, raceSet){
+  if (!pool || !pool.length) return null;
+  // race 시너지 카드는 2배 가중치
+  const w = [];
+  for (const c of pool){ w.push(c); if (raceSet && raceSet.has(c.id)) w.push(c); }
+  return w[Math.floor(Math.random() * w.length)];
+}
+
+function buildMonsterDeck(race, mLv, deckSize){
+  const synergy = RACE_SYNERGY[race] || new Set();
+  // 등급별 풀 (보스 전용 카드는 제외)
+  const filterAllowed = c => !MONSTER_BANNED.has(c.id) && c.id !== 'basic_atk';
+  const normalPool = CARDS.filter(c => c.grade === 'normal' && filterAllowed(c));
+  const rarePool   = CARDS.filter(c => c.grade === 'rare'   && filterAllowed(c));
+  const uniquePool = CARDS.filter(c => c.grade === 'unique' && filterAllowed(c));
+  // 등급 비중 — 레벨에 따라 상위 등급도 등장
+  const rareWeight   = Math.min(0.55, mLv * 0.012);                                // Lv1=0%, Lv42≈50%
+  const uniqueWeight = mLv >= 30 ? Math.min(0.05, (mLv - 29) * 0.002) : 0;         // Lv30=0.2%, Lv50=4%
+  const basicChance  = Math.max(0.10, 0.30 - mLv * 0.004);                         // Lv1=29%, Lv50=10%
+
+  const deck = [];
+  for (let i = 0; i < deckSize; i++){
+    if (Math.random() < basicChance){ deck.push(BASIC_ATTACK); continue; }
+    const roll = Math.random();
+    let pool;
+    if (roll < uniqueWeight) pool = uniquePool;
+    else if (roll < uniqueWeight + rareWeight) pool = rarePool;
+    else pool = normalPool;
+    const card = _pickWeighted(pool, synergy) || _pickWeighted(normalPool, synergy);
+    deck.push(card || BASIC_ATTACK);
+  }
+
+  // ── 선행 카드 의존성 보장 ──
+  // 1) 의존 카드의 requires가 덱에 없으면 BASIC_ATTACK 한 자리를 requires 카드로 대체
+  const needsSet = new Set();
+  for (const c of deck) if (_cardRequires(c)) needsSet.add(_cardRequires(c));
+  for (const reqId of needsSet){
+    if (deck.some(c => c.id === reqId)) continue;
+    const reqCard = CARDS.find(c => c.id === reqId);
+    if (!reqCard) continue;
+    const slotIdx = deck.findIndex(c => c.id === 'basic_atk');
+    if (slotIdx >= 0) deck[slotIdx] = reqCard;
+    else deck[0] = reqCard;
+  }
+  // 2) 의존 카드가 requires 카드보다 앞에 있으면 swap (requires가 먼저 발동되도록)
+  for (let i = 0; i < deck.length; i++){
+    const c = deck[i];
+    const req = _cardRequires(c);
+    if (!req) continue;
+    // requires가 i 이전에 있는지
+    let foundBefore = false;
+    for (let j = 0; j < i; j++) if (deck[j].id === req){ foundBefore = true; break; }
+    if (foundBefore) continue;
+    // i 이후에서 requires 찾기
+    for (let j = i + 1; j < deck.length; j++){
+      if (deck[j].id === req){
+        const tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
+        break;
+      }
+    }
+  }
+  return deck;
+}
+
 // ─── 몬스터 생성 fallback (풀 필터링 결과 빈 경우) ───
 function generateMonsterFallback(playerLv, tier){
   const tpl = (tier === 1) ? MONSTERS[0] : MONSTERS[18]; // 그런트 / 그리폰
@@ -4435,31 +4543,9 @@ function generateMonster(playerLv, tier){
   ];
   const def = Math.floor(con * 0.5);
 
-  // 덱 구성 — 레벨이 높을수록 레어 비중↑, Lv42+는 유니크 아주 드물게, 영웅 없음
+  // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용
   const deckSize = tier === 1 ? 10 : 15;
-  const normalPool = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk');
-  const rarePool   = CARDS.filter(c => c.grade === 'rare');
-  const uniquePool = CARDS.filter(c => c.grade === 'unique');
-  // 레어 비중: Lv1=0%, Lv42=50%로 선형 증가, 이후 +Lv마다 약간 더
-  const rareWeight = Math.min(0.55, mLv * 0.012);
-  // 유니크 비중: Lv 42부터 매우 드물게 (Lv42=0.5%, Lv60=2%)
-  const uniqueWeight = mLv >= 42 ? Math.min(0.02, (mLv - 41) * 0.0008) : 0;
-  const normalWeight = Math.max(0, 1 - rareWeight - uniqueWeight);
-  const deck = [];
-  for (let i = 0; i < deckSize; i++){
-    if (Math.random() < 0.25){ // 25%는 기본공격
-      deck.push(BASIC_ATTACK);
-      continue;
-    }
-    const roll = Math.random();
-    let pool;
-    if (roll < uniqueWeight) pool = uniquePool;
-    else if (roll < uniqueWeight + rareWeight) pool = rarePool;
-    else pool = normalPool;
-    if (!pool || !pool.length) pool = normalPool;
-    if (!pool.length){ deck.push(BASIC_ATTACK); continue; }
-    deck.push(pool[Math.floor(Math.random() * pool.length)]);
-  }
+  const deck = buildMonsterDeck(tpl.race, mLv, deckSize);
 
   // 보상 (XP는 옛 공식의 약 50% 수준으로 조정 — 레벨업 속도 완화)
   const gold = Math.floor(mLv * (5 + Math.random() * 10));
@@ -4477,6 +4563,11 @@ function generateMonster(playerLv, tier){
 // ─── 수행 진입 ───
 function openHunt(tier){
   const p = GAME.player;
+  if (p.hp <= 0){
+    toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
+    openHeal();
+    return;
+  }
   // tier 자동 결정 (Lv 1~25 → tier 1, Lv 26+ → tier 2)
   if (tier == null) tier = p.level >= 26 ? 2 : 1;
   setCombatMode(true);
@@ -5415,7 +5506,10 @@ function exitHuntToHeal(){
   if (window._huntReturnTimeout) clearTimeout(window._huntReturnTimeout);
   GAME.huntCombat = null;
   setCombatMode(false);
-  showContent('main');
+  // hunt sub-pane을 lobby/list 상태로 reset
+  if ($('hunt-list'))   $('hunt-list').hidden   = false;
+  if ($('hunt-battle')) $('hunt-battle').hidden = true;
+  if ($('hunt-result')) $('hunt-result').hidden = true;
   openHeal();
 }
 function exitHunt(){
@@ -5423,7 +5517,13 @@ function exitHunt(){
   if (window._huntReturnTimeout) clearTimeout(window._huntReturnTimeout);
   GAME.huntCombat = null;
   setCombatMode(false);
+  if ($('hunt-list'))   $('hunt-list').hidden   = false;
+  if ($('hunt-battle')) $('hunt-battle').hidden = true;
+  if ($('hunt-result')) $('hunt-result').hidden = true;
   showContent('main');
+  try { renderSheet(); } catch(e){}
+  try { renderDeck(); } catch(e){}
+  try { updateRaidUI(); } catch(e){}
 }
 
 // ============================================================
