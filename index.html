@@ -3587,7 +3587,88 @@ function makeRankNPC(name){
   };
 }
 
-function resetRanking(){
+// ─── 랭킹 클라우드 (실시간 공유) ───
+let _rankChannel = null;
+let _myUserId = null;
+
+async function _getMyUserId(){
+  if (_myUserId) return _myUserId;
+  if (!sb) return null;
+  try {
+    const { data: ud } = await sb.auth.getUser();
+    _myUserId = ud && ud.user ? ud.user.id : null;
+  } catch(e){}
+  return _myUserId;
+}
+
+function _hydrateSlotDeck(slot){
+  if (!slot || !Array.isArray(slot.deck)) return slot;
+  slot.deck = slot.deck.map(c =>
+    (typeof c === 'string') ? (CARDS.find(x => x.id === c) || BASIC_ATTACK) : c
+  );
+  return slot;
+}
+
+async function loadRankingFromCloud(){
+  if (!sb) return false;
+  try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('rank_check_reset', e); }
+  try {
+    const { data, error } = await sb.from('ranking_global')
+      .select('rank, slot, user_id').order('rank', { ascending: true });
+    if (error || !Array.isArray(data) || data.length === 0){
+      console.warn('[loadRanking]', error); return false;
+    }
+    GAME.ranking.slots = data.map(r => _hydrateSlotDeck(r.slot));
+    const myUid = await _getMyUserId();
+    const meRow = data.find(r => r.user_id === myUid);
+    GAME.ranking.myRank = meRow ? meRow.rank : 0;
+    return true;
+  } catch(e){ console.warn('[loadRanking]', e); return false; }
+}
+
+async function subscribeRanking(){
+  if (!sb) return;
+  if (_rankChannel){
+    try { await sb.removeChannel(_rankChannel); } catch(e){}
+    _rankChannel = null;
+  }
+  _rankChannel = sb.channel('ranking-global')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'ranking_global' },
+      async () => {
+        await loadRankingFromCloud();
+        if ($('content-rank') && !$('content-rank').hidden) renderRankList();
+        try { renderSheet(); } catch(e){}
+      })
+    .subscribe();
+}
+
+async function _teardownRanking(){
+  if (sb && _rankChannel){
+    try { await sb.removeChannel(_rankChannel); } catch(e){}
+    _rankChannel = null;
+  }
+}
+
+// 본인 슬롯 정보(레벨/스탯/덱) 클라우드와 동기화
+async function syncMyRankSlot(){
+  if (!sb) return;
+  try {
+    await cloudSaveNow();
+    await sb.rpc('rank_sync_my_slot');
+  } catch(e){ console.warn('[syncMyRankSlot]', e); }
+}
+
+async function resetRanking(){
+  // 클라우드: 서버 RPC가 전체 슬롯을 새 NPC로 교체
+  if (sb){
+    try {
+      await sb.rpc('rank_full_reset');
+      await loadRankingFromCloud();
+    } catch(e){ console.warn('[resetRanking cloud]', e); }
+    return;
+  }
+  // 오프라인 fallback
   const shuffled = RANK_NPC_NAMES.slice().sort(()=>Math.random()-0.5);
   GAME.ranking.slots = shuffled.slice(0, 10).map(n => makeRankNPC(n));
   GAME.ranking.myRank = 0;
@@ -3610,19 +3691,18 @@ function getRankRewardsLeft(){
   return GAME.ranking.rewardsLeft;
 }
 
-function checkRankingReset(){
+async function checkRankingReset(){
+  // 클라우드 우선: 서버가 자정 리셋을 판단·실행
+  if (sb){
+    try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('[checkRankingReset]', e); }
+    return;
+  }
+  // 오프라인 fallback (로컬)
   const today = new Date().toDateString();
   if (GAME.ranking.lastResetDate !== today){
     const wasReset = !!GAME.ranking.lastResetDate;
     resetRanking();
     if (wasReset) chatSys('★ 일일 랭킹전이 초기화되었습니다.');
-    return;
-  }
-  // 마이그레이션: 옛 NPC 이름이 남아있으면 새 여신 이름 풀로 강제 리셋
-  const validNames = new Set(RANK_NPC_NAMES);
-  const npcSlots = (GAME.ranking.slots || []).filter(s => s && s.isNPC);
-  if (npcSlots.some(s => !validNames.has(s.name))){
-    resetRanking();
   }
 }
 
@@ -3632,8 +3712,12 @@ function getRankBonus(){
   return (11 - r) * 10;  // 1위 100, 2위 90, ..., 10위 10
 }
 
-function openRank(){
-  checkRankingReset();
+async function openRank(){
+  await checkRankingReset();
+  if (sb){
+    await loadRankingFromCloud();
+    await subscribeRanking();
+  }
   showContent('rank');
   $('rank-list').hidden = false;
   $('rank-battle').hidden = true;
@@ -3643,8 +3727,12 @@ function openRank(){
 
 function renderRankList(){
   const myRank = GAME.ranking.myRank;
-  // 본인 슬롯이 등록 시점의 옛 데이터로 멈춰있지 않도록 최신 player 정보로 동기화
-  if (myRank >= 1 && myRank <= 10 && GAME.player){
+  // 클라우드 모드: 본인 슬롯 정보를 비동기로 갱신 (다음 update 이벤트에서 반영)
+  if (sb && myRank >= 1 && myRank <= 10 && GAME.player){
+    syncMyRankSlot();
+  }
+  // 오프라인 모드: 로컬 player 데이터로 즉시 동기화
+  if (!sb && myRank >= 1 && myRank <= 10 && GAME.player){
     GAME.ranking.slots[myRank - 1] = makeUserRankSlot();
   }
   $('rank_myrank').textContent = myRank === 0 ? '미등록' : `${myRank}위`;
@@ -3990,23 +4078,43 @@ function rankEnd(result){
   $('rank-result').hidden = false;
 }
 
-function promoteToRank(targetRank){
+async function promoteToRank(targetRank){
+  // 클라우드: 서버 RPC가 atomic하게 swap 처리
+  if (sb){
+    try {
+      await cloudSaveNow();   // build_user_slot이 최신 데이터 사용하도록
+      const { error } = await sb.rpc('rank_register', { target_rank: targetRank });
+      if (error){
+        console.warn('[rank_register]', error);
+        toast('랭킹 등록 실패: ' + (error.message||error));
+        return;
+      }
+      await loadRankingFromCloud();
+    } catch(e){ console.warn('[promoteToRank]', e); }
+    return;
+  }
+  // 오프라인 fallback
   const slots = GAME.ranking.slots;
   const myRank = GAME.ranking.myRank;
   if (myRank === 0){
-    // 0 → 10위: 사용자가 10위 슬롯 차지, 이전 10위 NPC 제거
     slots[targetRank - 1] = makeUserRankSlot();
   } else {
-    // myRank → targetRank: 두 슬롯 swap
     [slots[myRank-1], slots[targetRank-1]] = [slots[targetRank-1], slots[myRank-1]];
   }
   GAME.ranking.myRank = targetRank;
 }
 
-function demoteFromRank(){
+async function demoteFromRank(){
+  if (sb){
+    try {
+      const { error } = await sb.rpc('rank_demote');
+      if (error) console.warn('[rank_demote]', error);
+      await loadRankingFromCloud();
+    } catch(e){ console.warn('[demoteFromRank]', e); }
+    return;
+  }
   const myRank = GAME.ranking.myRank;
   if (myRank < 1) return;
-  // 사용자 슬롯을 새 NPC로 교체
   const usedNames = new Set(GAME.ranking.slots.map(s => s.name));
   const availableNames = RANK_NPC_NAMES.filter(n => !usedNames.has(n));
   const newName = availableNames.length > 0 ? availableNames[0] : RANK_NPC_NAMES[rnd(0,9)];
@@ -6541,10 +6649,12 @@ async function autoLogoutOnIdle(){
   try { toast('10분간 활동이 없어 자동 로그아웃됩니다.'); } catch(e){}
   // 랭킹 등록 상태면 자리 박탈
   if (GAME.ranking && GAME.ranking.myRank >= 1){
-    try { demoteFromRank(); } catch(e){ console.warn('idle demote', e); }
+    try { await demoteFromRank(); } catch(e){ console.warn('idle demote', e); }
   }
   try { await cloudSaveNow(); } catch(e){}
   await _teardownChat();
+  await _teardownRanking();
+  _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
   GAME.myDeck = Array(15).fill(BASIC_ATTACK);
@@ -6566,10 +6676,12 @@ async function doLogout(){
   await _teardownChat();
   // 본인이 랭킹에 등록되어 있다면 자리에서 빠짐 — 빈 자리는 Lv1 NPC로 채움
   if (GAME.player && GAME.ranking && GAME.ranking.myRank >= 1){
-    try { demoteFromRank(); } catch(e){ console.warn('logout demote', e); }
+    try { await demoteFromRank(); } catch(e){ console.warn('logout demote', e); }
   }
   // 디바운스된 클라우드 저장을 마저 확정
   try { await cloudSaveNow(); } catch(e){}
+  await _teardownRanking();
+  _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
   GAME.myDeck = Array(15).fill(BASIC_ATTACK);
@@ -6730,7 +6842,17 @@ function enterMain(){
   if (lb) lb.style.display = 'block';
   // 비활성 자동 로그아웃 타이머 시작
   resetIdleTimer();
-  checkRankingReset();  // 랭킹 일일 리셋 체크
+  checkRankingReset();  // 랭킹 일일 리셋 체크 (async, fire-and-forget)
+  // 클라우드 랭킹 초기 로드 + Realtime 구독
+  if (sb){
+    (async () => {
+      try {
+        await loadRankingFromCloud();
+        await subscribeRanking();
+        renderSheet();
+      } catch(e){ console.warn('rank init', e); }
+    })();
+  }
   checkRaidReset('dawn');
   checkRaidReset('mist');
   renderSheet();
