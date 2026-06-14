@@ -11,6 +11,9 @@
   .page { display:none; max-width:1000px; margin:0 auto; }
   .page.active { display:block; }
 
+  /* PC(가로) 모드에서 전반 1.2배 확대 — 모바일은 그대로 */
+  body:not(.layout-vertical) { zoom: 1.2; }
+
   /* ===== 관리자 에디터 ===== */
   #adminLoginBtn {
     position:absolute; top:18px; right:20px;
@@ -160,7 +163,7 @@
   .combat-grid .col-left,
   .combat-grid .col-right,
   .combat-grid .col-center { display:flex; flex-direction:column; gap:6px; min-width:0; }
-  .combat-grid .col-center .train-log { flex:1; max-height:none; min-height:420px; }
+  .combat-grid .col-center .train-log { flex:none; height:420px; min-height:420px; max-height:420px; overflow-y:auto; }
   .combat-grid .col-title {
     background:#7E181E; color:#fff; font-weight:bold; font-size:12px;
     padding:4px 8px; text-align:center;
