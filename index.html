@@ -250,9 +250,16 @@
     width:100%; height:100%; object-fit:cover; display:block;
   }
   .avatar-name {
-    width:100px; text-align:center;
+    width:100px; height:28px; box-sizing:border-box;
+    display:flex; align-items:center; justify-content:center;
+    text-align:center;
     font-weight:bold; font-size:13px; color:#7E181E;
+    background:linear-gradient(180deg, #fff 0%, #fde9c8 100%);
+    border:1px solid #c9a26b;
+    border-radius:4px;
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.6), 0 1px 2px rgba(0,0,0,0.15);
     overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+    padding:0 6px;
   }
   table.stat {
     border-collapse:collapse;
@@ -663,6 +670,7 @@
   .gacha-result-grid .gc .ico img { width:100%; height:100%; image-rendering:pixelated; display:block; object-fit:contain; }
   .gacha-result-grid .gc .nm { color:#FFFF99; font-weight:bold; font-size:11px; margin-top:4px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .gacha-result-grid .gc .gr { font-size:10px; opacity:.7; margin-top:2px; }
+  .gacha-result-grid .gc .ef { font-size:10px; color:#ccc; margin-top:3px; line-height:1.3; min-height:26px; text-align:left; }
   .gacha-result-grid .gc.rare   { border-color:#3399ff; box-shadow:0 0 6px #3399ff; }
   .gacha-result-grid .gc.unique { border-color:#ffd700; box-shadow:0 0 8px #ffd700; animation:glowGold 1s ease-in-out 2; }
   .gacha-result-grid .gc.hero   { border-color:#ff6699; box-shadow:0 0 12px #ff6699; animation:glowHero 1s ease-in-out 3; }
@@ -2984,6 +2992,7 @@ function doGacha(n){
       <div class="ico">${cardIcon(c)}</div>
       <div class="nm">${c.name}</div>
       <div class="gr">[${gradeKr(c.grade)}]</div>
+      <div class="ef">${c.text||''}</div>
     </div>
   `).join('');
 
