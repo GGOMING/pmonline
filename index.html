@@ -14,6 +14,17 @@
   /* 전반 1.1배 확대 (PC·모바일 공통) */
   body { zoom: 1.1; }
 
+  /* 패배 결과창 강조 애니메이션 */
+  @keyframes loseFlash {
+    0%, 100% { color:#ff3333; transform:scale(1); }
+    50% { color:#ffff00; transform:scale(1.08); }
+  }
+  /* 레벨업 강조 애니메이션 */
+  @keyframes lvUpBounce {
+    0%, 100% { transform: translateY(0) scale(1); text-shadow: 1px 1px 0 #fff, 0 0 4px #ffd700; }
+    50% { transform: translateY(-8px) scale(1.06); text-shadow: 1px 1px 0 #fff, 0 0 16px #ffff00; }
+  }
+
   /* ===== 관리자 에디터 ===== */
   #adminLoginBtn {
     position:absolute; top:18px; right:20px;
@@ -251,6 +262,7 @@
   }
   .avatar-name {
     width:100px; height:28px; box-sizing:border-box;
+    margin-top:8px;
     display:flex; align-items:center; justify-content:center;
     text-align:center;
     font-weight:bold; font-size:13px; color:#7E181E;
@@ -767,7 +779,7 @@
     width:900px; max-height:88vh; overflow:hidden;
     display:flex; flex-direction:column;
   }
-  .modal-head { background:#7E181E; color:#fff; padding:6px 12px; font-weight:bold; }
+  .modal-head { background:#7E181E; color:#fff; padding:6px 12px; font-weight:bold; cursor:move; user-select:none; }
   .modal-close { float:right; cursor:pointer; color:#fff; font-size:11px; font-weight:normal; }
   .grade-filter { padding:6px 10px; background:#f8f0e0; border-bottom:1px solid #aaa; }
   .grade-filter button {
@@ -1870,9 +1882,9 @@
 
 <!-- 카드 선택 모달 -->
 <div class="modal-bg" id="cardPickBg" onclick="if(event.target.id==='cardPickBg')closeCardPick()">
-  <div class="modal">
-    <div class="modal-head">
-      카드 선택 — <span id="cardPickSlot">슬롯 -</span>
+  <div class="modal" id="cardPickModal">
+    <div class="modal-head" id="cardPickHead" title="헤더를 잡고 드래그하여 이동">
+      ⤺ 카드 선택 — <span id="cardPickSlot">슬롯 -</span>
       <span class="modal-close" onclick="closeCardPick()">[ 닫기 ]</span>
     </div>
     <div class="grade-filter">
@@ -1911,18 +1923,18 @@ const CARDS = [
   { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'공격 +8', fx:{type:'buff',atk:8} },
   { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어 +8', fx:{type:'buff',def:8} },
   { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어 +8', fx:{type:'buff',def:8} },
-  { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 - 20 랜덤 데미지 / 매턴 Str +3 (소환의식 필요)', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
+  { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 - 20 랜덤 데미지 / 매턴 Str +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
   { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'시전 Dex +5, Str +2', fx:{type:'buff',dex:5,str:2} },
   { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'적 Dex + Con 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
   { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'Dex 공격', fx:{type:'dmgStat',stats:['dex']} },
-  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(Dex +2) x2 (은신 필요)', fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2}, requires:'r21' },
+  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(Dex +2) x2 [은신] 선행 필요', fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2}, requires:'r21' },
   { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
   { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'Str 1회 공격 / 적 Con -2, HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
   { id:'n11', name:'돌던지기',       grade:'normal', icon:'hammer', text:'Str + Dex + 5 데미지', fx:{type:'dmgStat',stats:['str','dex'],bonus:5} },
   { id:'n12', name:'디바우어매직',   grade:'normal', icon:'soul',   text:'HP 50, MP 50 회복', fx:{type:'heal',hp:50,mp:50} },
   { id:'n13', name:'디지즈클라우드', grade:'normal', icon:'cloud',  text:'6턴 8 데미지', fx:{type:'dot',turns:6,dmg:8} },
   { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'적 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
-  { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 - 10 랜덤데미지 (소환의식 필요)', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
+  { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 - 10 랜덤데미지 [소환의식] 선행 필요', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
   { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어 +4 / 3턴 5 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
   { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'적 Con만큼 데미지주고 HP흡수', fx:{type:'lifestealStat',stats:['con']} },
   { id:'n18', name:'라이프업',       grade:'normal', icon:'heart',  text:'최대 HP 30% 증가', fx:{type:'maxHpBuff',pct:0.3} },
@@ -1934,7 +1946,7 @@ const CARDS = [
   { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'적 Int + Con 만큼 고정데미지', fx:{type:'dmgStat',stats:['int','con']} },
   { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'적 Dex -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
   { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'적 버프 뺏음, 4턴 버프', fx:{type:'stealBuff',turns:4} },
-  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 Dex×0.5 포이즌데미지, 공격 +2 (은신 필요)', fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]}, requires:'r21' },
+  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 Dex×0.5 포이즌데미지, 공격 +2 [은신] 선행 필요', fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]}, requires:'r21' },
   { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'적 공격 -1 / Dex 공격 x2', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
   { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100', fx:{type:'sacrifice',hp:25,mp:100} },
   { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어 +4', fx:{type:'buff',def:4} },
@@ -1949,7 +1961,7 @@ const CARDS = [
   { id:'n39', name:'서펜트와드',     grade:'normal', icon:'paw',    text:'5 - 15 데미지 코브라와드 소환 (소환의식 불필요)', fx:{type:'dmg',min:5,max:15} },
   { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 시전자 MP 20 회복', fx:{type:'mot',turns:3,mp:20} },
   { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP -50', fx:{type:'mpCost',amount:50} },
-  { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 강화, 10 - 20 랜덤데미지 (소환의식 필요)', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
+  { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 강화, 10 - 20 랜덤데미지 [소환의식] 선행 필요', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
   { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'Str -10, Int -10, Dex -10 / 방어 +15', fx:{type:'buff',str:-10,int:-10,dex:-10,def:15} },
   { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(Str + 공격) x2', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
   { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'5 ~ 적 Con 랜덤데미지 x2', fx:{type:'dmgHits',min:5,max:25,hits:2} },
@@ -1973,7 +1985,7 @@ const CARDS = [
   { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어 +5', fx:{type:'buff',def:5} },
   { id:'n64', name:'커즈',           grade:'normal', icon:'curse',  text:'4턴 적 명중률 -20% (Dex 디버프)', fx:{type:'pctDebuff',stats:{dex:-0.2},turns:4} },
   { id:'n65', name:'콜드애로우',     grade:'normal', icon:'ice',    text:'Int×1.8 데미지 / 적 Dex -20% / Int×1.5 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:1.8},{type:'pctDebuff',stats:{dex:-0.2}},{type:'mpCost',stat:'int',mult:1.5}]} },
-  { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 - 20 랜덤데미지, 매턴 Int +3 (소환의식 필요)', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
+  { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 - 20 랜덤데미지, 매턴 Int +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
   { id:'n67', name:'크로우폼',       grade:'normal', icon:'bird',   text:'Int 0으로 떨어진 만큼 Dex 증가', fx:{type:'transferStat',from:'int',to:'dex'} },
   { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'적 Str, Dex, Int, 공격 -5', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
   { id:'n69', name:'트롤리제네레이션', grade:'normal', icon:'cross', text:'5턴 턴당 Con 절반만큼 HP회복', fx:{type:'hotStat',stats:['con'],mult:0.5,turns:5} },
@@ -1984,7 +1996,7 @@ const CARDS = [
   { id:'n74', name:'포이즌스피어',   grade:'normal', icon:'venom',  text:'기본공격 / 2턴 5 고정데미지', fx:{type:'multi',effects:[{type:'basicAtk'},{type:'dot',turns:2,dmg:5}]} },
   { id:'n75', name:'폭탄',           grade:'normal', icon:'bomb',   text:'적 Str + Con 데미지', fx:{type:'dmgStat',stats:['str','con']} },
   { id:'n76', name:'피드백',         grade:'normal', icon:'spark',  text:'적 버프 폭파 15 데미지 + 버프 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:15,max:15}]} },
-  { id:'n77', name:'호크소환',       grade:'normal', icon:'wings',  text:'5 - 20 랜덤데미지 / 매턴 Dex +3 (소환의식 필요)', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',dex:3}]}, requires:'n41' },
+  { id:'n77', name:'호크소환',       grade:'normal', icon:'wings',  text:'5 - 20 랜덤데미지 / 매턴 Dex +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',dex:3}]}, requires:'n41' },
   { id:'n78', name:'힐',             grade:'normal', icon:'cross2', text:'Int×1.5 HP회복', fx:{type:'healStat',stats:['int'],mult:1.5} },
   { id:'n79', name:'힐링워드',       grade:'normal', icon:'cross',  text:'5턴 Int×0.6 만큼 HP회복', fx:{type:'hotStat',stats:['int'],mult:0.6,turns:5} },
   { id:'n80', name:'힐링포션',       grade:'normal', icon:'potion2',text:'HP 25 회복', fx:{type:'heal',hp:25} },
@@ -1992,7 +2004,7 @@ const CARDS = [
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복', fx:{type:'heal',hp:60} },
   { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 방어력 +5', fx:{type:'buff',def:5,turns:3} },
-  { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10~25 랜덤데미지, HP 5 흡수 (소환의식 필요)', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
+  { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10~25 랜덤데미지, HP 5 흡수 [소환의식] 선행 필요', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
   { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격 +5, 방어 +5 / 적 공격 -5, 방어 -5', fx:{type:'multi',effects:[{type:'buff',atk:5,def:5},{type:'debuff',atk:-5,def:-5}]} },
   { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'적 MP×0.2 데미지 (최대 60) / 적 MP -50% / 기본공격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
   { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'공격 +12', fx:{type:'buff',atk:12} },
@@ -3596,9 +3608,12 @@ async function raidEnd(result){
         p.level++;
         p.xpUp += 1;
         raidMobLvUp = true;
-        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level} (HP·MP 완전 회복)</p>`;
       }
-      if (raidMobLvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
+      if (raidMobLvUp){
+        calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
+        bodyHtml += _lvUpBoxHtml();
+        _scheduleLvUpAlert();
+      }
       if (r.monsterCount === 0){
         bodyHtml += `<p style="color:#a02050; font-size:14px;">⚡ 잡몹 정리 완료! 보스 단계 진입!</p>`;
         chatSys(`★ 공격대 보스 단계 진입! 최종 타격를 노려보세요.`);
@@ -3657,9 +3672,12 @@ async function raidEnd(result){
         p.level++;
         p.xpUp += 1;
         raidBossLvUp = true;
-        bodyHtml += `<p style="color:#a02050;">🌟 레벨업! Lv ${p.level} (HP·MP 완전 회복)</p>`;
       }
-      if (raidBossLvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
+      if (raidBossLvUp){
+        calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
+        bodyHtml += _lvUpBoxHtml();
+        _scheduleLvUpAlert();
+      }
       chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆`);
       // 본인 보상 즉시 수령 시도
       if (sb){ setTimeout(() => claimRaidRewards(), 500); }
@@ -4515,6 +4533,11 @@ function generateMonster(playerLv, tier){
     minMLv = Math.max(26, playerLv - 3);
     maxMLv = playerLv + 3;
   }
+  // 약화 보정 (최근 10전투 중 5+ 패배 시 20회간 -5)
+  if (GAME.player && (GAME.player.huntGraceRemain|0) > 0){
+    minMLv = Math.max(1, minMLv - 5);
+    maxMLv = Math.max(minMLv, maxMLv - 5);
+  }
 
   // 몬스터 풀 필터링: 최저 등장 레벨이 maxMLv 이하인 것만 (강한 몹 차단)
   const pool = MONSTERS.filter(m => {
@@ -4547,13 +4570,14 @@ function generateMonster(playerLv, tier){
   if (tpl.race === 'undead')   { int += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
 
-  // HP/공격력 — 사용자 시작 HP 26 기준으로 초반 1~5턴이면 클리어되도록
-  const hp = Math.floor(tpl.baseHp * (1 + (mLv - 1) * 0.25));
+  // HP/공격력/방어력 — 1.05배 난이도 상향
+  const DIFF = 1.05;
+  const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * DIFF));
   const atk = [
-    Math.max(1, tpl.baseAtk[0] + Math.floor(mLv * 0.3)),
-    Math.max(2, tpl.baseAtk[1] + Math.floor(mLv * 0.6))
+    Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * DIFF)),
+    Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * DIFF))
   ];
-  const def = Math.floor(con * 0.5);
+  const def = Math.max(0, Math.round(con * 0.5 * DIFF));
 
   // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용
   const deckSize = tier === 1 ? 10 : 15;
@@ -5457,14 +5481,41 @@ function huntEnd(result){
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; }
   } else if (outcome === 'lose'){
+    // 골드 5% / 경험치 5% 차감 (최소 0)
     lostGold = Math.floor(p.gold * 0.05);
     p.gold = Math.max(0, p.gold - lostGold);
-    p.hp = 1;
-    huntLog(`💀 패배... 골드 5% 증발 (-${lostGold}G)`, 'opp');
-    chatSys(`★ ${p.name}님이 ${m.name}에게 패배하셨습니다.`);
+    var lostXp = Math.floor(p.xp * 0.05);
+    p.xp = Math.max(0, p.xp - lostXp);
+    // HP·MP 0으로
+    p.hp = 0;
+    p.mp = 0;
+    // 1% 확률로 보유 카드 또는 장비 중 1개 파괴
+    var destroyed = null;
+    if (Math.random() < 0.01){
+      var pools = [];
+      if (Array.isArray(GAME.inventory) && GAME.inventory.length) pools.push({arr:GAME.inventory, kind:'card'});
+      if (Array.isArray(p.weapons)    && p.weapons.length)        pools.push({arr:p.weapons, kind:'weapon'});
+      if (Array.isArray(p.armors)     && p.armors.length)         pools.push({arr:p.armors, kind:'armor'});
+      if (pools.length){
+        var pick = pools[Math.floor(Math.random()*pools.length)];
+        var idx  = Math.floor(Math.random() * pick.arr.length);
+        var item = pick.arr[idx];
+        pick.arr.splice(idx, 1);
+        destroyed = { kind: pick.kind, name: item && item.name || '?' };
+      }
+    }
+    // 패배 정보를 결과창에서 사용
+    GAME._lastHuntLoss = { lostGold: lostGold, lostXp: lostXp, destroyed: destroyed };
+    huntLog('💀 패배... 골드 5% 증발 (-' + lostGold + 'G), 경험치 5% 증발 (-' + lostXp + 'XP), HP·MP 0', 'opp');
+    if (destroyed){
+      huntLog('☠ ' + (destroyed.kind==='card'?'카드':destroyed.kind==='weapon'?'무기':'방어구') + ' 파괴됨 — ' + destroyed.name, 'opp');
+    }
+    chatSys('★ ' + p.name + '님이 ' + m.name + '에게 패배하셨습니다.');
   } else if (outcome === 'flee'){
     huntLog(`🏃 도주 완료`, 'sys');
   }
+  // 결과 기록 + grace 모드 토글
+  try { trackHuntResult(outcome); } catch(e){ console.warn('[trackHuntResult]', e); }
   renderSheet();
   renderDeck();
 
@@ -5491,10 +5542,38 @@ function showHuntResult(outcome, info){
     if (info.rankBonus > 0){
       body += `<p style="color:#a02050;">🏆 랭킹 ${GAME.ranking.myRank}위 보너스: <b>+${info.rankBonus} G</b></p>`;
     }
-    if (info.lvUp) body += `<p style="color:#a02050;">🌟 <b>레벨업!</b></p>`;
+    if (info.lvUp){ body += _lvUpBoxHtml(); _scheduleLvUpAlert(); }
   } else if (outcome === 'lose'){
-    body += `<p style="color:#a00;">✗ 골드 5% 증발 (-${info.lostGold} G), HP 1로 복구</p>`;
-    body += `<p style="font-size:11px;color:#666;">팁: 회복의 샘물에 들러 회복 후 재도전하세요.</p>`;
+    const loss = (GAME._lastHuntLoss) || { lostGold: info.lostGold || 0, lostXp: 0, destroyed: null };
+    const dInfo = loss.destroyed;
+    const destroyLine = dInfo
+      ? `<p style="color:#7E181E;font-weight:bold;">☠ ${dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구'} 파괴 — <b>${dInfo.name}</b></p>`
+      : '';
+    body += `
+      <div style="margin:10px 0;padding:14px;background:linear-gradient(180deg,#3a0000 0%, #1a0000 100%);border:3px solid #7E181E;border-radius:6px;text-align:center;box-shadow:0 0 16px rgba(255,0,0,0.4);">
+        <div style="font-size:42px;line-height:1;color:#ff3333;text-shadow:2px 2px 0 #000;animation:loseFlash 0.6s ease-in-out 3;">💀 패 배 💀</div>
+        <div style="color:#ffaaaa;font-size:14px;font-weight:bold;margin-top:8px;">패널티 적용</div>
+        <div style="margin-top:8px;color:#fff;line-height:1.7;text-align:left;display:inline-block;">
+          • 골드 <b style="color:#ff6666;">-${loss.lostGold.toLocaleString()} G</b><br>
+          • 경험치 <b style="color:#ff6666;">-${loss.lostXp.toLocaleString()} XP</b><br>
+          • HP·MP <b style="color:#ff6666;">0</b>으로 감소
+          ${destroyLine ? '<br>• ' + destroyLine.replace(/<p[^>]*>|<\/p>/g, '').trim() : ''}
+        </div>
+        <div style="margin-top:10px;font-size:10px;color:#ffcc88;">※ 패배 시 낮은 확률로 보유 카드 혹은 장비가 파괴될 수 있습니다.</div>
+      </div>
+      <p style="font-size:11px;color:#666;">팁: 회복의 샘물에 들러 회복 후 재도전하세요.</p>`;
+    // 패널티 팝업 (결과창 렌더 직후)
+    setTimeout(() => {
+      let msg = '💀 패배\n\n패널티가 적용되었습니다.\n\n';
+      msg += '• 골드: -' + loss.lostGold.toLocaleString() + ' G\n';
+      msg += '• 경험치: -' + loss.lostXp.toLocaleString() + ' XP\n';
+      msg += '• HP·MP: 0\n';
+      if (dInfo){
+        msg += '• ' + (dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구') + ' 파괴: ' + dInfo.name + '\n';
+      }
+      msg += '\n※ 패배 시 낮은 확률로 보유 카드 혹은 장비가 파괴될 수 있습니다.';
+      alert(msg);
+    }, 200);
   } else {
     body += `<p style="color:#888;">도주 완료. 보상 없음.</p>`;
   }
@@ -5724,6 +5803,39 @@ function renderCardGrid(){
   }).join('');
 }
 function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',hero:'영웅'}[g]; }
+// ─── 카드 선택 모달 드래그 ───
+(function setupCardPickDrag(){
+  let dragging = false, sx = 0, sy = 0, baseX = 0, baseY = 0, curX = 0, curY = 0;
+  function init(){
+    const head = document.getElementById('cardPickHead');
+    const modal = document.getElementById('cardPickModal');
+    if (!head || !modal) { setTimeout(init, 100); return; }
+    head.addEventListener('mousedown', (e) => {
+      dragging = true; sx = e.clientX; sy = e.clientY; baseX = curX; baseY = curY;
+      e.preventDefault();
+    });
+    document.addEventListener('mousemove', (e) => {
+      if (!dragging) return;
+      curX = baseX + (e.clientX - sx); curY = baseY + (e.clientY - sy);
+      modal.style.transform = `translate(${curX}px, ${curY}px)`;
+    });
+    document.addEventListener('mouseup', () => { dragging = false; });
+    // 터치 지원
+    head.addEventListener('touchstart', (e) => {
+      const t = e.touches[0]; dragging = true; sx = t.clientX; sy = t.clientY; baseX = curX; baseY = curY;
+    }, { passive:true });
+    document.addEventListener('touchmove', (e) => {
+      if (!dragging) return;
+      const t = e.touches[0];
+      curX = baseX + (t.clientX - sx); curY = baseY + (t.clientY - sy);
+      modal.style.transform = `translate(${curX}px, ${curY}px)`;
+    }, { passive:true });
+    document.addEventListener('touchend', () => { dragging = false; });
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
 function selectCardForSlot(cardId){
   try {
     const card = CARDS.find(c=>c.id===cardId);
@@ -5741,6 +5853,25 @@ function selectCardForSlot(cardId){
         if (owned <= equipped){
           toast(`「${card.name}」 보유 ${owned}장 / 장착 ${equipped}장 — 보유분 초과`);
           return;
+        }
+      }
+      // 선행 카드 검사 — 이 슬롯보다 앞 슬롯에 requires 카드가 있어야
+      if (card.requires){
+        const reqCard = CARDS.find(c => c.id === card.requires);
+        const reqName = reqCard ? reqCard.name : card.requires;
+        let foundBefore = false;
+        for (let i = 0; i < _cardPickSlot; i++){
+          const c = GAME.myDeck[i];
+          if (c && c.id === card.requires){ foundBefore = true; break; }
+        }
+        if (!foundBefore){
+          const ok = confirm(
+            `「${card.name}」은(는) [${reqName}] 선행 카드가 필요합니다.\n\n` +
+            `현재 슬롯 ${_cardPickSlot + 1} 앞에 [${reqName}] 카드가 없어\n` +
+            `전투에서 시전 실패할 수 있습니다.\n\n` +
+            `그래도 이대로 장착하시겠습니까?`
+          );
+          if (!ok) return;
         }
       }
       GAME.myDeck[_cardPickSlot] = card;
@@ -6463,7 +6594,54 @@ function newCharacter(name, comment, pw){
     gp:0, rankPos:0,
     atk:[2,5], def:0, atkType:'근접',
     autoFocus:false,  // 운영자 부여 시 다음턴·한번더 버튼이 자동 focus되어 스페이스바 연타 가능
+    huntHistory: [],  // 최근 10전투 결과 ('win'/'lose'/'flee')
+    huntGraceRemain: 0,  // 남은 grace 전투 수 (해당 기간 동안 몬스터 레벨 -5)
   };
+}
+
+// 레벨업 강조 박스 HTML (결과창에 삽입)
+function _lvUpBoxHtml(){
+  const lv = (GAME.player && GAME.player.level) || '?';
+  return '<div style="margin:12px 0;padding:14px 12px;background:linear-gradient(180deg,#fff7c0 0%, #ffd700 60%, #ff9900 100%);border:3px solid #ff6600;border-radius:8px;text-align:center;box-shadow:0 0 20px rgba(255,170,0,0.65);">' +
+    '<div style="font-size:32px;font-weight:bold;color:#7E181E;animation:lvUpBounce 0.7s ease-in-out 3;">🌟 LEVEL UP 🌟</div>' +
+    '<div style="margin-top:4px;font-size:18px;font-weight:bold;color:#3a1a00;">Lv <span style="font-size:24px;color:#a02050;">' + lv + '</span> 달성!</div>' +
+    '<div style="margin-top:4px;font-size:11px;color:#5a2a00;">• HP·MP 완전 회복   • 스탯 포인트 +1</div>' +
+  '</div>';
+}
+// 레벨업 알림 팝업 (1회)
+let _lvUpAlertPending = false;
+function _scheduleLvUpAlert(){
+  if (_lvUpAlertPending) return;
+  _lvUpAlertPending = true;
+  setTimeout(() => {
+    _lvUpAlertPending = false;
+    try {
+      const lv = (GAME.player && GAME.player.level) || '?';
+      alert('🌟 LEVEL UP! 🌟\n\nLv ' + lv + ' 달성\n\n• HP·MP 완전 회복\n• 스탯 포인트 +1\n\n메인 화면에서 STR/DEX/INT/CON에 분배할 수 있습니다.');
+    } catch(e){}
+  }, 350);
+}
+
+// 수행 결과 기록 + grace mode 자동 활성/소진
+function trackHuntResult(outcome){
+  const p = GAME.player;
+  if (!p) return;
+  if (!Array.isArray(p.huntHistory)) p.huntHistory = [];
+  p.huntHistory.push(outcome);
+  if (p.huntHistory.length > 10) p.huntHistory = p.huntHistory.slice(-10);
+  // grace 카운터 소진 (이미 활성된 grace 모드 중)
+  if ((p.huntGraceRemain|0) > 0){
+    p.huntGraceRemain -= 1;
+  } else {
+    // 최근 10전투 중 패배 5 이상이면 grace 20회 발동
+    const loseCount = p.huntHistory.filter(r => r === 'lose').length;
+    if (p.huntHistory.length === 10 && loseCount >= 5){
+      p.huntGraceRemain = 20;
+      p.huntHistory = [];  // 카운터 리셋
+      toast('🛡 최근 패배가 많아 향후 20회 동안 약한 몬스터가 등장합니다.');
+      try { chatSys(`★ ${p.name}님에게 약화 보정이 적용됩니다 (20전투).`); } catch(e){}
+    }
+  }
 }
 
 // 자동 focus 헬퍼 — autoFocus 권한이 있을 때만 동작
@@ -6504,6 +6682,7 @@ function checkLevelUp(){
     renderSheet();
     renderDeck();
     saveGame();
+    _scheduleLvUpAlert();  // 알림 팝업 (랭킹전 등 다른 경로에서도)
   }
   return leveled;
 }
@@ -7239,15 +7418,19 @@ async function initChat(){
     $('chatMsgs').innerHTML = '<div class="sys">★ 오프라인 모드 — 채팅은 로컬에만 표시됩니다.</div>';
     return;
   }
-  // 1) 최근 50개 메시지 가져오기 (오래된 → 최신 순)
+  // 1) 최근 6시간 이내 최대 50개 메시지만 가져오기 (오래된 메시지는 자동 미표시)
   try {
+    const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
     const { data, error } = await sb.from('chat_messages')
       .select('id, nickname, message, kind, created_at')
+      .gte('created_at', since)
       .order('created_at', { ascending: false }).limit(50);
     if (!error && Array.isArray(data)){
       data.reverse().forEach(_renderChatRow);
     }
   } catch(e){ console.warn('[initChat fetch]', e); }
+  // 옵션: 6시간 이상 된 옛 메시지 정리 RPC 호출 (서버에 chat_cleanup_old 함수가 있을 때만 동작)
+  try { sb.rpc('chat_cleanup_old'); } catch(e){}
 
   // 2) 기존 채널 정리 후 신규 구독
   try {
