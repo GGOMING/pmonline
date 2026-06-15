@@ -326,6 +326,12 @@
     width:200px; font-size:11px; text-align:left; line-height:1.4;
     box-shadow:2px 2px 4px rgba(0,0,0,.4);
   }
+  /* 메인 덱 세 번째 줄(슬롯 10~14)은 툴팁을 위로 띄워 메뉴를 가리지 않게 */
+  .deck tr.icons td[data-slot="10"] .ctip,
+  .deck tr.icons td[data-slot="11"] .ctip,
+  .deck tr.icons td[data-slot="12"] .ctip,
+  .deck tr.icons td[data-slot="13"] .ctip,
+  .deck tr.icons td[data-slot="14"] .ctip { top:auto; bottom:100%; }
   .deck tr.icons td:hover .ctip { display:block; }
 
   .deck tr.icons td.locked {
@@ -935,7 +941,6 @@
       <div class="admin-section-title">유저 목록 <span style="font-size:10px;color:#888;float:right;">서버 연동 전 (로컬)</span></div>
       <div id="adminUserList"></div>
       <div style="padding:8px;text-align:center;">
-        <button class="admin-btn" onclick="adminAddUser()">+ 신규 유저 추가</button>
       </div>
     </div>
 
@@ -7800,25 +7805,7 @@ async function loadAdminUsers(){
       } catch(e){}
     }
   }
-  // 가상 NPC 추가 (서버 연동 시뮬레이션)
-  const npcNames = ['Scandal','Idgun','더울이','로보스팟','반지요정','아그네시카','세이비아','선의기운'];
-  npcNames.forEach((name, i) => {
-    _adminUsers.push({
-      source: 'npc', isMe: false, name,
-      level: 1 + Math.floor(Math.random()*10),
-      xp: Math.floor(Math.random()*50), xpUp: 0,
-      str: 5 + Math.floor(Math.random()*5),
-      dex: 5 + Math.floor(Math.random()*5),
-      int: 5 + Math.floor(Math.random()*5),
-      con: 5 + Math.floor(Math.random()*5),
-      hp: 30, hpMax: 30, mp: 25, mpMax: 25,
-      gold: Math.floor(Math.random()*5000),
-      weapon: { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
-      armor: { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
-      weapons: [], armors: [],
-      myDeck: [], inventory: [],
-    });
-  });
+  // (이전엔 서버 연동 전 시뮬레이션용 가짜 NPC를 함께 보여줬지만, 클라우드 통합 후 제거됨)
 }
 
 function renderAdminUserList(){
@@ -8349,24 +8336,7 @@ function adminQuickResetStats(){
   u.xpUp = (u.xpUp || 0) + Math.max(0, used);
   renderAdminEdit();
 }
-function adminAddUser(){
-  const name = prompt('신규 NPC 닉네임:');
-  if (!name) return;
-  _adminUsers.push({
-    source:'npc', isMe:false, name,
-    level:1, xp:0, xpUp:0,
-    str:5, dex:5, int:5, con:5,
-    hp:26, hpMax:26, mp:25, mpMax:25,
-    gold:100,
-    weapon:{name:'훈련용 목검',atkBonus:1,id:'basic_club'},
-    armor:{name:'천 갑옷',defBonus:1,id:'basic_cloth'},
-    weapons:[], armors:[],
-    myDeck:[], inventory:[],
-  });
-  _adminSelectedUser = _adminUsers.length - 1;
-  renderAdminUserList();
-  renderAdminEdit();
-}
+// adminAddUser는 더 이상 사용하지 않습니다 (실제 가입은 회원가입 페이지에서만)
 
 // 시스템 설정
 function refreshAdminSystem(){
