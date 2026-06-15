@@ -72,6 +72,32 @@
     0%,100% { outline-color:#ffd700; box-shadow:0 0 20px #ffd700, 0 0 40px rgba(255,215,0,0.6); }
     50%     { outline-color:#ff9900; box-shadow:0 0 30px #ff9900, 0 0 60px rgba(255,153,0,0.7); }
   }
+  /* 튜토리얼 — 모바일 */
+  @media (max-width: 700px){
+    .tutorial-overlay { justify-content:stretch; align-items:flex-end; }
+    .tutorial-overlay .tutorial-modal {
+      width:auto; max-width:none; flex:1; margin:6px;
+      max-height:42vh; overflow-y:auto;
+      box-shadow:0 -4px 20px rgba(255,215,0,0.5);
+    }
+    .tutorial-overlay.center { justify-content:center; align-items:center; }
+    .tutorial-overlay.center .tutorial-modal {
+      width:92vw; max-width:520px; margin:0; max-height:80vh;
+    }
+    .tutorial-step { padding:12px 16px; }
+    .tutorial-overlay.center .tutorial-step { padding:18px 20px; min-height:auto; }
+    .tutorial-step h2 { font-size:15px; margin:0 0 6px; }
+    .tutorial-overlay.center .tutorial-step h2 { font-size:18px; margin:0 0 10px; }
+    .tutorial-step .ico-big { font-size:32px; margin-bottom:4px; }
+    .tutorial-overlay.center .tutorial-step .ico-big { font-size:44px; margin-bottom:8px; }
+    .tutorial-step p { font-size:12px; line-height:1.5; margin:4px 0; }
+    .tutorial-step .tip { font-size:11px; padding:6px 10px; margin:6px 0; }
+    .tutorial-nav { padding:8px; }
+    .tutorial-nav button { padding:5px 12px; font-size:11px; }
+    .tutorial-nav .step-num { font-size:10px; }
+    .tutorial-skip { top:4px; right:8px; font-size:10px; }
+    .tutorial-progress { height:4px; }
+  }
   /* 레벨업 강조 애니메이션 */
   @keyframes lvUpBounce {
     0%, 100% { transform: translateY(0) scale(1); text-shadow: 1px 1px 0 #fff, 0 0 4px #ffd700; }
@@ -6960,7 +6986,9 @@ function _tutorialApplyHighlight(sel){
     if (el){
       el.classList.add('tutorial-highlight');
       _tutorialHighlightEl = el;
-      try { el.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(e){}
+      // 모바일에선 하단에 모달이 있으므로 상단 정렬, 데스크탑은 중앙 정렬
+      const isMobile = window.matchMedia('(max-width: 700px)').matches;
+      try { el.scrollIntoView({ behavior:'smooth', block: isMobile ? 'start' : 'center' }); } catch(e){}
     }
   } catch(e){ console.warn('tutorial highlight', e); }
 }
@@ -7879,23 +7907,42 @@ async function initChat(){
   // 옵션: 6시간 이상 된 옛 메시지 정리 RPC 호출 (서버에 chat_cleanup_old 함수가 있을 때만 동작)
   try { sb.rpc('chat_cleanup_old'); } catch(e){}
 
-  // 2) 기존 채널 정리 후 신규 구독
+  // 2) 기존 채널 정리 후 신규 구독 (presence + postgres_changes)
   try {
     if (_chatChannel){ await sb.removeChannel(_chatChannel); _chatChannel = null; }
   } catch(e){}
-  _chatChannel = sb.channel('chat-room')
+  const presenceKey = myName || ('guest-' + Math.random().toString(36).slice(2, 8));
+  _chatChannel = sb.channel('chat-room', { config:{ presence:{ key: presenceKey } } })
     .on('postgres_changes',
         { event: 'INSERT', schema: 'public', table: 'chat_messages' },
         (payload) => _renderChatRow(payload.new))
-    .subscribe();
+    .on('presence', { event: 'sync' }, () => {
+      try {
+        const state = _chatChannel.presenceState();
+        const names = Object.keys(state).filter(k => !k.startsWith('guest-'));
+        $('chatUsers').textContent = names.length || (myName ? 1 : 0);
+        $('chatUserList').innerHTML = names
+          .map(n => `<span class="u">${escapeHtml(n)}</span>`).join('');
+      } catch(e){ console.warn('[presence sync]', e); }
+    })
+    .subscribe(async (status) => {
+      if (status === 'SUBSCRIBED' && myName){
+        try { await _chatChannel.track({ name: myName, at: Date.now() }); }
+        catch(e){ console.warn('[presence track]', e); }
+      }
+    });
 }
 
 async function _teardownChat(){
   if (sb && _chatChannel){
+    try { await _chatChannel.untrack(); } catch(e){}
     try { await sb.removeChannel(_chatChannel); } catch(e){}
     _chatChannel = null;
   }
 }
+window.addEventListener('beforeunload', () => {
+  try { if (_chatChannel) _chatChannel.untrack(); } catch(e){}
+});
 
 // ─── 공격대 타이머 (메인 화면에서 작동) ───
 let _raidTickCount = 0;
