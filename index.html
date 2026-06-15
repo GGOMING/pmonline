@@ -997,6 +997,11 @@
 
       <div class="sys-group">
         <h4>공격대 (보스전)</h4>
+        <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
+          <b>현재 활성 raid 강제 갱신:</b>
+          <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (active_key 무작위)</button>
+          <span style="font-size:11px;color:#666;">— 6시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 잡몹 99 리셋</span>
+        </div>
         <div style="margin:4px 0;">
           새벽의 언덕: 잡몹 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
           <button class="admin-btn small" onclick="adminResetRaid('dawn')">세션 리셋</button>
@@ -1141,7 +1146,7 @@
 
       <div class="infoline">
         랭킹전 순위 : <b id="myRank">미등록</b><br>
-        전체 유저 랭킹 : <b id="myOverallRank">-</b> / <b id="totalUsers">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
+        전체 유저 랭킹 : <b id="myOverallRank">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
         공격대 <b id="raid_active_label">-</b> 남은시간 <b id="raid_active_time">--:--:--</b> , 남은 몬스터 <b id="raid_active_mon">-</b>
       </div>
     </div>
@@ -2830,8 +2835,8 @@ function unequipArmor(){
 //   카드샵 (Gacha)
 // ============================================================
 const GACHA = {
-  cost1: 500,
-  cost10: 4500,
+  cost1: 1000,
+  cost10: 9000,
   table: [
     { grade:'normal', rate:0.739  },
     { grade:'rare',   rate:0.25   },
@@ -2840,12 +2845,10 @@ const GACHA = {
   ]
 };
 
-// 저레벨 가챠 할인표 — Lv1=100, Lv10+=정상가(GACHA.cost1)
-// 정상가 변경 시 자동으로 반영되도록 비율로도 처리할 수 있지만,
-// 사용자 의도(50G 단위·완만한 차등)를 명확히 두기 위해 명시적 테이블로 둔다.
+// 저레벨 가챠 할인표 — Lv N = N×100G, Lv10+ = 정상가 1,000G
 const GACHA_LV_COST1 = {
-  1: 100, 2: 150, 3: 200, 4: 250, 5: 300,
-  6: 350, 7: 400, 8: 425, 9: 475,
+  1: 100, 2: 200, 3: 300, 4: 400, 5: 500,
+  6: 600, 7: 700, 8: 800, 9: 900,
 };
 function gachaCost1For(level){
   if (level >= 10) return GACHA.cost1;
@@ -3058,16 +3061,16 @@ function openInventoryView(){
 // ============================================================
 const RAID_BOSSES = {
   dawn: [
-    { id:'mountainking', name:'마운틴킹',     hpMax:5000, str:30, dex:20, int:15, con:30, atk:[40,70], icon:'assets/wc3_icons/blademaster.png' },
-    { id:'blademaster',  name:'블레이드마스터', hpMax:5500, str:35, dex:30, int:15, con:25, atk:[50,90], icon:'assets/wc3_icons/blademaster.gif' },
-    { id:'paladin',      name:'패러딘',       hpMax:6000, str:25, dex:15, int:25, con:35, atk:[40,80], icon:'assets/wc3_icons/blademaster.png' },
-    { id:'warden',       name:'워든',         hpMax:5200, str:25, dex:40, int:20, con:20, atk:[45,85], icon:'assets/wc3_icons/darkranger.gif' },
+    { id:'mountainking', name:'마운틴킹',     hpMax:10000, str:30, dex:20, int:15, con:30, atk:[40,70], icon:'assets/wc3_icons/blademaster.png' },
+    { id:'blademaster',  name:'블레이드마스터', hpMax:10000, str:35, dex:30, int:15, con:25, atk:[50,90], icon:'assets/wc3_icons/blademaster.gif' },
+    { id:'paladin',      name:'패러딘',       hpMax:10000, str:25, dex:15, int:25, con:35, atk:[40,80], icon:'assets/wc3_icons/blademaster.png' },
+    { id:'warden',       name:'워든',         hpMax:10000, str:25, dex:40, int:20, con:20, atk:[45,85], icon:'assets/wc3_icons/darkranger.gif' },
   ],
   mist: [
-    { id:'demonhunter',  name:'데몬헌터',     hpMax:8000, str:30, dex:35, int:30, con:25, atk:[60,110], icon:'assets/wc3_icons/pitlord.gif' },
-    { id:'deathknight',  name:'데스나이트',   hpMax:8500, str:35, dex:25, int:30, con:30, atk:[65,115], icon:'assets/wc3_icons/shadowhunter.gif' },
-    { id:'beastmaster',  name:'비스트마스터', hpMax:7500, str:30, dex:30, int:20, con:35, atk:[55,100], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
-    { id:'darkranger',   name:'다크 레인저',  hpMax:7000, str:25, dex:45, int:25, con:20, atk:[70,120], icon:'assets/wc3_icons/darkranger.gif' },
+    { id:'demonhunter',  name:'데몬헌터',     hpMax:10000, str:30, dex:35, int:30, con:25, atk:[60,110], icon:'assets/wc3_icons/pitlord.gif' },
+    { id:'deathknight',  name:'데스나이트',   hpMax:10000, str:35, dex:25, int:30, con:30, atk:[65,115], icon:'assets/wc3_icons/shadowhunter.gif' },
+    { id:'beastmaster',  name:'비스트마스터', hpMax:10000, str:30, dex:30, int:20, con:35, atk:[55,100], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
+    { id:'darkranger',   name:'다크 레인저',  hpMax:10000, str:25, dex:45, int:25, con:20, atk:[70,120], icon:'assets/wc3_icons/darkranger.gif' },
   ],
 };
 
@@ -3329,11 +3332,62 @@ function raidChallenge(){
   }
 }
 
+// 공격대 잡몹 생성 — Lv 25~40 분포 (25~30 40%, 30~35 50%, 35~40 10%)
+function generateRaidMob(){
+  const roll = Math.random();
+  let lvMin, lvMax;
+  if (roll < 0.40){ lvMin = 25; lvMax = 30; }
+  else if (roll < 0.90){ lvMin = 30; lvMax = 35; }
+  else { lvMin = 35; lvMax = 40; }
+  const mLv = rnd(lvMin, lvMax);
+  const pool = MONSTERS.filter(m => mLv >= m.lvRange[0] && mLv <= m.lvRange[1]);
+  if (pool.length === 0) return generateMonsterFallback(mLv, 2);
+  const tpl = pool[Math.floor(Math.random() * pool.length)];
+  let str = 4 + Math.floor(mLv * 0.4);
+  let dex = 4 + Math.floor(mLv * 0.4);
+  let intl = 4 + Math.floor(mLv * 0.4);
+  let con = 4 + Math.floor(mLv * 0.4);
+  if (tpl.race === 'orc')      { str += 2; con += 1; }
+  if (tpl.race === 'nightelf') { dex += 3; }
+  if (tpl.race === 'undead')   { intl += 2; }
+  if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
+  const DIFF = 1.05;
+  const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * DIFF));
+  const atk = [
+    Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * DIFF)),
+    Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * DIFF))
+  ];
+  const def = Math.max(0, Math.round(con * 0.5 * DIFF));
+  const deck = buildMonsterDeck(tpl.race, mLv, 15);
+  const gold = Math.floor(mLv * (5 + Math.random() * 10));
+  const xp   = Math.floor(mLv * (4 + Math.random() * 3));
+  return {
+    id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
+    str, dex, int: intl, con,
+    hp, hpMax: hp, mp: 50, mpMax: 50,
+    atk, def, weapon:{atkBonus:0}, armor:{defBonus:0},
+    deck, gold, xp,
+  };
+}
+
 function startRaidMobBattle(){
-  // 잡몹은 generateMonster 사용 (tier 2 수준)
-  const monster = generateMonster(Math.max(GAME.player.level, 20), 2);
+  const raidKey = GAME.currentRaid;
+  const r = GAME.raid[raidKey];
+  const p = GAME.player;
+  let monster;
+  const pending = p.pendingRaidMob;
+  // 같은 raid 키 + 같은 세션 + HP 남아있는 잡몹이 있으면 복원
+  if (pending && pending.raidKey === raidKey
+      && Number(pending.sessionStart) === Number(r.sessionStart)
+      && pending.monster && pending.monster.hp > 0){
+    monster = pending.monster;
+    raidLog && true;  // 이어서 도전 안내는 아래에서
+  } else {
+    monster = generateRaidMob();
+    p.pendingRaidMob = null;
+  }
   GAME.raidCombat = {
-    raidKey: GAME.currentRaid,
+    raidKey,
     mode: 'mob',
     monster,
     maxTurns: GAME.player.level >= 26 ? 15 : 10,
@@ -3355,7 +3409,11 @@ function startRaidMobBattle(){
   $('raid_battle_title').textContent = `공격대 잡몹 — ${monster.name} (Lv ${monster.level})`;
   if ($('raidLog')) $('raidLog').innerHTML = '';
   renderRaidBattle();
-  raidLog(`⚔ ${monster.name} 등장! 잡몹 처치 시 카운트가 -1 됩니다.`, 'sys');
+  if (monster.hp < monster.hpMax){
+    raidLog(`⚔ ${monster.name} (Lv ${monster.level}) — 잔여 HP <b>${monster.hp}/${monster.hpMax}</b> 부터 이어서 도전`, 'sys');
+  } else {
+    raidLog(`⚔ ${monster.name} (Lv ${monster.level}) 등장! HP ${monster.hp}`, 'sys');
+  }
 }
 
 async function startRaidBossBattle(){
@@ -3374,7 +3432,7 @@ async function startRaidBossBattle(){
     race: 'boss',
     level: 50,
     str: bossDef.str, dex: bossDef.dex, int: bossDef.int, con: bossDef.con,
-    hp: r.bossHp, hpMax: bossDef.hpMax,
+    hp: r.bossHp, hpMax: (r.bossHpMax || bossDef.hpMax || 10000),
     mp: 200, mpMax: 200,
     atk: bossDef.atk.slice(),
     def: bossDef.con,
@@ -3591,6 +3649,8 @@ async function raidEnd(result){
       else outcome = 'win';
     }
     if (outcome === 'win'){
+      // 잡몹 처치 — pendingRaidMob 제거 (다음 도전 시 새 잡몹)
+      p.pendingRaidMob = null;
       // 잡몹 카운트 차감 — 클라우드 RPC (참여자 등록 포함)
       let remain = r.monsterCount;
       if (sb){
@@ -3626,12 +3686,25 @@ async function raidEnd(result){
         chatSys(`★ 공격대 보스 단계 진입! 최종 타격를 노려보세요.`);
       }
     } else if (outcome === 'lose'){
-      const lost = Math.floor(p.gold * 0.03);
-      p.gold = Math.max(0, p.gold - lost);
-      p.hp = 1;
-      bodyHtml = `<p style="color:#a00;">💀 패배... -${lost}G</p>`;
+      // 공격대 패배 패널티 없음. HP/MP는 0으로 (회복 후 재진입)
+      p.hp = 0;
+      p.mp = 0;
+      // 잡몹 잔여 HP 저장 — 다음 도전 시 이어서
+      if (m.hp > 0){
+        p.pendingRaidMob = { raidKey: c.raidKey, sessionStart: r.sessionStart, monster: m };
+      } else {
+        p.pendingRaidMob = null;
+      }
+      bodyHtml = `<p style="color:#a00;">💀 패배... HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
+        <p style="font-size:11px;color:#666;">잡몹 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 회복 후 다시 도전하면 이어서 사냥합니다.</p>`;
     } else {
-      bodyHtml = `<p>도주 완료. 보상 없음.</p>`;
+      // time / flee — 잡몹이 살아있으면 저장
+      if (m.hp > 0){
+        p.pendingRaidMob = { raidKey: c.raidKey, sessionStart: r.sessionStart, monster: m };
+      } else {
+        p.pendingRaidMob = null;
+      }
+      bodyHtml = `<p>${outcome==='flee'?'기권':'턴 종료'}. 잡몹 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 다음 도전 시 이어집니다.</p>`;
     }
   } else if (c.mode === 'boss'){
     // 보스 모드 — 클라우드 RPC에 누적 데미지 위임
@@ -3689,8 +3762,8 @@ async function raidEnd(result){
       // 본인 보상 즉시 수령 시도
       if (sb){ setTimeout(() => claimRaidRewards(), 500); }
     } else if (result === 'lose'){
-      p.hp = 1;
-      bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP 1로 복구.</p>
+      p.hp = 0; p.mp = 0;
+      bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
         <p>이번 도전 입힌 데미지 <b>${dealtTotal}</b>는 보스 HP에 누적되었습니다.</p>
         <p style="color:#666; font-size:11px;">최종 타격를 치지 못하면 보상이 없습니다.</p>
         <p>보스 잔여 HP: <b>${r.bossHp}/${r.bossHpMax}</b></p>`;
@@ -7543,9 +7616,9 @@ async function initChat(){
     $('chatMsgs').innerHTML = '<div class="sys">★ 오프라인 모드 — 채팅은 로컬에만 표시됩니다.</div>';
     return;
   }
-  // 1) 최근 6시간 이내 최대 50개 메시지만 가져오기 (오래된 메시지는 자동 미표시)
+  // 1) 최근 1시간 이내 최대 50개 메시지만 가져오기 (오래된 메시지는 자동 미표시)
   try {
-    const since = new Date(Date.now() - 6 * 3600 * 1000).toISOString();
+    const since = new Date(Date.now() - 1 * 3600 * 1000).toISOString();
     const { data, error } = await sb.from('chat_messages')
       .select('id, nickname, message, kind, created_at')
       .gte('created_at', since)
@@ -8406,12 +8479,34 @@ function adminBulkAllAccounts(field){
   alert(`✔ ${n}개 계정에 적용 완료`);
 }
 
-function adminBroadcast(){
+async function adminBroadcast(){
   const msg = ($('adminBroadcastMsg').value || '').trim();
   if (!msg) return;
-  try { chatSys(`[📢 공지] ${msg}`); } catch(e){}
+  // 운영자 패널에서는 GAME.player가 null이므로 chat_messages에 직접 insert
+  if (sb){
+    try {
+      const { error } = await sb.from('chat_messages').insert({
+        nickname: 'NOTICE', message: '[📢 공지] ' + msg, kind: 'system'
+      });
+      if (error){ alert('공지 송출 실패: ' + (error.message || error)); return; }
+    } catch(e){ alert('공지 송출 실패: ' + (e.message||e)); return; }
+  } else {
+    try { chatSys('[📢 공지] ' + msg); } catch(e){}
+  }
   $('adminBroadcastMsg').value = '';
   alert('✔ 채팅창에 송출');
+}
+
+// 운영자: 공격대 강제 갱신 (active_key 무작위 재선정 + 새 보스 + 잡몹 99)
+async function adminForceRaidReset(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (!confirm('현재 공격대를 즉시 갱신하시겠습니까?\n• active_key 무작위 재선정 (dawn/mist)\n• 새 보스 무작위 선정\n• 잡몹 99마리 리셋\n• 참여자 목록 초기화')) return;
+  try {
+    const { error } = await sb.rpc('raid_admin_force_reset');
+    if (error){ alert('강제 갱신 실패: ' + (error.message || error)); return; }
+    alert('✔ 공격대가 강제 갱신되었습니다.');
+    refreshAdminSystem();
+  } catch(e){ alert('강제 갱신 실패: ' + (e.message||e)); }
 }
 
 function adminResetRaid(key){
