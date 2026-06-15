@@ -1140,7 +1140,8 @@
       </div>
 
       <div class="infoline">
-        현재 랭킹 : <b id="myRank">0</b> 위<br>
+        랭킹전 순위 : <b id="myRank">미등록</b><br>
+        전체 유저 랭킹 : <b id="myOverallRank">-</b> / <b id="totalUsers">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
         공격대 <b id="raid_active_label">-</b> 남은시간 <b id="raid_active_time">--:--:--</b> , 남은 몬스터 <b id="raid_active_mon">-</b>
       </div>
     </div>
@@ -1197,6 +1198,12 @@
           <tr>
             <td class="lbl">예상 HP/MP</td>
             <td colspan="3"><span id="setup_preview">-</span></td>
+          </tr>
+          <tr>
+            <td class="lbl">상대 무기</td>
+            <td><select id="opp_weapon" onchange="onOppEquipChange()"></select></td>
+            <td class="lbl">상대 방어구</td>
+            <td><select id="opp_armor" onchange="onOppEquipChange()"></select></td>
           </tr>
         </table>
 
@@ -1276,8 +1283,8 @@
         </table>
 
         <div class="train-actions">
-          <button class="btn-atk" onclick="trainPlayerAttack()">평타</button>
-          <button class="btn-back" onclick="trainFlee()">기권</button>
+          <button class="btn-go" onclick="trainNextTurn()" id="trainNextBtn" style="background:#7E181E;">▶ 다음 턴</button>
+          <button class="btn-back" onclick="trainExitToSetup()">돌아가기</button>
         </div>
 
         <div class="train-log" id="trainLog"></div>
@@ -3801,6 +3808,21 @@ function _hydrateSlotDeck(slot){
   return slot;
 }
 
+// 전체 유저 랭킹 (레벨·경험치 순)
+async function fetchOverallRank(){
+  if (!sb) return;
+  try {
+    const { data, error } = await sb.rpc('get_my_overall_rank');
+    if (error){ console.warn('[get_my_overall_rank]', error); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) return;
+    const rEl = document.getElementById('myOverallRank');
+    const tEl = document.getElementById('totalUsers');
+    if (rEl) rEl.textContent = row.rank != null ? row.rank : '-';
+    if (tEl) tEl.textContent = row.total != null ? row.total : '-';
+  } catch(e){ console.warn('[fetchOverallRank]', e); }
+}
+
 async function loadRankingFromCloud(){
   if (!sb) return false;
   try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('rank_check_reset', e); }
@@ -3869,7 +3891,7 @@ async function resetRanking(){
 }
 
 // 일일 보상 한도 (도전 자체는 무제한 — 보상만 하루 N회까지)
-const RANK_DAILY_REWARDS = 10;
+const RANK_DAILY_REWARDS = 20;
 function getRankRewardsLeft(){
   if (typeof GAME.ranking.rewardsLeft !== 'number'){
     // 구버전 호환: 이전에 attemptsLeft였던 값 마이그레이션
@@ -5642,11 +5664,35 @@ function openTrain(){
       level: 5,
       str: 5, dex: 5, int: 5, con: 5,
       deck: Array(10).fill(BASIC_ATTACK),
+      weaponId: 'basic_club',
+      armorId:  'basic_cloth',
     };
+  } else {
+    if (!GAME.trainSetup.weaponId) GAME.trainSetup.weaponId = 'basic_club';
+    if (!GAME.trainSetup.armorId)  GAME.trainSetup.armorId  = 'basic_cloth';
+  }
+  // select option 채우기
+  const wSel = $('opp_weapon');
+  if (wSel){
+    wSel.innerHTML = '<option value="basic_club">훈련용 목검 (+1)</option>' +
+      WEAPONS.map(w => `<option value="${w.id}">${w.name} (+${w.atkBonus})</option>`).join('');
+    wSel.value = GAME.trainSetup.weaponId;
+  }
+  const aSel = $('opp_armor');
+  if (aSel){
+    aSel.innerHTML = '<option value="basic_cloth">천 갑옷 (+1)</option>' +
+      ARMORS.map(a => `<option value="${a.id}">${a.name} (+${a.defBonus})</option>`).join('');
+    aSel.value = GAME.trainSetup.armorId;
   }
   showContent('train');
   showTrainStep('setup');
   refreshSetupUI();
+}
+function onOppEquipChange(){
+  const s = GAME.trainSetup;
+  if (!s) return;
+  s.weaponId = $('opp_weapon').value;
+  s.armorId  = $('opp_armor').value;
 }
 function exitTrain(){
   GAME.trainCombat = null;
@@ -5702,6 +5748,11 @@ function refreshSetupUI(){
   const hpMax = 25 + s.con*8 + (s.level-1)*4;
   const mpMax = 25 + s.int*5 + (s.level-1)*2;
   $('setup_preview').textContent = `HP ${hpMax}, MP ${mpMax} (CON·INT 기반 자동 계산)`;
+  // 무기/방어구 select 동기화
+  const wSel = $('opp_weapon');
+  if (wSel && s.weaponId) wSel.value = s.weaponId;
+  const aSel = $('opp_armor');
+  if (aSel && s.armorId) aSel.value = s.armorId;
   renderSetupDeck();
 }
 function renderSetupDeck(){
@@ -5906,6 +5957,18 @@ function startTrainBattle(){
   const s = GAME.trainSetup;
   // 훈련소는 가상 전투이므로 HP/MP 백업 (전투 종료 시 복구)
   GAME.trainSaved = { hp: GAME.player.hp, mp: GAME.player.mp };
+  // 상대 무기/방어구 객체
+  let oWeapon, oArmor;
+  if (s.weaponId === 'basic_club') oWeapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
+  else {
+    const w = WEAPONS.find(x => x.id === s.weaponId);
+    oWeapon = w ? { id:w.id, name:w.name, atkBonus:w.atkBonus } : { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
+  }
+  if (s.armorId === 'basic_cloth') oArmor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
+  else {
+    const a = ARMORS.find(x => x.id === s.armorId);
+    oArmor = a ? { id:a.id, name:a.name, defBonus:a.defBonus } : { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
+  }
   // 상대 캐릭터 생성
   const opp = {
     name: '훈련 상대 (Lv ' + s.level + ')',
@@ -5913,37 +5976,93 @@ function startTrainBattle(){
     str: s.str, dex: s.dex, int: s.int, con: s.con,
     hpMax: 25 + s.con*8 + (s.level-1)*4,
     mpMax: 25 + s.int*5 + (s.level-1)*2,
-    weapon: { name:'자동무기', atkBonus: Math.floor(s.level*0.6) },
-    armor:  { name:'자동방어구', defBonus: Math.floor(s.level*0.4) },
+    weapon: oWeapon,
+    armor:  oArmor,
     deck: s.deck.slice(),
     buffs: {str:0,dex:0,int:0,con:0,atk:0,def:0},
     dots: [], hots: [],
-    usedThisTurn: false,
   };
-  // 무기/방어구 효과
-  opp.atkType = (opp.dex > opp.str) ? '사격' : (opp.int > opp.str) ? '마법' : '근접';
-  const wBase = (opp.atkType==='근접' ? opp.str : opp.atkType==='사격' ? opp.dex : opp.int) + opp.weapon.atkBonus;
-  opp.atk = [Math.max(2,Math.floor(wBase*0.6)), Math.max(4,Math.floor(wBase*1.2))];
-  opp.def = opp.con + opp.armor.defBonus;
+  // 무기/방어구 반영 공격력·방어력
+  const wBase = opp.str + (oWeapon.atkBonus||0);
+  opp.atk = [Math.max(2, Math.floor(wBase * 0.4)), Math.max(5, Math.floor(wBase * 1.0))];
+  opp.def = opp.con + (oArmor.defBonus||0);
+  opp.atkType = '근접';
   opp.hp = opp.hpMax;
   opp.mp = opp.mpMax;
   // 내 캐릭터 - 현재 상태 그대로
   const me = GAME.player;
   calcDerived(me);
-  // 전투 상태
+  // 전투 상태 — 슬롯 순서대로 자동 진행 (수행과 동일 패턴)
   GAME.trainCombat = {
     opp,
-    turn: 1,
+    turn: 0,
+    maxTurns: 10,
     myBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
     myDots:[], myHots:[],
-    myUsedThisTurn: false,
     log: [],
     statsMyDmg: 0, statsOppDmg: 0, statsMyCards: 0,
+    finished: false,
   };
   showTrainStep('battle');
   renderTrainBattle();
-  trainLog(`⚔ 전투 시작! 상대: ${opp.name} (HP ${opp.hp})`, 'sys');
-  trainLog(`STR ${opp.str} / DEX ${opp.dex} / INT ${opp.int} / CON ${opp.con} | 공격력 ${opp.atk[0]}-${opp.atk[1]} (${opp.atkType})`, 'info');
+  trainLog(`⚔ 전투 시작! 상대: ${opp.name} (HP ${opp.hp} · 무기 ${oWeapon.name} · 방어구 ${oArmor.name})`, 'sys');
+  trainLog(`STR ${opp.str} / DEX ${opp.dex} / INT ${opp.int} / CON ${opp.con} | 공격 ${opp.atk[0]}-${opp.atk[1]} · 방어 ${opp.def}`, 'info');
+  trainLog(`★ 「다음 턴」 버튼으로 자동 전투 진행. DEX 높은 쪽이 선공.`, 'info');
+  _autoFocusBtn('trainNextBtn');
+}
+
+// 자동 진행 — 슬롯 순서대로 양쪽 카드 발동
+function trainNextTurn(){
+  const c = GAME.trainCombat;
+  if (!c || c.finished) return;
+  c.turn++;
+  if (c.turn > c.maxTurns){ return onTrainEnd('time'); }
+  const me = GAME.player;
+  const opp = c.opp;
+  const slot = c.turn - 1;
+  const myCard = GAME.myDeck[slot] || BASIC_ATTACK;
+  const oppCard = opp.deck[slot] || BASIC_ATTACK;
+  const myDex = me.dex + c.myBuffs.dex;
+  const oppDex = opp.dex + opp.buffs.dex;
+  const playerFirst = myDex >= oppDex;
+  trainLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
+  function castMe(){ if (isTrainStunned('me')) trainLog('  ✱ 나 행동불능', 'sys'); else { trainLog(`🃏 <b>${myCard.name}</b> 발동`, 'info'); trainApplyCard(myCard, 'me'); c.statsMyCards++; } }
+  function castOpp(){ if (isTrainStunned('opp')) trainLog('  ✱ 상대 행동불능', 'sys'); else { trainLog(`🃏 [상대] <b>${oppCard.name}</b> 발동`, 'opp'); trainApplyCard(oppCard, 'opp'); } }
+  if (playerFirst){
+    castMe(); if (!checkTrainAlive()) return;
+    castOpp();
+  } else {
+    castOpp(); if (!checkTrainAlive()) return;
+    castMe();
+  }
+  if (!checkTrainAlive()) return;
+  processTrainTicks();
+  if (!checkTrainAlive()) return;
+  renderTrainBattle();
+  _autoFocusBtn('trainNextBtn');
+  if (c.turn >= c.maxTurns){ setTimeout(()=> onTrainEnd('time'), 500); }
+}
+
+function checkTrainAlive(){
+  const c = GAME.trainCombat;
+  if (!c) return false;
+  if (GAME.player.hp <= 0){ onTrainEnd('lose'); return false; }
+  if (c.opp.hp <= 0){ onTrainEnd('win'); return false; }
+  return true;
+}
+
+// 전투에서 돌아가기 → 새 상대 설정 화면
+function trainExitToSetup(){
+  // HP/MP 백업 복구
+  if (GAME.trainSaved){
+    GAME.player.hp = GAME.trainSaved.hp;
+    GAME.player.mp = GAME.trainSaved.mp;
+    GAME.trainSaved = null;
+  }
+  GAME.trainCombat = null;
+  showTrainStep('setup');
+  refreshSetupUI();
+  renderSheet();
 }
 
 function renderTrainBattle(){
@@ -5951,7 +6070,7 @@ function renderTrainBattle(){
   if (!c) return;
   const o = c.opp;
   $('train_turn').textContent = '턴 ' + c.turn;
-  $('who_turn').textContent = c.myUsedThisTurn ? '— 상대 대기 중…' : '— 내 턴 (카드/평타 선택)';
+  $('who_turn').textContent = '— 「다음 턴」 버튼으로 진행';
   $('o_name').textContent = o.name;
   $('o_level').textContent = o.level;
   $('o_str').textContent = o.str + (c.opp.buffs.str?` (${c.opp.buffs.str>0?'+':''}${c.opp.buffs.str})`:'');
@@ -5970,14 +6089,14 @@ function renderTrainBattle(){
     td.title = card.name + ' — ' + card.text;
     td.parentNode.nextElementSibling.children[i%5].textContent = card.name;
   }
-  // 내 덱 (현재 메인 myDeck)
+  // 내 덱 (현재 메인 myDeck) — 자동 진행이므로 클릭 비활성
   for (let i=0;i<10;i++){
     const td = document.querySelector(`[data-mdisp="${i}"]`);
     const card = GAME.myDeck[i] || BASIC_ATTACK;
     td.innerHTML = `<div class="card-ico">${cardIcon(card)}</div>`;
     td.title = card.name + ' — ' + card.text;
     td.parentNode.nextElementSibling.children[i%5].textContent = card.name;
-    td.onclick = ()=>trainPlayCard(i);
+    td.onclick = null;
   }
 }
 
@@ -6683,6 +6802,8 @@ function checkLevelUp(){
     renderDeck();
     saveGame();
     _scheduleLvUpAlert();  // 알림 팝업 (랭킹전 등 다른 경로에서도)
+    // 전체 랭킹 갱신 (cloudSave 디바운스 후 약간 지연)
+    setTimeout(() => { try { fetchOverallRank(); } catch(e){} }, 3500);
   }
   return leveled;
 }
@@ -6944,7 +7065,10 @@ function renderSheet(){
   setText('s_weapon', (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')');
   setText('s_armor',  (p.armor.name||'') + ' (+' + p.armor.defBonus + ')');
   setText('s_def', p.def);
-  if ($('myRank')) $('myRank').textContent = p.rankPos;
+  if ($('myRank')){
+    const r = (GAME.ranking && GAME.ranking.myRank) || 0;
+    $('myRank').textContent = r === 0 ? '미등록' : (r + '위');
+  }
   // HP/MP 바
   const hpPct = Math.max(0, Math.min(100, p.hp/p.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, p.mp/p.mpMax*100));
@@ -7323,6 +7447,7 @@ function enterMain(){
         await loadRaidFromCloud();
         await subscribeRaid();
         await claimRaidRewards();
+        await fetchOverallRank();
         renderSheet();
         try { updateRaidUI(); } catch(e){}
       } catch(e){ console.warn('init cloud', e); }
