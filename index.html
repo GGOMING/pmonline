@@ -22,36 +22,56 @@
   /* 튜토리얼 모달 */
   .tutorial-overlay {
     display:none; position:fixed; left:0; top:0; right:0; bottom:0;
-    background:rgba(0,0,0,.75); z-index:1000;
-    justify-content:center; align-items:center;
+    background:rgba(0,0,0,.35); z-index:1000;
+    justify-content:flex-end; align-items:flex-end;
+    pointer-events:none;
   }
   .tutorial-overlay.on { display:flex; }
+  .tutorial-overlay.center { justify-content:center; align-items:center; background:rgba(0,0,0,.75); }
   .tutorial-modal {
     background:linear-gradient(135deg,#1a3a6e 0%,#2e53b2 100%);
     color:#fff; border:3px solid #ffd700; border-radius:8px;
-    width:600px; max-width:92vw; display:flex; flex-direction:column;
+    width:380px; max-width:92vw; display:flex; flex-direction:column;
     box-shadow:0 0 30px rgba(255,215,0,0.6);
+    margin:20px; pointer-events:auto;
+    transition:transform .25s ease, opacity .25s ease;
   }
+  .tutorial-overlay.center .tutorial-modal { width:600px; margin:0; }
   .tutorial-progress { height:6px; background:#1a1a3a; }
   .tutorial-progress-bar { height:100%; background:linear-gradient(90deg,#ffd700,#ff9900); width:0%; transition:width 0.3s; }
-  .tutorial-step { padding:24px 28px; min-height:280px; text-align:center; }
-  .tutorial-step h2 { color:#ffd700; font-size:22px; margin:0 0 16px; text-shadow:1px 1px 0 #000; }
-  .tutorial-step .ico-big { font-size:56px; margin-bottom:12px; }
-  .tutorial-step p { font-size:14px; line-height:1.7; margin:8px 0; color:#fff; text-align:left; }
-  .tutorial-step .tip { background:rgba(255,215,0,0.15); border-left:4px solid #ffd700; padding:10px 14px; margin:12px 0; font-size:13px; text-align:left; }
-  .tutorial-nav { background:#0a1a3a; padding:12px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #ffd700; }
+  .tutorial-step { padding:18px 22px; min-height:auto; text-align:center; }
+  .tutorial-overlay.center .tutorial-step { padding:24px 28px; min-height:280px; }
+  .tutorial-step h2 { color:#ffd700; font-size:18px; margin:0 0 10px; text-shadow:1px 1px 0 #000; }
+  .tutorial-overlay.center .tutorial-step h2 { font-size:22px; margin:0 0 16px; }
+  .tutorial-step .ico-big { font-size:42px; margin-bottom:8px; }
+  .tutorial-overlay.center .tutorial-step .ico-big { font-size:56px; margin-bottom:12px; }
+  .tutorial-step p { font-size:13px; line-height:1.6; margin:6px 0; color:#fff; text-align:left; }
+  .tutorial-step .tip { background:rgba(255,215,0,0.15); border-left:4px solid #ffd700; padding:8px 12px; margin:10px 0; font-size:12px; text-align:left; }
+  .tutorial-nav { background:#0a1a3a; padding:10px; display:flex; justify-content:space-between; align-items:center; border-top:1px solid #ffd700; }
   .tutorial-nav button {
-    padding:8px 24px; background:#ffd700; color:#1a1a3a; border:0; cursor:pointer;
-    font-weight:bold; border-radius:4px; font-size:13px;
+    padding:6px 18px; background:#ffd700; color:#1a1a3a; border:0; cursor:pointer;
+    font-weight:bold; border-radius:4px; font-size:12px;
   }
   .tutorial-nav button:disabled { opacity:0.4; cursor:not-allowed; }
   .tutorial-nav button:hover:not(:disabled) { background:#ff9900; }
-  .tutorial-nav .step-num { color:#ffd700; font-size:12px; font-weight:bold; }
+  .tutorial-nav .step-num { color:#ffd700; font-size:11px; font-weight:bold; }
   .tutorial-skip {
     position:absolute; top:8px; right:12px; color:#ccc; font-size:11px;
     cursor:pointer; background:none; border:0;
   }
   .tutorial-skip:hover { color:#fff; text-decoration:underline; }
+  /* 튜토리얼 하이라이트 */
+  .tutorial-highlight {
+    position:relative; z-index:1001;
+    outline:3px solid #ffd700; outline-offset:4px;
+    box-shadow:0 0 20px #ffd700, 0 0 40px rgba(255,215,0,0.6);
+    animation:tutHighlightPulse 1.2s ease-in-out infinite;
+    border-radius:4px;
+  }
+  @keyframes tutHighlightPulse {
+    0%,100% { outline-color:#ffd700; box-shadow:0 0 20px #ffd700, 0 0 40px rgba(255,215,0,0.6); }
+    50%     { outline-color:#ff9900; box-shadow:0 0 30px #ff9900, 0 0 60px rgba(255,153,0,0.7); }
+  }
   /* 레벨업 강조 애니메이션 */
   @keyframes lvUpBounce {
     0%, 100% { transform: translateY(0) scale(1); text-shadow: 1px 1px 0 #fff, 0 0 4px #ffd700; }
@@ -295,7 +315,7 @@
   }
   .avatar-name {
     width:100px; height:28px; box-sizing:border-box;
-    margin-top:8px;
+    margin-top:2px;
     display:flex; align-items:center; justify-content:center;
     text-align:center;
     font-weight:bold; font-size:13px; color:#7E181E;
@@ -928,10 +948,6 @@
           </td>
         </tr>
         <tr>
-          <td class="lbl">대화</td>
-          <td><input id="regSay" maxlength="20" placeholder="잘 부탁드릴까요?"></td>
-        </tr>
-        <tr>
           <td class="lbl">휴대폰</td>
           <td>
             <input id="regPhone" maxlength="13" placeholder="010-1234-5678">
@@ -1100,12 +1116,12 @@
   <div id="game">
 
     <!-- 캐릭터 정보 -->
-    <div class="topbox">
+    <div class="topbox" id="main-topbox">
       <div class="avatar-col">
         <div class="avatar" id="avatar">?</div>
         <div class="avatar-name" id="s_name">-</div>
       </div>
-      <div style="display:flex;flex-direction:column;flex:1;">
+      <div style="display:flex;flex-direction:column;flex:1;" id="main-statbox">
       <table class="stat">
         <tr>
           <td class="lbl">레벨</td><td class="val" id="s_level">-</td>
@@ -1144,7 +1160,7 @@
 
     <!-- 메인 컨텐츠: 카드슬롯 + 메뉴 + 하단정보 -->
     <div class="content-pane" id="content-main">
-      <table class="deck">
+      <table class="deck" id="main-deck">
         <tr class="icons">
           <td data-slot="0"></td><td data-slot="1"></td><td data-slot="2"></td><td data-slot="3"></td><td data-slot="4"></td>
         </tr>
@@ -1167,17 +1183,17 @@
 
       <div class="menubar">
         <table><tr>
-          <td onclick="openHeal()">회복의 샘물</td>
-          <td onclick="openCardShop()">카드샵</td>
-          <td class="menu-hunt" onclick="openHunt()">수행</td>
-          <td onclick="openWeaponShop()">무기상점</td>
-          <td onclick="openArmorShop()">방어구상점</td>
+          <td id="m-heal" onclick="openHeal()">회복의 샘물</td>
+          <td id="m-cardshop" onclick="openCardShop()">카드샵</td>
+          <td id="m-hunt" class="menu-hunt" onclick="openHunt()">수행</td>
+          <td id="m-wshop" onclick="openWeaponShop()">무기상점</td>
+          <td id="m-ashop" onclick="openArmorShop()">방어구상점</td>
         </tr></table>
         <table><tr>
-          <td class="row2" onclick="openTrain()">훈련소</td>
-          <td class="row2" onclick="openRank()">랭킹전</td>
-          <td class="row2" onclick="openActiveRaid()">공격대</td>
-          <td class="row2" onclick="openProfilePage()">프로필 관리</td>
+          <td id="m-train" class="row2" onclick="openTrain()">훈련소</td>
+          <td id="m-rank" class="row2" onclick="openRank()">랭킹전</td>
+          <td id="m-raid" class="row2" onclick="openActiveRaid()">공격대</td>
+          <td id="m-profile" class="row2" onclick="openProfilePage()">프로필 관리</td>
           <td class="row2" onclick="todo('여신전쟁 카페')">여신전쟁 카페</td>
         </tr></table>
       </div>
@@ -6850,62 +6866,71 @@ const TUTORIAL_STEPS = [
     icon:'🎮', title:'여신전쟁에 오신 것을 환영합니다!',
     body:`<p>당신은 이제 신화 속 영웅이 되어 카드 덱으로 전투를 펼치게 됩니다.</p>
       <p>이 짧은 안내는 약 1분 정도 소요됩니다. 차근차근 따라와 주세요.</p>`,
+    target:null, page:'main', position:'center',
   },
   {
     icon:'🃏', title:'카드 덱 시스템',
     body:`<p>전투는 <b>덱 슬롯 1~10번</b>의 카드가 매 턴 순서대로 자동 발동됩니다.</p>
-      <p>메인 화면 가운데에서 카드 슬롯을 클릭해 보유 카드 중 원하는 것을 배치할 수 있어요.</p>
+      <p>아래에 강조된 <b>카드 덱</b> 영역의 슬롯을 클릭해 보유 카드 중 원하는 것을 배치할 수 있어요.</p>
       <div class="tip">🎯 <b>소환의식·은신</b> 같은 선행 카드가 필요한 카드는 앞 슬롯에 선행 카드를 먼저 두세요.</div>`,
+    target:'#main-deck', page:'main', position:'corner',
   },
   {
     icon:'📊', title:'스탯 (STR · DEX · INT · CON)',
     body:`<p>레벨업 시 받는 스탯 포인트를 어떻게 분배하느냐가 전략의 핵심입니다.</p>
-      <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력↑. 배쉬·슬램·도려내기 등 <b>STR 기반 데미지 카드</b>가 강해집니다.<br>
-         • <b style="color:#aaffaa;">DEX (민첩)</b> — 회피·선공 우위. 시어링애로우·임페일·블랙애로우 등 <b>DEX 카드</b> 시너지.<br>
-         • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지. 체인라이트닝·마나번 등 <b>마법 카드</b>가 위력을 냅니다.<br>
-         • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력. <b>탱커형 빌드</b>의 핵심.</p>
-      <div class="tip">💡 한 스탯에 집중 투자(빌드)하면 같은 등급 카드라도 효율이 크게 달라집니다.</div>`,
+      <p>• <b style="color:#ffaa66;">STR</b> — 기본공격력. 배쉬·슬램 등 STR 카드.<br>
+         • <b style="color:#aaffaa;">DEX</b> — 회피·선공. 시어링애로우·임페일.<br>
+         • <b style="color:#aaccff;">INT</b> — 최대 MP·마법. 체인라이트닝·마나번.<br>
+         • <b style="color:#ffccaa;">CON</b> — 최대 HP·방어. 탱커형 빌드.</p>
+      <div class="tip">💡 한 스탯에 집중 투자하면 같은 카드라도 효율이 크게 달라집니다.</div>`,
+    target:'#main-statbox', page:'main', position:'corner',
   },
   {
     icon:'🗡️', title:'무기와 방어구',
-    body:`<p><b>무기상점·방어구상점</b>에서 장비를 구매하면 영구히 장착됩니다.</p>
-      <p>• <b>무기</b>의 atkBonus는 STR과 합산되어 기본공격·STR 카드의 데미지에 직접 영향.<br>
-         • <b>방어구</b>의 defBonus는 CON과 합산되어 받는 데미지를 줄여줍니다.<br>
-         • 장비는 보스 처치 시 확률로 드랍되며(dawn=무기, mist=방어구), 보관함에 자동 보관됩니다.</p>
-      <div class="tip">🛡️ 같은 레벨이라도 좋은 무기·방어구를 장착한 쪽이 훨씬 단단하고 강합니다.</div>`,
+    body:`<p>강조된 <b>무기상점</b>·<b>방어구상점</b>에서 장비를 구매하면 영구히 장착됩니다.</p>
+      <p>• 무기 atkBonus → STR과 합산.<br>
+         • 방어구 defBonus → CON과 합산해 받는 데미지 감소.<br>
+         • 보스 처치 시 확률로 드랍됩니다.</p>
+      <div class="tip">🛡️ 같은 레벨이라도 좋은 장비를 갖춘 쪽이 훨씬 강합니다.</div>`,
+    target:'#m-wshop', page:'main', position:'corner',
   },
   {
     icon:'⚔', title:'수행 (사냥) & 회복의 샘물',
-    body:`<p>메인 메뉴 가운데 큰 <b style="color:#ffd700;">수행</b> 버튼으로 몬스터와 1:1 전투를 합니다.</p>
-      <p>승리하면 골드와 경험치를 얻고, 레벨이 오르면 HP·MP가 완전히 회복돼요.</p>
-      <p><b style="color:#88ddff;">회복의 샘물</b>은 깎인 HP·MP를 즉시 풀회복해 주는 곳입니다. 비용은 깎인 HP+MP의 10% (5~20G), 보유 골드 100G 미만이면 무료.</p>
-      <div class="tip">⚠️ HP가 0이 되면 어떤 콘텐츠에도 진입할 수 없고 자동으로 회복의 샘물로 이동합니다.</div>`,
+    body:`<p>가운데 큰 <b style="color:#ffd700;">수행</b> 버튼이 1:1 전투의 핵심입니다.</p>
+      <p>승리하면 골드·경험치를 얻고, 레벨이 오르면 HP·MP 완전 회복.</p>
+      <p><b style="color:#88ddff;">회복의 샘물</b>은 즉시 풀회복 (깎인 HP+MP의 10%, 100G 미만이면 무료).</p>
+      <div class="tip">⚠️ HP가 0이 되면 자동으로 회복의 샘물로 이동합니다.</div>`,
+    target:'#m-hunt', page:'main', position:'corner',
   },
   {
     icon:'🏆', title:'랭킹전 (초보 추천!)',
-    body:`<p>극초반에는 <b style="color:#ffd700;">랭킹전</b>이 가장 좋은 사냥터입니다.</p>
-      <p>10위부터 도전할 수 있고, 기본 NPC들은 Lv1 기본 캐릭터라 비교적 쉽게 이길 수 있어요.</p>
-      <p>승리하면 경험치와 <b>+50G</b>를 얻고, 한 위씩 올라갑니다 (일일 보상 한도 20회, 도전은 무제한).</p>
-      <div class="tip">💰 <b>랭킹에 등극하면 수행마다 골드 보너스</b>가 자동 지급됩니다 (1위 +100G ~ 10위 +10G/수행).<br>
-        ⚠️ 단, 랭킹은 다른 사용자에게 빼앗길 수 있고, 회복의 샘물 이용 후 5% 확률로 방어전이 발생할 수 있어요 (1~5위).</div>`,
+    body:`<p>극초반에는 강조된 <b style="color:#ffd700;">랭킹전</b>이 가장 좋은 사냥터입니다.</p>
+      <p>10위부터 도전 가능, NPC는 Lv1 기본 캐릭터라 비교적 쉽게 이깁니다.</p>
+      <p>승리 시 경험치 + <b>50G</b>, 한 위씩 상승 (일일 보상 20회).</p>
+      <div class="tip">💰 <b>랭킹 등극 시 수행마다 골드 보너스</b> (1위 +100G ~ 10위 +10G).<br>
+        ⚠️ 회복의 샘물 이용 후 5% 확률로 방어전 발생 (1~5위).</div>`,
+    target:'#m-rank', page:'main', position:'corner',
   },
   {
     icon:'🛒', title:'카드샵 — 가챠로 카드 모으기',
-    body:`<p>골드를 모았다면 <b style="color:#ffd700;">카드샵</b>에서 가챠로 카드를 뽑으세요.</p>
+    body:`<p>골드가 모이면 강조된 <b style="color:#ffd700;">카드샵</b>에서 가챠를 돌리세요.</p>
       <p>레벨이 낮을수록 할인이 큽니다 — <b>Lv1은 1뽑에 단 100G!</b> Lv10부터 정상가 1,000G.</p>
-      <div class="tip">⭐ 10뽑은 10% 할인. 카드는 등급별로 일반/레어/유니크/영웅이 있고, 등급이 높을수록 강력합니다.</div>`,
+      <div class="tip">⭐ 10뽑은 10% 할인. 일반/레어/유니크/영웅 등급이 있습니다.</div>`,
+    target:'#m-cardshop', page:'main', position:'corner',
   },
   {
     icon:'🐉', title:'공격대 — 함께 보스 사냥',
-    body:`<p><b>공격대</b>는 6시간마다 갱신되는 공동 콘텐츠입니다 (<b style="color:#ffd700;">Lv 25부터 입장</b>).</p>
-      <p>잡몹 99마리를 모두 함께 처치하면 보스가 등장하고, 보스 HP가 0이 되면 보상이 분배됩니다.</p>
-      <div class="tip">🎁 한 번이라도 잡몹·보스에 참여한 사람 전원에게 보스 처치 시 카드 1뽑이 자동 지급됩니다. 최종 타격자에겐 장비 추가 드랍!</div>`,
+    body:`<p>강조된 <b>공격대</b>는 6시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
+      <p>잡몹 99마리 + 보스를 공동으로 처치하면 보상이 분배됩니다.</p>
+      <div class="tip">🎁 참여자 전원 보스 처치 시 카드 1뽑 자동 지급. 최종 타격자엔 장비 추가 드랍!</div>`,
+    target:'#m-raid', page:'main', position:'corner',
   },
   {
     icon:'👤', title:'프로필 관리',
-    body:`<p>메인 메뉴의 <b style="color:#ffd700;">프로필 관리</b>에서 다음을 변경할 수 있어요.</p>
+    body:`<p>강조된 <b style="color:#ffd700;">프로필 관리</b>에서 다음을 변경할 수 있어요.</p>
       <p>• 프로필 사진 (10,000G)<br>• 닉네임 (50,000G)<br>• 비밀번호 (무료)</p>
       <div class="tip">📷 부적절한 사진·닉네임은 운영자 판단으로 계정이 삭제될 수 있습니다.</div>`,
+    target:'#m-profile', page:'main', position:'corner',
   },
   {
     icon:'🎁', title:'환영 보너스!',
@@ -6913,10 +6938,36 @@ const TUTORIAL_STEPS = [
       <p>총 <b style="color:#ffd700;font-size:18px;">400G</b>로 카드샵에서 <b>1뽑(100G)을 3번 이상</b> 돌려보세요.</p>
       <p>레어 카드가 나오면 덱에 배치하고 랭킹전이나 수행에 도전!</p>
       <div class="tip">🚀 즐거운 모험 되세요! 「시작하기」를 누르면 보너스가 지급됩니다.</div>`,
+    target:null, page:'main', position:'center',
   },
 ];
 
 let _tutorialIdx = 0;
+let _tutorialHighlightEl = null;
+function _tutorialClearHighlight(){
+  if (_tutorialHighlightEl){
+    _tutorialHighlightEl.classList.remove('tutorial-highlight');
+    _tutorialHighlightEl = null;
+  }
+}
+function _tutorialApplyHighlight(sel){
+  _tutorialClearHighlight();
+  if (!sel) return;
+  try {
+    const el = document.querySelector(sel);
+    if (el){
+      el.classList.add('tutorial-highlight');
+      _tutorialHighlightEl = el;
+      try { el.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(e){}
+    }
+  } catch(e){ console.warn('tutorial highlight', e); }
+}
+function _tutorialGoPage(pageId){
+  if (!pageId) return;
+  try {
+    if (typeof showContent === 'function') showContent(pageId);
+  } catch(e){ console.warn('tutorial page', e); }
+}
 function startTutorial(){
   _tutorialIdx = 0;
   const ov = document.getElementById('tutorialOverlay');
@@ -6926,6 +6977,15 @@ function startTutorial(){
 function renderTutorialStep(){
   const step = TUTORIAL_STEPS[_tutorialIdx];
   if (!step) return;
+  // 화면 전환
+  _tutorialGoPage(step.page || 'main');
+  // 모달 위치 (center / corner)
+  const ov = document.getElementById('tutorialOverlay');
+  if (ov){
+    if ((step.position || 'corner') === 'center') ov.classList.add('center');
+    else ov.classList.remove('center');
+  }
+  // 본문
   const el = document.getElementById('tutorialStepContent');
   if (el) el.innerHTML = `<div class="ico-big">${step.icon}</div><h2>${step.title}</h2>${step.body}`;
   const num = document.getElementById('tutorialStepNum');
@@ -6936,6 +6996,8 @@ function renderTutorialStep(){
   if (prev) prev.disabled = _tutorialIdx === 0;
   const next = document.getElementById('tutorialNextBtn');
   if (next) next.textContent = _tutorialIdx === TUTORIAL_STEPS.length - 1 ? '🎁 시작하기' : '다음 →';
+  // 하이라이트는 화면 전환 이후 한 틱 뒤에
+  setTimeout(() => _tutorialApplyHighlight(step.target), 80);
 }
 function tutorialNext(){
   if (_tutorialIdx < TUTORIAL_STEPS.length - 1){ _tutorialIdx++; renderTutorialStep(); }
@@ -6950,8 +7012,10 @@ function tutorialSkip(){
     GAME.player.tutorialDone = true;
     saveGame();
   }
+  _tutorialClearHighlight();
   const ov = document.getElementById('tutorialOverlay');
-  if (ov) ov.classList.remove('on');
+  if (ov){ ov.classList.remove('on'); ov.classList.remove('center'); }
+  _tutorialGoPage('main');
 }
 function tutorialFinish(){
   if (GAME.player){
@@ -6960,8 +7024,10 @@ function tutorialFinish(){
     saveGame();
     renderSheet();
   }
+  _tutorialClearHighlight();
   const ov = document.getElementById('tutorialOverlay');
-  if (ov) ov.classList.remove('on');
+  if (ov){ ov.classList.remove('on'); ov.classList.remove('center'); }
+  _tutorialGoPage('main');
   toast('🎁 환영 보너스 +300G 지급!');
   setTimeout(() => {
     alert('🎁 환영 보너스 +300G 지급!\n\n총 400G로 카드샵에서 1뽑(100G)을 3번 이상 돌려보세요.\n레어 카드가 나오면 덱에 배치하고 랭킹전에 도전해 보세요!');
@@ -7543,7 +7609,7 @@ let _regAuthOk = false;
 
 function showRegisterPage(){
   // 폼 초기화
-  ['regName','regPw','regPw2','regSay','regPhone','regAuth'].forEach(id => { if ($(id)) $(id).value = ''; });
+  ['regName','regPw','regPw2','regPhone','regAuth'].forEach(id => { if ($(id)) $(id).value = ''; });
   $('regNameStatus').textContent = '';
   $('regPwStatus').textContent = '';
   $('regAuthStatus').textContent = '';
@@ -7623,7 +7689,7 @@ async function doRegisterSubmit(){
   const name = ($('regName').value || '').trim();
   const pw   = ($('regPw').value || '').trim();
   const pw2  = ($('regPw2').value || '').trim();
-  const say  = ($('regSay').value || '').trim();
+  const say  = '';
   if (!_regDupOk){ alert('아이디 중복확인을 해주세요.'); return; }
   if (!pw || pw.length < 6){ alert('비밀번호는 6자 이상 입력해 주세요.'); return; }
   if (pw !== pw2){ alert('비밀번호 확인이 일치하지 않습니다.'); return; }
