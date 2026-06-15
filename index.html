@@ -4682,13 +4682,14 @@ function generateMonsterFallback(playerLv, tier){
 // ─── 몬스터 생성 ───
 function generateMonster(playerLv, tier){
   // 사용자 레벨 기반 몬스터 최대 레벨 캡
-  // - Lv 1~5: +2까지만 (Lv 1 → 최대 Lv 3)
+  // - Lv 1~5: 초보 보호 — 동급 이하만 등장 + 스탯 약화
   // - Lv 6~25: ±2
   // - 수행2: ±3
   let maxMLv, minMLv;
-  if (playerLv <= 5){
-    minMLv = playerLv;
-    maxMLv = playerLv + 2;
+  const earlyEasy = playerLv <= 5;
+  if (earlyEasy){
+    minMLv = Math.max(1, playerLv - 1);
+    maxMLv = playerLv;
   } else if (tier === 1){
     minMLv = Math.max(1, playerLv - 2);
     maxMLv = playerLv + 2;
@@ -4723,18 +4724,20 @@ function generateMonster(playerLv, tier){
   if (tier === 2) mLv = Math.max(26, mLv);
 
   // 스탯 계산 (사용자와 비슷한 성장 곡선)
-  let str = 4 + Math.floor(mLv * 0.4);
-  let dex = 4 + Math.floor(mLv * 0.4);
-  let int = 4 + Math.floor(mLv * 0.4);
-  let con = 4 + Math.floor(mLv * 0.4);
+  const STAT_BASE = earlyEasy ? 3 : 4;
+  const STAT_GROW = earlyEasy ? 0.3 : 0.4;
+  let str = STAT_BASE + Math.floor(mLv * STAT_GROW);
+  let dex = STAT_BASE + Math.floor(mLv * STAT_GROW);
+  let int = STAT_BASE + Math.floor(mLv * STAT_GROW);
+  let con = STAT_BASE + Math.floor(mLv * STAT_GROW);
   // 종족 편향
   if (tpl.race === 'orc')      { str += 2; con += 1; }
   if (tpl.race === 'nightelf') { dex += 3; }
   if (tpl.race === 'undead')   { int += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
 
-  // HP/공격력/방어력 — 1.05배 난이도 상향
-  const DIFF = 1.05;
+  // HP/공격력/방어력 — Lv 1~5는 0.65배 초보 보호, 이후 1.05배
+  const DIFF = earlyEasy ? 0.65 : 1.05;
   const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * DIFF));
   const atk = [
     Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * DIFF)),
@@ -6872,33 +6875,32 @@ const TUTORIAL_STEPS = [
     icon:'🃏', title:'카드 덱 시스템',
     body:`<p>전투는 <b>덱 슬롯 1~10번</b>의 카드가 매 턴 순서대로 자동 발동됩니다.</p>
       <p>아래에 강조된 <b>카드 덱</b> 영역의 슬롯을 클릭해 보유 카드 중 원하는 것을 배치할 수 있어요.</p>
-      <div class="tip">🎯 <b>소환의식·은신</b> 같은 선행 카드가 필요한 카드는 앞 슬롯에 선행 카드를 먼저 두세요.</div>`,
+      <div class="tip">🎯 발동 순서를 신경 써서 덱을 구성하면 전투 결과가 크게 달라집니다.</div>`,
     target:'#main-deck', page:'main', position:'corner',
   },
   {
     icon:'📊', title:'스탯 (STR · DEX · INT · CON)',
-    body:`<p>레벨업 시 받는 스탯 포인트를 어떻게 분배하느냐가 전략의 핵심입니다.</p>
-      <p>• <b style="color:#ffaa66;">STR</b> — 기본공격력. 배쉬·슬램 등 STR 카드.<br>
-         • <b style="color:#aaffaa;">DEX</b> — 회피·선공. 시어링애로우·임페일.<br>
-         • <b style="color:#aaccff;">INT</b> — 최대 MP·마법. 체인라이트닝·마나번.<br>
-         • <b style="color:#ffccaa;">CON</b> — 최대 HP·방어. 탱커형 빌드.</p>
-      <div class="tip">💡 한 스탯에 집중 투자하면 같은 카드라도 효율이 크게 달라집니다.</div>`,
+    body:`<p>레벨업 시 받는 스탯 포인트의 분배가 전략의 핵심입니다.</p>
+      <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력 ↑. 배쉬·슬램·도려내기 등 묵직한 근접 카드와 시너지. <i>정면 돌파형</i> 빌드의 기반.<br>
+         • <b style="color:#aaffaa;">DEX (민첩)</b> — 회피율·선공 결정. 시어링애로우·임페일·블랙애로우 등 명중 카드와 잘 맞음. <i>먼저 때리고 안 맞는</i> 빌드.<br>
+         • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·마나번 등으로 적 MP를 말리고 강력한 광역기를 굴리는 <i>마법사형</i> 빌드.<br>
+         • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력 ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
+      <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.</div>`,
     target:'#main-statbox', page:'main', position:'corner',
   },
   {
     icon:'🗡️', title:'무기와 방어구',
-    body:`<p>강조된 <b>무기상점</b>·<b>방어구상점</b>에서 장비를 구매하면 영구히 장착됩니다.</p>
-      <p>• 무기 atkBonus → STR과 합산.<br>
-         • 방어구 defBonus → CON과 합산해 받는 데미지 감소.<br>
-         • 보스 처치 시 확률로 드랍됩니다.</p>
+    body:`<p>강조된 <b>무기상점</b>·<b>방어구상점</b>에서 구매하거나, <b>공격대 레이드</b>의 보스 처치 시 드랍으로 장비를 얻을 수 있습니다.</p>
+      <p>• 무기 <b>atkBonus</b> → STR과 합산되어 공격력 ↑.<br>
+         • 방어구 <b>defBonus</b> → CON과 합산되어 받는 데미지 ↓.</p>
       <div class="tip">🛡️ 같은 레벨이라도 좋은 장비를 갖춘 쪽이 훨씬 강합니다.</div>`,
     target:'#m-wshop', page:'main', position:'corner',
   },
   {
     icon:'⚔', title:'수행 (사냥) & 회복의 샘물',
     body:`<p>가운데 큰 <b style="color:#ffd700;">수행</b> 버튼이 1:1 전투의 핵심입니다.</p>
-      <p>승리하면 골드·경험치를 얻고, 레벨이 오르면 HP·MP 완전 회복.</p>
-      <p><b style="color:#88ddff;">회복의 샘물</b>은 즉시 풀회복 (깎인 HP+MP의 10%, 100G 미만이면 무료).</p>
+      <p>승리하면 골드와 <b>경험치</b>를 얻고, 경험치가 쌓여 <b>레벨이 오를수록 더 강한 적</b>을 만나게 됩니다.</p>
+      <p><b style="color:#88ddff;">회복의 샘물</b>은 깎인 HP·MP를 즉시 풀회복 (깎인 HP+MP의 10%, 보유 100G 미만이면 무료).</p>
       <div class="tip">⚠️ HP가 0이 되면 자동으로 회복의 샘물로 이동합니다.</div>`,
     target:'#m-hunt', page:'main', position:'corner',
   },
@@ -6921,8 +6923,8 @@ const TUTORIAL_STEPS = [
   {
     icon:'🐉', title:'공격대 — 함께 보스 사냥',
     body:`<p>강조된 <b>공격대</b>는 6시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
-      <p>잡몹 99마리 + 보스를 공동으로 처치하면 보상이 분배됩니다.</p>
-      <div class="tip">🎁 참여자 전원 보스 처치 시 카드 1뽑 자동 지급. 최종 타격자엔 장비 추가 드랍!</div>`,
+      <p>몬스터 99마리 + 보스를 다른 유저들과 함께 처치하면 보상이 분배됩니다.</p>
+      <div class="tip">🎁 참여자 전원에게 보스 처치 시 카드 1뽑 자동 지급. <b>최종 타격(막타)은 여러 유저가 동시에 칠 수 있으니</b>, 채팅으로 서로 소통하며 다 같이 막타를 쳐 보세요!</div>`,
     target:'#m-raid', page:'main', position:'corner',
   },
   {
