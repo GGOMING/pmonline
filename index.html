@@ -3776,16 +3776,17 @@ async function raidEnd(result){
         <p>보상: <b>+${gold}G, +${xp}XP</b></p>
         <p>남은 잡몹: <b>${remain}/99</b></p>`;
       let raidMobLvUp = false;
+      let raidMobBonus = 0;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
-        _grantLvBonusGold(p, p.level);
+        raidMobBonus += _grantLvBonusGold(p, p.level);
         raidMobLvUp = true;
       }
       if (raidMobLvUp){
         calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
-        bodyHtml += _lvUpBoxHtml();
+        bodyHtml += _lvUpBoxHtml(raidMobBonus);
         _scheduleLvUpAlert();
       }
       if (r.monsterCount === 0){
@@ -3854,16 +3855,17 @@ async function raidEnd(result){
         ${cardLine}
         <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
       let raidBossLvUp = false;
+      let raidBossBonus = 0;
       while (p.xp >= xpForNextLevel(p.level)){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
-        _grantLvBonusGold(p, p.level);
+        raidBossBonus += _grantLvBonusGold(p, p.level);
         raidBossLvUp = true;
       }
       if (raidBossLvUp){
         calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
-        bodyHtml += _lvUpBoxHtml();
+        bodyHtml += _lvUpBoxHtml(raidBossBonus);
         _scheduleLvUpAlert();
       }
       chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆`);
@@ -4457,8 +4459,29 @@ function rankEnd(result){
         <p style="font-size:11px;color:#666;">모든 자리가 Lv1 NPC로 다시 채워졌습니다. 10위부터 다시 도전할 수 있습니다.</p>`;
     }
   }
+  // 랭킹전 inline 레벨업 처리 — 결과창 박스에 표시
+  let rankLvUp = false;
+  let rankLvBonus = 0;
+  if (outcome === 'win' && expGained > 0){
+    while (p.xp >= xpForNextLevel(p.level)){
+      p.xp -= xpForNextLevel(p.level);
+      p.level++;
+      p.xpUp += 1;
+      rankLvBonus += _grantLvBonusGold(p, p.level);
+      rankLvUp = true;
+      chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
+      if (p.level === 26){
+        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다.`);
+      }
+    }
+    if (rankLvUp){
+      calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
+      bodyHtml += _lvUpBoxHtml(rankLvBonus);
+      _scheduleLvUpAlert();
+      setTimeout(() => { try { fetchOverallRank(); } catch(e){} }, 3500);
+    }
+  }
   if (outcome === 'win'){
-    if (expGained > 0) checkLevelUp();
     saveGame();
   } else if (c.mode === 'defense'){
     saveGame();  // 패배 시 랭킹 초기화 결과도 저장
@@ -5685,7 +5708,7 @@ function huntEnd(result){
     huntLog(`⏱ ${c.maxTurns}턴 종료. 남은 HP 나 ${p.hp} vs ${m.name} ${m.hp}`, 'sys');
   }
 
-  let gold = 0, xp = 0, lvUp = false, lostGold = 0, rankBonus = 0;
+  let gold = 0, xp = 0, lvUp = false, lvBonus = 0, lostGold = 0, rankBonus = 0;
   if (outcome === 'win'){
     gold = m.gold;
     xp   = m.xp;
@@ -5704,6 +5727,7 @@ function huntEnd(result){
       p.xpUp += 1;
       lvUp = true;
       const bonusG = _grantLvBonusGold(p, p.level);
+      lvBonus += bonusG;
       huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복` + (bonusG ? ` · 🎁 +${bonusG}G` : ''), 'sys');
       // Lv 26 도달 시 슬롯 11~15 해금 안내
       if (p.level === 26){
@@ -5750,7 +5774,7 @@ function huntEnd(result){
   renderSheet();
   renderDeck();
 
-  showHuntResult(outcome, {gold, xp, lvUp, lostGold, m, beforeHp:c.playerHpBefore, rankBonus});
+  showHuntResult(outcome, {gold, xp, lvUp, lvBonus, lostGold, m, beforeHp:c.playerHpBefore, rankBonus});
 }
 
 function showHuntResult(outcome, info){
@@ -5773,7 +5797,7 @@ function showHuntResult(outcome, info){
     if (info.rankBonus > 0){
       body += `<p style="color:#a02050;">🏆 랭킹 ${GAME.ranking.myRank}위 보너스: <b>+${info.rankBonus} G</b></p>`;
     }
-    if (info.lvUp){ body += _lvUpBoxHtml(); _scheduleLvUpAlert(); }
+    if (info.lvUp){ body += _lvUpBoxHtml(info.lvBonus); _scheduleLvUpAlert(); }
   } else if (outcome === 'lose'){
     const loss = (GAME._lastHuntLoss) || { lostGold: info.lostGold || 0, lostXp: 0, destroyed: null };
     const dInfo = loss.destroyed;
@@ -7114,12 +7138,17 @@ function tutorialFinish(){
 }
 
 // 레벨업 강조 박스 HTML (결과창에 삽입)
-function _lvUpBoxHtml(){
+function _lvUpBoxHtml(bonusGold){
   const lv = (GAME.player && GAME.player.level) || '?';
+  const bg = bonusGold|0;
+  const bonusLine = bg > 0
+    ? '<div style="margin-top:8px;padding-top:6px;border-top:1px dashed #7E181E;font-size:13px;font-weight:bold;color:#7E181E;">🎁 축하 보너스 <span style="font-size:15px;color:#a02050;">+' + bg.toLocaleString() + ' G</span></div>'
+    : '';
   return '<div style="margin:12px 0;padding:14px 12px;background:linear-gradient(180deg,#fff7c0 0%, #ffd700 60%, #ff9900 100%);border:3px solid #ff6600;border-radius:8px;text-align:center;box-shadow:0 0 20px rgba(255,170,0,0.65);">' +
     '<div style="font-size:32px;font-weight:bold;color:#7E181E;animation:lvUpBounce 0.7s ease-in-out 3;">🌟 LEVEL UP 🌟</div>' +
     '<div style="margin-top:4px;font-size:18px;font-weight:bold;color:#3a1a00;">Lv <span style="font-size:24px;color:#a02050;">' + lv + '</span> 달성!</div>' +
     '<div style="margin-top:4px;font-size:11px;color:#5a2a00;">• HP·MP 완전 회복   • 스탯 포인트 +1</div>' +
+    bonusLine +
   '</div>';
 }
 // 레벨업 알림 팝업 (1회)
