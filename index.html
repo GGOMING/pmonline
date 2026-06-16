@@ -2953,13 +2953,15 @@ function gachaCost10For(level){
   return gachaCost1For(level) * 9;
 }
 
-// Lv 2~10 도달 시 3뽑 분 골드 축하 보너스 (Lv2=600, Lv3=900, ..., Lv10=3,000G)
+// Lv 2~10 도달 시 골드 축하 보너스 (Lv2=600 ~ Lv9=2,700G, Lv10=20,000G 졸업 보너스)
 function _grantLvBonusGold(p, newLevel){
   if (!p || newLevel < 2 || newLevel > 10) return 0;
-  const bonus = gachaCost1For(newLevel) * 3;
+  const isGrad = newLevel === 10;
+  const bonus = isGrad ? 20000 : gachaCost1For(newLevel) * 3;
   p.gold += bonus;
-  try { chatSys(`★ ${p.name}님 Lv ${newLevel} 달성 축하 보너스! +${bonus}G (3뽑 분)`); } catch(e){}
-  try { toast(`🎁 Lv ${newLevel} 축하 보너스 +${bonus}G`); } catch(e){}
+  const tag = isGrad ? '🎓 Lv 10 졸업 축하 보너스' : `Lv ${newLevel} 달성 축하 보너스`;
+  try { chatSys(`★ ${p.name}님 ${tag}! +${bonus.toLocaleString()}G`); } catch(e){}
+  try { toast(`🎁 ${tag} +${bonus.toLocaleString()}G`); } catch(e){}
   return bonus;
 }
 
@@ -4648,8 +4650,16 @@ function _pickWeighted(pool, raceSet){
 function buildMonsterDeck(race, mLv, deckSize){
   const isEasy = mLv <= 10;
   const synergy = RACE_SYNERGY[race] || new Set();
-  // 등급별 풀 (보스 전용 카드는 제외)
-  const filterAllowed = c => !MONSTER_BANNED.has(c.id) && c.id !== 'basic_atk';
+  // 회복 류 카드 식별
+  const isHealCard = c => {
+    const fx = c.fx || {};
+    if (fx.type === 'heal' || fx.type === 'hot' || fx.type === 'healLevel') return true;
+    if (fx.type === 'multi' && Array.isArray(fx.effects) &&
+        fx.effects.some(e => e && (e.type === 'heal' || e.type === 'hot' || e.type === 'healLevel'))) return true;
+    return false;
+  };
+  // 등급별 풀 (보스 전용 카드는 제외, easy 구간에선 회복 카드도 제외)
+  const filterAllowed = c => !MONSTER_BANNED.has(c.id) && c.id !== 'basic_atk' && !(isEasy && isHealCard(c));
   const normalPool = CARDS.filter(c => c.grade === 'normal' && filterAllowed(c));
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && filterAllowed(c));
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && filterAllowed(c));
@@ -4670,13 +4680,11 @@ function buildMonsterDeck(race, mLv, deckSize){
     deck.push(card || BASIC_ATTACK);
   }
 
-  // easy 구간: 회복/방어 강화 카드 1장 보장 (기본공격 한 슬롯과 교체) — 적이 자기 회복/버프로 자위만 함
+  // easy 구간: 방어 강화 카드 1장 보장 (기본공격 한 슬롯과 교체) — 회복은 풀에서 제외돼 안 나옴
   if (isEasy){
     const friendlyPool = normalPool.filter(c => {
       const fx = c.fx || {};
-      if (fx.type === 'heal' || fx.type === 'hot' || fx.type === 'healLevel') return true;
-      if (fx.type === 'buff' && (((fx.def|0) > 0) || ((fx.con|0) > 0))) return true;
-      return false;
+      return fx.type === 'buff' && (((fx.def|0) > 0) || ((fx.con|0) > 0));
     });
     if (friendlyPool.length){
       const card = friendlyPool[Math.floor(Math.random() * friendlyPool.length)];
@@ -6993,10 +7001,10 @@ const TUTORIAL_STEPS = [
   },
   {
     icon:'🎁', title:'환영 보너스!',
-    body:`<p style="font-size:16px;">시작 골드 100G에 더해 <b style="color:#ffd700;font-size:18px;">+300G</b>를 드립니다!</p>
-      <p>총 <b style="color:#ffd700;font-size:18px;">400G</b>로 카드샵에서 <b>1뽑(100G)을 3번 이상</b> 돌려보세요.</p>
-      <p>레어 카드가 나오면 덱에 배치하고 랭킹전이나 수행에 도전!</p>
-      <div class="tip">🚀 즐거운 모험 되세요! 「시작하기」를 누르면 보너스가 지급됩니다.</div>`,
+    body:`<p style="font-size:16px;">시작 골드 100G에 더해 <b style="color:#ffd700;font-size:18px;">+400G</b>를 드립니다!</p>
+      <p>총 <b style="color:#ffd700;font-size:18px;">500G</b>로 카드샵에서 <b>1뽑(100G)을 5번</b> 돌릴 수 있어요.</p>
+      <p>「시작하기」를 누르면 보너스 지급과 함께 <b style="color:#ffd700;">카드샵으로 바로 이동</b>합니다 — 강조된 1뽑 버튼을 눌러 첫 카드를 뽑아 보세요!</p>
+      <div class="tip">🚀 레어 카드가 나오면 메인 화면에서 덱 슬롯을 클릭해 배치하고, 수행이나 랭킹전에 도전!</div>`,
     target:null, page:'main', position:'center',
   },
 ];
@@ -7068,7 +7076,7 @@ function tutorialPrev(){
   if (_tutorialIdx > 0){ _tutorialIdx--; renderTutorialStep(); }
 }
 function tutorialSkip(){
-  if (!confirm('튜토리얼을 건너뛸까요?\n환영 보너스 300G는 지급되지 않습니다.\n(나중에 다시 표시되지 않으니 신중히 선택해 주세요.)')) return;
+  if (!confirm('튜토리얼을 건너뛸까요?\n환영 보너스 400G는 지급되지 않습니다.\n(나중에 다시 표시되지 않으니 신중히 선택해 주세요.)')) return;
   if (GAME.player){
     GAME.player.tutorialDone = true;
     saveGame();
@@ -7080,7 +7088,7 @@ function tutorialSkip(){
 }
 function tutorialFinish(){
   if (GAME.player){
-    GAME.player.gold += 300;
+    GAME.player.gold += 400;
     GAME.player.tutorialDone = true;
     saveGame();
     renderSheet();
@@ -7088,11 +7096,21 @@ function tutorialFinish(){
   _tutorialClearHighlight();
   const ov = document.getElementById('tutorialOverlay');
   if (ov){ ov.classList.remove('on'); ov.classList.remove('center'); }
-  _tutorialGoPage('main');
-  toast('🎁 환영 보너스 +300G 지급!');
+  toast('🎁 환영 보너스 +400G 지급! 카드샵으로 이동합니다.');
+  // 카드샵으로 자동 이동 + 1뽑 버튼 하이라이트 (사용자가 클릭하면 자동 해제)
   setTimeout(() => {
-    alert('🎁 환영 보너스 +300G 지급!\n\n총 400G로 카드샵에서 1뽑(100G)을 3번 이상 돌려보세요.\n레어 카드가 나오면 덱에 배치하고 랭킹전에 도전해 보세요!');
-  }, 200);
+    try { openCardShop(); } catch(e){ console.warn('openCardShop', e); }
+    setTimeout(() => {
+      const btn = document.querySelector('.btn-gacha-1');
+      if (!btn) return;
+      btn.classList.add('tutorial-highlight');
+      try { btn.scrollIntoView({ behavior:'smooth', block:'center' }); } catch(e){}
+      const clearHL = () => { btn.classList.remove('tutorial-highlight'); };
+      btn.addEventListener('click', clearHL, { once: true });
+      // 안전장치: 60초 후 자동 해제
+      setTimeout(clearHL, 60000);
+    }, 280);
+  }, 300);
 }
 
 // 레벨업 강조 박스 HTML (결과창에 삽입)
