@@ -2953,6 +2953,16 @@ function gachaCost10For(level){
   return gachaCost1For(level) * 9;
 }
 
+// Lv 2~10 도달 시 3뽑 분 골드 축하 보너스 (Lv2=600, Lv3=900, ..., Lv10=3,000G)
+function _grantLvBonusGold(p, newLevel){
+  if (!p || newLevel < 2 || newLevel > 10) return 0;
+  const bonus = gachaCost1For(newLevel) * 3;
+  p.gold += bonus;
+  try { chatSys(`★ ${p.name}님 Lv ${newLevel} 달성 축하 보너스! +${bonus}G (3뽑 분)`); } catch(e){}
+  try { toast(`🎁 Lv ${newLevel} 축하 보너스 +${bonus}G`); } catch(e){}
+  return bonus;
+}
+
 function pickGachaGrade(){
   let r = Math.random();
   for (const t of GACHA.table){ r -= t.rate; if (r<=0) return t.grade; }
@@ -3768,6 +3778,7 @@ async function raidEnd(result){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
+        _grantLvBonusGold(p, p.level);
         raidMobLvUp = true;
       }
       if (raidMobLvUp){
@@ -3845,6 +3856,7 @@ async function raidEnd(result){
         p.xp -= xpForNextLevel(p.level);
         p.level++;
         p.xpUp += 1;
+        _grantLvBonusGold(p, p.level);
         raidBossLvUp = true;
       }
       if (raidBossLvUp){
@@ -4634,16 +4646,17 @@ function _pickWeighted(pool, raceSet){
 }
 
 function buildMonsterDeck(race, mLv, deckSize){
+  const isEasy = mLv <= 10;
   const synergy = RACE_SYNERGY[race] || new Set();
   // 등급별 풀 (보스 전용 카드는 제외)
   const filterAllowed = c => !MONSTER_BANNED.has(c.id) && c.id !== 'basic_atk';
   const normalPool = CARDS.filter(c => c.grade === 'normal' && filterAllowed(c));
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && filterAllowed(c));
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && filterAllowed(c));
-  // 등급 비중 — 레벨에 따라 상위 등급도 등장
-  const rareWeight   = Math.min(0.55, mLv * 0.012);                                // Lv1=0%, Lv42≈50%
-  const uniqueWeight = mLv >= 30 ? Math.min(0.05, (mLv - 29) * 0.002) : 0;         // Lv30=0.2%, Lv50=4%
-  const basicChance  = Math.max(0.10, 0.30 - mLv * 0.004);                         // Lv1=29%, Lv50=10%
+  // 등급 비중 — easy 구간(Lv≤10)은 일반 카드만, 기본공격 비중↑
+  const rareWeight   = isEasy ? 0 : Math.min(0.55, mLv * 0.012);                   // Lv11=13%, Lv42≈50%
+  const uniqueWeight = isEasy ? 0 : (mLv >= 30 ? Math.min(0.05, (mLv - 29) * 0.002) : 0);
+  const basicChance  = isEasy ? 0.55 : Math.max(0.10, 0.30 - mLv * 0.004);         // Easy=55%, 그 외 Lv11=26%
 
   const deck = [];
   for (let i = 0; i < deckSize; i++){
@@ -4655,6 +4668,21 @@ function buildMonsterDeck(race, mLv, deckSize){
     else pool = normalPool;
     const card = _pickWeighted(pool, synergy) || _pickWeighted(normalPool, synergy);
     deck.push(card || BASIC_ATTACK);
+  }
+
+  // easy 구간: 회복/방어 강화 카드 1장 보장 (기본공격 한 슬롯과 교체) — 적이 자기 회복/버프로 자위만 함
+  if (isEasy){
+    const friendlyPool = normalPool.filter(c => {
+      const fx = c.fx || {};
+      if (fx.type === 'heal' || fx.type === 'hot' || fx.type === 'healLevel') return true;
+      if (fx.type === 'buff' && (((fx.def|0) > 0) || ((fx.con|0) > 0))) return true;
+      return false;
+    });
+    if (friendlyPool.length){
+      const card = friendlyPool[Math.floor(Math.random() * friendlyPool.length)];
+      const idx = deck.findIndex(c => c.id === 'basic_atk');
+      if (idx >= 0) deck[idx] = card;
+    }
   }
 
   // ── 선행 카드 의존성 보장 ──
@@ -4708,11 +4736,11 @@ function generateMonsterFallback(playerLv, tier){
 // ─── 몬스터 생성 ───
 function generateMonster(playerLv, tier){
   // 사용자 레벨 기반 몬스터 최대 레벨 캡
-  // - Lv 1~5: 초보 보호 — 동급 이하만 등장 + 스탯 약화
-  // - Lv 6~25: ±2
+  // - Lv 1~10: 초보 보호 — 동급 이하만 등장 + 스탯 약화 (튜토리얼 구간)
+  // - Lv 11~25: ±2
   // - 수행2: ±3
   let maxMLv, minMLv;
-  const earlyEasy = playerLv <= 5;
+  const earlyEasy = playerLv <= 10;
   if (earlyEasy){
     minMLv = Math.max(1, playerLv - 1);
     maxMLv = playerLv;
@@ -4762,14 +4790,16 @@ function generateMonster(playerLv, tier){
   if (tpl.race === 'undead')   { int += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
 
-  // HP/공격력/방어력 — Lv 1~5는 0.65배 초보 보호, 이후 1.05배
-  const DIFF = earlyEasy ? 0.65 : 1.05;
-  const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * DIFF));
+  // HP는 약간 상향, 공격은 크게 하향, 방어는 상향 → 전투가 길어지되 패배는 거의 없음
+  const HP_MUL  = earlyEasy ? 1.20 : 1.05;
+  const ATK_MUL = earlyEasy ? 0.45 : 1.05;
+  const DEF_MUL = earlyEasy ? 1.50 : 1.05;
+  const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * HP_MUL));
   const atk = [
-    Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * DIFF)),
-    Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * DIFF))
+    Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * ATK_MUL)),
+    Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * ATK_MUL))
   ];
-  const def = Math.max(0, Math.round(con * 0.5 * DIFF));
+  const def = Math.max(0, Math.round(con * 0.5 * DEF_MUL));
 
   // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용
   const deckSize = tier === 1 ? 10 : 15;
@@ -5665,7 +5695,8 @@ function huntEnd(result){
       p.level++;
       p.xpUp += 1;
       lvUp = true;
-      huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복`, 'sys');
+      const bonusG = _grantLvBonusGold(p, p.level);
+      huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복` + (bonusG ? ` · 🎁 +${bonusG}G` : ''), 'sys');
       // Lv 26 도달 시 슬롯 11~15 해금 안내
       if (p.level === 26){
         chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다.`);
@@ -7137,6 +7168,7 @@ function checkLevelUp(){
     p.xpUp += 1;
     leveled = true;
     chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
+    _grantLvBonusGold(p, p.level);
     if (p.level === 26){
       chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다.`);
     }
