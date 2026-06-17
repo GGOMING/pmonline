@@ -2425,6 +2425,8 @@ function saveGame(){
     try { localStorage.setItem(LAST_USER_KEY, GAME.player.name); } catch(e){}
     // 클라우드 동기화 (디바운스 2.5초)
     cloudSaveDebounced();
+    // 본인이 랭킹에 등록돼 있으면 ranking_global 슬롯도 디바운스 동기화
+    try { scheduleRankSlotSync(); } catch(e){}
   } catch(e){ console.error('save fail', e); }
 }
 function loadGame(name){
@@ -2967,8 +2969,12 @@ function _grantLvBonusGold(p, newLevel){
 
 function pickGachaGrade(){
   let r = Math.random();
-  for (const t of GACHA.table){ r -= t.rate; if (r<=0) return t.grade; }
-  return 'normal';
+  let grade = 'normal';
+  for (const t of GACHA.table){ r -= t.rate; if (r<=0){ grade = t.grade; break; } }
+  // Lv 5 이하: 유니크·영웅이 추첨되면 레어로 다운그레이드
+  const lv = (GAME.player && GAME.player.level) || 1;
+  if (lv <= 5 && (grade === 'unique' || grade === 'hero')) grade = 'rare';
+  return grade;
 }
 
 function openCardShop(){
@@ -3092,12 +3098,19 @@ function renderSellModal(){
   }).join('');
 }
 
+const INVENTORY_LIMIT = 30;
 function doGacha(n){
   const p = GAME.player;
   const c1 = gachaCost1For(p.level);
   const cost = (n===10) ? gachaCost10For(p.level) : c1 * n;
   if (p.gold < cost){
     setShopMsg(`⚠ 골드가 부족합니다. (필요: ${cost} G)`, 'err');
+    return;
+  }
+  // 보유 카드 한도 사전 검사
+  const room = INVENTORY_LIMIT - GAME.inventory.length;
+  if (room < n){
+    setShopMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${INVENTORY_LIMIT}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다. 카드를 판매하거나 덱 정리 후 다시 시도하세요.`, 'err');
     return;
   }
   p.gold -= cost;
@@ -3251,8 +3264,12 @@ async function claimRaidRewards(){
       if (row.kind === 'card'){
         const card = CARDS.find(c => c.id === row.item_id);
         if (card){
-          GAME.inventory.push(card);
-          lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
+          if (GAME.inventory.length >= INVENTORY_LIMIT){
+            lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}] · ⚠ 보유 한도(${INVENTORY_LIMIT}) 초과로 지급 누락`);
+          } else {
+            GAME.inventory.push(card);
+            lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
+          }
         }
       } else if (row.kind === 'weapon'){
         const w = WEAPONS.find(x => x.id === row.item_id);
@@ -4056,6 +4073,19 @@ async function syncMyRankSlot(){
   } catch(e){ console.warn('[syncMyRankSlot]', e); }
 }
 
+// 본인이 1~10위에 등록된 경우, 변경 후 디바운스 동기화
+let _rankSyncTimer = null;
+function scheduleRankSlotSync(){
+  if (!sb || !GAME.player) return;
+  const myRank = GAME.ranking && GAME.ranking.myRank;
+  if (!(myRank >= 1 && myRank <= 10)) return;
+  if (_rankSyncTimer) clearTimeout(_rankSyncTimer);
+  _rankSyncTimer = setTimeout(() => {
+    _rankSyncTimer = null;
+    syncMyRankSlot().catch(()=>{});
+  }, 4000);
+}
+
 async function resetRanking(){
   // 클라우드: 서버 RPC가 전체 슬롯을 새 NPC로 교체
   if (sb){
@@ -4442,8 +4472,12 @@ function rankEnd(result){
         const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk');
         const card = pool[Math.floor(Math.random() * pool.length)];
         if (card){
-          GAME.inventory.push(card);
-          bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
+          if (GAME.inventory.length >= INVENTORY_LIMIT){
+            bonusLine = `<p style="color:#a02050;">🎁 카드 1뽑 보너스 당첨 — <b>${card.name}</b> [${gradeKr(card.grade)}] · ⚠ 보유 한도(${INVENTORY_LIMIT}) 초과로 지급 누락</p>`;
+          } else {
+            GAME.inventory.push(card);
+            bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
+          }
         }
       }
       bodyHtml = `<p style="color:#060;">🛡 방어 성공! 랭킹 <b>${c.targetRank}위</b> 유지</p>
@@ -5156,8 +5190,28 @@ function _castCardWithDoubleCheck(card, ctx){
     applyCardEffect(card, ctx);
   }
 }
+function _computeMpCost(fx, castObj){
+  if (!fx) return 0;
+  if (fx.type === 'multi' && Array.isArray(fx.effects)){
+    let s = 0;
+    for (const sub of fx.effects) s += _computeMpCost(sub, castObj);
+    return s;
+  }
+  if (fx.type === 'mpCost'){
+    if (fx.stat) return Math.floor((castObj[fx.stat]||0) * (fx.mult||1));
+    if (fx.pct)  return Math.floor((castObj.mp||0) * fx.pct);
+    return fx.amount || 0;
+  }
+  return 0;
+}
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return;
+  // MP 사전 검사 — 카드 전체 비용을 미리 합산. 시전자 MP 부족 시 발동 차단
+  const mpNeed = _computeMpCost(fx, ctx.castObj);
+  if (mpNeed > (ctx.castObj.mp||0)){
+    ctx.log(`  ✱ ${ctx.castName} MP 부족 (필요 ${mpNeed} / 보유 ${ctx.castObj.mp|0}) — 카드 발동 실패`, 'info');
+    return;
+  }
   function dispatch(fx){
     if (!fx) return;
     if (fx.chance != null && Math.random() >= fx.chance){
@@ -6036,16 +6090,23 @@ function renderCardGrid(){
   // 모드별 카드 풀 결정
   let pool;
   if (_cardPickMode === 'my'){
-    // 내 덱 슬롯: 보유 카드 (중복 제거 + 보유 수량) + 기본공격
-    const counts = {};
-    for (const c of GAME.inventory){ counts[c.id] = (counts[c.id]||0) + 1; }
-    const uniqueIds = new Set();
+    // 내 덱 슬롯: 보유분 - 다른 슬롯 장착분 = 사용 가능 수량. 0이면 목록에서 제외.
+    const owned = {};
+    for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+    const equipped = {};
+    for (let i = 0; i < GAME.myDeck.length; i++){
+      const dc = GAME.myDeck[i];
+      if (!dc || dc.id === 'basic_atk' || i === _cardPickSlot) continue;
+      equipped[dc.id] = (equipped[dc.id]||0) + 1;
+    }
+    const seen = new Set();
     pool = [BASIC_ATTACK];
     for (const c of GAME.inventory){
-      if (!uniqueIds.has(c.id)){
-        uniqueIds.add(c.id);
-        pool.push({...c, _count: counts[c.id]});
-      }
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      const avail = (owned[c.id]||0) - (equipped[c.id]||0);
+      if (avail <= 0) continue;
+      pool.push({...c, _count: avail});
     }
   } else if (_cardPickMode === 'view'){
     // 보유 카드 도감 보기 (중복 제거, 보유 수량 표시)
@@ -6094,14 +6155,28 @@ function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',he
     const head = document.getElementById('cardPickHead');
     const modal = document.getElementById('cardPickModal');
     if (!head || !modal) { setTimeout(init, 100); return; }
+    // 헤더가 항상 viewport 안에 보이도록 transform 적용 + clamp
+    function applyDrag(nx, ny){
+      modal.style.transform = `translate(${nx}px, ${ny}px)`;
+      const hr = head.getBoundingClientRect();
+      let dx = 0, dy = 0;
+      if (hr.top < 0) dy -= hr.top;
+      else if (hr.bottom > window.innerHeight) dy -= (hr.bottom - window.innerHeight);
+      if (hr.left < 0) dx -= hr.left;
+      else if (hr.right > window.innerWidth) dx -= (hr.right - window.innerWidth);
+      if (dx !== 0 || dy !== 0){
+        nx += dx; ny += dy;
+        modal.style.transform = `translate(${nx}px, ${ny}px)`;
+      }
+      curX = nx; curY = ny;
+    }
     head.addEventListener('mousedown', (e) => {
       dragging = true; sx = e.clientX; sy = e.clientY; baseX = curX; baseY = curY;
       e.preventDefault();
     });
     document.addEventListener('mousemove', (e) => {
       if (!dragging) return;
-      curX = baseX + (e.clientX - sx); curY = baseY + (e.clientY - sy);
-      modal.style.transform = `translate(${curX}px, ${curY}px)`;
+      applyDrag(baseX + (e.clientX - sx), baseY + (e.clientY - sy));
     });
     document.addEventListener('mouseup', () => { dragging = false; });
     // 터치 지원
@@ -6111,10 +6186,13 @@ function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',he
     document.addEventListener('touchmove', (e) => {
       if (!dragging) return;
       const t = e.touches[0];
-      curX = baseX + (t.clientX - sx); curY = baseY + (t.clientY - sy);
-      modal.style.transform = `translate(${curX}px, ${curY}px)`;
+      applyDrag(baseX + (t.clientX - sx), baseY + (t.clientY - sy));
     }, { passive:true });
     document.addEventListener('touchend', () => { dragging = false; });
+    // 창 크기 변동 시도 클램프 재적용
+    window.addEventListener('resize', () => {
+      if (modal.style.transform) applyDrag(curX, curY);
+    });
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
@@ -7234,9 +7312,10 @@ function checkLevelUp(){
 }
 
 function calcDerived(p){
-  // 원래 게임 공식: Lv1 CON5 → 26, Lv26 CON5 → 77
-  p.hpMax = 26 + (p.level - 1) * 2 + (p.con - 5);
-  p.mpMax = 25 + (p.level - 1) * 1 + (p.int - 5);
+  // HP: CON 1당 +2 / 레벨업 1당 +2 (Lv1·CON5 기준 26)
+  // MP: INT 1당 +5 / 레벨업 1당 +1 (Lv1·INT5 기준 25)
+  p.hpMax = 26 + (p.level - 1) * 2 + (p.con - 5) * 2;
+  p.mpMax = 25 + (p.level - 1) * 1 + (p.int - 5) * 5;
   // 단일 공격력 (STR + 무기)
   const wBonus = (p.weapon && p.weapon.atkBonus) || 0;
   const wBase = p.str + wBonus;
@@ -8777,18 +8856,29 @@ function adminApplySellPrice(){
   alert('✔ 판매가 적용');
 }
 
-function adminSetBoss(key){
+async function adminSetBoss(key){
   const sel = $(key === 'dawn' ? 'adminRaidDawnBossSel' : 'adminRaidMistBossSel');
   if (!sel || !sel.value) return;
   const boss = RAID_BOSSES[key].find(b => b.id === sel.value);
   if (!boss) return;
-  const r = GAME.raid[key];
-  r.bossId = boss.id;
-  r.bossHpMax = boss.hpMax;
-  r.bossHp = boss.hpMax;
-  r.bossDefeated = false;
-  refreshAdminSystem();
-  alert(`✔ ${key==='dawn'?'새벽의 언덕':'안개의 숲'} 보스를 ${boss.name}(으)로 교체`);
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
+    alert(`현재 활성 세션은 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」입니다.\n비활성 쪽은 변경해도 인게임에 반영되지 않습니다. 「즉시 새 세션 시작」으로 키를 먼저 전환하세요.`);
+    return;
+  }
+  try {
+    const { error } = await sb.from('raid_state').update({
+      boss_id: boss.id,
+      boss_hp: boss.hpMax,
+      boss_hp_max: boss.hpMax,
+      boss_defeated: false,
+      last_killer: null,
+    }).eq('id', 1);
+    if (error){ alert('보스 교체 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    refreshAdminSystem();
+    alert(`✔ 보스를 ${boss.name}(으)로 교체`);
+  } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
 }
 
 function adminBulkAllAccounts(field){
@@ -8849,36 +8939,64 @@ async function adminForceRaidReset(){
   } catch(e){ alert('강제 갱신 실패: ' + (e.message||e)); }
 }
 
-function adminResetRaid(key){
-  if (!confirm(`${key === 'dawn' ? '새벽의 언덕' : '안개의 숲'} 세션을 강제로 리셋할까요?`)) return;
-  const r = GAME.raid[key];
+async function adminResetRaid(key){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
+    alert(`현재 활성 세션은 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」입니다.\n비활성 쪽 리셋은 의미가 없습니다. 「즉시 새 세션 시작」을 사용하세요.`);
+    return;
+  }
+  if (!confirm(`${key === 'dawn' ? '새벽의 언덕' : '안개의 숲'} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 잡몹 99마리\n• session_start 갱신`)) return;
   const bossList = RAID_BOSSES[key];
   const boss = bossList[Math.floor(Math.random()*bossList.length)];
-  r.sessionStart = getCurrentSessionStart();
-  r.monsterCount = 99;
-  r.bossId = boss.id;
-  r.bossHpMax = boss.hpMax;
-  r.bossHp = boss.hpMax;
-  r.bossDefeated = false;
-  r.lastKiller = null;
-  r.lastNpcUpdate = Date.now();
-  refreshAdminSystem();
-  alert('✔ 세션 리셋 완료');
+  try {
+    const { error } = await sb.from('raid_state').update({
+      session_start: getCurrentSessionStart(),
+      monster_count: 99,
+      boss_id: boss.id,
+      boss_hp: boss.hpMax,
+      boss_hp_max: boss.hpMax,
+      boss_defeated: false,
+      last_killer: null,
+    }).eq('id', 1);
+    if (error){ alert('세션 리셋 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    refreshAdminSystem();
+    alert('✔ 세션 리셋 완료');
+  } catch(e){ alert('세션 리셋 실패: ' + (e.message||e)); }
 }
 
-function adminBossPhase(key){
-  GAME.raid[key].monsterCount = 0;
-  refreshAdminSystem();
-  alert('✔ 보스 단계 진입');
+async function adminBossPhase(key){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
+    alert(`비활성 세션입니다. 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」 쪽만 조작 가능합니다.`);
+    return;
+  }
+  try {
+    const { error } = await sb.from('raid_state').update({ monster_count: 0 }).eq('id', 1);
+    if (error){ alert('보스 단계 진입 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    refreshAdminSystem();
+    alert('✔ 보스 단계 진입');
+  } catch(e){ alert('보스 단계 진입 실패: ' + (e.message||e)); }
 }
 
-function adminKillBoss(key){
-  const r = GAME.raid[key];
-  r.bossHp = 0;
-  r.bossDefeated = true;
-  r.lastKiller = '관리자';
-  refreshAdminSystem();
-  alert('✔ 보스 처치 완료');
+async function adminKillBoss(key){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
+    alert(`비활성 세션입니다. 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」 쪽만 조작 가능합니다.`);
+    return;
+  }
+  try {
+    const { error } = await sb.from('raid_state').update({
+      boss_hp: 0,
+      boss_defeated: true,
+      last_killer: '관리자',
+    }).eq('id', 1);
+    if (error){ alert('보스 처치 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    refreshAdminSystem();
+    alert('✔ 보스 처치 완료');
+  } catch(e){ alert('보스 처치 실패: ' + (e.message||e)); }
 }
 
 function adminResetRanking(){
