@@ -241,10 +241,7 @@
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
   body.combat-active:not(.layout-vertical) #chat { display:none; }
-  /* 전투 중에는 스탯 박스만 숨기고 아바타는 노출 (좌상단 작은 프로필) */
-  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:flex; }
-  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox #main-statbox { display:none; }
-  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox .avatar-col { display:flex; }
+  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
   body.combat-active:not(.layout-vertical) > #pg-main.active > #game > .main-bars { display:none; }
   .combat-grid {
     display:grid;
