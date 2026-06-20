@@ -6891,9 +6891,9 @@ const ICON_PMCARD_MAP = {
   'r09':'rare_089.png','r10':'rare_090.png','r11':'rare_091.png','r12':'rare_092.png',
   'r13':'rare_093.png','r14':'rare_094.png','r15':'rare_095.png','r16':'rare_096.png',
   'r17':'rare_097.png','r18':'rare_098.png','r19':'rare_099.png','r20':'rare_100.png',
-  'r21':'rare_101.png','r22':'rare_102.png','r23':'rare_103.png','r24':'rare_104.png',
+  'r21':'rare_101.png','r22':'rare_102.png','r23':'rare_023.png','r24':'rare_104.png',
   'r25':'rare_105.png','r26':'rare_106.png','r27':'rare_107.png','r28':'rare_108.png',
-  'r29':'rare_109.png','r30':'rare_110.png',
+  'r29':'rare_109.png','r30':'rare_030.png',
   // ── 유니크 6종 (pmlist2 카드 #119~#124 = rare_119~rare_124) ──
   'u01':'rare_119.png','u02':'rare_120.png','u03':'rare_121.png',
   'u04':'rare_122.png','u05':'rare_123.png','u06':'rare_124.png',
@@ -8137,7 +8137,14 @@ function doContinue(){
 //   관리자 에디터
 // ============================================================
 const ADMIN_ID = 'admin';
-const ADMIN_PW = '1234';
+// 운영자 PW는 솔트 결합 SHA-256으로만 저장 (평문 X). 변경 시 _AS+새PW+_AS를 sha256으로 재계산해 _AH에 반영.
+const _AS = 'yeoshin_jeonjaeng_v3_salt_2026';
+const _AH = 'c2bd3ded0cc6e0896c097e0a83df11933c10d5306e963d0095e39b121d96a4af';
+async function _hashPw(pw){
+  const buf = new TextEncoder().encode(_AS + pw + _AS);
+  const d = await crypto.subtle.digest('SHA-256', buf);
+  return Array.from(new Uint8Array(d)).map(b => b.toString(16).padStart(2,'0')).join('');
+}
 const ADMIN_EMAIL = 'admin@pmonline.system';  // Supabase 운영자 계정 이메일 (RLS 정책에 매칭)
 let _adminSelectedUser = null;
 let _adminUsers = [];  // 임시 유저 목록
@@ -8169,8 +8176,9 @@ async function showAdminAuth(){
     }
   }
 
-  // 2) 오프라인 fallback (로컬만 — 클라우드 변경 불가)
-  if (pw !== ADMIN_PW){ alert('PW 오류'); return; }
+  // 2) 오프라인 fallback (로컬만 — 클라우드 변경 불가). 솔트 결합 SHA-256 비교.
+  const hp = await _hashPw(pw);
+  if (hp !== _AH){ alert('PW 오류'); return; }
   _adminCloudActive = false;
   await enterAdmin();
 }
@@ -8619,10 +8627,16 @@ async function adminDeleteUser(){
   if (!u) return;
   if (u.source === 'cloud'){
     if (!sb || !_adminCloudActive){ alert('운영자 세션이 만료되었습니다.'); return; }
-    if (!confirm(`클라우드 계정(${u.name})을 삭제할까요?\n• saves 테이블의 행 삭제\n• Auth 계정은 그대로 남습니다 (수동 삭제 필요)`)) return;
-    const { error } = await sb.from('saves').delete().eq('user_id', u.user_id);
-    if (error){ alert('클라우드 삭제 실패: ' + error.message); return; }
-    alert('클라우드 saves 행 삭제 완료. (Auth 계정은 Supabase 대시보드 → Authentication → Users에서 수동 삭제)');
+    if (!confirm(`클라우드 계정(${u.name})을 삭제할까요?\n\n• saves 테이블 행 삭제\n• ranking_global 슬롯 정리 시도\n\n⚠ Auth 계정(auth.users)은 클라이언트에서 삭제 불가합니다.\n   Supabase 대시보드 → Authentication → Users에서 수동 삭제하세요.\n   삭제하지 않으면 같은 이메일로 재로그인 시 saves 행이 재생성됩니다.`)) return;
+    const { error: e1 } = await sb.from('saves').delete().eq('user_id', u.user_id);
+    if (e1){ alert('saves 삭제 실패: ' + e1.message); return; }
+    // ranking_global 잔재 정리 (운영자 권한 필요)
+    let rgMsg = '';
+    try {
+      const { error: e2 } = await sb.from('ranking_global').delete().eq('user_id', u.user_id);
+      rgMsg = e2 ? `\n⚠ ranking_global 정리 실패: ${e2.message}` : `\n✔ ranking_global 슬롯 정리`;
+    } catch(e){ rgMsg = `\n⚠ ranking_global 정리 실패: ${e.message||e}`; }
+    alert('✔ saves 삭제 완료.' + rgMsg + '\n\nAuth 계정은 Supabase 대시보드에서 수동 삭제하세요.');
     await loadAdminUsers();
     renderAdminUserList();
     renderAdminEdit();
@@ -9080,11 +9094,17 @@ function adminWipeAll(){
   location.reload();
 }
 function doDeleteSave(){
-  if (confirm('저장된 캐릭터 데이터를 모두 삭제할까요?')){
-    deleteSave();
-    alert('삭제 완료.');
-    location.reload();
-  }
+  // 로그인 전이라 GAME.player가 null → loginName 입력값을 기준으로 삭제
+  const name = (($('loginName') && $('loginName').value) || '').trim();
+  if (!name){ alert('아이디(닉네임)를 먼저 입력하세요.'); return; }
+  if (!confirm(`「${name}」의 로컬 저장 데이터(메인 + 백업 슬롯)를 삭제할까요?\n※ 클라우드 saves 및 Auth 계정은 본 화면에서 제거할 수 없습니다 — 운영자 패널에서 처리하세요.`)) return;
+  try {
+    localStorage.removeItem(saveKeyFor(name));
+    backupKeysFor(name).forEach(k => localStorage.removeItem(k));
+    removeAccountEntry(name);
+  } catch(e){ console.warn('[doDeleteSave]', e); }
+  alert(`「${name}」 로컬 데이터 삭제 완료.`);
+  location.reload();
 }
 
 // ─── 부팅 ───
