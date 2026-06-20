@@ -1562,6 +1562,12 @@
                 <tr>
                   <td class="lbl">공격</td><td class="val p-combat-atk" colspan="3">- - -</td>
                 </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val p-combat-armor" colspan="3">-</td>
+                </tr>
               </table>
             </div>
             <div class="main-bars" style="margin-bottom:4px;">
@@ -1605,6 +1611,12 @@
                 </tr>
                 <tr>
                   <td class="lbl">공격</td><td class="val" id="rk_atk" colspan="3">- - -</td>
+                </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val" id="rk_weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val" id="rk_armor" colspan="3">-</td>
                 </tr>
               </table>
             </div>
@@ -4386,6 +4398,17 @@ function renderRankBattle(){
   $('rk_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rk_atk').textContent = m.atk[0] + ' - ' + m.atk[1];
+  // 상대 장비
+  const ow = m.weapon, oa = m.armor;
+  $('rk_weapon').textContent = ow ? `${ow.name||'-'} (+${ow.atkBonus||0})` : '-';
+  $('rk_armor').textContent  = oa ? `${oa.name||'-'} (+${oa.defBonus||0})` : '-';
+  // 내 장비 (p-combat-weapon / p-combat-armor 클래스)
+  const p = GAME.player;
+  if (p){
+    const setMy = (cls, txt) => { document.querySelectorAll('.' + cls).forEach(el => el.textContent = txt); };
+    setMy('p-combat-weapon', p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-');
+    setMy('p-combat-armor',  p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-');
+  }
 
   const hpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
