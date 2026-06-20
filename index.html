@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="ko">
 <head>
 <meta charset="UTF-8">
@@ -2023,147 +2023,147 @@ const FROG_PORTRAIT_URL = 'assets/pmcards/rare_125.png';
 // ─── 카드 풀 (pmlist2.jpg Ver.12/04/13 기반) ───
 const CARDS = [
   // 기본공격 (게임 시작 시 모든 슬롯 기본값)
-  { id:'basic_atk', name:'기본공격', grade:'normal', icon:'sword', text:'무기 공격력으로 1회 평타', fx:{type:'basicAtk'} },
+  { id:'basic_atk', name:'기본공격', grade:'normal', icon:'sword', text:'공격력으로 1회 공격', fx:{type:'basicAtk'} },
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
-  { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'공격 +8', fx:{type:'buff',atk:8} },
-  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어 +8', fx:{type:'buff',def:8} },
-  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어 +8', fx:{type:'buff',def:8} },
-  { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 - 20 랜덤 데미지 / 매턴 Str +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
-  { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'시전 Dex +5, Str +2', fx:{type:'buff',dex:5,str:2} },
-  { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'적 Dex + Con 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
-  { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'Dex 공격', fx:{type:'dmgStat',stats:['dex']} },
-  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(Dex +2) x2 [은신] 선행 필요', fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2}, requires:'r21' },
-  { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
-  { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'Str 1회 공격 / 적 Con -2, HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
+  { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'공격력 +8 증가', fx:{type:'buff',atk:8} },
+  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어력 +8 증가', fx:{type:'buff',def:8} },
+  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어력 +8 증가', fx:{type:'buff',def:8} },
+  { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 ~ 20 랜덤 데미지 / 매턴 STR +3 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
+  { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'DEX +5, STR +2', fx:{type:'buff',dex:5,str:2} },
+  { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'DEX + CON 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
+  { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'DEX + 공격력으로 타격', fx:{type:'dmgStat',stats:['dex']} },
+  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)*2만큼 공격 / [은신] 선행 필요', fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2}, requires:'r21' },
+  { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3 증가', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
+  { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'STR 수치 만큼 1회 공격, 상대방 CON -2, 최대 HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
   { id:'n11', name:'돌던지기',       grade:'normal', icon:'hammer', text:'Str + Dex + 5 데미지', fx:{type:'dmgStat',stats:['str','dex'],bonus:5} },
   { id:'n12', name:'디바우어매직',   grade:'normal', icon:'soul',   text:'HP 50, MP 50 회복', fx:{type:'heal',hp:50,mp:50} },
-  { id:'n13', name:'디지즈클라우드', grade:'normal', icon:'cloud',  text:'6턴 8 데미지', fx:{type:'dot',turns:6,dmg:8} },
-  { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'적 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
-  { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 - 10 랜덤데미지 [소환의식] 선행 필요', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
-  { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어 +4 / 3턴 5 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
-  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'적 Con만큼 데미지주고 HP흡수', fx:{type:'lifestealStat',stats:['con']} },
+  { id:'n13', name:'디지즈클라우드', grade:'normal', icon:'cloud',  text:'6턴 동안 8 고정 데미지', fx:{type:'dot',turns:6,dmg:8} },
+  { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'상대방 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
+  { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 ~ 10 랜덤 데미지 / [소환의식] 선행 필요', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
+  { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어력 +4 증가, 3턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
+  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수', fx:{type:'lifestealStat',stats:['con']} },
   { id:'n18', name:'라이프업',       grade:'normal', icon:'heart',  text:'최대 HP 30% 증가', fx:{type:'maxHpBuff',pct:0.3} },
-  { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'Str +4 / 공격 +3', fx:{type:'buff',str:4,atk:3} },
-  { id:'n20', name:'리쥬베네이션',   grade:'normal', icon:'leaf',   text:'4턴 HP 10 회복', fx:{type:'hot',turns:4,heal:10} },
-  { id:'n21', name:'리퀴드파이어',   grade:'normal', icon:'fire',   text:'적 Dex -2, 3턴 10 고정데미지', fx:{type:'multi',effects:[{type:'debuff',dex:-2},{type:'dot',turns:3,dmg:10}]} },
+  { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'STR +4 증가, 공격력 +3 증가', fx:{type:'buff',str:4,atk:3} },
+  { id:'n20', name:'리쥬베네이션',   grade:'normal', icon:'leaf',   text:'4턴 동안 HP 10씩 회복', fx:{type:'hot',turns:4,heal:10} },
+  { id:'n21', name:'리퀴드파이어',   grade:'normal', icon:'fire',   text:'상대방 DEX -2, 3턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',dex:-2},{type:'dot',turns:3,dmg:10}]} },
   { id:'n22', name:'리플레시마나헬스', grade:'normal', icon:'flute', text:'HP 20, MP 20 회복', fx:{type:'heal',hp:20,mp:20} },
   { id:'n23', name:'마나포션',       grade:'normal', icon:'potion', text:'MP 20 회복', fx:{type:'heal',mp:20} },
-  { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'적 Int + Con 만큼 고정데미지', fx:{type:'dmgStat',stats:['int','con']} },
-  { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'적 Dex -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
-  { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'적 버프 뺏음, 4턴 버프', fx:{type:'stealBuff',turns:4} },
-  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 Dex×0.5 포이즌데미지, 공격 +2 [은신] 선행 필요', fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]}, requires:'r21' },
-  { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'적 공격 -1 / Dex 공격 x2', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
-  { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100', fx:{type:'sacrifice',hp:25,mp:100} },
-  { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어 +4', fx:{type:'buff',def:4} },
-  { id:'n31', name:'버닝오일',       grade:'normal', icon:'fire',   text:'5턴 5 파이어 데미지', fx:{type:'dot',turns:5,dmg:5} },
-  { id:'n32', name:'버서커',         grade:'normal', icon:'rage',   text:'시전자 Str +8, Dex +8, 방어 0, Int 0', fx:{type:'multi',effects:[{type:'buff',str:8,dex:8},{type:'zeroStat',target:'self',stats:['def','int']}]} },
-  { id:'n33', name:'버서커스트렝스', grade:'normal', icon:'lance',  text:'Str +5 / HP +15, MP +15', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'heal',hp:15,mp:15}]} },
-  { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'Str + Dex + 공격 데미지, 적 Dex -2', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
-  { id:'n35', name:'베어폼',         grade:'normal', icon:'paw',    text:'시전자 Int 0, 깎인 만큼 Str 증가', fx:{type:'transferStat',from:'int',to:'str'} },
-  { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'적 방어 -5 / 2턴 10 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
-  { id:'n37', name:'블러드러스트',   grade:'normal', icon:'blood',  text:'시전자 HP -25%, Str x3', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.25},{type:'pctBuff',stats:{str:2.0}}]} },
-  { id:'n38', name:'새크리파이스',   grade:'normal', icon:'cross',  text:'자신의 HP 20% 희생 / 적에게 같은 만큼 고정데미지', fx:{type:'sacrifice',hpPct:0.20,dmgToEnemy:true} },
-  { id:'n39', name:'서펜트와드',     grade:'normal', icon:'paw',    text:'5 - 15 데미지 코브라와드 소환 (소환의식 불필요)', fx:{type:'dmg',min:5,max:15} },
-  { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 시전자 MP 20 회복', fx:{type:'mot',turns:3,mp:20} },
-  { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP -50', fx:{type:'mpCost',amount:50} },
-  { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 강화, 10 - 20 랜덤데미지 [소환의식] 선행 필요', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
-  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'Str -10, Int -10, Dex -10 / 방어 +15', fx:{type:'buff',str:-10,int:-10,dex:-10,def:15} },
-  { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(Str + 공격) x2', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
-  { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'5 ~ 적 Con 랜덤데미지 x2', fx:{type:'dmgHits',min:5,max:25,hits:2} },
-  { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'(Str + Con) x2', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
-  { id:'n47', name:'슬로우',         grade:'normal', icon:'web',    text:'적 Dex -40%', fx:{type:'pctDebuff',stats:{dex:-0.4}} },
-  { id:'n48', name:'슬로우포이즌',   grade:'normal', icon:'venom',  text:'8 고정데미지 / 적 Dex -40%', fx:{type:'multi',effects:[{type:'dmg',min:8,max:8},{type:'pctDebuff',stats:{dex:-0.4}}]} },
-  { id:'n49', name:'시폰마나',       grade:'normal', icon:'drain',  text:'적 Int만큼 MP 흡수', fx:{type:'mpDrain',stat:'int',source:'target'} },
-  { id:'n50', name:'썬더크랩',       grade:'normal', icon:'thunder',text:'적 올스탯 -30%', fx:{type:'pctDebuff',stats:{str:-0.3,dex:-0.3,int:-0.3,con:-0.3}} },
-  { id:'n51', name:'애볼리쉬매직',   grade:'normal', icon:'spark',  text:'적 버프 해제 / Int만큼 MP소모', fx:{type:'multi',effects:[{type:'dispel'},{type:'mpCost',stat:'int'}]} },
-  { id:'n52', name:'언홀리프렌지',   grade:'normal', icon:'rage',   text:'시전자 Str +50% / 4턴 HP -5%', fx:{type:'multi',effects:[{type:'pctBuff',stats:{str:0.5}},{type:'dotSelf',turns:4,pct:0.05}]} },
-  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 시전자 방어 +3', fx:{type:'buff',def:3,turns:5} },
-  { id:'n54', name:'영혼흡수',       grade:'normal', icon:'soul',   text:'적 Int 50% 흡수', fx:{type:'statSteal',stats:['int'],pct:0.5} },
-  { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(Dex + 무기) x2', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
-  { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'공격 +40% (Str 10 or Dex 10 필요)', fx:{type:'pctBuff',stats:{atk:0.4}} },
-  { id:'n57', name:'이너파이어',     grade:'normal', icon:'aura',   text:'Int 절반만큼 Str, Dex 상승', fx:{type:'buffFromStat',source:'int',mult:0.5,addsTo:['str','dex']} },
-  { id:'n58', name:'자폭',           grade:'normal', icon:'bomb',   text:'적 15-50 랜덤, 시전자도 15-50 랜덤데미지', fx:{type:'dmgSelf',min:15,max:50,selfMin:15,selfMax:50} },
-  { id:'n59', name:'전투의외장',     grade:'normal', icon:'sword',  text:'시전자 Str +5 / 적 Str -50%', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'pctDebuff',stats:{str:-0.5}}]} },
-  { id:'n60', name:'지능증가',       grade:'normal', icon:'brain',  text:'Int +6', fx:{type:'buff',int:6} },
-  { id:'n61', name:'철제검',         grade:'normal', icon:'sword',  text:'공격 +5', fx:{type:'buff',atk:5} },
-  { id:'n62', name:'철제방어구',     grade:'normal', icon:'armor',  text:'방어 +4', fx:{type:'buff',def:4} },
-  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어 +5', fx:{type:'buff',def:5} },
-  { id:'n64', name:'커즈',           grade:'normal', icon:'curse',  text:'4턴 적 명중률 -20% (Dex 디버프)', fx:{type:'pctDebuff',stats:{dex:-0.2},turns:4} },
-  { id:'n65', name:'콜드애로우',     grade:'normal', icon:'ice',    text:'Int×1.8 데미지 / 적 Dex -20% / Int×1.5 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:1.8},{type:'pctDebuff',stats:{dex:-0.2}},{type:'mpCost',stat:'int',mult:1.5}]} },
-  { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 - 20 랜덤데미지, 매턴 Int +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
-  { id:'n67', name:'크로우폼',       grade:'normal', icon:'bird',   text:'Int 0으로 떨어진 만큼 Dex 증가', fx:{type:'transferStat',from:'int',to:'dex'} },
-  { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'적 Str, Dex, Int, 공격 -5', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
-  { id:'n69', name:'트롤리제네레이션', grade:'normal', icon:'cross', text:'5턴 턴당 Con 절반만큼 HP회복', fx:{type:'hotStat',stats:['con'],mult:0.5,turns:5} },
-  { id:'n70', name:'파이어볼트',     grade:'normal', icon:'fire',   text:'Int×2.2 데미지 / Int×1.5 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2.2},{type:'mpCost',stat:'int',mult:1.5}]} },
+  { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'상대방 INT + CON 만큼 고정 데미지', fx:{type:'dmgStat',stats:['int','con']} },
+  { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'상대방 DEX -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
+  { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'상대방 버프 해제 후 시전자에게 적용, 4턴 동안 해당 버프 지속', fx:{type:'stealBuff',turns:4} },
+  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 공격력 +2 증가 / [은신] 선행 필요', fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]}, requires:'r21' },
+  { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'상대방 공격력 -1 감소 / DEX 수치만큼 2회 타격', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
+  { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100 회복', fx:{type:'sacrifice',hp:25,mp:100} },
+  { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
+  { id:'n31', name:'버닝오일',       grade:'normal', icon:'fire',   text:'5턴 동안 5 고정 데미지', fx:{type:'dot',turns:5,dmg:5} },
+  { id:'n32', name:'버서커',         grade:'normal', icon:'rage',   text:'시전자 STR +8, DEX +8, 방어력 0, INT 0', fx:{type:'multi',effects:[{type:'buff',str:8,dex:8},{type:'zeroStat',target:'self',stats:['def','int']}]} },
+  { id:'n33', name:'버서커스트렝스', grade:'normal', icon:'lance',  text:'STR +5 증가 / HP +15, MP +15 증가 및 회복', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'heal',hp:15,mp:15}]} },
+  { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'[STR + DEX + 공격력]만큼 타격, 상대방 DEX -2 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
+  { id:'n35', name:'베어폼',         grade:'normal', icon:'paw',    text:'시전자 INT를 전부 STR로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'str'} },
+  { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'상대방 방어력 -5 감소 및 2턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
+  { id:'n37', name:'블러드러스트',   grade:'normal', icon:'blood',  text:'시전자 HP -25%, STR*3만큼 타격', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.25},{type:'pctBuff',stats:{str:2.0}}]} },
+  { id:'n38', name:'새크리파이스',   grade:'normal', icon:'cross',  text:'자신의 HP 20% 희생 후 상대방에게 같은 수치의 고정 데미지', fx:{type:'sacrifice',hpPct:0.20,dmgToEnemy:true} },
+  { id:'n39', name:'서펜트와드',     grade:'normal', icon:'paw',    text:'5 ~ 15 데미지 코브라와드 소환 (소환의식 불필요)', fx:{type:'dmg',min:5,max:15} },
+  { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 동안 시전자 MP 20씩 회복', fx:{type:'mot',turns:3,mp:20} },
+  { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP 50 사용', fx:{type:'mpCost',amount:50} },
+  { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 데미지를 10 ~ 20으로 강화 / [라이즈데드] 선행 필요', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
+  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어 +15 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:15} },
+  { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(STR + 공격력) *2만큼 공격', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
+  { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'[5 ~ 상대방 CON] 랜덤 데미지로 2회 공격', fx:{type:'dmgHits',min:5,max:25,hits:2} },
+  { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'시전자 (STR + CON) *2만큼 공격', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
+  { id:'n47', name:'슬로우',         grade:'normal', icon:'web',    text:'상대방 DEX -40% 감소', fx:{type:'pctDebuff',stats:{dex:-0.4}} },
+  { id:'n48', name:'슬로우포이즌',   grade:'normal', icon:'venom',  text:'8 고정 데미지 / 상대방 DEX -40% 감소', fx:{type:'multi',effects:[{type:'dmg',min:8,max:8},{type:'pctDebuff',stats:{dex:-0.4}}]} },
+  { id:'n49', name:'시폰마나',       grade:'normal', icon:'drain',  text:'상대방 INT만큼 MP 흡수', fx:{type:'mpDrain',stat:'int',source:'target'} },
+  { id:'n50', name:'썬더크랩',       grade:'normal', icon:'thunder',text:'상대방 올스탯 -30% 감소', fx:{type:'pctDebuff',stats:{str:-0.3,dex:-0.3,int:-0.3,con:-0.3}} },
+  { id:'n51', name:'애볼리쉬매직',   grade:'normal', icon:'spark',  text:'상대방 버프 해제 / 시전자 INT만큼 MP소모', fx:{type:'multi',effects:[{type:'dispel'},{type:'mpCost',stat:'int'}]} },
+  { id:'n52', name:'언홀리프렌지',   grade:'normal', icon:'rage',   text:'시전자 STR +50% 증가 / 4턴 동안 HP -5%씩 감소', fx:{type:'multi',effects:[{type:'pctBuff',stats:{str:0.5}},{type:'dotSelf',turns:4,pct:0.05}]} },
+  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어력 +3 증가', fx:{type:'buff',def:3,turns:5} },
+  { id:'n54', name:'영혼흡수',       grade:'normal', icon:'soul',   text:'상대방 INT 50% 흡수', fx:{type:'statSteal',stats:['int'],pct:0.5} },
+  { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(DEX + 무기 공격력) *2만큼 타격', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
+  { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'공격력 +40% 증가 / [STR 10 or DEX 10 이상일 경우 시전 가능]', fx:{type:'pctBuff',stats:{atk:0.4}} },
+  { id:'n57', name:'이너파이어',     grade:'normal', icon:'aura',   text:'INT 절반만큼 STR 및 DEX 증가', fx:{type:'buffFromStat',source:'int',mult:0.5,addsTo:['str','dex']} },
+  { id:'n58', name:'자폭',           grade:'normal', icon:'bomb',   text:'상대방에게 15 ~ 50 랜덤 데미지, 시전자에게도 15 ~ 50 랜덤 데미지', fx:{type:'dmgSelf',min:15,max:50,selfMin:15,selfMax:50} },
+  { id:'n59', name:'전투의외장',     grade:'normal', icon:'sword',  text:'시전자 STR +5 증가 및 적 STR -50% 감소', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'pctDebuff',stats:{str:-0.5}}]} },
+  { id:'n60', name:'지능증가',       grade:'normal', icon:'brain',  text:'INT +6 증가', fx:{type:'buff',int:6} },
+  { id:'n61', name:'철제검',         grade:'normal', icon:'sword',  text:'공격력 +5 증가', fx:{type:'buff',atk:5} },
+  { id:'n62', name:'철제방어구',     grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
+  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어력 +5 증가', fx:{type:'buff',def:5} },
+  { id:'n64', name:'커즈',           grade:'normal', icon:'curse',  text:'4턴 동안 상대방 DEX -20% 감소', fx:{type:'pctDebuff',stats:{dex:-0.2},turns:4} },
+  { id:'n65', name:'콜드애로우',     grade:'normal', icon:'ice',    text:'INT*1.8 데미지 / 적 DEX -20% 감소 / 시전자 INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:1.8},{type:'pctDebuff',stats:{dex:-0.2}},{type:'mpCost',stat:'int',mult:1.5}]} },
+  { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 ~ 20 랜덤 데미지, 매턴 INT +3씩 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
+  { id:'n67', name:'크로우폼',       grade:'normal', icon:'bird',   text:'시전자 INT를 전부 DEX로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'dex'} },
+  { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'상대방 STR, DEX, INT, 공격력 모두 -5씩 감소', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
+  { id:'n69', name:'트롤리제네레이션', grade:'normal', icon:'cross', text:'5턴 턴당 CON*0.5만큼 HP 회복', fx:{type:'hotStat',stats:['con'],mult:0.5,turns:5} },
+  { id:'n70', name:'파이어볼트',     grade:'normal', icon:'fire',   text:'INT*2.2 데미지 / INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2.2},{type:'mpCost',stat:'int',mult:1.5}]} },
   { id:'n71', name:'퍼지',           grade:'normal', icon:'holy',   text:'적 버프 제거 / 25 데미지 / 적 올스탯 -5 (Int 10 필요)', fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:25,max:25},{type:'debuff',str:-5,dex:-5,int:-5,con:-5}]} },
-  { id:'n72', name:'페어리파이어',   grade:'normal', icon:'ghost',  text:'5 고정데미지 / 적 방어 -10', fx:{type:'multi',effects:[{type:'dmg',min:5,max:5},{type:'debuff',def:-10}]} },
-  { id:'n73', name:'포세션',         grade:'normal', icon:'ghost',  text:'적 Str, Dex, Int 복사 / 시전자 무기 0, 방어구 0', fx:{type:'statCopy',stats:['str','dex','int'],zeroWeapon:true,zeroArmor:true} },
-  { id:'n74', name:'포이즌스피어',   grade:'normal', icon:'venom',  text:'기본공격 / 2턴 5 고정데미지', fx:{type:'multi',effects:[{type:'basicAtk'},{type:'dot',turns:2,dmg:5}]} },
-  { id:'n75', name:'폭탄',           grade:'normal', icon:'bomb',   text:'적 Str + Con 데미지', fx:{type:'dmgStat',stats:['str','con']} },
-  { id:'n76', name:'피드백',         grade:'normal', icon:'spark',  text:'적 버프 폭파 15 데미지 + 버프 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:15,max:15}]} },
-  { id:'n77', name:'호크소환',       grade:'normal', icon:'wings',  text:'5 - 20 랜덤데미지 / 매턴 Dex +3 [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',dex:3}]}, requires:'n41' },
-  { id:'n78', name:'힐',             grade:'normal', icon:'cross2', text:'Int×1.5 HP회복', fx:{type:'healStat',stats:['int'],mult:1.5} },
-  { id:'n79', name:'힐링워드',       grade:'normal', icon:'cross',  text:'5턴 Int×0.6 만큼 HP회복', fx:{type:'hotStat',stats:['int'],mult:0.6,turns:5} },
+  { id:'n72', name:'페어리파이어',   grade:'normal', icon:'ghost',  text:'5 고정 데미지 / 상대방 방어력 -10 감소', fx:{type:'multi',effects:[{type:'dmg',min:5,max:5},{type:'debuff',def:-10}]} },
+  { id:'n73', name:'포세션',         grade:'normal', icon:'ghost',  text:'상대방의 STR, DEX, INT를 복사하여 시전자 스탯으로 반영 / 시전자 무기 0, 방어구 0으로 감소', fx:{type:'statCopy',stats:['str','dex','int'],zeroWeapon:true,zeroArmor:true} },
+  { id:'n74', name:'포이즌스피어',   grade:'normal', icon:'venom',  text:'기본공격으로 타격 / 2턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'basicAtk'},{type:'dot',turns:2,dmg:5}]} },
+  { id:'n75', name:'폭탄',           grade:'normal', icon:'bomb',   text:'상대방의 STR + CON만큼 데미지', fx:{type:'dmgStat',stats:['str','con']} },
+  { id:'n76', name:'피드백',         grade:'normal', icon:'spark',  text:'상대방 버프 폭파하여 15 데미지 + 버프 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:15,max:15}]} },
+  { id:'n77', name:'호크소환',       grade:'normal', icon:'wings',  text:'5 ~ 20 랜덤 데미지 / 매턴 DEX +3씩 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',dex:3}]}, requires:'n41' },
+  { id:'n78', name:'힐',             grade:'normal', icon:'cross2', text:'INT*1.5만큼 HP 회복', fx:{type:'healStat',stats:['int'],mult:1.5} },
+  { id:'n79', name:'힐링워드',       grade:'normal', icon:'cross',  text:'5턴 동안 INT*0.6 만큼 HP 회복', fx:{type:'hotStat',stats:['int'],mult:0.6,turns:5} },
   { id:'n80', name:'힐링포션',       grade:'normal', icon:'potion2',text:'HP 25 회복', fx:{type:'heal',hp:25} },
 
   // ───── 레어 카드 30종 ─────
-  { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복', fx:{type:'heal',hp:60} },
-  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 방어력 +5', fx:{type:'buff',def:5,turns:3} },
-  { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10~25 랜덤데미지, HP 5 흡수 [소환의식] 선행 필요', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
-  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격 +5, 방어 +5 / 적 공격 -5, 방어 -5', fx:{type:'multi',effects:[{type:'buff',atk:5,def:5},{type:'debuff',atk:-5,def:-5}]} },
-  { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'적 MP×0.2 데미지 (최대 60) / 적 MP -50% / 기본공격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
-  { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'공격 +12', fx:{type:'buff',atk:12} },
-  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어 +11', fx:{type:'buff',def:11} },
-  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어 +10', fx:{type:'buff',def:10} },
-  { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'Str + 35 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
-  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 공격력 평균×0.5 만큼 HP 회복', fx:{type:'hot',turns:2,heal:10} },
-  { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 HP 35 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
-  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 10 독데미지 / 공격 +10', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
-  { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 적 Str/Dex/Int 0 (3턴) / Int만큼 MP소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
-  { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률 적 2턴 마비 / Int×2 MP소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
-  { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 10 고정데미지', fx:{type:'dot',turns:4,dmg:10} },
-  { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'(Str+공격) 데미지 / 30% 확률 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
-  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어 +5 / 적 공격 3회 70% 반사', fx:{type:'multi',effects:[{type:'buff',def:5},{type:'reflect',hits:3,pct:0.7}]} },
-  { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'Dex + 35 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
-  { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 턴당 20 HP 회복', fx:{type:'hot',turns:3,heal:20} },
-  { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 적 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
-  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 Dex +10 (은신 강화)', fx:{type:'buff',dex:10,turns:3} },
-  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 자신 MP×0.2 자해데미지 / MP -20% / 적 너프', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2},{type:'dispel'}]} },
-  { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 적 명중률(Dex) -50% / 적 버프 제거', fx:{type:'multi',effects:[{type:'pctDebuff',stats:{dex:-0.5},turns:3},{type:'dispel'}]} },
-  { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'(무기+Dex) 데미지 / 자신 기절 50% 풀림', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
-  { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'Int +10 / 최대 MP +50', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
-  { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'Int×3 데미지 / Int만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
+  { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
+  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어력 +5씩 증가', fx:{type:'buff',def:5,turns:3} },
+  { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10 ~ 25 랜덤 데미지, 매턴 HP 5씩 흡수 / [소환의식] 선행 필요', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
+  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격력 +5, 방어력 +5 증가 / 상대방 공격력 -5, 방어력 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:5},{type:'debuff',atk:-5,def:-5}]} },
+  { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'상대방 MP*0.2 데미지 (최대 60) / 상대방 MP -50% 감소 및 기본공격으로 타격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
+  { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'공격력 +12 증가', fx:{type:'buff',atk:12} },
+  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +11 증가', fx:{type:'buff',def:11} },
+  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +10 증가', fx:{type:'buff',def:10} },
+  { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
+  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 동안 공격력*0.5 만큼 HP 회복', fx:{type:'hot',turns:2,heal:10} },
+  { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
+  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 공격력 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
+  { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
+  { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
+  { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 동안 10 고정 데미지', fx:{type:'dot',turns:4,dmg:10} },
+  { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'[STR+공격력] 데미지 / 상대방 30% 확률로 1턴 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
+  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어력 +5 증가 및 3회 동안 상대방 공격의 70%를 반사', fx:{type:'multi',effects:[{type:'buff',def:5},{type:'reflect',hits:3,pct:0.7}]} },
+  { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'[DEX + 35] 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
+  { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
+  { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
+  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가 및 3턴 동안 상대방 공격 50% 확률로 회피', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5}]} },
+  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전자 MP*0.2 자해 데미지 / 상대방 MP -20%', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2},{type:'dispel'}]} },
+  { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'pctDebuff',stats:{dex:-0.5},turns:3},{type:'dispel'}]} },
+  { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
+  { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
+  { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'INT*3 데미지 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
   { id:'r27', name:'캐리언비틀즈',   grade:'rare', icon:'paw',      text:'10-20 데미지 / 3턴 5 고정데미지 (소환의식 없음)', fx:{type:'multi',effects:[{type:'dmg',min:10,max:20},{type:'dot',turns:3,dmg:5}]} },
-  { id:'r28', name:'캐리언스웜',     grade:'rare', icon:'soul',     text:'2턴 15 데미지 / 적 Str -3, Dex -3 / Int×2 MP소모', fx:{type:'multi',effects:[{type:'dot',turns:2,dmg:15},{type:'debuff',str:-3,dex:-3},{type:'mpCost',stat:'int',mult:2}]} },
-  { id:'r29', name:'코로시브브레스', grade:'rare', icon:'sword2',   text:'Int×2 데미지 / 4턴 8 고정데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'dot',turns:4,dmg:8}]} },
-  { id:'r30', name:'쿠루징웨이브',   grade:'rare', icon:'armor',    text:'Int + 35 데미지', fx:{type:'dmgStat',stats:['int'],bonus:35} },
+  { id:'r28', name:'캐리언스웜',     grade:'rare', icon:'soul',     text:'2턴 동안 15 데미지 / 상대방 STR -3, DEX -3 감소 / INT*2 MP 소모', fx:{type:'multi',effects:[{type:'dot',turns:2,dmg:15},{type:'debuff',str:-3,dex:-3},{type:'mpCost',stat:'int',mult:2}]} },
+  { id:'r29', name:'코로시브브레스', grade:'rare', icon:'sword2',   text:'INT*2 데미지 / 4턴 동안 8 고정 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'dot',turns:4,dmg:8}]} },
+  { id:'r30', name:'쿠루징웨이브',   grade:'rare', icon:'armor',    text:'[INT + 35] 데미지', fx:{type:'dmgStat',stats:['int'],bonus:35} },
 
   // ───── 유니크 카드 6종 ─────
-  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'(Str + 공격) x3', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
-  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1-10 랜덤데미지 x8 / 1-10 랜덤회복 x8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
-  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'(Int + 공격) x3 / Int만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
-  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'(Dex + 공격) x3', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
-  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 20-40 랜덤 데미지 (방어력 무시, 소환의식 없음)', fx:{type:'dot',turns:10,min:20,max:40} },
-  { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'자신의 레벨 × 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
+  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 공격력] *3으로 공격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
+  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
+  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 공격력] *3으로 공격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
+  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'(DEX + 공격력] *3으로 공격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
+  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 동안 10-25 랜덤 데미지 (소환의식 없음)', fx:{type:'dot',turns:10,min:10,max:25} },
+  { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 적을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.90,frog:true} },
+  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.90,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
-  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5회 5-10 랜덤데미지 (방어력 무시, 소환의식 없음)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'30-80 랜덤 데미지 (효과 미정)', fx:{type:'dmg',min:30,max:80} },
-  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'Str/Dex/Int/Con +10 / 무기 +10 / 방어구 +10', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
+  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5 ~ 10 랜덤 데미지 *5 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'3턴 동안 상대방의 타격을 모두 시전자 HP 회복으로 변환 / 상대방의 버프 강탈, 디버프 반사', fx:{type:'multi',effects:[{type:'stealBuff',turns:3},{type:'voodoo',turns:3}]} },
+  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
-  { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'HP 40 회복', fx:{type:'heal',hp:40} },
-  { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'사용턴에 5~10 랜덤회복 × 5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
-  { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5~10 랜덤데미지 × 5회', fx:{type:'dmgHits',min:5,max:10,hits:5} },
+  { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
+  { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
+  { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회', fx:{type:'dmgHits',min:5,max:10,hits:5} },
   { id:'r34', name:'스피드스크롤',       grade:'rare', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
-  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 / 방어 +5 (필요 Str 10)', fx:{type:'buff',atk:10,def:5} },
-  { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'공격 +5 / 적 방어 -10 (필요 Str 10)', fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-10}]} },
-  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'무기 +40% / 방어구 +40% (필요 Str 10 또는 Dex 10)', fx:{type:'pctBuff',stats:{atk:0.4,def:0.4}} },
-  { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'Int + 무기 데미지 / 2턴간 턴당 Int×0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
-  { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'적 1턴 얼림 / Int 마법데미지 / Int만큼 MP소모 (필요 Int 10)', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int']},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
-  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'Dex+무기 ×3 데미지 / 시전자 공격·방어 0', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
+  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +5 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:5} },
+  { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 공격력 +5 증가 / 상대방 방어력 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
+  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'무기 +40% 증가 / 방어구 +40% 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',stats:{atk:0.4,def:0.4}} },
+  { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
+  { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT*2 데미지 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
+  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기] *3 데미지 / 시전자 공격력 및 방어력 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -5097,6 +5097,8 @@ function _ensureCombatExt(c){
   c.castedByMe ||= []; c.castedByMon ||= [];
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   c.myFrog ||= 0; c.monFrog ||= 0;
+  c.myEvade ||= null; c.monEvade ||= null;       // {turns, pct}
+  c.myVoodoo ||= null; c.monVoodoo ||= null;     // {turns}
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -5163,6 +5165,11 @@ function _buildCombatCtx(kind, caster){
     getCastDouble(){ return isP ? c.myDoubleCastReady : c.monDoubleCastReady; },
     setCastDouble(v){ if (isP) c.myDoubleCastReady = v; else c.monDoubleCastReady = v; },
     setTargFrog(turns){ if (isP) c.monFrog = Math.max(c.monFrog, turns); else c.myFrog = Math.max(c.myFrog, turns); },
+    // 회피·부두 — 시전자에게 부여, 데미지 받을 때 대상의 evade/voodoo 체크
+    setCastEvade(e){ if (isP) c.myEvade = e; else c.monEvade = e; },
+    targEvade(){ return isP ? c.monEvade : c.myEvade; },
+    setCastVoodoo(v){ if (isP) c.myVoodoo = v; else c.monVoodoo = v; },
+    targVoodoo(){ return isP ? c.monVoodoo : c.myVoodoo; },
   };
 }
 function _addTurnBuff(buffs, turnBuffs, stat, value, turns){
@@ -5206,6 +5213,24 @@ function _computeMpCost(fx, castObj){
 }
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return;
+  // 스탯 조건 검사 — AND: card.statReq:{str:10}, OR: card.statReqAny:[{str:10},{dex:10}]
+  if (card.statReq){
+    for (const s of Object.keys(card.statReq)){
+      const need = card.statReq[s];
+      if ((ctx.castObj[s]||0) < need){
+        ctx.log(`  ✱ ${ctx.castName} ${s.toUpperCase()} ${need} 미달 — 카드 발동 실패`, 'info');
+        return;
+      }
+    }
+  }
+  if (card.statReqAny){
+    const ok = card.statReqAny.some(req => Object.keys(req).every(s => (ctx.castObj[s]||0) >= req[s]));
+    if (!ok){
+      const labels = card.statReqAny.map(req => Object.keys(req).map(s => `${s.toUpperCase()} ${req[s]}`).join('+')).join(' / ');
+      ctx.log(`  ✱ ${ctx.castName} 스탯 조건 미달 (${labels}) — 카드 발동 실패`, 'info');
+      return;
+    }
+  }
   // MP 사전 검사 — 카드 전체 비용을 미리 합산. 시전자 MP 부족 시 발동 차단
   const mpNeed = _computeMpCost(fx, ctx.castObj);
   if (mpNeed > (ctx.castObj.mp||0)){
@@ -5221,6 +5246,22 @@ function applyCardEffect(card, ctx){
     const t = fx.type;
 
     function doDmg(raw){
+      // 회피 (r21 은신 등) — 대상이 evade 상태면 pct 확률로 완전 회피
+      const ev = ctx.targEvade && ctx.targEvade();
+      if (ev && ev.turns > 0 && Math.random() < (ev.pct||0)){
+        ctx.log(`  ✗ ${ctx.targName} 회피!`, 'heal');
+        return;
+      }
+      // 부두 (h04 빅베드부두) — 대상이 voodoo 상태면 데미지를 모두 HP 회복으로 변환
+      const vo = ctx.targVoodoo && ctx.targVoodoo();
+      if (vo && vo.turns > 0){
+        const heal = Math.max(1, Math.floor(raw));
+        const before = ctx.targObj.hp;
+        ctx.targObj.hp = Math.min(ctx.targObj.hpMax || ctx.targObj.hp + heal, ctx.targObj.hp + heal);
+        const got = ctx.targObj.hp - before;
+        ctx.log(`  🌀 ${ctx.targName} 부두 → 데미지 ${heal} → 회복 +${got}`, 'heal');
+        return;
+      }
       let dmg = Math.max(1, Math.floor(raw - (ctx.targBuffs.def||0) - (ctx.targObj.def||0)));
       ctx.targObj.hp -= dmg;
       ctx.addDmg(dmg);
@@ -5240,8 +5281,35 @@ function applyCardEffect(card, ctx){
     function statSum(stats, obj=ctx.castObj, buffs=ctx.castBuffs){
       let s = 0; for (const k of stats) s += (obj[k]||0) + (buffs[k]||0); return s;
     }
+    // 부두 디버프 반사 — 대상이 voodoo면 디버프 적용 대상을 시전자로 swap
+    function _debuffTarget(){
+      const vo = ctx.targVoodoo && ctx.targVoodoo();
+      if (vo && vo.turns > 0){
+        ctx.log(`  🌀 ${ctx.targName} 부두 → 디버프 반사`, 'heal');
+        return {
+          obj: ctx.castObj, buffs: ctx.castBuffs, turnBuffs: ctx.castTurnBuffs,
+          name: ctx.castName, stun: ctx.addCastStun.bind(ctx),
+          logCls: ctx.targLogCls, reflected: true,
+        };
+      }
+      return {
+        obj: ctx.targObj, buffs: ctx.targBuffs, turnBuffs: ctx.targTurnBuffs,
+        name: ctx.targName, stun: ctx.addTargStun.bind(ctx),
+        logCls: ctx.castLogCls, reflected: false,
+      };
+    }
 
     if (t === 'multi'){ for (const sub of fx.effects) dispatch(sub); return; }
+    if (t === 'evadeBuff'){
+      ctx.setCastEvade && ctx.setCastEvade({ turns: fx.turns, pct: fx.pct });
+      ctx.log(`  ✓ ${ctx.castName} ${fx.turns}턴 회피 ${Math.floor((fx.pct||0)*100)}% 부여`, 'heal');
+      return;
+    }
+    if (t === 'voodoo'){
+      ctx.setCastVoodoo && ctx.setCastVoodoo({ turns: fx.turns });
+      ctx.log(`  🌀 ${ctx.castName} ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
+      return;
+    }
     if (t === 'basicAtk'){ doDmg(rnd(ctx.castObj.atk[0], ctx.castObj.atk[1]) + (ctx.castBuffs.atk||0)); return; }
     if (t === 'dmg'){ doDmg(rnd(fx.min, fx.max)); return; }
     if (t === 'dmgSelf'){
@@ -5335,13 +5403,14 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'debuff'){
+      const tgt = _debuffTarget();
       const msgs = [];
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance') continue;
-        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, fx[k], fx.turns||0);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0);
         msgs.push(`${k}${fx[k]>=0?'+':''}${fx[k]}`);
       }
-      ctx.log(`  - ${ctx.targName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, ctx.castLogCls);
+      ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
       return;
     }
     if (t === 'pctBuff'){
@@ -5356,26 +5425,30 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'pctDebuff'){
+      const tgt = _debuffTarget();
       const msgs = [];
       for (const [k, pct] of Object.entries(fx.stats)){
-        const base = (ctx.targObj[k]||0) + (ctx.targBuffs[k]||0);
+        const base = (tgt.obj[k]||0) + (tgt.buffs[k]||0);
         const d = Math.floor(base * pct);
-        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, d, fx.turns||0);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0);
         msgs.push(`${k} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
       }
-      ctx.log(`  - ${ctx.targName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, ctx.castLogCls);
+      ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
       return;
     }
     if (t === 'zeroStat'){
-      const side = (fx.target === 'self') ? 'cast' : 'targ';
-      const obj = side==='cast' ? ctx.castObj : ctx.targObj;
-      const buffs = side==='cast' ? ctx.castBuffs : ctx.targBuffs;
-      const tBuffs = side==='cast' ? ctx.castTurnBuffs : ctx.targTurnBuffs;
+      let obj, buffs, tBuffs, name, logCls;
+      if (fx.target === 'self'){
+        obj = ctx.castObj; buffs = ctx.castBuffs; tBuffs = ctx.castTurnBuffs; name = ctx.castName; logCls = 'opp';
+      } else {
+        const tgt = _debuffTarget();
+        obj = tgt.obj; buffs = tgt.buffs; tBuffs = tgt.turnBuffs; name = tgt.name; logCls = tgt.logCls;
+      }
       for (const k of fx.stats){
         const cur = (obj[k]||0) + (buffs[k]||0);
         _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0);
       }
-      ctx.log(`  ${side==='self'?'-':' -'} ${side==='cast'?ctx.castName:ctx.targName} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, side==='cast'?'opp':ctx.castLogCls);
+      ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
       return;
     }
     if (t === 'dot'){
@@ -5443,12 +5516,13 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'cc'){
-      ctx.addTargStun(fx.turns);
-      if (fx.frog && ctx.setTargFrog){
+      const tgt = _debuffTarget();
+      tgt.stun(fx.turns);
+      if (fx.frog && ctx.setTargFrog && !tgt.reflected){
         ctx.setTargFrog(fx.turns);
         ctx.log(`  🐸 ${ctx.targName}가 ${fx.turns}턴간 개구리로 변신!`, ctx.castLogCls);
       } else {
-        ctx.log(`  ✱ ${ctx.targName} ${fx.turns}턴 행동불능`, ctx.castLogCls);
+        ctx.log(`  ✱ ${tgt.name} ${fx.turns}턴 행동불능`, tgt.logCls);
       }
       return;
     }
@@ -5553,9 +5627,10 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'mpDebuff'){
-      const amt = fx.pct ? Math.floor((ctx.targObj.mp||0) * fx.pct) : (fx.amount||0);
-      ctx.targObj.mp = Math.max(0, ctx.targObj.mp - amt);
-      ctx.log(`  - ${ctx.targName} MP -${amt}`, ctx.castLogCls);
+      const tgt = _debuffTarget();
+      const amt = fx.pct ? Math.floor((tgt.obj.mp||0) * fx.pct) : (fx.amount||0);
+      tgt.obj.mp = Math.max(0, tgt.obj.mp - amt);
+      ctx.log(`  - ${tgt.name} MP -${amt}`, tgt.logCls);
       return;
     }
     if (t === 'mpCost'){
@@ -5625,6 +5700,11 @@ function processCombatTicks(kind){
   // 반사막 감소 (턴 기반만; hits 기반은 doDmg에서 소비)
   if (c.myReflect && c.myReflect.turns != null){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (c.monReflect && c.monReflect.turns != null){ c.monReflect.turns--; if (c.monReflect.turns<=0) c.monReflect = null; }
+  // 회피 / 부두 카운터 감소
+  if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; log(`  · 회피 종료`, 'info'); } }
+  if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
+  if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
+  if (c.monVoodoo){ c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
   // 개구리 변신 카운터 감소
   if (c.myFrog && c.myFrog > 0){ c.myFrog--; if (c.myFrog === 0) log(`  🐸 → 사람 모습으로 돌아왔습니다.`, 'sys'); }
   if (c.monFrog && c.monFrog > 0){ c.monFrog--; if (c.monFrog === 0) log(`  🐸 → ${opp.name}이(가) 사람 모습으로 돌아왔습니다.`, 'sys'); }
@@ -5657,10 +5737,12 @@ function _ensureTrainExt(){
   c.myTurnBuffs ||= []; c.myMpHots ||= []; c.myStun ||= 0; c.myReflect ||= null; c.mySelfDots ||= []; c.myFrog ||= 0; c.monFrog ||= 0;
   c.castedByMe ||= [];
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
+  c.myEvade ||= null; c.myVoodoo ||= null;
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   o.turnBuffs ||= []; o.mpHots ||= []; o.stun ||= 0; o.reflect ||= null; o.selfDots ||= [];
   o.castedBy ||= [];
+  o.evade ||= null; o.voodoo ||= null;
 }
 function _buildTrainCtx(caster){
   _ensureTrainExt();
@@ -5696,6 +5778,11 @@ function _buildTrainCtx(caster){
     getCastDouble(){ return isMe ? c.myDoubleCastReady : c.monDoubleCastReady; },
     setCastDouble(v){ if (isMe) c.myDoubleCastReady = v; else c.monDoubleCastReady = v; },
     setTargFrog(turns){ if (isMe) c.monFrog = Math.max(c.monFrog||0, turns); else c.myFrog = Math.max(c.myFrog||0, turns); },
+    // 회피·부두
+    setCastEvade(e){ if (isMe) c.myEvade = e; else opp.evade = e; },
+    targEvade(){ return isMe ? opp.evade : c.myEvade; },
+    setCastVoodoo(v){ if (isMe) c.myVoodoo = v; else opp.voodoo = v; },
+    targVoodoo(){ return isMe ? opp.voodoo : c.myVoodoo; },
   };
 }
 function isTrainStunned(caster){
@@ -5739,6 +5826,11 @@ function processTrainTicks(){
   // stun 카운터는 isTrainStunned에서 소비
   if (c.myReflect){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (opp.reflect){ opp.reflect.turns--; if (opp.reflect.turns<=0) opp.reflect = null; }
+  // 회피 / 부두 카운터 감소 (train 모드)
+  if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; trainLog(`  · 회피 종료`, 'info'); } }
+  if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
+  if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
+  if (opp.voodoo){ opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
 }
 
 function huntFlee(){
