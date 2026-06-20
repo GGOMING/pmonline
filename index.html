@@ -5275,8 +5275,15 @@ function _buildCombatCtx(kind, caster){
     targLogCls: isP ? 'opp' : 'hit',
     log,
     addDmg(amt){ if (isP) c.statsMyDmg += amt; else c.statsMonDmg += amt; },
-    addCastStun(turns){ if (isP) c.myStun += turns; else c.monStun += turns; },
-    addTargStun(turns){ if (isP) c.monStun += turns; else c.myStun += turns; },
+    // stun은 누적이 아닌 max 갱신 — 같은 cc 카드 연속 시전 시 무한 행동불능 방지
+    addCastStun(turns){
+      if (isP) c.myStun = Math.max(c.myStun||0, turns);
+      else     c.monStun = Math.max(c.monStun||0, turns);
+    },
+    addTargStun(turns){
+      if (isP) c.monStun = Math.max(c.monStun||0, turns);
+      else     c.myStun = Math.max(c.myStun||0, turns);
+    },
     setCastReflect(r){ if (isP) c.myReflect = r; else c.monReflect = r; },
     targReflect(){ return isP ? c.monReflect : c.myReflect; },
     clearTargReflect(){ if (isP) c.monReflect = null; else c.myReflect = null; },
@@ -5888,8 +5895,15 @@ function _buildTrainCtx(caster){
     targLogCls: isMe ? 'opp' : 'hit',
     log: trainLog,
     addDmg(amt){ if (isMe) c.statsMyDmg += amt; else c.statsOppDmg += amt; },
-    addCastStun(turns){ if (isMe) c.myStun += turns; else opp.stun += turns; },
-    addTargStun(turns){ if (isMe) opp.stun += turns; else c.myStun += turns; },
+    // stun max 갱신 (train 모드)
+    addCastStun(turns){
+      if (isMe) c.myStun = Math.max(c.myStun||0, turns);
+      else      opp.stun = Math.max(opp.stun||0, turns);
+    },
+    addTargStun(turns){
+      if (isMe) opp.stun = Math.max(opp.stun||0, turns);
+      else      c.myStun = Math.max(c.myStun||0, turns);
+    },
     setCastReflect(r){ if (isMe) c.myReflect = r; else opp.reflect = r; },
     targReflect(){ return isMe ? opp.reflect : c.myReflect; },
     clearTargReflect(){ if (isMe) opp.reflect = null; else c.myReflect = null; },
