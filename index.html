@@ -241,7 +241,10 @@
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
   body.combat-active:not(.layout-vertical) #chat { display:none; }
-  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
+  /* 전투 중에는 스탯 박스만 숨기고 아바타는 노출 (좌상단 작은 프로필) */
+  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:flex; }
+  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox #main-statbox { display:none; }
+  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox .avatar-col { display:flex; }
   body.combat-active:not(.layout-vertical) > #pg-main.active > #game > .main-bars { display:none; }
   .combat-grid {
     display:grid;
@@ -3057,21 +3060,31 @@ const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000 };
 
 function sellAllByGrade(grade){
   const p = GAME.player;
-  const targets = GAME.inventory.filter(c => c.grade === grade);
-  if (targets.length === 0){ toast('판매할 카드가 없습니다.'); return; }
-  const price = CARD_SELL_PRICE[grade];
-  const total = price * targets.length;
-  if (!confirm(`${gradeKr(grade)} 카드 ${targets.length}장을 ${total.toLocaleString()}G에 판매할까요?\n(덱에 장착된 카드도 모두 해제됩니다)`)) return;
-  GAME.inventory = GAME.inventory.filter(c => c.grade !== grade);
-  // 덱에서도 해당 등급 카드 모두 해제 (보유 0이라 자동 제거)
-  for (let i = 0; i < GAME.myDeck.length; i++){
-    if (GAME.myDeck[i] && GAME.myDeck[i].grade === grade){
-      GAME.myDeck[i] = BASIC_ATTACK;
-    }
+  // 덱 장착분은 판매 대상에서 제외 (장착 카드는 인벤토리에 그대로 유지)
+  const equippedCounts = {};
+  for (const dc of GAME.myDeck){
+    if (!dc || dc.id === 'basic_atk') continue;
+    if (dc.grade !== grade) continue;
+    equippedCounts[dc.id] = (equippedCounts[dc.id]||0) + 1;
   }
+  const consumed = {};  // 인스턴스별로 장착분 1장씩 보존
+  const sellList = [];
+  const keepList = [];
+  for (const c of GAME.inventory){
+    if (c.grade !== grade){ keepList.push(c); continue; }
+    const need = equippedCounts[c.id] || 0;
+    const used = consumed[c.id] || 0;
+    if (used < need){ consumed[c.id] = used + 1; keepList.push(c); }  // 장착분 유지
+    else { sellList.push(c); }
+  }
+  if (sellList.length === 0){ toast('판매할 카드가 없습니다. (모두 장착 중이거나 보유 없음)'); return; }
+  const price = CARD_SELL_PRICE[grade];
+  const total = price * sellList.length;
+  if (!confirm(`${gradeKr(grade)} 카드 ${sellList.length}장을 ${total.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
+  GAME.inventory = keepList;
   p.gold += total;
-  toast(`${gradeKr(grade)} 카드 ${targets.length}장 판매 +${total.toLocaleString()}G`);
-  chatSys(`★ ${p.name}님이 ${gradeKr(grade)} 카드 ${targets.length}장을 판매하셨습니다. (+${total.toLocaleString()}G)`);
+  toast(`${gradeKr(grade)} 카드 ${sellList.length}장 판매 +${total.toLocaleString()}G`);
+  chatSys(`★ ${p.name}님이 ${gradeKr(grade)} 카드 ${sellList.length}장을 판매하셨습니다. (+${total.toLocaleString()}G)`);
   renderSheet();
   renderDeck();
   refreshShopUI();
@@ -3082,17 +3095,17 @@ function sellOneCard(cardId){
   const p = GAME.player;
   const idx = GAME.inventory.findIndex(c => c.id === cardId);
   if (idx < 0){ toast('보유하지 않은 카드'); return; }
+  // 장착분 보호 — 보유 중 장착 안 된 잉여분만 판매 가능
+  const ownedTotal = GAME.inventory.filter(c => c.id === cardId).length;
+  const equippedTotal = GAME.myDeck.filter(c => c && c.id === cardId).length;
+  if (ownedTotal - equippedTotal <= 0){
+    toast('장착 중인 카드는 판매할 수 없습니다.');
+    return;
+  }
   const card = GAME.inventory[idx];
   const price = CARD_SELL_PRICE[card.grade] || 1;
   GAME.inventory.splice(idx, 1);
   p.gold += price;
-  // 덱 슬롯 보유 수 초과 시 1슬롯 해제
-  const owned = GAME.inventory.filter(c => c.id === cardId).length;
-  const equipped = GAME.myDeck.filter(c => c && c.id === cardId).length;
-  if (equipped > owned){
-    const slot = GAME.myDeck.findIndex(c => c && c.id === cardId);
-    if (slot >= 0) GAME.myDeck[slot] = BASIC_ATTACK;
-  }
   toast(`${card.name} 판매 +${price}G`);
   renderSheet();
   renderDeck();
@@ -3113,15 +3126,22 @@ function openSellModal(){
 
 function renderSellModal(){
   $('cardPickSlot').textContent = `카드 판매 — 보유 ${GAME.inventory.length}장`;
-  const counts = {};
-  for (const c of GAME.inventory){ counts[c.id] = (counts[c.id]||0) + 1; }
-  const uniqueIds = new Set();
+  // 보유 - 장착 = 판매 가능 수량. 모두 장착 중이면 판매창에서 숨김.
+  const owned = {};
+  for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+  const equipped = {};
+  for (const dc of GAME.myDeck){
+    if (!dc || dc.id === 'basic_atk') continue;
+    equipped[dc.id] = (equipped[dc.id]||0) + 1;
+  }
+  const seen = new Set();
   let pool = [];
   for (const c of GAME.inventory){
-    if (!uniqueIds.has(c.id)){
-      uniqueIds.add(c.id);
-      pool.push({...c, _count: counts[c.id]});
-    }
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    const avail = (owned[c.id]||0) - (equipped[c.id]||0);
+    if (avail <= 0) continue;
+    pool.push({...c, _count: avail});
   }
   if (_cardPickFilter !== 'all') pool = pool.filter(c => c.grade === _cardPickFilter);
   if (pool.length === 0){
@@ -3144,7 +3164,11 @@ function renderSellModal(){
   }).join('');
 }
 
-const INVENTORY_LIMIT = 30;
+// 보유 카드 한도: Lv 1~25 = 50장, Lv 26+ = 100장
+function inventoryLimit(){
+  const lv = (GAME.player && GAME.player.level) || 1;
+  return lv >= 26 ? 100 : 50;
+}
 function doGacha(n){
   const p = GAME.player;
   const c1 = gachaCost1For(p.level);
@@ -3154,9 +3178,10 @@ function doGacha(n){
     return;
   }
   // 보유 카드 한도 사전 검사
-  const room = INVENTORY_LIMIT - GAME.inventory.length;
+  const limit = inventoryLimit();
+  const room = limit - GAME.inventory.length;
   if (room < n){
-    setShopMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${INVENTORY_LIMIT}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다. 카드를 판매하거나 덱 정리 후 다시 시도하세요.`, 'err');
+    setShopMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${limit}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다. 카드를 판매하거나 덱 정리 후 다시 시도하세요.`, 'err');
     return;
   }
   p.gold -= cost;
@@ -3310,8 +3335,8 @@ async function claimRaidRewards(){
       if (row.kind === 'card'){
         const card = CARDS.find(c => c.id === row.item_id);
         if (card){
-          if (GAME.inventory.length >= INVENTORY_LIMIT){
-            lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}] · ⚠ 보유 한도(${INVENTORY_LIMIT}) 초과로 지급 누락`);
+          if (GAME.inventory.length >= inventoryLimit()){
+            lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}] · ⚠ 보유 한도(${inventoryLimit()}) 초과로 지급 누락`);
           } else {
             GAME.inventory.push(card);
             lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
@@ -4518,8 +4543,8 @@ function rankEnd(result){
         const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk');
         const card = pool[Math.floor(Math.random() * pool.length)];
         if (card){
-          if (GAME.inventory.length >= INVENTORY_LIMIT){
-            bonusLine = `<p style="color:#a02050;">🎁 카드 1뽑 보너스 당첨 — <b>${card.name}</b> [${gradeKr(card.grade)}] · ⚠ 보유 한도(${INVENTORY_LIMIT}) 초과로 지급 누락</p>`;
+          if (GAME.inventory.length >= inventoryLimit()){
+            bonusLine = `<p style="color:#a02050;">🎁 카드 1뽑 보너스 당첨 — <b>${card.name}</b> [${gradeKr(card.grade)}] · ⚠ 보유 한도(${inventoryLimit()}) 초과로 지급 누락</p>`;
           } else {
             GAME.inventory.push(card);
             bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
