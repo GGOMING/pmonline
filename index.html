@@ -2635,31 +2635,31 @@ function exitHealToMain(){
 // ============================================================
 // tier: 보스 드랍 등급. dropRate: 보스 처치 시 % 확률 (× dmgRatio). shopHidden: 상점 미노출
 const WEAPONS = [
-  { id:'old_dagger',        name:'낡은 단도',                  atkBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.4, icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'bronze_glaive',     name:'청동 글레이브',              atkBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.0, icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'iron_spatha',       name:'철제 스파타',                atkBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/wc3_icons/steelmeleeweapons.png' },
-  { id:'steel_longsword',   name:'강철 롱소드',                atkBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
-  { id:'knight_sword',      name:'기사단의 의전검',            atkBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/wc3_icons/arcanitemeleeweapons.png' },
-  { id:'gladius',           name:'글라디우스 히스파니엔시스',  atkBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'mithril_ascalon',   name:'미스릴 아스칼론',            atkBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'saint_elaha',       name:'성왕의 엘라하',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'lord_requiem',      name:'명왕의 레퀴엠',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'ancient_excalibur', name:'고대 군주의 엑스칼리버',     atkBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/wc3_icons/thoriummeleeweapons.png' },
-  { id:'divine_elaha',      name:'천신의 엘라하',              atkBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/wc3_icons/thoriummeleeweapons.png' },
+  { id:'old_dagger',        name:'낡은 단도',                  atkBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.4, icon:'assets/equipment/1.%20%EB%82%A1%EC%9D%80%20%EB%8B%A8%EB%8F%84.jpg' },
+  { id:'bronze_glaive',     name:'청동 글레이브',              atkBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.0, icon:'assets/equipment/2.%20%EC%B2%AD%EB%8F%99%20%EA%B8%80%EB%A0%88%EC%9D%B4%EB%B8%8C.png' },
+  { id:'iron_spatha',       name:'철제 스파타',                atkBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/equipment/3.%20%EC%B2%A0%EC%A0%9C%20%EC%8A%A4%ED%8C%8C%ED%83%80.png' },
+  { id:'steel_longsword',   name:'강철 롱소드',                atkBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/equipment/4.%20%EA%B0%95%EC%B2%A0%20%EB%A1%B1%EC%86%8C%EB%93%9C.png' },
+  { id:'knight_sword',      name:'기사단의 의전검',            atkBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/equipment/5.%20%EA%B8%B0%EC%82%AC%EB%8B%A8%EC%9D%98%20%EC%9D%98%EC%A0%84%EA%B2%80.png' },
+  { id:'gladius',           name:'글라디우스',                  atkBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/equipment/6.%20%EA%B8%80%EB%9D%BC%EB%94%94%EC%9A%B0%EC%8A%A4.png' },
+  { id:'mithril_ascalon',   name:'미스릴 아스칼론',            atkBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/equipment/7.%20%EB%AF%B8%EC%8A%A4%EB%A6%B4%20%EC%95%84%EC%8A%A4%EC%B9%BC%EB%A1%A0.png' },
+  { id:'saint_elaha',       name:'성왕의 엘라하',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/equipment/8.%20%EC%84%B1%EC%99%95%EC%9D%98%20%EC%97%98%EB%9D%BC%ED%95%98.png' },
+  { id:'lord_requiem',      name:'명왕의 레퀴엠',              atkBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/equipment/9.%20%EB%AA%85%EC%99%95%EC%9D%98%20%EB%A0%88%ED%80%B4%EC%97%A0.png' },
+  { id:'ancient_excalibur', name:'고대 군주의 엑스칼리버',     atkBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/equipment/10.%20%EA%B3%A0%EB%8C%80%20%EA%B5%B0%EC%A3%BC%EC%9D%98%20%EC%97%91%EC%8A%A4%EC%B9%BC%EB%A6%AC%EB%B2%84.png' },
+  { id:'divine_elaha',      name:'천신의 아스트레이아',        atkBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/equipment/11.%20%EC%B2%9C%EC%8B%A0%EC%9D%98%20%EC%95%84%EC%8A%A4%ED%8A%B8%EB%A0%88%EC%9D%B4%EC%95%84.jpg' },
 ];
 
 const ARMORS = [
-  { id:'leather_guard',      name:'가죽 보호구',          defBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.9, icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'bronze_scale',       name:'청동 스케일 메일',     defBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.5, icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'iron_lamellar',      name:'철제 라멜라 아머',     defBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/wc3_icons/steelarmor.png' },
-  { id:'steel_hauberk',      name:'강철 하버크',          defBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'knight_armor',       name:'기사단의 갑옷',        defBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/wc3_icons/arcanitearmor.png' },
-  { id:'lorica_segment',     name:'로리카 세그멘타타',    defBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'mithril_plate',      name:'미스릴 풀 플레이트',   defBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'saint_cuirass',      name:'성왕의 큐이라스',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'lord_cruor',         name:'명왕의 크루오르',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'ancient_brigandine', name:'고대 군주의 브리간딘', defBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/wc3_icons/thoriumarmor.png' },
-  { id:'divine_fluted',      name:'천신의 플루티드 아머', defBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/wc3_icons/thoriumarmor.png' },
+  { id:'leather_guard',      name:'가죽 보호구',          defBonus:2,  price:5000,     reqLv:5,  tier:'normal', dropRate:17.9, icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%201.%20%EA%B0%80%EC%A3%BD%20%EB%B0%A9%EC%96%B4%EA%B5%AC.jpg' },
+  { id:'bronze_scale',       name:'청동 스케일 메일',     defBonus:4,  price:10000,    reqLv:10, tier:'normal', dropRate:13.5, icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%202.%20%EC%B2%AD%EB%8F%99%20%EC%8A%A4%EC%BC%80%EC%9D%BC%20%EB%A9%94%EC%9D%BC.png' },
+  { id:'iron_lamellar',      name:'철제 라멜라 아머',     defBonus:7,  price:20000,    reqLv:15, tier:'normal', dropRate:10.0, icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%203.%20%EC%B2%A0%EC%A0%9C%20%EB%9D%BC%EB%A9%9C%EB%9D%BC%20%EC%95%84%EB%A8%B8.png' },
+  { id:'steel_hauberk',      name:'강철 하버크',          defBonus:10, price:50000,    reqLv:20, tier:'rare',   dropRate:7.5,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%204.%20%EA%B0%95%EC%B2%A0%20%ED%95%98%EB%B2%84%ED%81%AC.png' },
+  { id:'knight_armor',       name:'기사단의 갑옷',        defBonus:13, price:100000,   reqLv:25, tier:'rare',   dropRate:5.0,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%205.%20%EA%B8%B0%EC%82%AC%EB%8B%A8%EC%9D%98%20%EA%B0%91%EC%98%B7.png' },
+  { id:'lorica_segment',     name:'로리카 세그멘타타',    defBonus:15, price:300000,   reqLv:30, tier:'rare',   dropRate:3.5,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%206.%20%EB%A1%9C%EB%A6%AC%EC%B9%B4%20%EC%84%B8%EA%B7%B8%EB%A9%98%ED%83%80%EB%82%98.png' },
+  { id:'mithril_plate',      name:'미스릴 풀 플레이트',   defBonus:18, price:500000,   reqLv:35, tier:'rare',   dropRate:2.0,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%207%20.%EB%AF%B8%EC%8A%A4%EB%A6%B4%20%ED%92%80%20%ED%94%8C%EB%A0%88%EC%9D%B4%ED%8A%B8.png' },
+  { id:'saint_cuirass',      name:'성왕의 큐이라스',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%208.%20%EC%84%B1%EC%99%95%EC%9D%98%20%ED%81%90%EC%9D%B4%EB%9D%BC%EC%8A%A4.png' },
+  { id:'lord_cruor',         name:'명왕의 크루오르',      defBonus:20, price:1000000,  reqLv:40, tier:'unique', dropRate:0.5,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%209.%20%EB%AA%85%EC%99%95%EC%9D%98%20%ED%81%AC%EB%A3%A8%EC%98%A4%EB%A5%B4.png' },
+  { id:'ancient_brigandine', name:'고대 군주의 브리간딘', defBonus:25, price:10000000, reqLv:30, tier:'hero',   dropRate:0.5,  icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%2010.%20%EA%B3%A0%EB%8C%80%EA%B5%B0%EC%A3%BC%EC%9D%98%20%EB%B8%8C%EB%A6%AC%EA%B0%84%EB%94%98.png' },
+  { id:'divine_fluted',      name:'천신의 플루티드 아머', defBonus:35, price:0,        reqLv:1,  tier:'hero',   dropRate:0.1, shopHidden:true, icon:'assets/equipment/%EB%B0%A9%EC%96%B4%EA%B5%AC%2011.%20%EC%B2%9C%EC%8B%A0%EC%9D%98%20%ED%94%8C%EB%A3%A8%ED%8B%B0%EB%93%9C%20%EC%95%84%EB%A8%B8.jpg' },
 ];
 
 function openWeaponShop(){
@@ -3622,7 +3622,7 @@ function renderRaidBattle(){
   const m = c.monster;
   $('raid_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
   $('rd_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
-  $('rd_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : ('assets/wc3_icons/' + monsterIconFile(m));
+  $('rd_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : monsterIconPath(m);
   $('rd_portrait').alt = m.name;
   $('rd_level').textContent = m.level;
   $('rd_str').textContent = m.str;
@@ -4642,30 +4642,57 @@ const MONSTERS = [
   { id:'golem',       name:'골렘',         race:'beast',    lvRange:[35,50], baseHp:48, baseAtk:[11,20] },
 ];
 
-// 몬스터 초상화 (wc3_icons)
+// 몬스터 초상화 — Reforged HD 아이콘 (assets/wc3_reforged_used/, 게임에서 실제 사용하는 32개)
+const MONSTER_ICON_DIR = 'assets/wc3_reforged_used/';
 const MONSTER_ICON_MAP = {
-  grunt:'grunt.gif', pedent:'peon.gif', troll:'foresttrollberserker.gif',
-  headhunter:'headhunter.gif', shaman:'shaman.gif',
-  footman:'blademaster.gif', peasant:'peon.gif', rifleman:'headhunter.gif',
-  wizard:'farseer.gif', priest:'shadowhunter.gif',
-  zombie:'witchdoctor.gif', ghoul:'witchdoctor.gif', shroda:'witchdoctor.gif',
-  witchdoctor:'witchdoctor.gif',
-  archer:'darkranger.gif', huntress:'darkranger.gif', dryad:'darkranger.gif',
-  gargoyle:'batrider.gif',
-  gryphon:'wyvernrider.gif', mighty:'pitlord.gif', keeper:'tauren.gif',
-  abyssal:'shadowhunter.gif', wyvern:'wyvernrider.gif', golem:'mudgolem.gif',
+  // 수행 (Lv 1~25)
+  grunt:'BTNGrunt-Reforged.png',
+  pedent:'BTNPeon-Reforged.png',
+  troll:'BTNDarkTrollShadowPriest-Reforged.png',
+  headhunter:'BTNHeadhunter-Reforged.png',
+  shaman:'BTNShamanMaster-Reforged.png',
+  footman:'BTNFootman-Reforged.png',
+  peasant:'BTNPeasant-Reforged.png',
+  rifleman:'BTNRifleman-Reforged.png',
+  wizard:'BTNSorceress-Reforged.png',
+  priest:'BTNSpellBreaker-Reforged.png',
+  zombie:'BTNZombie-Reforged.png',
+  ghoul:'BTNGhoul-Reforged.png',
+  shroda:'BTNCryptFiend-Reforged.png',
+  witchdoctor:'BTNWitchDoctor-Reforged.png',
+  archer:'BTNArcher-Reforged.png',
+  huntress:'BTNHuntress-Reforged.png',
+  dryad:'BTNDryad-Reforged.png',
+  gargoyle:'BTNGargoyle-Reforged.png',
+  // 수행2 (Lv 26+)
+  gryphon:'BTNGryphonRider-Reforged.png',
+  mighty:'BTNAbomination-Reforged.png',
+  keeper:'BTNKeeperOfTheGrove-Reforged.png',
+  abyssal:'BTNDoomGuard-Reforged.png',
+  wyvern:'BTNWyvern-Reforged.png',
+  golem:'BTNFleshGolem-Reforged.png',
   // 보스
-  mountainking:'blademaster.png', blademaster:'blademaster.gif',
-  paladin:'chieftain.gif', warden:'darkranger.gif',
-  demonhunter:'pitlord.gif', deathknight:'shadowhunter.gif',
-  beastmaster:'beastmaster.gif', darkranger:'darkranger.gif',
+  mountainking:'BTNHeroMountainKing-Reforged.png',
+  blademaster:'BTNHeroBlademaster-Reforged.png',
+  paladin:'BTNHeroPaladin-Reforged.png',
+  warden:'BTNHeroWarden-Reforged.png',
+  demonhunter:'BTNHeroDemonHunter-Reforged.png',
+  deathknight:'BTNHeroDeathKnight-Reforged.png',
+  beastmaster:'BTNBeastMaster-Reforged.png',
+  darkranger:'BTNBansheeRanger-Reforged.png',
 };
 const RACE_FALLBACK_ICON = {
-  orc:'grunt.gif', human:'blademaster.gif', undead:'witchdoctor.gif',
-  nightelf:'darkranger.gif', beast:'wyvernrider.gif',
+  orc:'BTNGrunt-Reforged.png',
+  human:'BTNFootman-Reforged.png',
+  undead:'BTNGhoul-Reforged.png',
+  nightelf:'BTNArcher-Reforged.png',
+  beast:'BTNGargoyle-Reforged.png',
 };
 function monsterIconFile(m){
-  return MONSTER_ICON_MAP[m.id] || RACE_FALLBACK_ICON[m.race] || 'grunt.gif';
+  return MONSTER_ICON_MAP[m.id] || RACE_FALLBACK_ICON[m.race] || 'BTNGrunt-Reforged.png';
+}
+function monsterIconPath(m){
+  return MONSTER_ICON_DIR + monsterIconFile(m);
 }
 
 // 종족별 즐겨 쓰는 카드 풀 (몬스터 덱 자동 구성)
@@ -4931,7 +4958,7 @@ function renderHuntBattle(){
   $('hunt_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
 
   $('m_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
-  $('m_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : ('assets/wc3_icons/' + monsterIconFile(m));
+  $('m_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : monsterIconPath(m);
   $('m_portrait').alt = m.name;
   $('m_level').textContent = m.level;
   $('m_str').textContent = m.str + (c.monBuffs.str?` (${c.monBuffs.str>0?'+':''}${c.monBuffs.str})`:'');
