@@ -116,7 +116,11 @@
   #pg-admin { background:#1a1a2a; color:#ddd; min-height:400px; padding:0; }
   .admin-header { background:#2a0a40; color:#ffcc00; padding:10px 16px; font-weight:bold; font-size:15px; border-bottom:2px solid #ffcc00; }
   .admin-body { display:flex; gap:0; min-height:400px; }
-  .admin-userlist { width:240px; background:#2a2a3a; border-right:1px solid #555; }
+  .admin-userlist { width:240px; background:#2a2a3a; border-right:1px solid #555; max-height:600px; overflow-y:auto; }
+  .admin-userlist::-webkit-scrollbar { width:8px; }
+  .admin-userlist::-webkit-scrollbar-track { background:#1a1a2a; }
+  .admin-userlist::-webkit-scrollbar-thumb { background:#5a1a6b; border-radius:4px; }
+  .admin-userlist::-webkit-scrollbar-thumb:hover { background:#7a2a8b; }
   .admin-edit { flex:1; background:#fff; color:#000; }
   .admin-system { background:#1a1a2a; border-top:2px solid #5a1a6b; }
   .admin-section-title { background:#5a1a6b; color:#fff; padding:6px 12px; font-weight:bold; font-size:12px; }
@@ -8525,7 +8529,12 @@ async function loadAdminUsers(){
       } catch(e){}
     }
   }
-  // (이전엔 서버 연동 전 시뮬레이션용 가짜 NPC를 함께 보여줬지만, 클라우드 통합 후 제거됨)
+  // 랭킹순(레벨 desc, 같은 레벨이면 xp desc) 정렬
+  _adminUsers.sort((a, b) => {
+    const lvDiff = (b.level||0) - (a.level||0);
+    if (lvDiff !== 0) return lvDiff;
+    return (b.xp||0) - (a.xp||0);
+  });
 }
 
 function renderAdminUserList(){
@@ -8534,9 +8543,10 @@ function renderAdminUserList(){
     const tag = u.source === 'cloud' ? '<span style="color:#66ccff;">☁ 클라우드</span>'
               : u.source === 'local' ? '<span style="color:#ffcc00;">★ 로컬</span>'
               : '<span style="color:#888;">NPC</span>';
+    const rankNum = `<span style="color:#ffcc00;font-weight:bold;">${i+1}.</span> `;
     return `<div class="admin-user-item ${active}" onclick="adminSelectUser(${i})">
-      <div class="nick">${u.name} ${tag}</div>
-      <div class="meta">Lv ${u.level} · ${u.gold||0}G · 카드 ${(u.inventory||[]).length}장</div>
+      <div class="nick">${rankNum}${u.name} ${tag}</div>
+      <div class="meta">Lv ${u.level} · XP ${u.xp||0} · ${u.gold||0}G · 카드 ${(u.inventory||[]).length}장</div>
     </div>`;
   }).join('');
 }
