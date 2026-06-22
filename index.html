@@ -1131,7 +1131,18 @@
         <button class="admin-btn small" onclick="adminBulkAllAccounts('gold')">전 계정 골드 +</button>
         <button class="admin-btn small" onclick="adminBulkAllAccounts('xp')">전 계정 경험치 +</button>
         <button class="admin-btn small" onclick="adminBulkAllAccounts('xpUp')">전 계정 스탯P +</button>
+        <button class="admin-btn small" onclick="adminBulkAllAccounts('blessing')" style="background:#ffd700;color:#3a1a00;">전 계정 ✨축복 +</button>
         <span style="font-size:11px;color:#666;margin-left:4px;">로컬 슬롯에 저장된 모든 가입 계정 대상</span>
+      </div>
+
+      <div class="sys-group">
+        <h4>접속 중인 유저 한정 지급</h4>
+        <label>지급량: <input type="number" id="adminOnlineAmount" value="100" style="width:90px;"></label>
+        <button class="admin-btn small" onclick="adminGrantOnline('gold')">접속 유저 골드 +</button>
+        <button class="admin-btn small" onclick="adminGrantOnline('xp')">접속 유저 경험치 +</button>
+        <button class="admin-btn small" onclick="adminGrantOnline('xpUp')">접속 유저 스탯P +</button>
+        <button class="admin-btn small" onclick="adminGrantOnline('blessing')" style="background:#ffd700;color:#3a1a00;">접속 유저 ✨축복 +</button>
+        <div style="font-size:11px;color:#666;margin-top:4px;">현재 채팅창 presence에 있는 유저(<b id="adminOnlineCount">-</b>명)에게만 지급. 클라우드 모드 필요.</div>
       </div>
 
       <div class="sys-group">
@@ -1199,7 +1210,7 @@
         <tr>
           <td class="lbl">INT</td><td class="val"><span id="s_int">-</span> <button class="statup-btn" onclick="addStat('int')">＋</button></td>
           <td class="lbl">CON</td><td class="val"><span id="s_con">-</span> <button class="statup-btn" onclick="addStat('con')">＋</button></td>
-          <td colspan="2"></td>
+          <td class="lbl" colspan="2" style="text-align:left;padding-left:8px;">✨ 여신의 축복 <b id="s_blessing" style="color:#ffd700;float:right;padding-right:8px;">0</b></td>
         </tr>
       </table>
       <div class="main-bars">
@@ -1246,8 +1257,8 @@
           <td id="m-train" class="row2" onclick="openTrain()">훈련소</td>
           <td id="m-rank" class="row2" onclick="openRank()">랭킹전</td>
           <td id="m-raid" class="row2" onclick="openActiveRaid()">공격대</td>
+          <td class="row2" onclick="openBlessShop()" style="color:#ffd700;font-weight:bold;">✨ 축복의 상점</td>
           <td id="m-profile" class="row2" onclick="openProfilePage()">프로필 관리</td>
-          <td class="row2" onclick="todo('여신전쟁 카페')">여신전쟁 카페</td>
         </tr></table>
       </div>
 
@@ -1765,6 +1776,30 @@
       </div>
     </div>
 
+    <!-- 축복의 상점 컨텐츠 -->
+    <div class="content-pane" id="content-blessshop" hidden>
+      <div class="shop-page">
+        <div class="shop-head">✨ 축복의 상점</div>
+        <div class="shop-desc">
+          여신의 축복은 <b>공격대 보스 최종 타격 시 1개씩 확정 드롭</b>됩니다.<br>
+          모은 축복으로 카드를 뽑거나 <b style="color:#ffd700;">축복의 랜덤 상자</b>를 구매하세요.
+        </div>
+        <table class="shop-rates" style="width:96%;">
+          <tr>
+            <td class="lbl">현재 골드</td>
+            <td class="val"><b id="bshop_gold">-</b> G</td>
+            <td class="lbl">✨ 보유 축복</td>
+            <td class="val"><b id="bshop_blessing" style="color:#ffd700;">0</b></td>
+          </tr>
+        </table>
+        <div id="blessShopList" style="padding:14px;"></div>
+        <div class="shop-actions">
+          <button class="btn-back" onclick="showContent('main')">메인으로 돌아가기</button>
+        </div>
+        <div id="bshop_msg" class="heal-result"></div>
+      </div>
+    </div>
+
     <!-- 무기상점 컨텐츠 -->
     <div class="content-pane" id="content-wshop" hidden>
       <div class="shop-page">
@@ -2206,7 +2241,7 @@ const CARDS = [
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
-  { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회', fx:{type:'dmgHits',min:5,max:10,hits:5} },
+  { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'r34', name:'스피드스크롤',       grade:'rare', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
   { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +5 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:5} },
   { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 공격력 +5 증가 / 상대방 방어력 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
@@ -3356,6 +3391,139 @@ function inventoryLimit(){
   const lv = (GAME.player && GAME.player.level) || 1;
   return lv >= 26 ? 100 : 50;
 }
+
+// ─── 축복의 상점 ───
+const BLESS_SHOP_ITEMS = [
+  { id:'card1',  name:'카드 1뽑',           cost:1,   icon:'assets/wc3_reforged_used/BTNGrunt-Reforged.png', tooltip:'여신의 축복 1개로 카드 1장을 뽑는다. 가챠 확률은 카드샵과 동일.' },
+  { id:'card20', name:'카드 20뽑',          cost:10,  icon:'assets/wc3_reforged_used/BTNGrunt-Reforged.png', tooltip:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다.' },
+  { id:'box',    name:'축복의 랜덤 상자',   cost:100, icon:'assets/wc3_reforged_used/Legendary Chest.jpg',  tooltip:'여신의 축복을 담은 신성한 상자이다. 유니크 카드, 영웅 카드, 스탯 포인트 중 한 가지를 얻을 수 있다.' },
+];
+function openBlessShop(){
+  showContent('blessshop');
+  refreshBlessShop();
+}
+function refreshBlessShop(){
+  const p = GAME.player;
+  if (!p) return;
+  $('bshop_gold').textContent = (p.gold||0).toLocaleString();
+  $('bshop_blessing').textContent = (p.blessing||0).toLocaleString();
+  $('bshop_msg').textContent = '';
+  const list = BLESS_SHOP_ITEMS.map(it => {
+    const can = (p.blessing||0) >= it.cost;
+    const btnStyle = can
+      ? 'background:#a02050;color:#fff;cursor:pointer;'
+      : 'background:#777;color:#ccc;cursor:not-allowed;';
+    const iconEnc = it.icon.replace(/ /g, '%20');
+    const tip = (it.tooltip || '').replace(/"/g, '&quot;');
+    return `<div style="display:flex;align-items:center;gap:14px;padding:12px;background:#fff;border:2px solid #c9a26b;border-radius:6px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
+      <img src="${iconEnc}" title="${tip}" style="width:72px;height:72px;object-fit:contain;background:#000;border:1px solid #888;flex:none;cursor:help;">
+      <div style="flex:1;">
+        <div style="font-size:16px;font-weight:bold;color:#7E181E;" title="${tip}">${it.name}</div>
+        <div style="font-size:12px;color:#555;margin-top:4px;">필요: <b style="color:#ffd700;">✨ 축복 ${it.cost}</b></div>
+      </div>
+      <button onclick="buyBlessItem('${it.id}')" ${can?'':'disabled'} style="padding:10px 22px;font-size:14px;font-weight:bold;border:0;border-radius:4px;${btnStyle}">${can?'구매':'축복 부족'}</button>
+    </div>`;
+  }).join('');
+  $('blessShopList').innerHTML = list;
+}
+function buyBlessItem(id){
+  const p = GAME.player;
+  const it = BLESS_SHOP_ITEMS.find(x => x.id === id);
+  if (!p || !it) return;
+  if ((p.blessing||0) < it.cost){
+    setBlessMsg(`⚠ 여신의 축복이 부족합니다. (필요: ${it.cost})`, 'err');
+    return;
+  }
+  if (id === 'card1' || id === 'card20'){
+    const n = id === 'card1' ? 1 : 20;
+    // 인벤토리 한도 검사
+    const room = inventoryLimit() - GAME.inventory.length;
+    if (room < n){
+      setBlessMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${inventoryLimit()}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다.`, 'err');
+      return;
+    }
+    if (!confirm(`✨ 여신의 축복 ${it.cost}개로 ${it.name}을(를) 진행할까요?`)) return;
+    p.blessing -= it.cost;
+    // 가챠 풀
+    const pool = CARDS.filter(c => c.id !== 'basic_atk');
+    const results = [];
+    for (let i = 0; i < n; i++){
+      const grade = pickGachaGrade();
+      const gPool = pool.filter(c => c.grade === grade);
+      const card = gPool[Math.floor(Math.random() * gPool.length)];
+      if (!card) continue;
+      GAME.inventory.push(card);
+      results.push(card);
+    }
+    const heroes = results.filter(c => c.grade === 'hero').length;
+    const uniques = results.filter(c => c.grade === 'unique').length;
+    let msg = `✔ ${it.name} 완료 (-✨ ${it.cost})`;
+    if (heroes) msg += ` · ⭐ 영웅 ${heroes}장!`;
+    if (uniques) msg += ` · 🔮 유니크 ${uniques}장!`;
+    setBlessMsg(msg, 'ok');
+    if (heroes) chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 ${heroes}장을 뽑으셨습니다!`);
+    else if (uniques) chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 ${uniques}장을 획득하셨습니다!`);
+    renderSheet();
+    refreshBlessShop();
+    saveGame();
+    return;
+  }
+  if (id === 'box'){
+    if (!confirm(`✨ 여신의 축복 ${it.cost}개로 축복의 랜덤 상자를 구매할까요?`)) return;
+    // 카드 보상 가능성에 대비해 인벤토리 한도 사전 검사 (스탯 P 보상은 한도 무관)
+    if (GAME.inventory.length >= inventoryLimit()){
+      if (!confirm(`⚠ 보유 카드 한도(${inventoryLimit()}장)에 도달했습니다.\n상자 결과가 카드일 경우 지급이 누락될 수 있습니다. 그래도 진행할까요?`)) return;
+    }
+    p.blessing -= it.cost;
+    // 보상 추첨 — 유니크 85% / 영웅 10% / 스탯 P 5%
+    const r = Math.random();
+    let resultMsg = '';
+    if (r < 0.85){
+      // 유니크 카드
+      const pool = CARDS.filter(c => c.grade === 'unique' && c.id !== 'basic_atk');
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      if (card){
+        if (GAME.inventory.length >= inventoryLimit()){
+          resultMsg = `📦 🔮 유니크 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
+        } else {
+          GAME.inventory.push(card);
+          resultMsg = `📦 🔮 유니크 카드 획득 — ${card.name}`;
+        }
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🔮 유니크 카드 [${card.name}]을(를) 획득하셨습니다!`);
+      }
+    } else if (r < 0.95){
+      // 영웅 카드
+      const pool = CARDS.filter(c => c.grade === 'hero' && c.id !== 'basic_atk');
+      const card = pool[Math.floor(Math.random() * pool.length)];
+      if (card){
+        if (GAME.inventory.length >= inventoryLimit()){
+          resultMsg = `📦 ⭐ 영웅 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
+        } else {
+          GAME.inventory.push(card);
+          resultMsg = `📦 ⭐⭐ 영웅 카드 획득 — ${card.name} ⭐⭐`;
+        }
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⭐ 영웅 카드 [${card.name}]을(를) 획득하셨습니다!`);
+      }
+    } else {
+      // 스탯 포인트
+      p.xpUp = (p.xpUp || 0) + 1;
+      resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
+      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`);
+    }
+    setBlessMsg(resultMsg, 'ok');
+    setTimeout(() => alert(resultMsg), 200);
+    renderSheet();
+    refreshBlessShop();
+    saveGame();
+    return;
+  }
+}
+function setBlessMsg(msg, kind){
+  const el = $('bshop_msg');
+  if (!el) return;
+  el.textContent = msg;
+  el.style.color = kind === 'err' ? '#a02050' : '#060';
+}
 function doGacha(n){
   const p = GAME.player;
   const c1 = gachaCost1For(p.level);
@@ -4134,10 +4302,12 @@ async function raidEnd(result){
       r.lastKiller = p.name;
       p.gold += goldReward;
       p.xp += xpReward;
+      p.blessing = (p.blessing||0) + 1;  // 최종 타격자 확정 드롭
       const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
-      const equipLine = '';
+      const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
       bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
         <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
+        ${blessLine}
         ${cardLine}
         <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
       let raidBossLvUp = false;
@@ -4154,7 +4324,7 @@ async function raidEnd(result){
         bodyHtml += _lvUpBoxHtml(raidBossBonus);
         _scheduleLvUpAlert();
       }
-      chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆`);
+      chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
       // 본인 보상 즉시 수령 시도
       if (sb){ setTimeout(() => claimRaidRewards(), 500); }
     } else if (result === 'lose'){
@@ -7445,6 +7615,7 @@ function newCharacter(name, comment, pw){
     atk:[2,5], def:0, atkType:'근접',
     autoFocus:false,  // 운영자 부여 시 다음턴·한번더 버튼이 자동 focus되어 스페이스바 연타 가능
     tutorialDone:false,  // 첫 입장 시 튜토리얼 자동 실행 트리거
+    blessing: 0,  // 여신의 축복 (공격대 막타 +1 확정 드롭. 축복 상점에서 카드/상자 구매)
     huntHistory: [],  // 최근 10전투 결과 ('win'/'lose'/'flee')
     huntGraceRemain: 0,  // 남은 grace 전투 수 (해당 기간 동안 몬스터 레벨 -5)
     avatar: _pickDefaultFace(),  // 신규 유저 기본 초상화 (랜덤 face)
@@ -7993,6 +8164,7 @@ function renderSheet(){
   setText('s_level', p.level);
   setText('s_xp', (p.xp||0).toLocaleString());
   setText('s_xpup', (p.xpUp||0).toLocaleString());
+  setText('s_blessing', (p.blessing||0).toLocaleString());
   const isMobile = document.body.classList.contains('layout-vertical');
   if (isMobile){
     setText('s_hp', (p.hpMax||0).toLocaleString());
@@ -8826,6 +8998,7 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">경험치</span> <input type="number" id="ed_xp" value="${u.xp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">스탯 P</span> <input type="number" id="ed_xpUp" value="${u.xpUp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">골드</span> <input type="number" id="ed_gold" value="${u.gold||0}" min="0"></div>
+    <div class="edit-row"><span class="lbl">✨ 축복</span> <input type="number" id="ed_blessing" value="${u.blessing||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">INT</span> <input type="number" id="ed_int" value="${u.int||5}" min="1"></div>
@@ -8936,6 +9109,7 @@ async function adminSaveUser(){
   u.xp = parseInt($('ed_xp').value) || 0;
   u.xpUp = parseInt($('ed_xpUp').value) || 0;
   u.gold = parseInt($('ed_gold').value) || 0;
+  u.blessing = parseInt($('ed_blessing').value) || 0;
   u.str = parseInt($('ed_str').value) || 5;
   u.dex = parseInt($('ed_dex').value) || 5;
   u.int = parseInt($('ed_int').value) || 5;
@@ -9293,6 +9467,7 @@ function adminQuickResetStats(){
 
 // 시스템 설정
 function refreshAdminSystem(){
+  try { _adminUpdateOnlineCount(); } catch(e){}
   $('adminGachaCost1').value = GACHA.cost1;
   $('adminGachaCost10').value = GACHA.cost10;
   $('adminRateNormal').value = GACHA.table[0].rate;
@@ -9385,12 +9560,19 @@ async function adminSetBoss(key){
   } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
 }
 
+function _adminFieldKr(field){
+  return field==='gold' ? '골드'
+    : field==='xp' ? '경험치'
+    : field==='xpUp' ? '스탯P'
+    : field==='blessing' ? '✨ 여신의 축복'
+    : field;
+}
 function adminBulkAllAccounts(field){
   const amt = parseInt($('adminBulkAmount').value) || 0;
   if (amt === 0){ alert('지급량을 입력하세요.'); return; }
   const accounts = getAccounts();
   if (accounts.length === 0){ alert('계정이 없습니다.'); return; }
-  if (!confirm(`전체 ${accounts.length}개 계정의 ${field==='gold'?'골드':field==='xp'?'경험치':'스탯P'}에 ${amt}을(를) 더할까요?`)) return;
+  if (!confirm(`전체 ${accounts.length}개 계정의 ${_adminFieldKr(field)}에 ${amt}을(를) 더할까요?`)) return;
   let n = 0;
   for (const name of accounts){
     try {
@@ -9411,6 +9593,53 @@ function adminBulkAllAccounts(field){
     try { renderSheet(); } catch(e){}
   }
   alert(`✔ ${n}개 계정에 적용 완료`);
+}
+
+// 현재 채팅 presence에 등록된 유저 닉 목록 (게스트 제외)
+function _adminGetOnlineNicks(){
+  if (!sb || !_chatChannel) return [];
+  try {
+    const state = _chatChannel.presenceState();
+    return Object.keys(state).filter(k => !k.startsWith('guest-'));
+  } catch(e){ return []; }
+}
+async function adminGrantOnline(field){
+  if (!sb || !_adminCloudActive){ alert('클라우드 운영자 세션에서만 동작합니다.'); return; }
+  const amt = parseInt($('adminOnlineAmount').value) || 0;
+  if (amt === 0){ alert('지급량을 입력하세요.'); return; }
+  const nicks = _adminGetOnlineNicks();
+  if (nicks.length === 0){ alert('현재 접속 중인 유저가 없습니다. (채팅 채널 presence 비어 있음)'); return; }
+  if (!confirm(`접속 중인 ${nicks.length}명에게 ${_adminFieldKr(field)} ${amt}을(를) 지급할까요?\n\n대상: ${nicks.join(', ')}`)) return;
+  // 클라우드 saves에서 닉네임으로 행을 가져와 데이터 수정 후 다시 저장
+  let ok = 0, fail = 0;
+  for (const nick of nicks){
+    try {
+      const { data: row, error: e1 } = await sb.from('saves')
+        .select('user_id, data').eq('nickname', nick).maybeSingle();
+      if (e1 || !row){ fail++; continue; }
+      const d = row.data || {};
+      if (!d.player) d.player = {};
+      d.player[field] = (d.player[field] || 0) + amt;
+      const { error: e2 } = await sb.from('saves')
+        .update({ data: d }).eq('user_id', row.user_id);
+      if (e2){ fail++; continue; }
+      ok++;
+    } catch(e){ fail++; }
+  }
+  // 채팅 공지
+  try {
+    await sb.from('chat_messages').insert({
+      nickname:'NOTICE',
+      message:`[📢 운영자 지급] 접속 중인 ${ok}명에게 ${_adminFieldKr(field)} +${amt.toLocaleString()}`,
+      kind:'system',
+    });
+  } catch(e){}
+  alert(`✔ 지급 완료 — 성공 ${ok}명 / 실패 ${fail}명\n\n해당 유저는 다음 saves load 시 반영됩니다.`);
+}
+// 운영자 화면 갱신 시 접속 인원수 함께 표시
+function _adminUpdateOnlineCount(){
+  const el = $('adminOnlineCount');
+  if (el) el.textContent = _adminGetOnlineNicks().length;
 }
 
 async function adminBroadcast(){
