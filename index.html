@@ -213,7 +213,7 @@
     display:none;
   }
   #pg-main.active { display:flex; gap:6px; }
-  #game { width:600px; background:#FFFFCC; padding:6px; border:1px solid #555; }
+  #game { width:540px; background:#FFFFCC; padding:6px; border:1px solid #555; }
   #chat { width:230px; background:#fff; border:1px solid #555; display:flex; flex-direction:column; max-height:660px; }
 
   /* 레이아웃 토글 버튼 */
@@ -358,7 +358,8 @@
   }
   table.stat {
     border-collapse:collapse;
-    width:560px;
+    width:500px;
+    table-layout:fixed;
     background:#2e53b2;
     color:#fff;
     font-size:11px;
@@ -370,9 +371,11 @@
     background:#2e53b2;
     text-align:center;
     white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
   }
-  table.stat td.lbl { background:#2e53b2; color:#FFFF99; font-weight:bold; width:48px; }
-  table.stat td.val { background:#2e53b2; color:#fff; font-weight:bold; min-width:60px; }
+  table.stat td.lbl { background:#2e53b2; color:#FFFF99; font-weight:bold; width:44px; }
+  table.stat td.val { background:#2e53b2; color:#fff; font-weight:bold; width:122px; }
 
   /* 카드 슬롯 */
   .deck {
@@ -7992,7 +7995,7 @@ function renderSheet(){
     // PC: 셀이 자동 확장되지 않도록 내부 span에 max-width+ellipsis. 풀 이름은 title로.
     const wTxt = (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')';
     const aTxt = (p.armor.name||'')  + ' (+' + p.armor.defBonus  + ')';
-    const wrap = (txt) => `<span style="display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
+    const wrap = (txt) => `<span style="display:inline-block;max-width:118px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
     const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt);
     const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt);
   }
