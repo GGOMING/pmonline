@@ -281,6 +281,14 @@
   body.layout-vertical #chat { width:100%; max-width:480px; max-height:260px; box-sizing:border-box; }
   body.layout-vertical .topbox { flex-wrap:wrap; }
   body.layout-vertical table.stat { width:100% !important; table-layout:fixed; font-size:10px; }
+  /* 모바일 전용 — 스탯창 컬럼 비율 재정의 (PC는 8/17/8/17/8/42, 모바일은 짧은 라벨 더 넓게) */
+  body.layout-vertical table.stat colgroup col:nth-of-type(1),
+  body.layout-vertical table.stat colgroup col:nth-of-type(3),
+  body.layout-vertical table.stat colgroup col:nth-of-type(5) { width:14% !important; }
+  body.layout-vertical table.stat colgroup col:nth-of-type(2),
+  body.layout-vertical table.stat colgroup col:nth-of-type(4) { width:20% !important; }
+  body.layout-vertical table.stat colgroup col:nth-of-type(6) { width:18% !important; }
+  body.layout-vertical table.stat td { padding:0 2px; }
   /* (avatar는 기본 사이즈 100×100 사용) */
   /* 메인 카드 덱 (15슬롯) */
   body.layout-vertical .deck { table-layout:fixed; width:100%; font-size:10px; }
