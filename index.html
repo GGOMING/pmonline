@@ -7989,8 +7989,12 @@ function renderSheet(){
     setText('s_weapon', '+' + (p.weapon.atkBonus||0));
     setText('s_armor',  '+' + (p.armor.defBonus||0));
   } else {
-    setText('s_weapon', (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')');
-    setText('s_armor',  (p.armor.name||'') + ' (+' + p.armor.defBonus + ')');
+    // PC: 셀이 자동 확장되지 않도록 내부 span에 max-width+ellipsis. 풀 이름은 title로.
+    const wTxt = (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')';
+    const aTxt = (p.armor.name||'')  + ' (+' + p.armor.defBonus  + ')';
+    const wrap = (txt) => `<span style="display:inline-block;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
+    const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt);
+    const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt);
   }
   setText('s_def', p.def);
   if ($('myRank')){
