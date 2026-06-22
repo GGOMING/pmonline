@@ -358,12 +358,15 @@
   }
   table.stat {
     border-collapse:collapse;
-    width:446px;
+    width:100%;
+    max-width:100%;
     table-layout:fixed;
     background:#2e53b2;
     color:#fff;
     font-size:11px;
   }
+  /* #main-statbox(부모)가 .topbox 안에서 폭이 모자라지 않도록 min-width 0 */
+  #main-statbox { min-width:0; }
   table.stat td {
     border:1px solid #FFFF99;
     padding:0 3px;
@@ -1158,12 +1161,12 @@
       <div style="display:flex;flex-direction:column;flex:1;" id="main-statbox">
       <table class="stat">
         <colgroup>
-          <col style="width:44px;">
-          <col style="width:72px;">
-          <col style="width:44px;">
-          <col style="width:72px;">
-          <col style="width:44px;">
-          <col style="width:170px;">
+          <col style="width:11%;">
+          <col style="width:17%;">
+          <col style="width:11%;">
+          <col style="width:17%;">
+          <col style="width:11%;">
+          <col style="width:33%;">
         </colgroup>
         <tr>
           <td class="lbl">레벨</td><td class="val" id="s_level">-</td>
@@ -8003,7 +8006,7 @@ function renderSheet(){
     // PC: 셀이 자동 확장되지 않도록 내부 span에 max-width+ellipsis. 풀 이름은 title로.
     const wTxt = (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')';
     const aTxt = (p.armor.name||'')  + ' (+' + p.armor.defBonus  + ')';
-    const wrap = (txt) => `<span style="display:inline-block;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
+    const wrap = (txt) => `<span style="display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
     const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt);
     const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt);
   }
