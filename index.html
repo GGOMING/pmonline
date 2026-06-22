@@ -1518,7 +1518,6 @@
         <div class="rank-info">
           내 순위: <b id="rank_myrank">미등록</b>
           <span style="margin-left:14px;">랭킹 보너스: +<b id="rank_bonus">0</b> G / 수행</span>
-          <span style="margin-left:14px;">오늘 남은 보상: <b id="rank_attempts">10 / 10</b></span>
           <span style="float:right; font-size:11px; color:#666;">매일 0시 리셋</span>
         </div>
         <table class="rank-table" id="rank_table"></table>
@@ -1592,7 +1591,7 @@
           <div class="col-right">
             <div class="col-title">상대 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><div style="width:100%;height:100%;background:#5a2020;color:#fff;font-size:36px;font-weight:bold;display:flex;align-items:center;justify-content:center;">⚔</div></div>
+              <div class="mon-portrait"><div id="rk_avatar" style="width:100%;height:100%;background:#5a2020;color:#fff;font-size:36px;font-weight:bold;display:flex;align-items:center;justify-content:center;overflow:hidden;">⚔</div></div>
               <table class="stat enemy-stat">
                 <tr>
                   <td class="lbl">상대</td><td class="val" id="rk_name">-</td>
@@ -1748,8 +1747,7 @@
       <div class="shop-page">
         <div class="shop-head">무기상점</div>
         <div class="shop-desc">
-          무기를 구매하면 영구 장착됩니다. 이전 무기는 사라지니 신중히 선택하세요.<br>
-          <b>DEX/INT 빌드</b>는 100원짜리 단도라도 꼭 구입하셔야 공격타입이 사격/마법으로 바뀝니다.
+          무기는 공격력을 증가시켜 카드의 효과를 극대화할 수 있습니다. <b>공격대</b>를 통해 고성능 무기를 노려보고, <b>상점에서 팔지 않는 종결 무기</b>도 노려보세요!
         </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
@@ -1770,7 +1768,7 @@
       <div class="shop-page">
         <div class="shop-head">방어구상점</div>
         <div class="shop-desc">
-          방어구를 구매하면 영구 장착됩니다. 이전 방어구는 사라지니 신중히 선택하세요.
+          방어구는 방어력을 증가시켜 유저가 생존하는데 중요한 역할을 합니다. <b>공격대</b>를 통해 고성능 방어구를 노려보고, <b>상점에서 팔지 않는 종결 방어구</b>도 노려보세요!
         </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
@@ -1839,6 +1837,9 @@
 
         <!-- 카드 판매 -->
         <div class="shop-section-title" style="margin-top:20px;">━ 카드 판매 ━</div>
+        <div style="text-align:center; padding:10px 0 12px;">
+          <button onclick="openSellModal()" style="background:#2e53b2;color:#fff;border:0;padding:10px 28px;font-size:14px;font-weight:bold;cursor:pointer;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🃏 개별 판매 (보유 카드에서 선택)</button>
+        </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
             <td class="lbl">일반 (1G/장)</td>
@@ -1861,9 +1862,6 @@
             </td>
           </tr>
         </table>
-        <div style="text-align:center; padding:6px;">
-          <button class="mini-btn" onclick="openSellModal()" style="background:#2e53b2;">개별 판매 (보유 카드에서 선택)</button>
-        </div>
       </div>
     </div>
 
@@ -2690,12 +2688,41 @@ function openArmorShop(){
 function refreshWeaponShop(){
   const p = GAME.player;
   $('wshop_gold').textContent = p.gold;
-  const eqText = (p.weapon && p.weapon.id)
-    ? `${p.weapon.name} (+${p.weapon.atkBonus}) <button onclick="unequipWeapon()" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#666;color:#fff;border:0;cursor:pointer;">장착 해제</button>`
-    : '맨손';
-  $('wshop_current').innerHTML = eqText;
+  // 현재 장착 무기 — 사진 + 이름 + 보너스 + 장착 해제 버튼
+  let eqHtml = '';
+  if (p.weapon && p.weapon.id){
+    const tpl = WEAPONS.find(x => x.id === p.weapon.id);
+    const ico = tpl && tpl.icon ? `<img src="${tpl.icon}" alt="" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;object-fit:contain;">` : '';
+    eqHtml = `${ico}<b>${p.weapon.name}</b> (+${p.weapon.atkBonus}) <button onclick="unequipWeapon()" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#666;color:#fff;border:0;cursor:pointer;">장착 해제</button>`;
+  } else {
+    eqHtml = '맨손';
+  }
+  $('wshop_current').innerHTML = eqHtml;
 
-  let html = '<div class="shop-section-title">━ 매물 (구매) ━</div>';
+  // 보관함 (먼저 노출)
+  let html = `<div class="shop-section-title">━ 보관함 (${p.weapons.length}개) ━</div>`;
+  if (p.weapons.length === 0){
+    html += `<div style="padding:10px;color:#888;font-size:11px;text-align:center;">보관함이 비어있습니다.</div>`;
+  } else {
+    html += p.weapons.map(w => {
+      const tpl = WEAPONS.find(x => x.id === w.id) || w;
+      const sellPrice = tpl.price ? Math.floor(tpl.price * 0.1) : 0;
+      return `<div class="equip-row owned">
+        <div class="ico"><img src="${tpl.icon||''}" alt=""></div>
+        <div class="nm">${w.name}</div>
+        <div class="bonus">공격 +${w.atkBonus}</div>
+        <div class="lv" style="color:#060;">보관함</div>
+        <div class="price" style="color:#a02050;font-size:10px;">판매가 ${sellPrice.toLocaleString()}G</div>
+        <div>
+          <button onclick="equipWeapon('${w.id}')">장착</button>
+          <button onclick="sellWeapon('${w.id}')" style="background:#a02050;margin-top:2px;">판매</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // 매물 (아래로)
+  html += '<div class="shop-section-title" style="margin-top:10px;">━ 매물 (구매) ━</div>';
   html += WEAPONS.filter(w => !w.shopHidden).map(w => {
     const isEquipped = p.weapon && p.weapon.id === w.id;
     const inInv = p.weapons.some(x => x.id === w.id);
@@ -2720,40 +2747,47 @@ function refreshWeaponShop(){
       <div>${btnHtml}</div>
     </div>`;
   }).join('');
-
-  // 보관함
-  html += `<div class="shop-section-title">━ 보관함 (${p.weapons.length}개) ━</div>`;
-  if (p.weapons.length === 0){
-    html += `<div style="padding:10px;color:#888;font-size:11px;text-align:center;">보관함이 비어있습니다.</div>`;
-  } else {
-    html += p.weapons.map(w => {
-      const tpl = WEAPONS.find(x => x.id === w.id) || w;
-      const sellPrice = tpl.price ? Math.floor(tpl.price * 0.1) : 0;
-      return `<div class="equip-row owned">
-        <div class="ico"><img src="${tpl.icon||''}" alt=""></div>
-        <div class="nm">${w.name}</div>
-        <div class="bonus">공격 +${w.atkBonus}</div>
-        <div class="lv" style="color:#060;">보관함</div>
-        <div class="price" style="color:#a02050;font-size:10px;">판매가 ${sellPrice.toLocaleString()}G</div>
-        <div>
-          <button onclick="equipWeapon('${w.id}')">장착</button>
-          <button onclick="sellWeapon('${w.id}')" style="background:#a02050;margin-top:2px;">판매</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
   $('weaponList').innerHTML = html;
 }
 
 function refreshArmorShop(){
   const p = GAME.player;
   $('ashop_gold').textContent = p.gold;
-  const eqText = (p.armor && p.armor.id)
-    ? `${p.armor.name} (+${p.armor.defBonus}) <button onclick="unequipArmor()" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#666;color:#fff;border:0;cursor:pointer;">장착 해제</button>`
-    : '없음';
-  $('ashop_current').innerHTML = eqText;
+  // 현재 장착 방어구 — 사진 + 이름 + 보너스 + 장착 해제 버튼
+  let eqHtml = '';
+  if (p.armor && p.armor.id){
+    const tpl = ARMORS.find(x => x.id === p.armor.id);
+    const ico = tpl && tpl.icon ? `<img src="${tpl.icon}" alt="" style="width:28px;height:28px;vertical-align:middle;margin-right:6px;object-fit:contain;">` : '';
+    eqHtml = `${ico}<b>${p.armor.name}</b> (+${p.armor.defBonus}) <button onclick="unequipArmor()" style="margin-left:6px;padding:2px 8px;font-size:10px;background:#666;color:#fff;border:0;cursor:pointer;">장착 해제</button>`;
+  } else {
+    eqHtml = '없음';
+  }
+  $('ashop_current').innerHTML = eqHtml;
 
-  let html = '<div class="shop-section-title">━ 매물 (구매) ━</div>';
+  // 보관함 (먼저 노출)
+  let html = `<div class="shop-section-title">━ 보관함 (${p.armors.length}개) ━</div>`;
+  if (p.armors.length === 0){
+    html += `<div style="padding:10px;color:#888;font-size:11px;text-align:center;">보관함이 비어있습니다.</div>`;
+  } else {
+    html += p.armors.map(a => {
+      const tpl = ARMORS.find(x => x.id === a.id) || a;
+      const sellPrice = tpl.price ? Math.floor(tpl.price * 0.1) : 0;
+      return `<div class="equip-row owned">
+        <div class="ico"><img src="${tpl.icon||''}" alt=""></div>
+        <div class="nm">${a.name}</div>
+        <div class="bonus">방어 +${a.defBonus}</div>
+        <div class="lv" style="color:#060;">보관함</div>
+        <div class="price" style="color:#a02050;font-size:10px;">판매가 ${sellPrice.toLocaleString()}G</div>
+        <div>
+          <button onclick="equipArmor('${a.id}')">장착</button>
+          <button onclick="sellArmor('${a.id}')" style="background:#a02050;margin-top:2px;">판매</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // 매물 (아래로)
+  html += '<div class="shop-section-title" style="margin-top:10px;">━ 매물 (구매) ━</div>';
   html += ARMORS.filter(a => !a.shopHidden).map(a => {
     const isEquipped = p.armor && p.armor.id === a.id;
     const inInv = p.armors.some(x => x.id === a.id);
@@ -2778,28 +2812,6 @@ function refreshArmorShop(){
       <div>${btnHtml}</div>
     </div>`;
   }).join('');
-
-  // 보관함
-  html += `<div class="shop-section-title">━ 보관함 (${p.armors.length}개) ━</div>`;
-  if (p.armors.length === 0){
-    html += `<div style="padding:10px;color:#888;font-size:11px;text-align:center;">보관함이 비어있습니다.</div>`;
-  } else {
-    html += p.armors.map(a => {
-      const tpl = ARMORS.find(x => x.id === a.id) || a;
-      const sellPrice = tpl.price ? Math.floor(tpl.price * 0.1) : 0;
-      return `<div class="equip-row owned">
-        <div class="ico"><img src="${tpl.icon||''}" alt=""></div>
-        <div class="nm">${a.name}</div>
-        <div class="bonus">방어 +${a.defBonus}</div>
-        <div class="lv" style="color:#060;">보관함</div>
-        <div class="price" style="color:#a02050;font-size:10px;">판매가 ${sellPrice.toLocaleString()}G</div>
-        <div>
-          <button onclick="equipArmor('${a.id}')">장착</button>
-          <button onclick="sellArmor('${a.id}')" style="background:#a02050;margin-top:2px;">판매</button>
-        </div>
-      </div>`;
-    }).join('');
-  }
   $('armorList').innerHTML = html;
 }
 
@@ -3131,12 +3143,15 @@ function openSellModal(){
   _cardPickMode = 'sell';
   $('cardPickSlot').textContent = `카드 판매 — 보유 ${GAME.inventory.length}장`;
   _cardPickFilter = 'all';
+  _sellSelected = {};   // 모달 열 때 선택 초기화
   document.querySelectorAll('.grade-filter button').forEach(b=>b.classList.remove('active'));
   $('gf_all').classList.add('active');
   renderSellModal();
   $('cardPickBg').classList.add('on');
 }
 
+// 판매 모달 다중 선택 상태 — { cardId: 선택 수량 }
+let _sellSelected = {};
 function renderSellModal(){
   $('cardPickSlot').textContent = `카드 판매 — 보유 ${GAME.inventory.length}장`;
   // 보유 - 장착 = 판매 가능 수량. 모두 장착 중이면 판매창에서 숨김.
@@ -3157,24 +3172,145 @@ function renderSellModal(){
     pool.push({...c, _count: avail});
   }
   if (_cardPickFilter !== 'all') pool = pool.filter(c => c.grade === _cardPickFilter);
+  // 선택 상태에서 사라진(전부 판매됐거나 장착됨) 카드 정리
+  const validIds = new Set(pool.map(c => c.id));
+  for (const id of Object.keys(_sellSelected)){
+    if (!validIds.has(id)) delete _sellSelected[id];
+    else {
+      const max = pool.find(c => c.id === id)._count;
+      if (_sellSelected[id] > max) _sellSelected[id] = max;
+    }
+  }
+  // 선택 합계
+  let selCount = 0, selGold = 0;
+  for (const id of Object.keys(_sellSelected)){
+    const item = pool.find(c => c.id === id);
+    if (!item) continue;
+    const n = _sellSelected[id];
+    selCount += n;
+    selGold  += n * (CARD_SELL_PRICE[item.grade] || 1);
+  }
+  const headerBar = `
+    <div style="grid-column:1/-1;display:flex;gap:8px;align-items:center;padding:8px 10px;background:#0a1a3a;color:#fff;border-radius:4px;margin-bottom:6px;flex-wrap:wrap;">
+      <button onclick="sellSelectAll(true)" style="padding:5px 12px;background:#666;color:#fff;border:0;cursor:pointer;font-size:11px;border-radius:3px;">전체 선택</button>
+      <button onclick="sellSelectAll(false)" style="padding:5px 12px;background:#444;color:#fff;border:0;cursor:pointer;font-size:11px;border-radius:3px;">전체 해제</button>
+      <div style="flex:1;text-align:right;font-size:12px;">
+        선택: <b style="color:#ffd700;">${selCount}</b>장 / 예상 수익 <b style="color:#ffd700;">${selGold.toLocaleString()} G</b>
+      </div>
+      <button onclick="sellSelectedCards()" ${selCount===0?'disabled':''} style="padding:7px 18px;background:${selCount>0?'#a02050':'#555'};color:#fff;border:0;cursor:${selCount>0?'pointer':'not-allowed'};font-size:13px;font-weight:bold;border-radius:4px;">선택한 카드 판매</button>
+    </div>`;
   if (pool.length === 0){
-    $('cardGrid').innerHTML = `<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;">판매할 카드가 없습니다.</div>`;
+    $('cardGrid').innerHTML = headerBar + `<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;">판매할 카드가 없습니다. (장착 중인 카드는 판매할 수 없습니다)</div>`;
     return;
   }
-  $('cardGrid').innerHTML = pool.map(c => {
+  $('cardGrid').innerHTML = headerBar + pool.map(c => {
     const price = CARD_SELL_PRICE[c.grade] || 1;
+    const selN = _sellSelected[c.id] || 0;
+    const checked = selN > 0 ? 'checked' : '';
+    const qtyCtrl = c._count > 1
+      ? `<input type="number" min="0" max="${c._count}" value="${selN}" onchange="sellSelectQty('${c.id}', this.value)" style="width:50px;font-size:12px;padding:2px 4px;margin-left:6px;">`
+      : '';
     return `<div class="cg-item ${c.grade}">
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:11px;color:#000;padding:2px 0;">
+        <input type="checkbox" ${checked} onchange="sellToggle('${c.id}', this.checked, ${c._count})" style="width:16px;height:16px;cursor:pointer;">
+        <span>선택</span>
+        ${qtyCtrl}
+      </label>
       <div class="ico">${cardIcon(c)}</div>
       <div class="info">
         <div class="nm">${c.name} <span style="float:right;background:#7E181E;color:#fff;padding:1px 4px;font-size:9px;">x${c._count}</span></div>
         <div class="gr">[${gradeKr(c.grade)}] · 판매가 ${price}G</div>
         <div class="ef">${c.text}</div>
-        <div style="margin-top:3px;">
-          <button onclick="sellOneCard('${c.id}')" style="padding:2px 8px;background:#a02050;color:#fff;border:0;cursor:pointer;font-size:10px;">1장 판매 (+${price}G)</button>
+        <div style="margin-top:5px;">
+          <button onclick="sellOneCard('${c.id}')" style="padding:5px 14px;background:#a02050;color:#fff;border:0;cursor:pointer;font-size:12px;font-weight:bold;border-radius:3px;">1장 판매 (+${price}G)</button>
         </div>
       </div>
     </div>`;
   }).join('');
+}
+function sellToggle(cardId, checked, maxN){
+  if (checked) _sellSelected[cardId] = maxN;  // 기본 전부 선택
+  else delete _sellSelected[cardId];
+  renderSellModal();
+}
+function sellSelectQty(cardId, n){
+  const v = Math.max(0, parseInt(n) || 0);
+  if (v <= 0) delete _sellSelected[cardId];
+  else _sellSelected[cardId] = v;
+  renderSellModal();
+}
+function sellSelectAll(on){
+  _sellSelected = {};
+  if (on){
+    const owned = {};
+    for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+    const equipped = {};
+    for (const dc of GAME.myDeck){
+      if (!dc || dc.id === 'basic_atk') continue;
+      equipped[dc.id] = (equipped[dc.id]||0) + 1;
+    }
+    const seen = new Set();
+    for (const c of GAME.inventory){
+      if (seen.has(c.id)) continue;
+      seen.add(c.id);
+      if (_cardPickFilter !== 'all' && c.grade !== _cardPickFilter) continue;
+      const avail = (owned[c.id]||0) - (equipped[c.id]||0);
+      if (avail > 0) _sellSelected[c.id] = avail;
+    }
+  }
+  renderSellModal();
+}
+function sellSelectedCards(){
+  const p = GAME.player;
+  // 카운트 + 확인
+  let totalCount = 0, totalGold = 0;
+  const planByGrade = {normal:0, rare:0, unique:0, hero:0};
+  for (const id of Object.keys(_sellSelected)){
+    const card = GAME.inventory.find(c => c.id === id);
+    if (!card) continue;
+    const n = _sellSelected[id]|0;
+    totalCount += n;
+    totalGold  += n * (CARD_SELL_PRICE[card.grade] || 1);
+    planByGrade[card.grade] = (planByGrade[card.grade]||0) + n;
+  }
+  if (totalCount === 0){ toast('선택한 카드가 없습니다.'); return; }
+  const summary = ['normal','rare','unique','hero']
+    .filter(g => planByGrade[g] > 0)
+    .map(g => `${gradeKr(g)} ${planByGrade[g]}장`).join(', ');
+  if (!confirm(`선택한 카드 ${totalCount}장 (${summary})을 ${totalGold.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
+  // 장착분 보호하며 인스턴스 단위로 제거
+  const equippedCounts = {};
+  for (const dc of GAME.myDeck){
+    if (!dc || dc.id === 'basic_atk') continue;
+    equippedCounts[dc.id] = (equippedCounts[dc.id]||0) + 1;
+  }
+  const consumed = {};   // id별 장착분 보존 카운터
+  const sellLeft = Object.assign({}, _sellSelected);  // id별 남은 판매 요청
+  const keepList = [];
+  let actualSold = 0, actualGold = 0;
+  for (const c of GAME.inventory){
+    const need = equippedCounts[c.id] || 0;
+    const used = consumed[c.id] || 0;
+    if (used < need){ consumed[c.id] = used + 1; keepList.push(c); continue; }  // 장착분 보존
+    const remain = sellLeft[c.id] || 0;
+    if (remain > 0){
+      sellLeft[c.id] = remain - 1;
+      actualSold++;
+      actualGold += CARD_SELL_PRICE[c.grade] || 1;
+    } else {
+      keepList.push(c);
+    }
+  }
+  GAME.inventory = keepList;
+  p.gold += actualGold;
+  _sellSelected = {};
+  toast(`✔ ${actualSold}장 판매 +${actualGold.toLocaleString()}G`);
+  chatSys(`★ ${p.name}님이 카드 ${actualSold}장을 판매하셨습니다. (+${actualGold.toLocaleString()}G)`);
+  renderSheet();
+  renderDeck();
+  refreshShopUI();
+  renderSellModal();
+  saveGame();
 }
 
 // 보유 카드 한도: Lv 1~25 = 50장, Lv 26+ = 100장
@@ -3344,6 +3480,7 @@ async function claimRaidRewards(){
     const { data, error } = await sb.rpc('raid_claim_rewards');
     if (error || !Array.isArray(data) || data.length === 0) return;
     const lines = [];
+    const noteworthy = [];  // 채팅에 노출할 드랍 — 무기/방어구 전부 + 유니크 이상 카드
     for (const row of data){
       if (row.kind === 'card'){
         const card = CARDS.find(c => c.id === row.item_id);
@@ -3353,6 +3490,10 @@ async function claimRaidRewards(){
           } else {
             GAME.inventory.push(card);
             lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
+            if (card.grade === 'unique' || card.grade === 'hero'){
+              const emoji = card.grade === 'hero' ? '⭐' : '🔮';
+              noteworthy.push(`${emoji} ${card.name} [${gradeKr(card.grade)}]`);
+            }
           }
         }
       } else if (row.kind === 'weapon'){
@@ -3361,6 +3502,7 @@ async function claimRaidRewards(){
           if (!GAME.player.weapons) GAME.player.weapons = [];
           GAME.player.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
           lines.push(`⚔ 무기 — ${w.name} (+${w.atkBonus})`);
+          noteworthy.push(`⚔ ${w.name} (+${w.atkBonus})`);
         }
       } else if (row.kind === 'armor'){
         const a = ARMORS.find(x => x.id === row.item_id);
@@ -3368,6 +3510,7 @@ async function claimRaidRewards(){
           if (!GAME.player.armors) GAME.player.armors = [];
           GAME.player.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
           lines.push(`🛡 방어구 — ${a.name} (+${a.defBonus})`);
+          noteworthy.push(`🛡 ${a.name} (+${a.defBonus})`);
         }
       }
     }
@@ -3376,6 +3519,10 @@ async function claimRaidRewards(){
       try { renderSheet(); } catch(e){}
       try { renderDeck(); } catch(e){}
       setTimeout(() => alert(`📦 공격대 보상 ${lines.length}건 수령\n\n${lines.join('\n')}`), 200);
+    }
+    // 채팅 공지: 무기/방어구 드랍 + 유니크/영웅 카드만 (일반·레어 카드는 노이즈 방지)
+    if (noteworthy.length > 0){
+      try { chatSys(`🏆 ${GAME.player.name}님 공격대 보상 획득 — ${noteworthy.join(' / ')}`); } catch(e){}
     }
   } catch(e){ console.warn('[claimRaidRewards]', e); }
 }
@@ -4248,7 +4395,6 @@ function renderRankList(){
   }
   $('rank_myrank').textContent = myRank === 0 ? '미등록' : `${myRank}위`;
   $('rank_bonus').textContent = getRankBonus();
-  if ($('rank_attempts')) $('rank_attempts').textContent = `${getRankRewardsLeft()} / ${RANK_DAILY_REWARDS}`;
 
   let html = `<tr>
     <th>순위</th><th>이름</th><th>레벨</th><th>덱 (대표 카드)</th><th>행동</th>
@@ -4292,11 +4438,6 @@ function challengeRank(targetRank){
   if (myRank === 0 && targetRank === 10) allowed = true;
   else if (myRank > 1 && targetRank === myRank - 1) allowed = true;
   if (!allowed){ toast('도전할 수 없는 순위입니다.'); return; }
-
-  // 일일 보상 한도 안내 (도전은 무제한)
-  if (getRankRewardsLeft() <= 0){
-    toast(`※ 오늘 보상 한도(${RANK_DAILY_REWARDS}회)를 모두 받았습니다. 승리해도 경험치·골드는 지급되지 않습니다.`);
-  }
 
   const opponent = GAME.ranking.slots[targetRank - 1];
   startRankBattle(opponent, targetRank, 'attack');
@@ -4399,6 +4540,18 @@ function renderRankBattle(){
   $('rk_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rk_atk').textContent = m.atk[0] + ' - ' + m.atk[1];
+  // 상대 아바타 — 슬롯에 avatar 있으면 이미지, NPC면 ⚔, 그 외면 첫 글자
+  const avEl = $('rk_avatar');
+  if (avEl){
+    const hasAv = m.avatar && typeof m.avatar === 'string' && (m.avatar.startsWith('data:image') || m.avatar.startsWith('assets/') || m.avatar.startsWith('http'));
+    if (hasAv){
+      avEl.innerHTML = `<img src="${m.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+    } else if (m.isNPC){
+      avEl.innerHTML = '⚔';
+    } else {
+      avEl.innerHTML = (m.name||'?').charAt(0);
+    }
+  }
   // 상대 장비
   const ow = m.weapon, oa = m.armor;
   $('rk_weapon').textContent = ow ? `${ow.name||'-'} (+${ow.atkBonus||0})` : '-';
@@ -4511,7 +4664,7 @@ function rankExpReward(level){
   return 10;
 }
 
-function rankEnd(result){
+async function rankEnd(result){
   const c = GAME.rankCombat;
   if (!c || c.finished) return;
   c.finished = true;
@@ -4525,25 +4678,17 @@ function rankEnd(result){
     rankLog(`⏱ ${c.maxTurns}턴 종료. 남은 HP 나 ${p.hp} vs ${m.name} ${m.hp}`, 'sys');
   }
 
-  // 승리(공격 성공 / 방어 성공) 시 경험치 + 골드 지급 (단, 일일 보상 한도 내일 때만)
+  // 승리(공격 성공 / 방어 성공) 시 경험치 + 골드 지급 (보상 한도 없음 — 무제한)
   const RANK_WIN_GOLD = 50;
   let expGained = 0;
   let goldGained = 0;
-  let rewardCapped = false;
   if (outcome === 'win'){
-    if (getRankRewardsLeft() > 0){
-      expGained = rankExpReward(p.level);
-      p.xp += expGained;
-      goldGained = RANK_WIN_GOLD;
-      p.gold += goldGained;
-      GAME.ranking.rewardsLeft -= 1;
-    } else {
-      rewardCapped = true;
-    }
+    expGained = rankExpReward(p.level);
+    p.xp += expGained;
+    goldGained = RANK_WIN_GOLD;
+    p.gold += goldGained;
   }
-  const rewardLine = rewardCapped
-    ? `<p style="font-size:11px;color:#a02050;">※ 오늘 보상 한도(${RANK_DAILY_REWARDS}회)를 모두 받아 경험치·골드는 지급되지 않습니다.</p>`
-    : `<p>획득: <b>+${expGained} XP</b> · <b>+${goldGained} G</b> <span style="font-size:11px;color:#666;">(오늘 남은 보상 ${getRankRewardsLeft()}/${RANK_DAILY_REWARDS})</span></p>`;
+  const rewardLine = `<p>획득: <b>+${expGained} XP</b> · <b>+${goldGained} G</b></p>`;
 
   let bodyHtml = '';
   if (c.mode === 'attack'){
@@ -4560,32 +4705,15 @@ function rankEnd(result){
     }
   } else { // defense
     if (outcome === 'win'){
-      let bonusLine = '';
-      // 보상 한도 초과 시 10% 확률로 카드 1뽑 보너스
-      if (rewardCapped && Math.random() < 0.10){
-        const grade = pickGachaGrade();
-        const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk');
-        const card = pool[Math.floor(Math.random() * pool.length)];
-        if (card){
-          if (GAME.inventory.length >= inventoryLimit()){
-            bonusLine = `<p style="color:#a02050;">🎁 카드 1뽑 보너스 당첨 — <b>${card.name}</b> [${gradeKr(card.grade)}] · ⚠ 보유 한도(${inventoryLimit()}) 초과로 지급 누락</p>`;
-          } else {
-            GAME.inventory.push(card);
-            bonusLine = `<p style="color:#a02050;">🎁 보너스! 카드 1뽑 — <b>${card.name}</b> [${gradeKr(card.grade)}]</p>`;
-          }
-        }
-      }
       bodyHtml = `<p style="color:#060;">🛡 방어 성공! 랭킹 <b>${c.targetRank}위</b> 유지</p>
-        ${rewardLine}
-        ${bonusLine}`;
+        ${rewardLine}`;
     } else {
-      // 방어 실패 — 랭킹 전체 초기화 (모든 슬롯을 Lv1 NPC로 새로 채움, 본인 미등록)
-      // 일일 보상 한도는 패배해도 복원되지 않도록 보존
-      const _keepRewards = GAME.ranking.rewardsLeft;
-      resetRanking();
-      if (typeof _keepRewards === 'number') GAME.ranking.rewardsLeft = _keepRewards;
-      bodyHtml = `<p style="color:#a00;">💀 방어 실패... 랭킹이 전체 초기화되었습니다.</p>
-        <p style="font-size:11px;color:#666;">모든 자리가 Lv1 NPC로 다시 채워졌습니다. 10위부터 다시 도전할 수 있습니다.</p>`;
+      // 방어 실패 — 본인만 랭킹에서 퇴출 (해당 슬롯은 NPC로 교체)
+      const lostRank = c.targetRank;
+      try { await demoteFromRank(); } catch(e){ console.warn('[defense demote]', e); }
+      bodyHtml = `<p style="color:#a00;">💀 방어 실패... <b>${lostRank}위</b>에서 퇴출되었습니다.</p>
+        <p style="font-size:11px;color:#666;">10위부터 다시 도전할 수 있습니다.</p>`;
+      chatSys(`★ ${p.name}님이 방어전에 실패하여 ${lostRank}위에서 퇴출되셨습니다.`);
     }
   }
   // 랭킹전 inline 레벨업 처리 — 결과창 박스에 표시
@@ -4676,12 +4804,13 @@ function makeUserRankSlot(){
   return {
     isNPC: false,
     name: p.name,
+    avatar: p.avatar || null,
     level: p.level,
     str: p.str, dex: p.dex, int: p.int, con: p.con,
     hp: p.hpMax, hpMax: p.hpMax, mp: p.mpMax, mpMax: p.mpMax,
     atk: p.atk.slice(), def: p.def,
-    weapon: { atkBonus: p.weapon.atkBonus },
-    armor: { defBonus: p.armor.defBonus },
+    weapon: { name: p.weapon && p.weapon.name, atkBonus: p.weapon && p.weapon.atkBonus },
+    armor:  { name: p.armor  && p.armor.name,  defBonus: p.armor  && p.armor.defBonus },
     deck: GAME.myDeck.slice(0, 10),
     atkType: p.atkType,
   };
@@ -7859,7 +7988,12 @@ function renderSheet(){
   setCls('p-combat-int', p.int);
   setCls('p-combat-con', p.con);
   setCls('p-combat-atk', p.atk[0] + ' - ' + p.atk[1]);
-  setCls('p-combat-avatar', (p.name||'?').charAt(0));
+  // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
+  const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
+  const avHtml = hasAv
+    ? `<img src="${p.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`
+    : (p.name||'?').charAt(0);
+  document.querySelectorAll('.p-combat-avatar').forEach(el => { el.innerHTML = avHtml; });
   setWidth('bar-phc-fill', hpPct + '%');
   setWidth('bar-pmc-fill', mpPct + '%');
   setCls('bar-phc-text', 'HP ' + Math.max(0,p.hp) + ' / ' + p.hpMax);
@@ -8524,6 +8658,7 @@ async function loadAdminUsers(){
             ...d.player,
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
+            updated_at: d.savedAt ? new Date(d.savedAt).toISOString() : null,
           });
         }
       } catch(e){}
@@ -8537,16 +8672,26 @@ async function loadAdminUsers(){
   });
 }
 
+function _fmtLastSeen(iso){
+  if (!iso) return '-';
+  try {
+    const d = new Date(iso);
+    const yy = String(d.getFullYear()).slice(2);
+    const mm = String(d.getMonth()+1).padStart(2,'0');
+    const dd = String(d.getDate()).padStart(2,'0');
+    const hh = String(d.getHours()).padStart(2,'0');
+    const mi = String(d.getMinutes()).padStart(2,'0');
+    return `${yy}/${mm}/${dd} ${hh}:${mi}`;
+  } catch(e){ return '-'; }
+}
 function renderAdminUserList(){
   $('adminUserList').innerHTML = _adminUsers.map((u, i) => {
     const active = _adminSelectedUser === i ? 'active' : '';
-    const tag = u.source === 'cloud' ? '<span style="color:#66ccff;">☁ 클라우드</span>'
-              : u.source === 'local' ? '<span style="color:#ffcc00;">★ 로컬</span>'
-              : '<span style="color:#888;">NPC</span>';
     const rankNum = `<span style="color:#ffcc00;font-weight:bold;">${i+1}.</span> `;
     return `<div class="admin-user-item ${active}" onclick="adminSelectUser(${i})">
-      <div class="nick">${rankNum}${u.name} ${tag}</div>
+      <div class="nick">${rankNum}${u.name}</div>
       <div class="meta">Lv ${u.level} · XP ${u.xp||0} · ${u.gold||0}G · 카드 ${(u.inventory||[]).length}장</div>
+      <div class="meta" style="color:#9aa;">최근 접속: ${_fmtLastSeen(u.updated_at)}</div>
     </div>`;
   }).join('');
 }
