@@ -213,7 +213,7 @@
     display:none;
   }
   #pg-main.active { display:flex; gap:6px; }
-  #game { width:560px; background:#FFFFCC; padding:6px; border:1px solid #555; }
+  #game { width:640px; background:#FFFFCC; padding:6px; border:1px solid #555; }
   #chat { width:230px; background:#fff; border:1px solid #555; display:flex; flex-direction:column; max-height:660px; }
 
   /* 레이아웃 토글 버튼 */
@@ -2238,6 +2238,8 @@ function applyLayout(mode){
   const btn = document.getElementById('layoutToggle');
   if (btn) btn.textContent = isVert ? '🖥️ PC 모드' : '📱 모바일 모드';
   try { localStorage.setItem(LAYOUT_KEY, mode); } catch(e){}
+  // 모드 전환 즉시 스탯창 표기 갱신 (HP/MP·무기·방어구 표기 분기)
+  try { if (GAME && GAME.player) renderSheet(); } catch(e){}
 }
 function toggleLayout(){
   const cur = (localStorage.getItem(LAYOUT_KEY) === 'vertical') ? 'vertical' : 'horizontal';
@@ -7969,16 +7971,27 @@ function renderSheet(){
   setText('s_level', p.level);
   setText('s_xp', (p.xp||0).toLocaleString());
   setText('s_xpup', (p.xpUp||0).toLocaleString());
-  setText('s_hp', (p.hp||0).toLocaleString() + ' / ' + (p.hpMax||0).toLocaleString());
-  setText('s_mp', (p.mp||0).toLocaleString() + ' / ' + (p.mpMax||0).toLocaleString());
+  const isMobile = document.body.classList.contains('layout-vertical');
+  if (isMobile){
+    setText('s_hp', (p.hpMax||0).toLocaleString());
+    setText('s_mp', (p.mpMax||0).toLocaleString());
+  } else {
+    setText('s_hp', (p.hp||0).toLocaleString() + ' / ' + (p.hpMax||0).toLocaleString());
+    setText('s_mp', (p.mp||0).toLocaleString() + ' / ' + (p.mpMax||0).toLocaleString());
+  }
   setText('s_gold', (p.gold||0).toLocaleString());
   setText('s_str', p.str);
   setText('s_dex', p.dex);
   setText('s_int', p.int);
   setText('s_con', p.con);
   setText('s_atk', Math.round((p.atk[0] + p.atk[1]) / 2));
-  setText('s_weapon', (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')');
-  setText('s_armor',  (p.armor.name||'') + ' (+' + p.armor.defBonus + ')');
+  if (isMobile){
+    setText('s_weapon', '+' + (p.weapon.atkBonus||0));
+    setText('s_armor',  '+' + (p.armor.defBonus||0));
+  } else {
+    setText('s_weapon', (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')');
+    setText('s_armor',  (p.armor.name||'') + ' (+' + p.armor.defBonus + ')');
+  }
   setText('s_def', p.def);
   if ($('myRank')){
     const r = (GAME.ranking && GAME.ranking.myRank) || 0;
