@@ -322,6 +322,8 @@
   .statup-btn.reset { background:#ffcccc; color:#7E181E; font-size:9px; padding:0 6px; }
   .statup-btn.reset:hover { background:#ff8888; color:#fff; }
 
+  /* 명예의 전당 행 호버 */
+  #honorList .honor-row:hover { background:#fde9c8; }
   /* HP/MP 바 */
   .main-bars { margin-top:2px; }
   .bar { width:100%; height:13px; background:#222; position:relative; border:1px solid #555; margin-top:2px; }
@@ -1277,6 +1279,13 @@
           <td class="row2" onclick="openBlessShop()" style="color:#000;font-weight:bold;">✨ 축복의 상점</td>
           <td id="m-profile" class="row2" onclick="openProfilePage()">프로필 관리</td>
         </tr></table>
+        <table><tr>
+          <td class="row2" onclick="openHonor()" style="color:#a02050;font-weight:bold;">🏆 명예의 전당</td>
+          <td class="row2" style="visibility:hidden;"></td>
+          <td class="row2" style="visibility:hidden;"></td>
+          <td class="row2" style="visibility:hidden;"></td>
+          <td class="row2" style="visibility:hidden;"></td>
+        </tr></table>
       </div>
 
       <div class="infoline">
@@ -1817,6 +1826,28 @@
       </div>
     </div>
 
+    <!-- 명예의 전당 컨텐츠 -->
+    <div class="content-pane" id="content-honor" hidden>
+      <div class="shop-page">
+        <div class="shop-head">🏆 명예의 전당 — TOP 10</div>
+        <div class="shop-desc">
+          여신전쟁 정상에 선 영웅들입니다. 좌측 랭커를 클릭하면 상세 정보를 볼 수 있습니다.<br>
+          <span style="font-size:11px;color:#666;">정렬: 레벨 내림차순 · 같은 레벨이면 경험치 내림차순</span>
+        </div>
+        <div style="display:flex;gap:12px;padding:8px;">
+          <div id="honorList" style="width:260px;flex:none;background:#fff;border:2px solid #c9a26b;border-radius:6px;padding:6px;max-height:560px;overflow-y:auto;">
+            <div style="text-align:center;color:#888;padding:20px;font-size:12px;">불러오는 중...</div>
+          </div>
+          <div id="honorDetail" style="flex:1;background:#fff;border:2px solid #c9a26b;border-radius:6px;padding:14px;min-height:560px;">
+            <div style="text-align:center;color:#888;padding:40px;font-size:12px;">왼쪽에서 랭커를 선택하세요.</div>
+          </div>
+        </div>
+        <div class="shop-actions">
+          <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 무기상점 컨텐츠 -->
     <div class="content-pane" id="content-wshop" hidden>
       <div class="shop-page">
@@ -2072,6 +2103,24 @@
     <div class="chat-input">
       <span class="nick-prefix" id="chatNick">-</span>
       <input id="chatInput" placeholder="메시지를 입력하시길 바랍니다." onkeydown="if(event.key==='Enter')sendChat()">
+    </div>
+  </div>
+</div>
+
+<!-- 프로필 사진 미리보기 모달 -->
+<div class="modal-bg" id="avatarPreviewBg" onclick="if(event.target.id==='avatarPreviewBg')cancelAvatarPreview()">
+  <div class="modal" style="width:340px;max-width:92vw;">
+    <div class="modal-head">📷 프로필 사진 미리보기</div>
+    <div style="padding:18px;background:#FFFFCC;text-align:center;">
+      <div style="margin-bottom:10px;">
+        <img id="avatarPreviewImg" src="" alt="" style="width:200px;height:200px;object-fit:cover;border:2px solid #7E181E;background:#000;">
+      </div>
+      <div id="avatarPreviewMsg" style="font-size:12px;color:#555;line-height:1.6;margin:10px 0;"></div>
+      <div style="margin-top:12px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;">
+        <button onclick="confirmAvatarPreview()" id="avatarConfirmBtn" style="padding:8px 18px;background:#2e7d32;color:#fff;border:0;cursor:pointer;font-weight:bold;font-size:13px;border-radius:4px;">✔ 이 사진으로 설정</button>
+        <button onclick="reselectAvatarPreview()" style="padding:8px 18px;background:#3a3a8a;color:#fff;border:0;cursor:pointer;font-size:13px;border-radius:4px;">🔄 다시 선택</button>
+        <button onclick="cancelAvatarPreview()" style="padding:8px 18px;background:#888;color:#fff;border:0;cursor:pointer;font-size:13px;border-radius:4px;">취소</button>
+      </div>
     </div>
   </div>
 </div>
@@ -3542,6 +3591,146 @@ function setBlessMsg(msg, kind){
   if (!el) return;
   el.textContent = msg;
   el.style.color = kind === 'err' ? '#a02050' : '#060';
+}
+
+// ─── 명예의 전당 (Top 10 by level + xp) ───
+let _honorRankers = [];
+async function openHonor(){
+  showContent('honor');
+  $('honorList').innerHTML = '<div style="text-align:center;color:#888;padding:20px;font-size:12px;">불러오는 중...</div>';
+  $('honorDetail').innerHTML = '<div style="text-align:center;color:#888;padding:40px;font-size:12px;">왼쪽에서 랭커를 선택하세요.</div>';
+  _honorRankers = await _loadHonorRankers();
+  renderHonorList();
+}
+async function _loadHonorRankers(){
+  // 클라우드 우선: saves 전체에서 level+xp 상위 추출. 운영자 권한이 없으면 saves 전체 select가 막힐 수 있음
+  if (sb){
+    try {
+      const { data, error } = await sb.from('saves').select('user_id, nickname, data');
+      if (!error && Array.isArray(data) && data.length > 0){
+        const list = data.map(row => {
+          const d = row.data || {};
+          const p = d.player || {};
+          return {
+            user_id: row.user_id,
+            name: row.nickname || p.name || '?',
+            level: p.level || 1,
+            xp: p.xp || 0,
+            xpUp: p.xpUp || 0,
+            hp: p.hp || 0, hpMax: p.hpMax || 0,
+            mp: p.mp || 0, mpMax: p.mpMax || 0,
+            str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
+            atk: p.atk || [0,0], def: p.def || 0,
+            weapon: p.weapon || null,
+            armor:  p.armor  || null,
+            avatar: p.avatar || null,
+            blessing: p.blessing || 0,
+            myDeck: (d.myDeck || []).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
+          };
+        });
+        list.sort((a,b) => (b.level - a.level) || (b.xp - a.xp));
+        return list.slice(0, 10);
+      }
+    } catch(e){ console.warn('[honor cloud]', e); }
+  }
+  // 폴백: 로컬 계정 인덱스
+  const accounts = (typeof getAccounts === 'function') ? getAccounts() : [];
+  const list = [];
+  for (const name of accounts){
+    try {
+      const raw = localStorage.getItem(saveKeyFor(name));
+      if (!raw) continue;
+      const d = JSON.parse(raw);
+      const p = d.player || {};
+      list.push({
+        user_id: null,
+        name, level: p.level||1, xp: p.xp||0, xpUp: p.xpUp||0,
+        hp: p.hp||0, hpMax: p.hpMax||0, mp: p.mp||0, mpMax: p.mpMax||0,
+        str: p.str||5, dex: p.dex||5, int: p.int||5, con: p.con||5,
+        atk: p.atk||[0,0], def: p.def||0,
+        weapon: p.weapon||null, armor: p.armor||null,
+        avatar: p.avatar||null, blessing: p.blessing||0,
+        myDeck: (d.myDeck||[]).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
+      });
+    } catch(e){}
+  }
+  list.sort((a,b) => (b.level - a.level) || (b.xp - a.xp));
+  return list.slice(0, 10);
+}
+function _honorAvatarHtml(r, size){
+  const sz = size || 56;
+  const hasAv = r.avatar && typeof r.avatar === 'string' && (r.avatar.startsWith('data:image') || r.avatar.startsWith('assets/') || r.avatar.startsWith('http'));
+  if (hasAv){
+    return `<img src="${r.avatar}" alt="" style="width:${sz}px;height:${sz}px;object-fit:cover;background:#000;border:1px solid #888;">`;
+  }
+  return `<div style="width:${sz}px;height:${sz}px;background:#000;color:#FFFF99;font-size:${Math.floor(sz*0.5)}px;font-weight:bold;display:flex;align-items:center;justify-content:center;border:1px solid #888;">${(r.name||'?').charAt(0).toUpperCase()}</div>`;
+}
+function renderHonorList(){
+  const el = $('honorList');
+  if (!_honorRankers || _honorRankers.length === 0){
+    el.innerHTML = '<div style="text-align:center;color:#888;padding:20px;font-size:12px;">조회 결과가 없습니다.</div>';
+    return;
+  }
+  const medals = ['🥇','🥈','🥉'];
+  el.innerHTML = _honorRankers.map((r, i) => {
+    const rank = i + 1;
+    const medal = medals[i] || `${rank}.`;
+    return `<div class="honor-row" onclick="renderHonorDetail(${i})" style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #eee;cursor:pointer;">
+      <div style="width:28px;text-align:center;font-weight:bold;color:#7E181E;font-size:14px;">${medal}</div>
+      ${_honorAvatarHtml(r, 40)}
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:bold;color:#000;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(r.name||'?')}</div>
+        <div style="font-size:11px;color:#555;">Lv ${r.level} · XP ${(r.xp||0).toLocaleString()}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+function renderHonorDetail(idx){
+  const r = _honorRankers[idx];
+  const el = $('honorDetail');
+  if (!r){ el.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">데이터 없음</div>'; return; }
+  // 상단 — 아바타·이름·기본
+  const wname = r.weapon ? `${r.weapon.name||'-'} (+${r.weapon.atkBonus||0})` : '-';
+  const aname = r.armor  ? `${r.armor.name||'-'}  (+${r.armor.defBonus||0})`   : '-';
+  const atkAvg = Array.isArray(r.atk) && r.atk.length >= 2 ? Math.round((r.atk[0]+r.atk[1])/2) : '-';
+  // 덱 (10개 슬롯)
+  const deck = (r.myDeck || []).slice(0, 10);
+  while (deck.length < 10) deck.push(BASIC_ATTACK);
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700' };
+  const deckHtml = deck.map((c, i) => {
+    const borderColor = gradeColor[c.grade] || '#bbb';
+    return `<div style="width:64px;text-align:center;" title="${(c.name||'').replace(/"/g,'&quot;')} — ${(c.text||'').replace(/"/g,'&quot;')}">
+      <div style="width:64px;height:64px;border:2px solid ${borderColor};background:#222;display:flex;align-items:center;justify-content:center;overflow:hidden;">${typeof cardIcon === 'function' ? cardIcon(c) : ''}</div>
+      <div style="font-size:10px;color:${c.grade==='normal'?'#333':borderColor};font-weight:bold;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name||''}</div>
+    </div>`;
+  }).join('');
+  el.innerHTML = `
+    <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px;border-bottom:2px solid #c9a26b;padding-bottom:12px;">
+      ${_honorAvatarHtml(r, 120)}
+      <div style="flex:1;">
+        <div style="font-size:22px;font-weight:bold;color:#7E181E;">${r.name||'?'}</div>
+        <div style="font-size:13px;color:#000;margin-top:4px;">
+          <b>Lv ${r.level}</b> · 경험치 <b>${(r.xp||0).toLocaleString()}</b> · 스탯 P <b>${r.xpUp||0}</b>
+        </div>
+        <div style="font-size:13px;color:#000;margin-top:2px;">
+          HP <b>${r.hpMax||0}</b> · MP <b>${r.mpMax||0}</b> · 공격 <b>${atkAvg}</b> · 방어 <b>${r.def||0}</b>
+        </div>
+        <div style="font-size:12px;color:#a02050;margin-top:2px;">
+          ✨ 여신의 축복 <b>${(r.blessing||0).toLocaleString()}</b>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;gap:16px;font-size:12px;color:#000;margin-bottom:10px;flex-wrap:wrap;">
+      <div>STR <b>${r.str}</b></div>
+      <div>DEX <b>${r.dex}</b></div>
+      <div>INT <b>${r.int}</b></div>
+      <div>CON <b>${r.con}</b></div>
+      <div style="margin-left:auto;color:#555;">⚔ ${wname}</div>
+      <div style="color:#555;">🛡 ${aname}</div>
+    </div>
+    <div style="font-weight:bold;color:#7E181E;margin-bottom:4px;">🃏 카드 덱 (1 ~ 10)</div>
+    <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:6px;background:#222;padding:8px;border-radius:4px;">${deckHtml}</div>
+  `;
 }
 function doGacha(n){
   const p = GAME.player;
@@ -7956,6 +8145,10 @@ const AVATAR_JPEG_QUAL = 0.85;
 const AVATAR_CHANGE_COST = 10000;       // 변경 비용 (G). 첫 설정은 무료
 const NICK_CHANGE_COST   = 50000;       // 닉네임 변경 비용
 
+// 미리보기 상태
+let _pendingAvatarDataUrl = null;
+let _pendingAvatarIsChange = false;
+
 function openAvatarPicker(){
   if (!GAME.player){ alert('로그인 후 사용하세요.'); return; }
   const isChange = !!GAME.player.avatar;
@@ -7963,14 +8156,10 @@ function openAvatarPicker(){
     alert(`프로필 사진 변경에 ${AVATAR_CHANGE_COST.toLocaleString()}G가 필요합니다.\n현재 보유: ${GAME.player.gold.toLocaleString()}G`);
     return;
   }
-  if (isChange){
-    const ok = confirm(
-      `프로필 사진을 변경하시겠습니까?\n\n` +
-      `• 비용: ${AVATAR_CHANGE_COST.toLocaleString()}G\n` +
-      `• 부적절한 사진(선정성·혐오·타인 도용 등) 적발 시 계정이 삭제될 수 있습니다.`
-    );
-    if (!ok) return;
-  }
+  _pendingAvatarIsChange = isChange;
+  _openAvatarFilePicker();
+}
+function _openAvatarFilePicker(){
   const input = document.createElement('input');
   input.type = 'file';
   input.accept = 'image/png,image/jpeg,image/webp,image/gif';
@@ -7988,18 +8177,56 @@ function openAvatarPicker(){
     try {
       const dataUrl = await _resizeImageToDataUrl(file, AVATAR_MAX_DIM, AVATAR_JPEG_QUAL);
       if (!dataUrl){ alert('이미지 처리 실패'); return; }
-      GAME.player.avatar = dataUrl;
-      if (isChange) GAME.player.gold -= AVATAR_CHANGE_COST;
-      renderSheet();
-      _renderProfilePage();
-      saveGame();
-      toast(isChange ? `프로필 사진 변경 완료 (-${AVATAR_CHANGE_COST.toLocaleString()}G)` : '프로필 사진이 설정되었습니다.');
+      _pendingAvatarDataUrl = dataUrl;
+      _showAvatarPreview();
     } catch(err){
       console.warn('avatar upload', err);
       alert('이미지 처리 중 오류: ' + (err.message||err));
     }
   };
   input.click();
+}
+function _showAvatarPreview(){
+  if (!_pendingAvatarDataUrl) return;
+  const isChange = _pendingAvatarIsChange;
+  $('avatarPreviewImg').src = _pendingAvatarDataUrl;
+  const msg = isChange
+    ? `이 사진으로 변경하시겠습니까?<br>비용: <b style="color:#7E181E;">${AVATAR_CHANGE_COST.toLocaleString()} G</b><br><span style="color:#a02050;font-size:11px;">⚠ 부적절한 사진 적발 시 계정이 삭제될 수 있습니다.</span>`
+    : `이 사진으로 프로필을 설정하시겠습니까? <span style="color:#060;">(첫 설정 무료)</span><br><span style="color:#a02050;font-size:11px;">⚠ 부적절한 사진 적발 시 계정이 삭제될 수 있습니다.</span>`;
+  $('avatarPreviewMsg').innerHTML = msg;
+  $('avatarPreviewBg').classList.add('on');
+}
+function cancelAvatarPreview(){
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarIsChange = false;
+  const bg = $('avatarPreviewBg');
+  if (bg) bg.classList.remove('on');
+}
+function reselectAvatarPreview(){
+  // 미리보기 닫고 파일 선택 재시도 (isChange는 유지)
+  const bg = $('avatarPreviewBg');
+  if (bg) bg.classList.remove('on');
+  _pendingAvatarDataUrl = null;
+  _openAvatarFilePicker();
+}
+function confirmAvatarPreview(){
+  if (!_pendingAvatarDataUrl || !GAME.player) return;
+  const isChange = _pendingAvatarIsChange;
+  // 변경 비용 재확인 (그 사이 골드가 줄었을 수도)
+  if (isChange && GAME.player.gold < AVATAR_CHANGE_COST){
+    alert(`프로필 사진 변경에 ${AVATAR_CHANGE_COST.toLocaleString()}G가 필요합니다.`);
+    return;
+  }
+  GAME.player.avatar = _pendingAvatarDataUrl;
+  if (isChange) GAME.player.gold -= AVATAR_CHANGE_COST;
+  _pendingAvatarDataUrl = null;
+  _pendingAvatarIsChange = false;
+  const bg = $('avatarPreviewBg');
+  if (bg) bg.classList.remove('on');
+  renderSheet();
+  _renderProfilePage();
+  saveGame();
+  toast(isChange ? `프로필 사진 변경 완료 (-${AVATAR_CHANGE_COST.toLocaleString()}G)` : '프로필 사진이 설정되었습니다.');
 }
 
 function profileRemoveAvatar(){
