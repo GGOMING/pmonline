@@ -1099,7 +1099,7 @@
         <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
           <b>현재 활성 raid 강제 갱신:</b>
           <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (active_key 무작위)</button>
-          <span style="font-size:11px;color:#666;">— 6시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 잡몹 99 리셋</span>
+          <span style="font-size:11px;color:#666;">— 1시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 잡몹 99 리셋</span>
         </div>
         <div style="margin:4px 0;">
           새벽의 언덕: 잡몹 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
@@ -2260,7 +2260,7 @@ const GAME = {
   myDeck: Array(15).fill(BASIC_ATTACK), // 사용자 본인의 덱 (Lv 26+ 부터 11~15 슬롯 해금)
   inventory: [],   // 보유 카드 (가챠에서 획득) — 현재 단계에선 사용자가 모든 카드 보유한다고 가정 (훈련소 테스트용)
   chatUsers: [],  // 서버 연동 시 라이브 반영 예정
-  // 공격대 (6시간 세션, 0/6/12/18시 리셋)
+  // 공격대 (1시간 세션, 매시 정각 리셋)
   raid: {
     dawn: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
     mist: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
@@ -3621,12 +3621,11 @@ const RAID_BOSSES = {
   ],
 };
 
-// 세션 시작 시각 (6시간 단위로 0/6/12/18시)
+// 세션 시작 시각 (1시간 단위로 매시 정각)
 function getCurrentSessionStart(){
   const now = new Date();
-  const sessionHour = Math.floor(now.getHours() / 6) * 6;
   const sessionStart = new Date(now);
-  sessionStart.setHours(sessionHour, 0, 0, 0);
+  sessionStart.setMinutes(0, 0, 0);
   return sessionStart.getTime();
 }
 
@@ -3778,7 +3777,7 @@ function updateRaidUI(){
     if (monEl) monEl.textContent = '-';
     return;
   }
-  const remainMs = (r.sessionStart + 6*3600*1000) - Date.now();
+  const remainMs = (r.sessionStart + 1*3600*1000) - Date.now();
   const remainSec = Math.max(0, Math.floor(remainMs / 1000));
   const h = Math.floor(remainSec / 3600);
   const m = Math.floor((remainSec % 3600) / 60);
@@ -3845,7 +3844,7 @@ function renderRaidLobby(){
   $('raid_banner').className = 'raid-banner' + (isDawn ? '' : ' mist');
 
   // 남은 시간
-  const remainMs = (r.sessionStart + 6*3600*1000) - Date.now();
+  const remainMs = (r.sessionStart + 1*3600*1000) - Date.now();
   const remainSec = Math.max(0, Math.floor(remainMs / 1000));
   const h = Math.floor(remainSec / 3600);
   const m = Math.floor((remainSec % 3600) / 60);
@@ -7684,7 +7683,7 @@ const TUTORIAL_STEPS = [
   },
   {
     icon:'🐉', title:'공격대 — 함께 보스 사냥',
-    body:`<p>강조된 <b>공격대</b>는 6시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
+    body:`<p>강조된 <b>공격대</b>는 1시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
       <p>몬스터 99마리 + 보스를 다른 유저들과 함께 처치하면 보상이 분배됩니다.</p>
       <div class="tip">🎁 참여자 전원에게 보스 처치 시 카드 1뽑 자동 지급. <b>최종 타격(막타)은 여러 유저가 동시에 칠 수 있으니</b>, 채팅으로 서로 소통하며 다 같이 막타를 쳐 보세요!</div>`,
     target:'#m-raid', page:'main', position:'corner',
