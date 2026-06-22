@@ -358,7 +358,7 @@
   }
   table.stat {
     border-collapse:collapse;
-    width:448px;
+    width:600px;
     background:#2e53b2;
     color:#fff;
     font-size:11px;
@@ -369,9 +369,10 @@
     height:20px;
     background:#2e53b2;
     text-align:center;
+    white-space:nowrap;
   }
-  table.stat td.lbl { background:#2e53b2; color:#FFFF99; font-weight:bold; width:60px; }
-  table.stat td.val { background:#2e53b2; color:#fff; font-weight:bold; min-width:60px; }
+  table.stat td.lbl { background:#2e53b2; color:#FFFF99; font-weight:bold; width:54px; }
+  table.stat td.val { background:#2e53b2; color:#fff; font-weight:bold; min-width:80px; }
 
   /* 카드 슬롯 */
   .deck {
@@ -1160,7 +1161,7 @@
         </tr>
         <tr>
           <td class="lbl">골드</td><td class="val" id="s_gold">-</td>
-          <td class="lbl">스탯 P</td><td class="val"><span id="s_xpup">-</span> <button class="statup-btn reset" onclick="resetStats()" title="10000G로 스탯 초기화">초기화</button></td>
+          <td class="lbl">스탯 P</td><td class="val"><span id="s_xpup">-</span></td>
           <td class="lbl">MP</td><td class="val" id="s_mp">- (-)</td>
         </tr>
         <tr>
@@ -1913,7 +1914,20 @@
           </div>
         </div>
 
-        <!-- 3) 비밀번호 변경 -->
+        <!-- 3) 스탯 초기화 -->
+        <div class="profile-section">
+          <h4>♻ 스탯 초기화</h4>
+          <div style="font-size:11px;color:#555;line-height:1.6;">
+            • 현재 STR / DEX / INT / CON을 모두 <b>5</b>로 리셋합니다.<br>
+            • 레벨업으로 받은 <b>스탯 P는 그대로 돌려받습니다.</b><br>
+            • 비용: <b style="color:#7E181E;">10,000 G</b>
+          </div>
+          <div style="margin-top:8px;">
+            <button class="btn-go" onclick="resetStats()" style="background:#7E181E;">스탯 초기화하기 (-10,000 G)</button>
+          </div>
+        </div>
+
+        <!-- 4) 비밀번호 변경 -->
         <div class="profile-section">
           <h4>🔑 비밀번호 변경</h4>
           <div style="font-size:11px;color:#555;line-height:1.6;">
@@ -2687,7 +2701,7 @@ function openArmorShop(){
 
 function refreshWeaponShop(){
   const p = GAME.player;
-  $('wshop_gold').textContent = p.gold;
+  $('wshop_gold').textContent = (p.gold||0).toLocaleString();
   // 현재 장착 무기 — 사진 + 이름 + 보너스 + 장착 해제 버튼
   let eqHtml = '';
   if (p.weapon && p.weapon.id){
@@ -2752,7 +2766,7 @@ function refreshWeaponShop(){
 
 function refreshArmorShop(){
   const p = GAME.player;
-  $('ashop_gold').textContent = p.gold;
+  $('ashop_gold').textContent = (p.gold||0).toLocaleString();
   // 현재 장착 방어구 — 사진 + 이름 + 보너스 + 장착 해제 버튼
   let eqHtml = '';
   if (p.armor && p.armor.id){
@@ -3060,7 +3074,7 @@ function openCardShop(){
 }
 function refreshShopUI(){
   const p = GAME.player;
-  $('shop_gold').textContent = p.gold;
+  $('shop_gold').textContent = (p.gold||0).toLocaleString();
   $('shop_inv_total').textContent = GAME.inventory.length;
   const uniqueIds = new Set(GAME.inventory.map(c=>c.id));
   $('shop_inv_unique').textContent = uniqueIds.size;
@@ -3862,7 +3876,7 @@ function renderRaidBattle(){
   $('rd_con').textContent = m.con;
   $('rd_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rd_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
-  $('rd_atk').textContent = m.atk[0] + ' - ' + m.atk[1];
+  $('rd_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
 
   const hpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
@@ -4539,7 +4553,7 @@ function renderRankBattle(){
   $('rk_con').textContent = m.con;
   $('rk_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
-  $('rk_atk').textContent = m.atk[0] + ' - ' + m.atk[1];
+  $('rk_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   // 상대 아바타 — 슬롯에 avatar 있으면 이미지, NPC면 ⚔, 그 외면 첫 글자
   const avEl = $('rk_avatar');
   if (avEl){
@@ -5191,7 +5205,7 @@ function renderHuntBattle(){
   $('m_con').textContent = m.con;
   $('m_hp').textContent  = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('m_mp').textContent  = Math.max(0,m.mp) + ' / ' + m.mpMax;
-  $('m_atk').textContent = m.atk[0] + ' - ' + m.atk[1];
+  $('m_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   $('m_race_badge').textContent = `(${raceKr(m.race)})`;
   // 몬스터 HP/MP 바
   const mhpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
@@ -6747,7 +6761,7 @@ function renderTrainBattle(){
   $('o_con').textContent = o.con;
   $('o_hp').textContent = Math.max(0,o.hp) + ' / ' + o.hpMax;
   $('o_mp').textContent = Math.max(0,o.mp) + ' / ' + o.mpMax;
-  $('o_atk').textContent = o.atk[0] + ' - ' + o.atk[1];
+  $('o_atk').textContent = Math.round((o.atk[0] + o.atk[1]) / 2);
 
   // 상대 덱
   for (let i=0;i<10;i++){
@@ -7418,7 +7432,8 @@ const TUTORIAL_STEPS = [
   {
     icon:'🎮', title:'여신전쟁에 오신 것을 환영합니다!',
     body:`<p>당신은 이제 신화 속 영웅이 되어 카드 덱으로 전투를 펼치게 됩니다.</p>
-      <p>이 짧은 안내는 약 1분 정도 소요됩니다. 차근차근 따라와 주세요.</p>`,
+      <p>이 짧은 안내는 약 1분 정도 소요됩니다. 차근차근 따라와 주세요.</p>
+      <div class="tip">♻ 스탯 분배가 마음에 들지 않으면 언제든 <b>「프로필 관리 → 스탯 초기화」</b>에서 10,000G로 STR/DEX/INT/CON을 리셋할 수 있어요. 스탯 P는 그대로 돌려받으니 안심하세요!</div>`,
     target:null, page:'main', position:'center',
   },
   {
@@ -7952,16 +7967,16 @@ function renderSheet(){
   const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   setText('s_name', p.name);
   setText('s_level', p.level);
-  setText('s_xp', p.xp);
-  setText('s_xpup', p.xpUp);
-  setText('s_hp', p.hp + ' (' + p.hpMax + ')');
-  setText('s_mp', p.mp + ' (' + p.mpMax + ')');
-  setText('s_gold', p.gold);
+  setText('s_xp', (p.xp||0).toLocaleString());
+  setText('s_xpup', (p.xpUp||0).toLocaleString());
+  setText('s_hp', (p.hp||0).toLocaleString() + ' / ' + (p.hpMax||0).toLocaleString());
+  setText('s_mp', (p.mp||0).toLocaleString() + ' / ' + (p.mpMax||0).toLocaleString());
+  setText('s_gold', (p.gold||0).toLocaleString());
   setText('s_str', p.str);
   setText('s_dex', p.dex);
   setText('s_int', p.int);
   setText('s_con', p.con);
-  setText('s_atk', p.atk[0] + ' - ' + p.atk[1]);
+  setText('s_atk', Math.round((p.atk[0] + p.atk[1]) / 2));
   setText('s_weapon', (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')');
   setText('s_armor',  (p.armor.name||'') + ' (+' + p.armor.defBonus + ')');
   setText('s_def', p.def);
@@ -7987,7 +8002,7 @@ function renderSheet(){
   setCls('p-combat-dex', p.dex);
   setCls('p-combat-int', p.int);
   setCls('p-combat-con', p.con);
-  setCls('p-combat-atk', p.atk[0] + ' - ' + p.atk[1]);
+  setCls('p-combat-atk', Math.round((p.atk[0] + p.atk[1]) / 2));
   // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
   const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
   const avHtml = hasAv
@@ -8776,8 +8791,8 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">INT</span> <input type="number" id="ed_int" value="${u.int||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">CON</span> <input type="number" id="ed_con" value="${u.con||5}" min="1"></div>
-    <div class="edit-row"><span class="lbl">HP</span> <input type="number" id="ed_hp" value="${u.hp||0}"> / Max <input type="number" id="ed_hpMax" value="${u.hpMax||0}" style="width:80px;"></div>
-    <div class="edit-row"><span class="lbl">MP</span> <input type="number" id="ed_mp" value="${u.mp||0}"> / Max <input type="number" id="ed_mpMax" value="${u.mpMax||0}" style="width:80px;"></div>
+    <div class="edit-row"><span class="lbl">HP</span> <input type="number" id="ed_hp" value="${u.hp||0}"> / Max <input type="number" id="ed_hpMax" value="${u.hpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 CON 자동 역산)</span></div>
+    <div class="edit-row"><span class="lbl">MP</span> <input type="number" id="ed_mp" value="${u.mp||0}"> / Max <input type="number" id="ed_mpMax" value="${u.mpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 INT 자동 역산)</span></div>
     <div class="edit-row"><span class="lbl">랭킹 순위</span> <input type="number" id="ed_rankPos" value="${u.rankPos||0}" min="0" max="10" style="width:80px;"> <span style="font-size:11px;color:#666;">0=미등록, 1~10=순위</span></div>
 
     <div class="edit-row"><span class="lbl">장착 무기</span>
@@ -8887,9 +8902,27 @@ async function adminSaveUser(){
   u.int = parseInt($('ed_int').value) || 5;
   u.con = parseInt($('ed_con').value) || 5;
   u.hp = parseInt($('ed_hp').value) || 0;
-  u.hpMax = parseInt($('ed_hpMax').value) || 0;
   u.mp = parseInt($('ed_mp').value) || 0;
-  u.mpMax = parseInt($('ed_mpMax').value) || 0;
+  // hpMax / mpMax 입력값에 맞춰 CON / INT 역산 (calcDerived가 매번 공식으로 덮어쓰므로)
+  // 공식:  hpMax = 26 + (lv-1)*2 + (con-5)*2  →  con = 5 + (hpMax - 26 - (lv-1)*2)/2
+  //        mpMax = 25 + (lv-1)*1 + (int-5)*5  →  int = 5 + (mpMax - 25 - (lv-1))/5
+  const lvForCalc = u.level || 1;
+  const editedHpMax = parseInt($('ed_hpMax').value);
+  if (!isNaN(editedHpMax) && editedHpMax > 0){
+    const expectedHp = 26 + (lvForCalc - 1) * 2 + (u.con - 5) * 2;
+    if (editedHpMax !== expectedHp){
+      u.con = Math.max(0, 5 + Math.round((editedHpMax - 26 - (lvForCalc - 1) * 2) / 2));
+    }
+    u.hpMax = 26 + (lvForCalc - 1) * 2 + (u.con - 5) * 2;
+  }
+  const editedMpMax = parseInt($('ed_mpMax').value);
+  if (!isNaN(editedMpMax) && editedMpMax > 0){
+    const expectedMp = 25 + (lvForCalc - 1) * 1 + (u.int - 5) * 5;
+    if (editedMpMax !== expectedMp){
+      u.int = Math.max(0, 5 + Math.round((editedMpMax - 25 - (lvForCalc - 1)) / 5));
+    }
+    u.mpMax = 25 + (lvForCalc - 1) * 1 + (u.int - 5) * 5;
+  }
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
   // 자동 커서 이동 권한
   const afEl = $('ed_autoFocus');
