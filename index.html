@@ -212,7 +212,7 @@
   #pg-main {
     display:none;
   }
-  #pg-main.active { display:flex; gap:6px; }
+  #pg-main.active { display:flex; gap:6px; align-items:flex-start; }
   #game { width:900px; background:#FFFFCC; padding:6px; border:1px solid #555; }
   #chat { width:320px; background:#fff; border:1px solid #555; display:flex; flex-direction:column; max-height:760px; }
 
@@ -1133,6 +1133,23 @@
         <button class="admin-btn small" onclick="adminBulkAllAccounts('xpUp')">전 계정 스탯P +</button>
         <button class="admin-btn small" onclick="adminBulkAllAccounts('blessing')" style="background:#ffd700;color:#3a1a00;">전 계정 ✨축복 +</button>
         <span style="font-size:11px;color:#666;margin-left:4px;">로컬 슬롯에 저장된 모든 가입 계정 대상</span>
+      </div>
+
+      <div class="sys-group">
+        <h4>💬 채팅 히스토리 조회 (유저 메시지)</h4>
+        <div style="font-size:11px;color:#666;margin-bottom:6px;">시스템·공지 메시지는 제외되며, 유저 채팅만 조회됩니다. (보관 기간 30일)</div>
+        <label>닉네임: <input type="text" id="adminChatHistNick" placeholder="(빈칸=전체)" style="width:120px;font-size:11px;"></label>
+        <label style="margin-left:6px;">키워드: <input type="text" id="adminChatHistKw" placeholder="검색어" style="width:160px;font-size:11px;"></label>
+        <label style="margin-left:6px;">최근 일수:
+          <select id="adminChatHistDays" style="font-size:11px;">
+            <option value="1">1일</option>
+            <option value="7" selected>7일</option>
+            <option value="30">30일</option>
+          </select>
+        </label>
+        <button class="admin-btn small" onclick="adminLoadChatHistory()">조회</button>
+        <button class="admin-btn small" onclick="adminPurgeOldChats()" style="background:#7E181E;">30일 이전 삭제</button>
+        <div id="adminChatHistResult" style="margin-top:8px;max-height:340px;overflow-y:auto;background:#1a1a2a;border:1px solid #5a1a6b;padding:6px;font-size:11px;line-height:1.5;color:#ddd;"></div>
       </div>
 
       <div class="sys-group">
@@ -9641,6 +9658,83 @@ async function adminGrantOnline(field){
 function _adminUpdateOnlineCount(){
   const el = $('adminOnlineCount');
   if (el) el.textContent = _adminGetOnlineNicks().length;
+}
+
+// 채팅 히스토리 조회 (유저 메시지만, kind='user')
+async function adminLoadChatHistory(){
+  const out = $('adminChatHistResult');
+  if (!sb || !_adminCloudActive){
+    out.innerHTML = '<div style="color:#a02050;">클라우드 운영자 세션에서만 동작합니다.</div>';
+    return;
+  }
+  const nick = ($('adminChatHistNick').value || '').trim();
+  const kw   = ($('adminChatHistKw').value   || '').trim();
+  const days = parseInt($('adminChatHistDays').value) || 7;
+  const since = new Date(Date.now() - days * 86400 * 1000).toISOString();
+  out.innerHTML = '<div style="color:#888;">조회 중...</div>';
+  try {
+    let q = sb.from('chat_messages')
+      .select('id, nickname, message, kind, created_at')
+      .eq('kind', 'user')
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(500);
+    if (nick) q = q.eq('nickname', nick);
+    if (kw)   q = q.ilike('message', `%${kw}%`);
+    const { data, error } = await q;
+    if (error){
+      out.innerHTML = `<div style="color:#a02050;">조회 실패: ${error.message || error}</div>`;
+      return;
+    }
+    if (!Array.isArray(data) || data.length === 0){
+      out.innerHTML = '<div style="color:#888;">조건에 맞는 메시지가 없습니다.</div>';
+      return;
+    }
+    const escapeH = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    const fmtDt = iso => {
+      try {
+        const d = new Date(iso);
+        const yy = String(d.getFullYear()).slice(2);
+        const mm = String(d.getMonth()+1).padStart(2,'0');
+        const dd = String(d.getDate()).padStart(2,'0');
+        const hh = String(d.getHours()).padStart(2,'0');
+        const mi = String(d.getMinutes()).padStart(2,'0');
+        return `${yy}/${mm}/${dd} ${hh}:${mi}`;
+      } catch(e){ return '-'; }
+    };
+    const rows = data.map(r => `
+      <div style="padding:4px 6px;border-bottom:1px dotted #444;">
+        <span style="color:#888;font-size:10px;">${fmtDt(r.created_at)}</span>
+        <span style="color:#66ccff;font-weight:bold;margin-left:6px;">${escapeH(r.nickname)}</span>
+        <span style="color:#fff;margin-left:6px;">${escapeH(r.message)}</span>
+        <button onclick="adminDeleteChatMsg(${r.id})" style="float:right;padding:1px 6px;font-size:10px;background:#7E181E;color:#fff;border:0;cursor:pointer;">삭제</button>
+      </div>
+    `).join('');
+    out.innerHTML = `<div style="color:#ffcc00;margin-bottom:4px;">${data.length}건 (최신순, 최대 500건)</div>` + rows;
+  } catch(e){
+    out.innerHTML = `<div style="color:#a02050;">조회 실패: ${e.message || e}</div>`;
+  }
+}
+async function adminDeleteChatMsg(id){
+  if (!sb || !_adminCloudActive) return;
+  if (!confirm(`메시지 #${id}를 삭제할까요? (복구 불가)`)) return;
+  try {
+    const { error } = await sb.from('chat_messages').delete().eq('id', id);
+    if (error){ alert('삭제 실패: ' + error.message); return; }
+    adminLoadChatHistory();
+  } catch(e){ alert('삭제 실패: ' + (e.message||e)); }
+}
+async function adminPurgeOldChats(){
+  if (!sb || !_adminCloudActive){ alert('클라우드 운영자 세션에서만 동작합니다.'); return; }
+  if (!confirm('30일 이전의 모든 채팅 메시지(시스템 포함)를 영구 삭제할까요?\n복구할 수 없습니다.')) return;
+  const cutoff = new Date(Date.now() - 30 * 86400 * 1000).toISOString();
+  try {
+    const { error, count } = await sb.from('chat_messages')
+      .delete({ count: 'exact' })
+      .lt('created_at', cutoff);
+    if (error){ alert('삭제 실패: ' + error.message); return; }
+    alert(`✔ 30일 이전 메시지 ${count != null ? count + '건 ' : ''}삭제 완료`);
+  } catch(e){ alert('삭제 실패: ' + (e.message||e)); }
 }
 
 async function adminBroadcast(){
