@@ -1257,7 +1257,7 @@
           <td id="m-train" class="row2" onclick="openTrain()">훈련소</td>
           <td id="m-rank" class="row2" onclick="openRank()">랭킹전</td>
           <td id="m-raid" class="row2" onclick="openActiveRaid()">공격대</td>
-          <td class="row2" onclick="openBlessShop()" style="color:#ffd700;font-weight:bold;">✨ 축복의 상점</td>
+          <td class="row2" onclick="openBlessShop()" style="color:#000;font-weight:bold;">✨ 축복의 상점</td>
           <td id="m-profile" class="row2" onclick="openProfilePage()">프로필 관리</td>
         </tr></table>
       </div>
@@ -1491,7 +1491,7 @@
           <div class="col-center">
             <div class="hunt-actions">
               <button class="btn-go" onclick="raidNextTurn()" id="raidNextBtn">▶ 다음 턴</button>
-              <button class="btn-back" onclick="raidFleeToMain()">메인으로 돌아가기</button>
+              <button class="btn-back" onclick="raidFleeToMain()">메인으로<br>돌아가기</button>
             </div>
             <div class="train-log" id="raidLog"></div>
           </div>
@@ -1616,7 +1616,7 @@
           <div class="col-center">
             <div class="hunt-actions">
               <button class="btn-go" onclick="rankNextTurn()" id="rankNextBtn">▶ 다음 턴</button>
-              <button class="btn-back" onclick="exitRank()">메인으로 돌아가기</button>
+              <button class="btn-back" onclick="exitRank()">메인으로<br>돌아가기</button>
             </div>
             <div class="train-log" id="rankLog"></div>
           </div>
@@ -1720,7 +1720,7 @@
           <div class="col-center">
             <div class="hunt-actions">
               <button class="btn-go" onclick="huntNextTurn()" id="huntNextBtn">▶ 다음 턴</button>
-              <button class="btn-back" onclick="exitHunt()">메인으로 돌아가기</button>
+              <button class="btn-back" onclick="exitHunt()">메인으로<br>돌아가기</button>
             </div>
             <div class="train-log" id="huntLog"></div>
           </div>
@@ -1794,7 +1794,7 @@
         </table>
         <div id="blessShopList" style="padding:14px;"></div>
         <div class="shop-actions">
-          <button class="btn-back" onclick="showContent('main')">메인으로 돌아가기</button>
+          <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
         </div>
         <div id="bshop_msg" class="heal-result"></div>
       </div>
@@ -1805,7 +1805,8 @@
       <div class="shop-page">
         <div class="shop-head">무기상점</div>
         <div class="shop-desc">
-          무기는 공격력을 증가시켜 카드의 효과를 극대화할 수 있습니다. <b>공격대</b>를 통해 고성능 무기를 노려보고, <b>상점에서 팔지 않는 종결 무기</b>도 노려보세요!
+          무기는 공격력을 증가시켜 카드의 효과를 극대화할 수 있습니다.<br>
+          <b>공격대</b>를 통해 고성능 무기를 노려보고, <b>상점에서 팔지 않는 종결 무기</b>도 노려보세요!
         </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
@@ -1815,7 +1816,7 @@
         </table>
         <div class="equip-list" id="weaponList"></div>
         <div class="shop-actions">
-          <button class="btn-back" onclick="showContent('main')">메인으로 돌아가기</button>
+          <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
         </div>
         <div id="wshop_msg" class="heal-result"></div>
       </div>
@@ -1826,7 +1827,8 @@
       <div class="shop-page">
         <div class="shop-head">방어구상점</div>
         <div class="shop-desc">
-          방어구는 방어력을 증가시켜 유저가 생존하는데 중요한 역할을 합니다. <b>공격대</b>를 통해 고성능 방어구를 노려보고, <b>상점에서 팔지 않는 종결 방어구</b>도 노려보세요!
+          방어구는 방어력을 증가시켜 유저가 생존하는데 중요한 역할을 합니다.<br>
+          <b>공격대</b>를 통해 고성능 방어구를 노려보고, <b>상점에서 팔지 않는 종결 방어구</b>도 노려보세요!
         </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
@@ -1836,7 +1838,7 @@
         </table>
         <div class="equip-list" id="armorList"></div>
         <div class="shop-actions">
-          <button class="btn-back" onclick="showContent('main')">메인으로 돌아가기</button>
+          <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
         </div>
         <div id="ashop_msg" class="heal-result"></div>
       </div>
@@ -3394,8 +3396,8 @@ function inventoryLimit(){
 
 // ─── 축복의 상점 ───
 const BLESS_SHOP_ITEMS = [
-  { id:'card1',  name:'카드 1뽑',           cost:1,   icon:'assets/wc3_reforged_used/BTNGrunt-Reforged.png', tooltip:'여신의 축복 1개로 카드 1장을 뽑는다. 가챠 확률은 카드샵과 동일.' },
-  { id:'card20', name:'카드 20뽑',          cost:10,  icon:'assets/wc3_reforged_used/BTNGrunt-Reforged.png', tooltip:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다.' },
+  { id:'card1',  name:'카드 1뽑',           cost:1,   icon:'assets/wc3_reforged_used/card1.png',  tooltip:'여신의 축복 1개로 카드 1장을 뽑는다. 가챠 확률은 카드샵과 동일.' },
+  { id:'card20', name:'카드 20뽑',          cost:10,  icon:'assets/wc3_reforged_used/card20.png', tooltip:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다.' },
   { id:'box',    name:'축복의 랜덤 상자',   cost:100, icon:'assets/wc3_reforged_used/Legendary Chest.jpg',  tooltip:'여신의 축복을 담은 신성한 상자이다. 유니크 카드, 영웅 카드, 스탯 포인트 중 한 가지를 얻을 수 있다.' },
 ];
 function openBlessShop(){
