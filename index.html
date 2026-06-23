@@ -5322,8 +5322,8 @@ async function rankEnd(result){
   let bodyHtml = '';
   if (c.mode === 'attack'){
     if (outcome === 'win'){
-      // 사용자가 targetRank로 등록
-      promoteToRank(c.targetRank);
+      // 사용자가 targetRank로 등록 — await로 완료 보장
+      await promoteToRank(c.targetRank);
       bodyHtml = `<p style="color:#060;">🏆 승리! <b>${c.targetRank}위</b>로 등록되었습니다.</p>
         ${rewardLine}
         <p>랭킹 보너스: <b>+${getRankBonus()} G</b> / 수행마다 자동 적용됩니다.</p>`;
@@ -5385,34 +5385,25 @@ async function rankEnd(result){
 }
 
 async function promoteToRank(targetRank){
-  // 클라우드: 서버 RPC가 처리. 본인이 이전 N위였다면 이전 슬롯이 NPC로 채워지도록 보정 후처리.
+  // 클라우드: 서버 RPC가 처리.
   if (sb){
     try {
-      await cloudSaveNow();   // build_user_slot이 최신 데이터 사용하도록
-      const oldRank = GAME.ranking && GAME.ranking.myRank;
+      try { await cloudSaveNow(); } catch(e){ console.warn('[promoteToRank cloudSave]', e); }
       const { error } = await sb.rpc('rank_register', { target_rank: targetRank });
       if (error){
         console.warn('[rank_register]', error);
-        toast('랭킹 등록 실패: ' + (error.message||error));
+        alert('랭킹 등록 실패: ' + (error.message || error) + '\n\nSupabase RPC rank_register 정의를 확인하세요.');
         return;
       }
       await loadRankingFromCloud();
-      // 보정 — 본인 닉이 두 슬롯에 남아 있다면(서버가 swap 처리한 경우) 옛 슬롯을 NPC로 덮어 퇴출 효과
-      try {
-        const myNick = GAME.player && GAME.player.name;
-        if (myNick){
-          for (let i = 0; i < GAME.ranking.slots.length; i++){
-            if (i === targetRank - 1) continue;
-            const s = GAME.ranking.slots[i];
-            if (s && s.name === myNick){
-              // RPC가 있으면 호출, 없으면 클라이언트 캐시만 정리 (서버 동기화는 SQL 수정 필요)
-              try { await sb.rpc('rank_evict_slot', { slot_rank: i + 1 }); } catch(e){}
-              break;
-            }
-          }
-        }
-      } catch(e){}
-    } catch(e){ console.warn('[promoteToRank]', e); }
+      // 본인이 정말 target_rank로 갔는지 검증
+      if (GAME.ranking && GAME.ranking.myRank !== targetRank){
+        console.warn('[rank_register] myRank not updated', GAME.ranking.myRank, 'expected', targetRank);
+      }
+    } catch(e){
+      console.warn('[promoteToRank]', e);
+      alert('랭킹 등록 실패: ' + (e.message || e));
+    }
     return;
   }
   // 오프라인 fallback — swap이 아닌 퇴출: 본인 이전 슬롯은 NPC로 채움
