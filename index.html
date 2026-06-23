@@ -3729,11 +3729,30 @@ function buyBlessItem(id){
       if (!confirm(`⚠ 보유 카드 한도(${inventoryLimit()}장)에 도달했습니다.\n상자 결과가 카드일 경우 지급이 누락될 수 있습니다. 그래도 진행할까요?`)) return;
     }
     p.blessing -= it.cost;
-    // 보상 추첨 — 유니크 85% / 영웅 10% / 스탯 P 5%
+    // 보상 추첨 (합 100%):
+    //  유니크 70 · 영웅 10 · 스탯P 5
+    //  무기:  성왕의엘라하 2.5 · 명왕의레퀴엠 2.5 · 고대군주의엑스칼리버 1.5 · 천신의아스트레이아 1.0
+    //  방어구: 성왕의큐이라스 2.5 · 명왕의크루오르 2.5 · 고대군주의브리간딘 1.5 · 천신의플루티드아머 1.0
     const r = Math.random();
     let resultMsg = '';
-    if (r < 0.85){
-      // 유니크 카드
+    const giveWeapon = (id) => {
+      const w = WEAPONS.find(x => x.id === id);
+      if (!w) return null;
+      if (!p.weapons) p.weapons = [];
+      p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
+      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ <b>${w.name}</b>을(를) 획득하셨습니다!`);
+      return `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
+    };
+    const giveArmor = (id) => {
+      const a = ARMORS.find(x => x.id === id);
+      if (!a) return null;
+      if (!p.armors) p.armors = [];
+      p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 <b>${a.name}</b>을(를) 획득하셨습니다!`);
+      return `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
+    };
+    if (r < 0.70){
+      // 유니크 카드 70%
       const pool = CARDS.filter(c => c.grade === 'unique' && c.id !== 'basic_atk');
       const card = pool[Math.floor(Math.random() * pool.length)];
       if (card){
@@ -3745,8 +3764,8 @@ function buyBlessItem(id){
         }
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🔮 유니크 카드 [${card.name}]을(를) 획득하셨습니다!`);
       }
-    } else if (r < 0.95){
-      // 영웅 카드
+    } else if (r < 0.80){
+      // 영웅 카드 10%
       const pool = CARDS.filter(c => c.grade === 'hero' && c.id !== 'basic_atk');
       const card = pool[Math.floor(Math.random() * pool.length)];
       if (card){
@@ -3758,12 +3777,22 @@ function buyBlessItem(id){
         }
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⭐ 영웅 카드 [${card.name}]을(를) 획득하셨습니다!`);
       }
-    } else {
-      // 스탯 포인트
+    } else if (r < 0.85){
+      // 스탯 포인트 5%
       p.xpUp = (p.xpUp || 0) + 1;
       resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
       chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`);
     }
+    // 무기 풀 — 누적 7.5%
+    else if (r < 0.875) resultMsg = giveWeapon('saint_elaha')      || resultMsg;
+    else if (r < 0.900) resultMsg = giveWeapon('lord_requiem')     || resultMsg;
+    else if (r < 0.915) resultMsg = giveWeapon('ancient_excalibur')|| resultMsg;
+    else if (r < 0.925) resultMsg = giveWeapon('divine_elaha')     || resultMsg;
+    // 방어구 풀 — 누적 7.5%
+    else if (r < 0.950) resultMsg = giveArmor('saint_cuirass')     || resultMsg;
+    else if (r < 0.975) resultMsg = giveArmor('lord_cruor')        || resultMsg;
+    else if (r < 0.990) resultMsg = giveArmor('ancient_brigandine')|| resultMsg;
+    else                resultMsg = giveArmor('divine_fluted')     || resultMsg;
     setBlessMsg(resultMsg, 'ok');
     setTimeout(() => alert(resultMsg), 200);
     renderSheet();
@@ -4861,10 +4890,13 @@ async function _getMyUserId(){
 }
 
 function _hydrateSlotDeck(slot){
-  if (!slot || !Array.isArray(slot.deck)) return slot;
+  if (!slot) return slot;
+  if (!Array.isArray(slot.deck)) slot.deck = [];
   slot.deck = slot.deck.map(c =>
     (typeof c === 'string') ? (CARDS.find(x => x.id === c) || BASIC_ATTACK) : c
   );
+  // 빈 덱이거나 슬롯이 모자라면 기본공격으로 보강 (특히 NPC 슬롯)
+  while (slot.deck.length < 10) slot.deck.push(BASIC_ATTACK);
   return slot;
 }
 
