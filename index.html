@@ -5,7 +5,7 @@
 <title>RE: 여신전쟁</title>
 <style>
   * { box-sizing:border-box; }
-  body { background:#7B7B7B; color:#000; font-family:"굴림",Gulim,sans-serif; font-size:12px; margin:0; padding:14px; }
+  body { background:#2a1f14 linear-gradient(180deg,#3a2a1a 0%,#1a1208 100%); background-attachment:fixed; min-height:100vh; color:#000; font-family:"굴림",Gulim,sans-serif; font-size:12px; margin:0; padding:14px; }
 
   /* ===== 페이지 시스템 ===== */
   .page { display:none; max-width:1000px; margin:0 auto; }
@@ -244,7 +244,17 @@
     min-height:calc(100vh - 12px);
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
-  body.combat-active:not(.layout-vertical) #chat { display:none; }
+  /* 전투 중 채팅창 — 우측 상단 고정 미니 사이즈로 노출 */
+  body.combat-active:not(.layout-vertical) #chat {
+    position:fixed; top:14px; right:14px;
+    width:280px; max-height:calc(100vh - 28px);
+    z-index:200;
+    box-shadow:-2px 2px 12px rgba(0,0,0,0.6);
+    border:2px solid #7E181E;
+  }
+  body.combat-active:not(.layout-vertical) #chatMsgs { max-height:none; }
+  /* 모바일 전투 중에는 채팅창 숨김 (좁아서 표시 어려움) */
+  body.combat-active.layout-vertical #chat { display:none; }
   body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
   body.combat-active:not(.layout-vertical) > #pg-main.active > #game > .main-bars { display:none; }
   .combat-grid {
@@ -276,7 +286,9 @@
 
   /* 세로 모드 (모바일) */
   body.layout-vertical { padding:6px; }
-  body.layout-vertical #pg-main.active { flex-direction:column; align-items:center; gap:6px; }
+  body.layout-vertical #pg-main.active { flex-direction:column; align-items:center !important; gap:6px; }
+  body.layout-vertical #chat { align-self:center !important; max-height:380px !important; }
+  body.layout-vertical #game { align-self:center !important; }
   body.layout-vertical #game { width:100%; max-width:480px; box-sizing:border-box; }
   body.layout-vertical #chat { width:100%; max-width:480px; max-height:260px; box-sizing:border-box; }
   body.layout-vertical .topbox { flex-wrap:wrap; }
@@ -461,7 +473,7 @@
   .menubar td:hover { background:#FFFF99; }
   .menubar td.row2 { background:#FFE8DC; }
   .menubar td.row2:hover { background:#FFFF99; }
-  .menubar td.row3 { background:#E0F0FF; }
+  .menubar td.row3 { background:#EFE0FF; }
   .menubar td.row3:hover { background:#FFFF99; }
   .menubar td.row2 small { display:block; font-size:10px; color:#666; }
   /* 수행 버튼 — 파스텔 살구 톤 */
@@ -1264,6 +1276,16 @@
         </tr>
       </table>
 
+      <div id="deckPresetBar" style="display:flex;gap:6px;padding:4px 2px;align-items:center;flex-wrap:wrap;font-size:11px;">
+        <span style="color:#7E181E;font-weight:bold;">덱 프리셋:</span>
+        <button onclick="loadDeckPreset(0)" id="presetLoad0" style="padding:3px 10px;background:#2e53b2;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">1번 불러오기</button>
+        <button onclick="saveDeckPreset(0)" style="padding:3px 8px;background:#666;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">💾</button>
+        <button onclick="loadDeckPreset(1)" id="presetLoad1" style="padding:3px 10px;background:#2e53b2;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">2번 불러오기</button>
+        <button onclick="saveDeckPreset(1)" style="padding:3px 8px;background:#666;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">💾</button>
+        <button onclick="loadDeckPreset(2)" id="presetLoad2" style="padding:3px 10px;background:#2e53b2;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">3번 불러오기</button>
+        <button onclick="saveDeckPreset(2)" style="padding:3px 8px;background:#666;color:#fff;border:0;cursor:pointer;border-radius:3px;font-size:11px;">💾</button>
+      </div>
+
       <div class="menubar">
         <table><tr>
           <td id="m-heal" onclick="openHeal()">회복의 샘물</td>
@@ -1280,11 +1302,11 @@
           <td id="m-profile" class="row2" onclick="openProfilePage()">프로필 관리</td>
         </tr></table>
         <table><tr>
-          <td class="row2" onclick="openHonor()" style="color:#a02050;font-weight:bold;">🏆 명예의 전당</td>
-          <td class="row2" style="visibility:hidden;"></td>
-          <td class="row2" style="visibility:hidden;"></td>
-          <td class="row2" style="visibility:hidden;"></td>
-          <td class="row2" style="visibility:hidden;"></td>
+          <td class="row3" onclick="openHonor()" style="color:#a02050;font-weight:bold;">🏆 명예의 전당</td>
+          <td class="row3" onclick="window.open('https://open.kakao.com/o/gZeYwJAi','_blank','noopener,noreferrer')" style="color:#5a1a6b;font-weight:bold;">💬 오픈채팅방</td>
+          <td class="row3" style="visibility:hidden;"></td>
+          <td class="row3" style="visibility:hidden;"></td>
+          <td class="row3" style="visibility:hidden;"></td>
         </tr></table>
       </div>
 
@@ -1909,19 +1931,8 @@
 
         <table class="shop-rates">
           <tr>
-            <td class="lbl">등급별 확률</td>
-            <td class="val">
-              <span class="rate normal">일반 73.9%</span>
-              <span class="rate rare">레어 25%</span>
-              <span class="rate unique">유니크 1.0%</span>
-              <span class="rate hero">영웅 0.1%</span>
-            </td>
-          </tr>
-          <tr>
             <td class="lbl">현재 골드</td>
             <td class="val"><b id="shop_gold">-</b> G</td>
-          </tr>
-          <tr>
             <td class="lbl">보유 카드</td>
             <td class="val">
               총 <b id="shop_inv_total">0</b>장 · 도감 <b id="shop_inv_unique">0</b>종
@@ -1930,10 +1941,10 @@
           </tr>
         </table>
 
+        <div id="gachaShopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 0;"></div>
+
         <div class="shop-actions">
-          <button class="btn-gacha-1" onclick="doGacha(1)">1뽑<br><small id="gacha_cost1">500 G</small></button>
-          <button class="btn-gacha-10" onclick="doGacha(10)">10뽑<br><small id="gacha_cost10">4500 G (10% 할인)</small></button>
-          <button class="btn-back" onclick="showContent('main')">돌아가기</button>
+          <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
         </div>
 
         <div id="shop_msg" class="heal-result"></div>
@@ -2186,11 +2197,11 @@ const CARDS = [
   { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'DEX +5, STR +2', fx:{type:'buff',dex:5,str:2} },
   { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'DEX + CON 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
   { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'DEX + 공격력으로 타격', fx:{type:'dmgStat',stats:['dex']} },
-  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)*2만큼 공격 / [은신] 선행 필요', fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2}, requires:'r21' },
+  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)*2만큼 공격 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2} },
   { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3 증가', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
   { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'STR 수치 만큼 1회 공격, 상대방 CON -2, 최대 HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
   { id:'n11', name:'돌던지기',       grade:'normal', icon:'hammer', text:'Str + Dex + 5 데미지', fx:{type:'dmgStat',stats:['str','dex'],bonus:5} },
-  { id:'n12', name:'디바우어매직',   grade:'normal', icon:'soul',   text:'HP 50, MP 50 회복', fx:{type:'heal',hp:50,mp:50} },
+  { id:'n12', name:'디바우어매직',   grade:'normal', icon:'soul',   text:'시전자에게 걸린 디버프를 제거하고, HP와 MP 50씩 회복 (디버프 없을 시 미발동)', fx:{type:'cleanseSelfDebuff',hp:50,mp:50} },
   { id:'n13', name:'디지즈클라우드', grade:'normal', icon:'cloud',  text:'6턴 동안 8 고정 데미지', fx:{type:'dot',turns:6,dmg:8} },
   { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'상대방 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
   { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 ~ 10 랜덤 데미지 / [소환의식] 선행 필요', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
@@ -2205,7 +2216,7 @@ const CARDS = [
   { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'상대방 INT + CON 만큼 고정 데미지', fx:{type:'dmgStat',stats:['int','con']} },
   { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'상대방 DEX -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
   { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'상대방 버프 해제 후 시전자에게 적용, 4턴 동안 해당 버프 지속', fx:{type:'stealBuff',turns:4} },
-  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 공격력 +2 증가 / [은신] 선행 필요', fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]}, requires:'r21' },
+  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 공격력 +2 증가 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]} },
   { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'상대방 공격력 -1 감소 / DEX 수치만큼 2회 타격', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
   { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100 회복', fx:{type:'sacrifice',hp:25,mp:100} },
   { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
@@ -2270,7 +2281,7 @@ const CARDS = [
   { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +11 증가', fx:{type:'buff',def:11} },
   { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +10 증가', fx:{type:'buff',def:10} },
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
-  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 동안 공격력*0.5 만큼 HP 회복', fx:{type:'hot',turns:2,heal:10} },
+  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 동안 공격력*0.5 만큼 HP 회복', fx:{type:'hotStat',stats:['str'],weaponBonus:true,mult:0.5,turns:2} },
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
   { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 공격력 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
@@ -2281,7 +2292,7 @@ const CARDS = [
   { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'[DEX + 35] 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
-  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가 및 3턴 동안 상대방 공격 50% 확률로 회피', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5}]} },
+  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
   { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전자 MP*0.2 자해 데미지 / 상대방 MP -20%', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2},{type:'dispel'}]} },
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'pctDebuff',stats:{dex:-0.5},turns:3},{type:'dispel'}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
@@ -2593,6 +2604,9 @@ function loadGame(name){
     const d = JSON.parse(s);
     if (!d.player) return false;
     GAME.player = d.player;
+    // 신규 필드 호환 — 기존 저장에 없으면 빈 프리셋 3슬롯 부여
+    if (!Array.isArray(GAME.player.deckPresets)) GAME.player.deckPresets = [null, null, null];
+    while (GAME.player.deckPresets.length < 3) GAME.player.deckPresets.push(null);
     GAME.myDeck = (d.myDeck || []).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK);
     while (GAME.myDeck.length < 15) GAME.myDeck.push(BASIC_ATTACK);
     // 인벤토리 로드 — 미인식 ID 추적
@@ -3110,6 +3124,52 @@ const GACHA = {
   ]
 };
 
+// 카드샵 — 각자 가격·확률·최대 등급 다름. 'legend'는 추후 오픈 예정 (잠금)
+const GACHA_SHOPS = {
+  normal: {
+    label: '일반 뽑기', icon: 'assets/wc3_reforged_used/cardshop_normal.png',
+    cost1: 500, cost10: 4500,
+    maxGradeKr: '일반',
+    table: [{ grade:'normal', rate:1.0 }],
+  },
+  rare: {
+    label: '레어 뽑기', icon: 'assets/wc3_reforged_used/cardshop_rare.jpg',
+    cost1: 1000, cost10: 9000,
+    maxGradeKr: '레어',
+    table: [
+      { grade:'normal', rate:0.65 },
+      { grade:'rare',   rate:0.35 },
+    ],
+  },
+  unique: {
+    label: '유니크 뽑기', icon: 'assets/wc3_reforged_used/cardshop_unique.png',
+    cost1: 5000, cost10: 45000,
+    maxGradeKr: '유니크',
+    table: [
+      { grade:'normal', rate:0.37 },
+      { grade:'rare',   rate:0.60 },
+      { grade:'unique', rate:0.03 },
+    ],
+  },
+  hero: {
+    label: '영웅 뽑기', icon: 'assets/wc3_reforged_used/cardshop_hero.png',
+    cost1: 10000, cost10: 90000,
+    maxGradeKr: '영웅',
+    table: [
+      { grade:'normal', rate:0.20 },
+      { grade:'rare',   rate:0.72 },
+      { grade:'unique', rate:0.07 },
+      { grade:'hero',   rate:0.01 },
+    ],
+  },
+  legend: {
+    label: '전설 뽑기', icon: 'assets/wc3_reforged_used/cardshop_legend.jpg',
+    locked: true,
+    maxGradeKr: '전설',
+    table: [],
+  },
+};
+
 // 저레벨 가챠 할인표 — Lv N = N×100G, Lv10+ = 정상가 1,000G
 const GACHA_LV_COST1 = {
   1: 100, 2: 200, 3: 300, 4: 400, 5: 500,
@@ -3183,13 +3243,22 @@ function _grantLv25Reward(p){
 }
 
 function pickGachaGrade(){
+  // 호환용 — 영웅 뽑기와 동일한 확률표 사용 (축복 상점 / 랭킹 보너스 등)
+  return pickGachaGradeForTable(GACHA_SHOPS.hero.table);
+}
+function pickGachaGradeForTable(table){
   let r = Math.random();
   let grade = 'normal';
-  for (const t of GACHA.table){ r -= t.rate; if (r<=0){ grade = t.grade; break; } }
-  // Lv 5 이하: 유니크·영웅이 추첨되면 레어로 다운그레이드
+  for (const t of table){ r -= t.rate; if (r<=0){ grade = t.grade; break; } }
+  // Lv 5 이하: 유니크·영웅이 추첨되면 레어로 다운그레이드 (정책 유지)
   const lv = (GAME.player && GAME.player.level) || 1;
   if (lv <= 5 && (grade === 'unique' || grade === 'hero')) grade = 'rare';
   return grade;
+}
+function pickGachaGradeFor(shopId){
+  const s = GACHA_SHOPS[shopId];
+  if (!s) return pickGachaGrade();
+  return pickGachaGradeForTable(s.table);
 }
 
 function openCardShop(){
@@ -3205,12 +3274,8 @@ function refreshShopUI(){
   $('shop_inv_total').textContent = GAME.inventory.length;
   const uniqueIds = new Set(GAME.inventory.map(c=>c.id));
   $('shop_inv_unique').textContent = uniqueIds.size;
-  // 가격 텍스트 동적 갱신 (레벨별 할인 적용 — Lv1~9 할인, Lv10+ 정상가)
-  const c1 = gachaCost1For(p.level);
-  const c10 = gachaCost10For(p.level);
-  const discountTag = (p.level < 10) ? ` (Lv${p.level} 할인)` : '';
-  if ($('gacha_cost1'))  $('gacha_cost1').textContent  = `${c1} G${discountTag}`;
-  if ($('gacha_cost10')) $('gacha_cost10').textContent = `${c10} G (10% 할인${discountTag ? ' + Lv'+p.level+' 할인' : ''})`;
+  // 4종 카드샵 그리드 렌더
+  renderGachaShopGrid();
   // 등급별 보유 카드 수 (판매 섹션)
   const counts = { normal:0, rare:0, unique:0, hero:0 };
   for (const c of GAME.inventory) if (counts[c.grade] != null) counts[c.grade]++;
@@ -3218,6 +3283,91 @@ function refreshShopUI(){
   if ($('sell_rare_count'))   $('sell_rare_count').textContent   = counts.rare;
   if ($('sell_unique_count')) $('sell_unique_count').textContent = counts.unique;
   if ($('sell_hero_count'))   $('sell_hero_count').textContent   = counts.hero;
+}
+
+const _GACHA_SHOP_ORDER = ['normal','rare','unique','hero','legend'];
+const _GRADE_COLORS = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700', legend:'#ff6600' };
+function renderGachaShopGrid(){
+  const el = $('gachaShopGrid');
+  if (!el) return;
+  const p = GAME.player;
+  // 5칸 grid로 자동 확장
+  el.style.gridTemplateColumns = `repeat(${_GACHA_SHOP_ORDER.length},1fr)`;
+  const html = _GACHA_SHOP_ORDER.map(id => {
+    const s = GACHA_SHOPS[id];
+    const border = _GRADE_COLORS[id] || '#888';
+    const iconUrl = s.icon.replace(/ /g,'%20');
+    if (s.locked){
+      // 잠금 카드 — 추후 오픈 예정
+      return `<div style="background:#f0f0f0;border:2px dashed ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);opacity:0.85;">
+        <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;filter:grayscale(40%);">
+        <div style="font-size:14px;font-weight:bold;color:${border};">${s.label} 🔒</div>
+        <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의 카드를<br>획득할 수 있습니다.</div>
+        <div style="margin-top:8px;padding:6px;background:#ddd;color:#555;font-size:11px;font-weight:bold;border-radius:3px;">추후 오픈 예정</div>
+      </div>`;
+    }
+    const can1  = p.gold >= s.cost1;
+    const can10 = p.gold >= s.cost10;
+    return `<div style="background:#fff;border:2px solid ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+      <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;">
+      <div style="font-size:14px;font-weight:bold;color:${border};">${s.label}</div>
+      <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의 카드를<br>획득할 수 있습니다.</div>
+      <div style="display:flex;gap:4px;justify-content:center;margin-top:6px;">
+        <button onclick="doGachaShop('${id}', 1)" ${can1?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can1?'#2e53b2':'#888'};color:#fff;border:0;cursor:${can1?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;">1뽑<br><small>${s.cost1.toLocaleString()} G</small></button>
+        <button onclick="doGachaShop('${id}', 10)" ${can10?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can10?'#a02050':'#888'};color:#fff;border:0;cursor:${can10?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;">10뽑<br><small>${s.cost10.toLocaleString()} G</small></button>
+      </div>
+    </div>`;
+  }).join('');
+  el.innerHTML = html;
+}
+
+function doGachaShop(shopId, n){
+  const s = GACHA_SHOPS[shopId];
+  if (!s) return;
+  const p = GAME.player;
+  const cost = (n === 10) ? s.cost10 : s.cost1 * n;
+  if (p.gold < cost){
+    setShopMsg(`⚠ 골드가 부족합니다. (필요: ${cost.toLocaleString()} G)`, 'err');
+    return;
+  }
+  const limit = inventoryLimit();
+  const room = limit - GAME.inventory.length;
+  if (room < n){
+    setShopMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${limit}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다.`, 'err');
+    return;
+  }
+  p.gold -= cost;
+  const pool = CARDS.filter(c => c.id !== 'basic_atk');
+  const results = [];
+  for (let i = 0; i < n; i++){
+    const grade = pickGachaGradeFor(shopId);
+    const gPool = pool.filter(c => c.grade === grade);
+    if (gPool.length === 0) continue;
+    const card = gPool[Math.floor(Math.random() * gPool.length)];
+    GAME.inventory.push(card);
+    results.push(card);
+  }
+  // 결과 렌더링
+  $('gachaResult').hidden = false;
+  $('gachaResultGrid').innerHTML = results.map(c => `
+    <div class="gc ${c.grade}">
+      <div class="ico">${cardIcon(c)}</div>
+      <div class="nm">${c.name}</div>
+      <div class="gr">[${gradeKr(c.grade)}]</div>
+      <div class="ef">${c.text||''}</div>
+    </div>
+  `).join('');
+  const heroes = results.filter(c => c.grade === 'hero').length;
+  const uniques = results.filter(c => c.grade === 'unique').length;
+  let msg = `✔ ${s.label} ${n}뽑 완료 (-${cost.toLocaleString()} G)`;
+  if (heroes) msg += ` · ⭐ 영웅 ${heroes}장!`;
+  if (uniques) msg += ` · 🔮 유니크 ${uniques}장!`;
+  setShopMsg(msg, 'ok');
+  if (heroes) chatSys(`★ ${p.name}님이 ${s.label}에서 ⭐ 영웅 카드 ${heroes}장을 뽑으셨습니다!`);
+  else if (uniques) chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 ${uniques}장 획득`);
+  renderSheet();
+  refreshShopUI();
+  saveGame();
 }
 
 // 카드 판매 가격 (관리자 패널에서 편집 가능)
@@ -3247,6 +3397,10 @@ function sellAllByGrade(grade){
   const price = CARD_SELL_PRICE[grade];
   const total = price * sellList.length;
   if (!confirm(`${gradeKr(grade)} 카드 ${sellList.length}장을 ${total.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
+  // 유니크 이상 — 한 번 더 확인
+  if (grade === 'unique' || grade === 'hero'){
+    if (!confirm(`⚠ 높은 등급의 카드가 포함되어 있습니다.\n\n${gradeKr(grade)} 카드 ${sellList.length}장\n\n정말 판매하시겠습니까?`)) return;
+  }
   GAME.inventory = keepList;
   p.gold += total;
   toast(`${gradeKr(grade)} 카드 ${sellList.length}장 판매 +${total.toLocaleString()}G`);
@@ -3269,6 +3423,10 @@ function sellOneCard(cardId){
     return;
   }
   const card = GAME.inventory[idx];
+  // 유니크 이상 — 한 번 더 확인
+  if (card.grade === 'unique' || card.grade === 'hero'){
+    if (!confirm(`⚠ 높은 등급의 카드입니다.\n\n「${card.name}」 [${gradeKr(card.grade)}]\n\n정말 판매하시겠습니까?`)) return;
+  }
   const price = CARD_SELL_PRICE[card.grade] || 1;
   GAME.inventory.splice(idx, 1);
   p.gold += price;
@@ -3419,6 +3577,13 @@ function sellSelectedCards(){
     .filter(g => planByGrade[g] > 0)
     .map(g => `${gradeKr(g)} ${planByGrade[g]}장`).join(', ');
   if (!confirm(`선택한 카드 ${totalCount}장 (${summary})을 ${totalGold.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
+  // 유니크 이상 포함 — 한 번 더 확인
+  if ((planByGrade.unique||0) + (planByGrade.hero||0) > 0){
+    const hi = [];
+    if (planByGrade.unique) hi.push(`유니크 ${planByGrade.unique}장`);
+    if (planByGrade.hero)   hi.push(`영웅 ${planByGrade.hero}장`);
+    if (!confirm(`⚠ 높은 등급의 카드가 포함되어 있습니다.\n\n${hi.join(', ')}\n\n정말 판매하시겠습니까?`)) return;
+  }
   // 장착분 보호하며 인스턴스 단위로 제거
   const equippedCounts = {};
   for (const dc of GAME.myDeck){
@@ -3672,30 +3837,53 @@ function renderHonorList(){
     return;
   }
   const medals = ['🥇','🥈','🥉'];
+  const myName = (GAME.player && GAME.player.name) || '';
   el.innerHTML = _honorRankers.map((r, i) => {
     const rank = i + 1;
     const medal = medals[i] || `${rank}.`;
-    return `<div class="honor-row" onclick="renderHonorDetail(${i})" style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #eee;cursor:pointer;">
+    const isMe = myName && r.name === myName;
+    const rowBg = isMe ? 'background:linear-gradient(90deg,#fff7c0,#ffe07a);border-left:4px solid #ff6600;' : '';
+    const meTag = isMe ? '<span style="background:#ff6600;color:#fff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">나</span>' : '';
+    return `<div class="honor-row" onclick="renderHonorDetail(${i})" style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #eee;cursor:pointer;${rowBg}">
       <div style="width:28px;text-align:center;font-weight:bold;color:#7E181E;font-size:14px;">${medal}</div>
       ${_honorAvatarHtml(r, 40)}
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:bold;color:#000;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(r.name||'?')}</div>
+        <div style="font-weight:bold;color:#000;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(r.name||'?')}${meTag}</div>
         <div style="font-size:11px;color:#555;">Lv ${r.level} · XP ${(r.xp||0).toLocaleString()}</div>
       </div>
     </div>`;
   }).join('');
 }
+function _honorEquipIcon(kind, item){
+  // 장비 카탈로그에서 icon path 찾기. 기본 무기/방어구는 카탈로그에 없어 fallback
+  let iconPath = null;
+  if (item && item.id){
+    const list = kind === 'weapon' ? WEAPONS : ARMORS;
+    const tpl = list.find(x => x.id === item.id);
+    if (tpl && tpl.icon) iconPath = tpl.icon;
+  }
+  if (iconPath){
+    return `<img src="${iconPath}" alt="" style="width:24px;height:24px;object-fit:contain;background:#000;border:1px solid #888;vertical-align:middle;margin-right:6px;flex:none;">`;
+  }
+  // 기본 장비 — 회색 박스 + 이니셜
+  const lbl = kind === 'weapon' ? '⚔' : '🛡';
+  return `<div style="width:24px;height:24px;background:#555;border:1px solid #888;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:14px;margin-right:6px;vertical-align:middle;flex:none;">${lbl}</div>`;
+}
 function renderHonorDetail(idx){
   const r = _honorRankers[idx];
   const el = $('honorDetail');
   if (!r){ el.innerHTML = '<div style="text-align:center;color:#888;padding:40px;">데이터 없음</div>'; return; }
-  // 상단 — 아바타·이름·기본
-  const wname = r.weapon ? `${r.weapon.name||'-'} (+${r.weapon.atkBonus||0})` : '-';
-  const aname = r.armor  ? `${r.armor.name||'-'}  (+${r.armor.defBonus||0})`   : '-';
+  const myName = (GAME.player && GAME.player.name) || '';
+  const isMe = myName && r.name === myName;
+  // 장비 — 아이콘 + 이름 + 보너스
+  const wname = r.weapon ? `${r.weapon.name||'-'} (+${r.weapon.atkBonus||0})` : '맨손';
+  const aname = r.armor  ? `${r.armor.name||'-'}  (+${r.armor.defBonus||0})`  : '없음';
+  const wIcon = _honorEquipIcon('weapon', r.weapon);
+  const aIcon = _honorEquipIcon('armor',  r.armor);
   const atkAvg = Array.isArray(r.atk) && r.atk.length >= 2 ? Math.round((r.atk[0]+r.atk[1])/2) : '-';
-  // 덱 (10개 슬롯)
-  const deck = (r.myDeck || []).slice(0, 10);
-  while (deck.length < 10) deck.push(BASIC_ATTACK);
+  // 덱 (15개 슬롯)
+  const deck = (r.myDeck || []).slice(0, 15);
+  while (deck.length < 15) deck.push(BASIC_ATTACK);
   const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700' };
   const deckHtml = deck.map((c, i) => {
     const borderColor = gradeColor[c.grade] || '#bbb';
@@ -3704,11 +3892,15 @@ function renderHonorDetail(idx){
       <div style="font-size:10px;color:${c.grade==='normal'?'#fff':borderColor};font-weight:bold;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${c.name||''}</div>
     </div>`;
   }).join('');
+  // 본인 강조: 페이지 전체에 황금 테두리
+  const meWrap = isMe ? 'border:3px solid #ff6600;box-shadow:0 0 20px rgba(255,170,0,0.4);padding:10px;border-radius:6px;background:linear-gradient(180deg,#fff7c0 0%, #fff 30%);' : '';
+  const meBadge = isMe ? '<span style="background:#ff6600;color:#fff;padding:2px 10px;border-radius:3px;font-size:12px;margin-left:8px;vertical-align:middle;">★ 본인</span>' : '';
   el.innerHTML = `
+    <div style="${meWrap}">
     <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:12px;border-bottom:2px solid #c9a26b;padding-bottom:12px;">
       ${_honorAvatarHtml(r, 120)}
       <div style="flex:1;">
-        <div style="font-size:22px;font-weight:bold;color:#7E181E;">${r.name||'?'}</div>
+        <div style="font-size:22px;font-weight:bold;color:#7E181E;">${r.name||'?'}${meBadge}</div>
         <div style="font-size:13px;color:#000;margin-top:4px;">
           <b>Lv ${r.level}</b> · 경험치 <b>${(r.xp||0).toLocaleString()}</b> · 스탯 P <b>${r.xpUp||0}</b>
         </div>
@@ -3726,10 +3918,11 @@ function renderHonorDetail(idx){
       <div>INT <b>${r.int}</b></div>
       <div>CON <b>${r.con}</b></div>
     </div>
-    <div style="font-size:12px;color:#555;margin-bottom:2px;">⚔ ${wname}</div>
-    <div style="font-size:12px;color:#555;margin-bottom:10px;">🛡 ${aname}</div>
-    <div style="font-weight:bold;color:#7E181E;margin-bottom:4px;">🃏 카드 덱 (1 ~ 10)</div>
+    <div style="font-size:12px;color:#333;margin-bottom:4px;display:flex;align-items:center;">${wIcon}${wname}</div>
+    <div style="font-size:12px;color:#333;margin-bottom:10px;display:flex;align-items:center;">${aIcon}${aname}</div>
+    <div style="font-weight:bold;color:#7E181E;margin-bottom:4px;">🃏 카드 덱 (1 ~ 15)</div>
     <div style="display:grid;grid-template-columns:repeat(5, 1fr);gap:6px;background:#222;padding:8px;border-radius:4px;">${deckHtml}</div>
+    </div>
   `;
 }
 function doGacha(n){
@@ -5171,10 +5364,11 @@ async function rankEnd(result){
 }
 
 async function promoteToRank(targetRank){
-  // 클라우드: 서버 RPC가 atomic하게 swap 처리
+  // 클라우드: 서버 RPC가 처리. 본인이 이전 N위였다면 이전 슬롯이 NPC로 채워지도록 보정 후처리.
   if (sb){
     try {
       await cloudSaveNow();   // build_user_slot이 최신 데이터 사용하도록
+      const oldRank = GAME.ranking && GAME.ranking.myRank;
       const { error } = await sb.rpc('rank_register', { target_rank: targetRank });
       if (error){
         console.warn('[rank_register]', error);
@@ -5182,17 +5376,38 @@ async function promoteToRank(targetRank){
         return;
       }
       await loadRankingFromCloud();
+      // 보정 — 본인 닉이 두 슬롯에 남아 있다면(서버가 swap 처리한 경우) 옛 슬롯을 NPC로 덮어 퇴출 효과
+      try {
+        const myNick = GAME.player && GAME.player.name;
+        if (myNick){
+          for (let i = 0; i < GAME.ranking.slots.length; i++){
+            if (i === targetRank - 1) continue;
+            const s = GAME.ranking.slots[i];
+            if (s && s.name === myNick){
+              // RPC가 있으면 호출, 없으면 클라이언트 캐시만 정리 (서버 동기화는 SQL 수정 필요)
+              try { await sb.rpc('rank_evict_slot', { slot_rank: i + 1 }); } catch(e){}
+              break;
+            }
+          }
+        }
+      } catch(e){}
     } catch(e){ console.warn('[promoteToRank]', e); }
     return;
   }
-  // 오프라인 fallback
+  // 오프라인 fallback — swap이 아닌 퇴출: 본인 이전 슬롯은 NPC로 채움
   const slots = GAME.ranking.slots;
   const myRank = GAME.ranking.myRank;
-  if (myRank === 0){
-    slots[targetRank - 1] = makeUserRankSlot();
-  } else {
-    [slots[myRank-1], slots[targetRank-1]] = [slots[targetRank-1], slots[myRank-1]];
+  if (myRank > 0 && myRank !== targetRank){
+    const usedNames = new Set(slots.map(s => s && s.name));
+    const availableNames = (typeof RANK_NPC_NAMES !== 'undefined')
+      ? RANK_NPC_NAMES.filter(n => !usedNames.has(n))
+      : [];
+    const newName = availableNames.length > 0
+      ? availableNames[0]
+      : ((typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES[rnd(0, RANK_NPC_NAMES.length-1)] : 'NPC');
+    slots[myRank - 1] = (typeof makeRankNPC === 'function') ? makeRankNPC(newName) : { name: newName, level: 1 };
   }
+  slots[targetRank - 1] = makeUserRankSlot();
   GAME.ranking.myRank = targetRank;
 }
 
@@ -5765,6 +5980,7 @@ function _ensureCombatExt(c){
   c.myFrog ||= 0; c.monFrog ||= 0;
   c.myEvade ||= null; c.monEvade ||= null;       // {turns, pct}
   c.myVoodoo ||= null; c.monVoodoo ||= null;     // {turns}
+  c.myStealth ||= 0; c.monStealth ||= 0;         // 은신 후 기습/맹독 사용 가능 잔여 턴 (정수)
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -5843,6 +6059,8 @@ function _buildCombatCtx(kind, caster){
     targEvade(){ return isP ? c.monEvade : c.myEvade; },
     setCastVoodoo(v){ if (isP) c.myVoodoo = v; else c.monVoodoo = v; },
     targVoodoo(){ return isP ? c.monVoodoo : c.myVoodoo; },
+    setCastStealth(turns){ if (isP) c.myStealth = turns; else c.monStealth = turns; },
+    getCastStealth(){ return isP ? (c.myStealth||0) : (c.monStealth||0); },
   };
 }
 function _addTurnBuff(buffs, turnBuffs, stat, value, turns){
@@ -5884,8 +6102,31 @@ function _computeMpCost(fx, castObj){
   }
   return 0;
 }
+// 카드가 적에게 HP 데미지를 주는 효과를 포함하는지 검사 (평타 자동 추가 판정용)
+const _OFFENSIVE_FX_TYPES = new Set([
+  'basicAtk','dmg','dmgSelf','dmgStat','dmgHits','dot','dotStat',
+  'mpDmg','lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dotPct',
+]);
+function _isOffensiveCard(card){
+  function check(fx){
+    if (!fx) return false;
+    if (fx.type === 'multi' && Array.isArray(fx.effects)) return fx.effects.some(check);
+    if (_OFFENSIVE_FX_TYPES.has(fx.type)) return true;
+    if (fx.type === 'sacrifice' && fx.dmgToEnemy) return true;
+    return false;
+  }
+  return check(card && card.fx);
+}
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return;
+  // 은신 상태 요구 — 기습/맹독은 은신 시전 후 3턴 윈도우 안에서만 발동
+  if (card.requireStealth){
+    const left = ctx.getCastStealth ? ctx.getCastStealth() : 0;
+    if (left <= 0){
+      ctx.log(`  ✱ ${ctx.castName} 은신 상태가 아님 — <b>${card.name}</b> 발동 실패`, 'info');
+      return;
+    }
+  }
   // 스탯 조건 검사 — AND: card.statReq:{str:10}, OR: card.statReqAny:[{str:10},{dex:10}]
   if (card.statReq){
     for (const s of Object.keys(card.statReq)){
@@ -5981,6 +6222,14 @@ function applyCardEffect(card, ctx){
     if (t === 'voodoo'){
       ctx.setCastVoodoo && ctx.setCastVoodoo({ turns: fx.turns });
       ctx.log(`  🌀 ${ctx.castName} ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
+      return;
+    }
+    if (t === 'stealth'){
+      // 시전자에게 은신 윈도우 부여 (기습/맹독 등 후속기 가능). max로 갱신해 매번 새로 시전하면 리셋
+      const turns = fx.turns || 3;
+      const cur = ctx.getCastStealth ? ctx.getCastStealth() : 0;
+      if (ctx.setCastStealth) ctx.setCastStealth(Math.max(cur, turns));
+      ctx.log(`  🥷 ${ctx.castName} 은신 상태 (${turns}턴 동안 기습·맹독 사용 가능)`, 'heal');
       return;
     }
     if (t === 'basicAtk'){ doDmg(rnd(ctx.castObj.atk[0], ctx.castObj.atk[1]) + (ctx.castBuffs.atk||0)); return; }
@@ -6160,8 +6409,9 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'hotStat'){
-      const base = statSum(fx.stats);
-      const heal = Math.floor(base * (fx.mult||1));
+      let base = statSum(fx.stats);
+      if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus||0);
+      const heal = Math.max(1, Math.floor(base * (fx.mult||1)));
       ctx.castHots.push({heal, turns:fx.turns});
       ctx.log(`  + ${ctx.castName} 핫 ${heal}×${fx.turns}턴`, 'heal');
       return;
@@ -6177,6 +6427,33 @@ function applyCardEffect(card, ctx){
       doDmg(dmg);
       ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + fx.steal);
       ctx.log(`  + HP ${fx.steal} 흡수`, 'heal');
+      return;
+    }
+    if (t === 'cleanseSelfDebuff'){
+      // 시전자에게 걸린 디버프(stat 음수) 검사
+      const cb = ctx.castBuffs;
+      const tbs = ctx.castTurnBuffs;
+      let has = false;
+      for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0){ has = true; break; } }
+      if (!has) for (const tb of tbs){ if ((tb.value||0) < 0){ has = true; break; } }
+      if (!has){
+        ctx.log(`  ✱ ${ctx.castName} 디버프가 없어 발동 실패`, 'info');
+        return;
+      }
+      // 음수 turnBuffs 제거 + castBuffs에서 역연산 (decay와 동일 로직)
+      for (let i = tbs.length - 1; i >= 0; i--){
+        const tb = tbs[i];
+        if ((tb.value||0) < 0){
+          cb[tb.stat] = (cb[tb.stat]||0) - tb.value;
+          tbs.splice(i, 1);
+        }
+      }
+      // 영구 디버프(turnBuffs 없이 직접 음수로 누적된 값)도 0으로 복귀
+      for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0) cb[k] = 0; }
+      // HP/MP 회복
+      if (fx.hp){ ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + fx.hp); }
+      if (fx.mp){ ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + fx.mp); }
+      ctx.log(`  ✓ ${ctx.castName} 디버프 제거 + HP+${fx.hp||0}/MP+${fx.mp||0}`, 'heal');
       return;
     }
     if (t === 'sacrifice'){
@@ -6327,6 +6604,10 @@ function applyCardEffect(card, ctx){
     ctx.log(`  (미구현 효과: ${t})`, 'info');
   }
   dispatch(fx);
+  // 공격 효과가 없는 카드(버프/회복/방어/변신 등)는 자동으로 기본 평타 1회 추가
+  if (card && card.id !== 'basic_atk' && !_isOffensiveCard(card)){
+    dispatch({ type:'basicAtk' });
+  }
 }
 
 // 통합 도트/핫/턴버프 처리
@@ -6378,6 +6659,9 @@ function processCombatTicks(kind){
   if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
   if (c.monVoodoo){ c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
+  // 은신 윈도우 감소
+  if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) log(`  · 은신 종료`, 'info'); }
+  if (c.monStealth && c.monStealth > 0){ c.monStealth--; if (c.monStealth === 0) log(`  · ${opp.name} 은신 종료`, 'info'); }
   // 개구리 변신 카운터 감소
   if (c.myFrog && c.myFrog > 0){ c.myFrog--; if (c.myFrog === 0) log(`  🐸 → 사람 모습으로 돌아왔습니다.`, 'sys'); }
   if (c.monFrog && c.monFrog > 0){ c.monFrog--; if (c.monFrog === 0) log(`  🐸 → ${opp.name}이(가) 사람 모습으로 돌아왔습니다.`, 'sys'); }
@@ -6411,11 +6695,13 @@ function _ensureTrainExt(){
   c.castedByMe ||= [];
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   c.myEvade ||= null; c.myVoodoo ||= null;
+  c.myStealth ||= 0;
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   o.turnBuffs ||= []; o.mpHots ||= []; o.stun ||= 0; o.reflect ||= null; o.selfDots ||= [];
   o.castedBy ||= [];
   o.evade ||= null; o.voodoo ||= null;
+  o.stealth ||= 0;
 }
 function _buildTrainCtx(caster){
   _ensureTrainExt();
@@ -6463,6 +6749,8 @@ function _buildTrainCtx(caster){
     targEvade(){ return isMe ? opp.evade : c.myEvade; },
     setCastVoodoo(v){ if (isMe) c.myVoodoo = v; else opp.voodoo = v; },
     targVoodoo(){ return isMe ? opp.voodoo : c.myVoodoo; },
+    setCastStealth(turns){ if (isMe) c.myStealth = turns; else opp.stealth = turns; },
+    getCastStealth(){ return isMe ? (c.myStealth||0) : (opp.stealth||0); },
   };
 }
 function isTrainStunned(caster){
@@ -6511,6 +6799,9 @@ function processTrainTicks(){
   if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
   if (opp.voodoo){ opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
+  // 은신 윈도우 감소
+  if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) trainLog(`  · 은신 종료`, 'info'); }
+  if (opp.stealth && opp.stealth > 0){ opp.stealth--; if (opp.stealth === 0) trainLog(`  · ${opp.name} 은신 종료`, 'info'); }
 }
 
 function huntFlee(){
@@ -6570,19 +6861,62 @@ function huntEnd(result){
     // HP·MP 0으로
     p.hp = 0;
     p.mp = 0;
-    // 1% 확률로 보유 카드 또는 장비 중 1개 파괴
+    // 패배 파괴 — 총 2%: 카드 1.2% + 장비 0.8%
+    //  • 카드 파괴: 장착 중인 레어 이상만 대상. 가장 높은 등급(동급은 가장 앞 슬롯)이 1.1배 가중치
+    //  • 장비 파괴: 장착 중인 무기/방어구만 대상 (기본 장비 제외, 균등 추첨)
     var destroyed = null;
-    if (Math.random() < 0.01){
-      var pools = [];
-      if (Array.isArray(GAME.inventory) && GAME.inventory.length) pools.push({arr:GAME.inventory, kind:'card'});
-      if (Array.isArray(p.weapons)    && p.weapons.length)        pools.push({arr:p.weapons, kind:'weapon'});
-      if (Array.isArray(p.armors)     && p.armors.length)         pools.push({arr:p.armors, kind:'armor'});
-      if (pools.length){
-        var pick = pools[Math.floor(Math.random()*pools.length)];
-        var idx  = Math.floor(Math.random() * pick.arr.length);
-        var item = pick.arr[idx];
-        pick.arr.splice(idx, 1);
-        destroyed = { kind: pick.kind, name: item && item.name || '?' };
+    var lossRoll = Math.random();
+    if (lossRoll < 0.012){
+      // 카드 파괴 — 장착 중 grade in (rare/unique/hero)
+      var candidates = [];
+      for (var ci = 0; ci < GAME.myDeck.length; ci++){
+        var c = GAME.myDeck[ci];
+        if (!c || c.id === 'basic_atk') continue;
+        if (c.grade === 'normal') continue;
+        candidates.push({ slot: ci, card: c });
+      }
+      if (candidates.length){
+        var gradeOrder = { rare:1, unique:2, hero:3 };
+        var topGrade = 0;
+        for (var k = 0; k < candidates.length; k++){
+          if (gradeOrder[candidates[k].card.grade] > topGrade) topGrade = gradeOrder[candidates[k].card.grade];
+        }
+        // 동급일 경우 가장 앞 슬롯 카드만 1.1배
+        var topIdx = -1;
+        for (var k = 0; k < candidates.length; k++){
+          if (gradeOrder[candidates[k].card.grade] === topGrade){ topIdx = k; break; }
+        }
+        var weights = candidates.map(function(_, k){ return k === topIdx ? 1.1 : 1.0; });
+        var sum = weights.reduce(function(a,b){ return a+b; }, 0);
+        var pickW = Math.random() * sum;
+        var chosen = candidates[candidates.length - 1];
+        for (var k = 0; k < candidates.length; k++){
+          pickW -= weights[k];
+          if (pickW <= 0){ chosen = candidates[k]; break; }
+        }
+        // 인벤토리에서 동일 id 1장 제거 + 덱 슬롯 비움
+        var invIdx = GAME.inventory.findIndex(function(c){ return c.id === chosen.card.id; });
+        if (invIdx >= 0) GAME.inventory.splice(invIdx, 1);
+        GAME.myDeck[chosen.slot] = BASIC_ATTACK;
+        destroyed = { kind: 'card', name: chosen.card.name };
+      }
+    } else if (lossRoll < 0.020){
+      // 장비 파괴 — 장착 중 무기/방어구 (기본 장비 제외)
+      var equipped = [];
+      if (p.weapon && p.weapon.id && p.weapon.id !== 'basic_club') equipped.push({ kind:'weapon', item:p.weapon });
+      if (p.armor  && p.armor.id  && p.armor.id  !== 'basic_cloth') equipped.push({ kind:'armor',  item:p.armor  });
+      if (equipped.length){
+        var ePick = equipped[Math.floor(Math.random() * equipped.length)];
+        if (ePick.kind === 'weapon'){
+          var widx = (p.weapons||[]).findIndex(function(x){ return x.id === ePick.item.id; });
+          if (widx >= 0) p.weapons.splice(widx, 1);
+          p.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
+        } else {
+          var aidx = (p.armors||[]).findIndex(function(x){ return x.id === ePick.item.id; });
+          if (aidx >= 0) p.armors.splice(aidx, 1);
+          p.armor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
+        }
+        destroyed = { kind: ePick.kind, name: ePick.item.name };
       }
     }
     // 패배 정보를 결과창에서 사용
@@ -7644,7 +7978,7 @@ const ICON_PMCARD_MAP = {
   'n25':'normal_025.png','n26':'normal_026.png','n27':'normal_027.png','n28':'normal_028.png',
   'n29':'normal_029.png','n30':'normal_030.png','n31':'normal_031.png','n32':'normal_032.png',
   'n33':'normal_033.png','n34':'normal_034.png','n35':'normal_035.png','n36':'normal_036.png',
-  'n37':'normal_037.png','n38':'normal_038.png','n39':'normal_039.png','n40':'normal_040.png',
+  'n37':'normal_037.png','n38':'BTNSacrifice-Reforged.png','n39':'normal_039.png','n40':'normal_040.png',
   'n41':'normal_041.png','n42':'normal_042.png','n43':'normal_043.png','n44':'normal_044.png',
   'n45':'normal_045.png','n46':'normal_046.png','n47':'normal_047.png','n48':'normal_048.png',
   'n49':'normal_049.png','n50':'normal_050.png','n51':'normal_051.png','n52':'normal_052.png',
@@ -7665,7 +7999,7 @@ const ICON_PMCARD_MAP = {
   'r17':'rare_097.png','r18':'rare_098.png','r19':'rare_099.png','r20':'rare_100.png',
   'r21':'rare_101.png','r22':'rare_102.png','r23':'rare_023.png','r24':'rare_104.png',
   'r25':'rare_105.png','r26':'rare_106.png','r27':'rare_107.png','r28':'rare_108.png',
-  'r29':'rare_109.png','r30':'rare_030.png',
+  'r29':'rare_109.png','r30':'BTNCrushingWave-Reforged.png',
   // ── 유니크 6종 (pmlist2 카드 #119~#124 = rare_119~rare_124) ──
   'u01':'rare_119.png','u02':'rare_120.png','u03':'rare_121.png',
   'u04':'rare_122.png','u05':'rare_123.png','u06':'rare_124.png',
@@ -7681,6 +8015,7 @@ const ICON_PMCARD_MAP = {
   'r39':'rare_116.png',   // 프리징브레스
   'r31':'rare_117.png',   // 회복스크롤
   'r32':'rare_118.png',   // 힐링웨이브
+  'r37':'BTNEngineeringUpgrade-Reforged.png',   // 엔지니어링업그레이드
 };
 
 // 카드 아이콘 — pmcards 우선, wc3_icons 차선, SVG fallback
@@ -7823,6 +8158,7 @@ function newCharacter(name, comment, pw){
     autoFocus:false,  // 운영자 부여 시 다음턴·한번더 버튼이 자동 focus되어 스페이스바 연타 가능
     tutorialDone:false,  // 첫 입장 시 튜토리얼 자동 실행 트리거
     blessing: 0,  // 여신의 축복 (공격대 막타 +1 확정 드롭. 축복 상점에서 카드/상자 구매)
+    deckPresets: [null, null, null],  // 카드 덱 프리셋 3개 (각 슬롯은 카드 id 배열 또는 null)
     huntHistory: [],  // 최근 10전투 결과 ('win'/'lose'/'flee')
     huntGraceRemain: 0,  // 남은 grace 전투 수 (해당 기간 동안 몬스터 레벨 -5)
     avatar: _pickDefaultFace(),  // 신규 유저 기본 초상화 (랜덤 face)
@@ -8392,6 +8728,17 @@ function _resizeImageToDataUrl(file, maxDim, quality){
   });
 }
 
+// 전투 활성 시 myBuffs(영구 buff/debuff 합) 반환. 없으면 null
+function _getActiveCombatBuffs(){
+  const candidates = [
+    GAME.huntCombat && !GAME.huntCombat.finished ? GAME.huntCombat.myBuffs : null,
+    GAME.raidCombat && !GAME.raidCombat.finished ? GAME.raidCombat.myBuffs : null,
+    GAME.rankCombat && !GAME.rankCombat.finished ? GAME.rankCombat.myBuffs : null,
+    GAME.trainCombat && !GAME.trainCombat.finished ? GAME.trainCombat.myBuffs : null,
+  ];
+  for (const b of candidates) if (b) return b;
+  return null;
+}
 function renderSheet(){
   const p = GAME.player; if (!p) return;
   calcDerived(p);
@@ -8421,9 +8768,27 @@ function renderSheet(){
   setText('s_gold', (p.gold||0).toLocaleString());
   setText('s_str', p.str);
   setText('s_dex', p.dex);
-  setText('s_int', p.int);
-  setText('s_con', p.con);
-  setText('s_atk', Math.round((p.atk[0] + p.atk[1]) / 2));
+  // 전투 중이면 myBuffs 합산 표시
+  const cb = _getActiveCombatBuffs();
+  const buffSpan = (delta) => {
+    if (!delta) return '';
+    const sign = delta > 0 ? '+' : '';
+    const color = delta > 0 ? '#7eff7e' : '#ff7e7e';
+    return ` <span style="font-size:10px;color:${color};">(${sign}${delta})</span>`;
+  };
+  const setHtml = (id, html) => { const el = $(id); if (el) el.innerHTML = html; };
+  const strDelta = (cb && cb.str) | 0;
+  const dexDelta = (cb && cb.dex) | 0;
+  const intDelta = (cb && cb.int) | 0;
+  const conDelta = (cb && cb.con) | 0;
+  const atkDelta = (cb && cb.atk) | 0;
+  const defDelta = (cb && cb.def) | 0;
+  setHtml('s_str', p.str + buffSpan(strDelta));
+  setHtml('s_dex', p.dex + buffSpan(dexDelta));
+  setHtml('s_int', p.int + buffSpan(intDelta));
+  setHtml('s_con', p.con + buffSpan(conDelta));
+  const atkAvg = Math.round((p.atk[0] + p.atk[1]) / 2);
+  setHtml('s_atk', atkAvg + buffSpan(atkDelta));
   if (isMobile){
     setText('s_weapon', '+' + (p.weapon.atkBonus||0));
     setText('s_armor',  '+' + (p.armor.defBonus||0));
@@ -8435,7 +8800,7 @@ function renderSheet(){
     const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt);
     const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt);
   }
-  setText('s_def', p.def);
+  setHtml('s_def', p.def + buffSpan(defDelta));
   if ($('myRank')){
     const r = (GAME.ranking && GAME.ranking.myRank) || 0;
     $('myRank').textContent = r === 0 ? '미등록' : (r + '위');
@@ -8449,16 +8814,17 @@ function renderSheet(){
   $('bar_mp_text').textContent = 'MP ' + Math.max(0,p.mp) + ' / ' + p.mpMax;
   // 전투 화면 좌측 플레이어 패널 (class-based)
   const setCls = (cls, val) => document.querySelectorAll('.'+cls).forEach(el => el.textContent = val);
+  const setClsHtml = (cls, html) => document.querySelectorAll('.'+cls).forEach(el => el.innerHTML = html);
   const setWidth = (cls, val) => document.querySelectorAll('.'+cls).forEach(el => el.style.width = val);
   setCls('p-combat-name', p.name);
   setCls('p-combat-level', p.level);
   setCls('p-combat-hp', p.hp + ' / ' + p.hpMax);
   setCls('p-combat-mp', p.mp + ' / ' + p.mpMax);
-  setCls('p-combat-str', p.str);
-  setCls('p-combat-dex', p.dex);
-  setCls('p-combat-int', p.int);
-  setCls('p-combat-con', p.con);
-  setCls('p-combat-atk', Math.round((p.atk[0] + p.atk[1]) / 2));
+  setClsHtml('p-combat-str', p.str + buffSpan(strDelta));
+  setClsHtml('p-combat-dex', p.dex + buffSpan(dexDelta));
+  setClsHtml('p-combat-int', p.int + buffSpan(intDelta));
+  setClsHtml('p-combat-con', p.con + buffSpan(conDelta));
+  setClsHtml('p-combat-atk', atkAvg + buffSpan(atkDelta));
   // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
   const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
   const avHtml = hasAv
@@ -8517,6 +8883,66 @@ function resetStats(){
   saveGame();
 }
 
+// ─── 카드 덱 프리셋 (3개) ───
+function _ensureDeckPresets(){
+  if (!GAME.player) return;
+  if (!Array.isArray(GAME.player.deckPresets)) GAME.player.deckPresets = [null, null, null];
+  while (GAME.player.deckPresets.length < 3) GAME.player.deckPresets.push(null);
+}
+function saveDeckPreset(slot){
+  if (!GAME.player) return;
+  _ensureDeckPresets();
+  const existing = GAME.player.deckPresets[slot];
+  if (existing){
+    if (!confirm(`프리셋 ${slot+1}번을 현재 덱 구성으로 덮어쓸까요?`)) return;
+  }
+  GAME.player.deckPresets[slot] = GAME.myDeck.map(c => c ? c.id : 'basic_atk');
+  toast(`✔ 프리셋 ${slot+1}번에 현재 덱을 저장했습니다.`);
+  renderDeckPresetLabels();
+  saveGame();
+}
+function loadDeckPreset(slot){
+  if (!GAME.player) return;
+  _ensureDeckPresets();
+  const ids = GAME.player.deckPresets[slot];
+  if (!Array.isArray(ids) || ids.length === 0){
+    toast(`프리셋 ${slot+1}번이 비어 있습니다. 💾 버튼으로 먼저 저장하세요.`);
+    return;
+  }
+  if (!confirm(`프리셋 ${slot+1}번을 현재 덱에 적용할까요?\n(현재 덱은 덮어써집니다)`)) return;
+  // 보유 카드 검증 — 카드별 보유 수량을 초과해서 장착하지 않도록
+  const owned = {};
+  for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+  const used = {};
+  const newDeck = ids.slice(0, 15).map(id => {
+    if (id === 'basic_atk' || !id) return BASIC_ATTACK;
+    const card = CARDS.find(c => c.id === id);
+    if (!card) return BASIC_ATTACK;
+    const cap = owned[id] || 0;
+    const u = used[id] || 0;
+    if (u >= cap) return BASIC_ATTACK;  // 보유분 초과 시 기본공격으로
+    used[id] = u + 1;
+    return card;
+  });
+  while (newDeck.length < 15) newDeck.push(BASIC_ATTACK);
+  GAME.myDeck = newDeck;
+  renderDeck();
+  renderSheet();
+  toast(`✔ 프리셋 ${slot+1}번을 덱에 적용했습니다.`);
+  saveGame();
+}
+function renderDeckPresetLabels(){
+  if (!GAME.player) return;
+  _ensureDeckPresets();
+  for (let i = 0; i < 3; i++){
+    const btn = document.getElementById('presetLoad' + i);
+    if (!btn) continue;
+    const has = Array.isArray(GAME.player.deckPresets[i]) && GAME.player.deckPresets[i].length > 0;
+    btn.textContent = has ? `${i+1}번 불러오기` : `${i+1}번 (비어있음)`;
+    btn.style.opacity = has ? '1' : '0.55';
+  }
+}
+
 function renderDeck(){
   const maxSlots = maxDeckSlots();
   for (let i=0;i<15;i++){
@@ -8541,6 +8967,7 @@ function renderDeck(){
       td.onclick = ()=>openMyCardPick(i);
     }
   }
+  try { renderDeckPresetLabels(); } catch(e){}
 }
 
 // ─── 로그인 ───
@@ -8974,6 +9401,30 @@ window.addEventListener('beforeunload', () => {
   try { if (_chatChannel) _chatChannel.untrack(); } catch(e){}
 });
 
+// PC 메인 화면에서 채팅창 높이를 게임 박스에 동기화 (전투 모드/모바일은 자체 CSS 우선)
+(function syncChatHeightToGame(){
+  function apply(){
+    const g = document.getElementById('game');
+    const c = document.getElementById('chat');
+    if (!g || !c) return;
+    if (document.body.classList.contains('combat-active')) { c.style.height = ''; return; }
+    if (document.body.classList.contains('layout-vertical')) { c.style.height = ''; return; }
+    c.style.height = g.offsetHeight + 'px';
+  }
+  function init(){
+    const g = document.getElementById('game');
+    if (!g){ setTimeout(init, 200); return; }
+    apply();
+    if (typeof ResizeObserver !== 'undefined'){
+      const ro = new ResizeObserver(apply);
+      ro.observe(g);
+    }
+    window.addEventListener('resize', apply);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
+
 // ─── 공격대 타이머 (메인 화면에서 작동) ───
 let _raidTickCount = 0;
 setInterval(()=>{
@@ -9096,6 +9547,7 @@ async function loadAdminUsers(){
             hp: p.hp || 0, hpMax: p.hpMax || 0, mp: p.mp || 0, mpMax: p.mpMax || 0,
             str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
             gold: p.gold || 0,
+            blessing: p.blessing || 0,
             weapon: p.weapon || { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
             armor:  p.armor  || { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
             weapons: p.weapons || [],
@@ -9109,6 +9561,7 @@ async function loadAdminUsers(){
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
             updated_at: row.updated_at,
+            _origData: d,   // adminSaveUser가 신규 필드 보존하기 위해 원본 보관
           });
         }
       }
@@ -9441,10 +9894,12 @@ async function adminSaveUser(){
     const key = saveKeyFor(newName);
     const saved = JSON.parse(localStorage.getItem(key) || '{}');
     saved.player = {
+      ...(saved.player || {}),    // tutorialDone, deckPresets, huntHistory 등 보존
       name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
       hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
       str:u.str, dex:u.dex, int:u.int, con:u.con,
-      gold:u.gold, weapon:u.weapon, armor:u.armor,
+      gold:u.gold, blessing: u.blessing || 0,
+      weapon:u.weapon, armor:u.armor,
       weapons: u.weapons || [],
       armors: u.armors || [],
       rank:saved.player ? saved.player.rank : '평민',
@@ -9494,13 +9949,16 @@ async function adminSaveUser(){
       alert('운영자 세션이 만료되었습니다. 다시 로그인하세요.');
       return;
     }
-    // 데이터 payload 조립
+    // 데이터 payload 조립 — 기존 saves의 player 객체와 merge해 신규 필드(tutorialDone/deckPresets 등)도 보존
+    const prevPlayer = (u._origData && u._origData.player) || {};
     const payloadData = {
       player: {
+        ...prevPlayer,
         name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
         hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
         str:u.str, dex:u.dex, int:u.int, con:u.con,
-        gold:u.gold, weapon:u.weapon, armor:u.armor,
+        gold:u.gold, blessing: u.blessing || 0,
+        weapon:u.weapon, armor:u.armor,
         weapons: u.weapons || [],
         armors: u.armors || [],
         rank: u.rank || '평민',
