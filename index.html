@@ -244,16 +244,23 @@
     min-height:calc(100vh - 12px);
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
-  /* 전투 중 채팅창 — 화면 하단 가로로 긴 형태 (덱을 가리지 않도록) */
+  /* 전투 중 채팅창 — 게임 박스 아래에 가로로 길게. 페이지 스크롤로 같이 내려감 */
+  body.combat-active:not(.layout-vertical) #pg-main.active {
+    flex-direction:column !important;
+    align-items:center !important;
+  }
   body.combat-active:not(.layout-vertical) #chat {
-    position:fixed; left:50%; bottom:8px; transform:translateX(-50%);
-    width:92vw; max-width:1400px; height:180px; max-height:180px;
-    z-index:200; flex-direction:column;
+    position:static; transform:none;
+    align-self:center;
+    width:96vw; max-width:1400px;
+    height:auto; max-height:280px;
+    margin-top:10px;
+    flex-direction:column;
     box-shadow:0 -2px 12px rgba(0,0,0,0.6);
     border:2px solid #7E181E;
     background:#fff;
   }
-  body.combat-active:not(.layout-vertical) #chatMsgs { flex:1; max-height:none; overflow-y:auto; }
+  body.combat-active:not(.layout-vertical) #chatMsgs { flex:1 1 auto; max-height:200px; min-height:120px; overflow-y:auto; }
   /* 모바일 전투 중에는 채팅창 숨김 (좁아서 표시 어려움) */
   body.combat-active.layout-vertical #chat { display:none; }
   body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
