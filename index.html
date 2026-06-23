@@ -1084,29 +1084,10 @@
         <span style="font-size:10px;color:#888;margin-left:6px;">인벤토리 급감 등 이상 감지 시 자동 보존</span>
       </div>
       <div class="sys-group">
-        <h4>카드 뽑기 확률·가격</h4>
-        <label>정상 1뽑 가격 (Lv10+): <input type="number" id="adminGachaCost1" style="width:80px;"> G</label>
-        <label>정상 10뽑 가격 (Lv10+): <input type="number" id="adminGachaCost10" style="width:80px;"> G</label>
-        <br>
-        <label>일반: <input type="number" id="adminRateNormal" step="0.001" style="width:80px;"></label>
-        <label>레어: <input type="number" id="adminRateRare" step="0.001" style="width:80px;"></label>
-        <label>유니크: <input type="number" id="adminRateUnique" step="0.001" style="width:80px;"></label>
-        <label>영웅: <input type="number" id="adminRateHero" step="0.001" style="width:80px;"></label>
-        <button class="admin-btn" onclick="adminApplyGacha()">적용</button>
-        <div style="margin-top:6px;font-size:11px;">
-          <b>Lv1~9 1뽑 할인표</b> (G)
-          <span style="margin-left:4px;">Lv1 <input type="number" id="adminLvCost1" style="width:55px;"></span>
-          <span>Lv2 <input type="number" id="adminLvCost2" style="width:55px;"></span>
-          <span>Lv3 <input type="number" id="adminLvCost3" style="width:55px;"></span>
-          <span>Lv4 <input type="number" id="adminLvCost4" style="width:55px;"></span>
-          <span>Lv5 <input type="number" id="adminLvCost5" style="width:55px;"></span>
-          <span>Lv6 <input type="number" id="adminLvCost6" style="width:55px;"></span>
-          <span>Lv7 <input type="number" id="adminLvCost7" style="width:55px;"></span>
-          <span>Lv8 <input type="number" id="adminLvCost8" style="width:55px;"></span>
-          <span>Lv9 <input type="number" id="adminLvCost9" style="width:55px;"></span>
-          <button class="admin-btn small" onclick="adminApplyLvCost()">할인표 적용</button>
-        </div>
-        <div style="margin-top:6px;font-size:11px;">
+        <h4>🃏 카드 뽑기 (4종 상점별 확률·가격)</h4>
+        <div id="adminGachaShops" style="font-size:11px;"></div>
+        <button class="admin-btn" onclick="adminApplyGachaShops()" style="margin-top:6px;">상점 가격·확률 적용</button>
+        <div style="margin-top:10px;font-size:11px;">
           <b>카드 판매가</b>
           <label>일반: <input type="number" id="adminSellNormal" style="width:55px;"></label>
           <label>레어: <input type="number" id="adminSellRare" style="width:55px;"></label>
@@ -1114,6 +1095,14 @@
           <label>영웅: <input type="number" id="adminSellHero" style="width:60px;"></label>
           <button class="admin-btn small" onclick="adminApplySellPrice()">적용</button>
         </div>
+      </div>
+
+      <div class="sys-group">
+        <h4>📦 축복의 랜덤 상자 — 보상 확률</h4>
+        <div style="font-size:10px;color:#888;margin-bottom:4px;">소수(0.70 = 70%) 입력. 합계 1.0 권장.</div>
+        <div id="adminBlessBoxRates" style="font-size:11px;display:grid;grid-template-columns:repeat(2,1fr);gap:4px;"></div>
+        <button class="admin-btn" onclick="adminApplyBlessBoxRates()" style="margin-top:6px;">상자 확률 적용</button>
+        <div id="adminBlessBoxSum" style="font-size:11px;color:#666;margin-top:4px;"></div>
       </div>
 
       <div class="sys-group">
@@ -3634,6 +3623,21 @@ function inventoryLimit(){
 }
 
 // ─── 축복의 상점 ───
+// 축복의 랜덤 상자 — 보상 풀 (admin에서 확률 조정 가능). 합 1.0 권장
+const BLESS_BOX_REWARDS = [
+  { id:'unique_card', label:'🔮 유니크 카드 (랜덤 1장)',     rate:0.70 },
+  { id:'hero_card',   label:'⭐ 영웅 카드 (랜덤 1장)',       rate:0.10 },
+  { id:'stat_point',  label:'✨ 스탯 포인트 +1',              rate:0.05 },
+  { id:'w_saint_elaha',       label:'⚔ 성왕의 엘라하',          rate:0.025, kind:'weapon', itemId:'saint_elaha' },
+  { id:'w_lord_requiem',      label:'⚔ 명왕의 레퀴엠',          rate:0.025, kind:'weapon', itemId:'lord_requiem' },
+  { id:'w_ancient_excalibur', label:'⚔ 고대 군주의 엑스칼리버', rate:0.015, kind:'weapon', itemId:'ancient_excalibur' },
+  { id:'w_divine_elaha',      label:'⚔ 천신의 아스트레이아',    rate:0.010, kind:'weapon', itemId:'divine_elaha' },
+  { id:'a_saint_cuirass',     label:'🛡 성왕의 큐이라스',        rate:0.025, kind:'armor',  itemId:'saint_cuirass' },
+  { id:'a_lord_cruor',        label:'🛡 명왕의 크루오르',        rate:0.025, kind:'armor',  itemId:'lord_cruor' },
+  { id:'a_ancient_brigandine',label:'🛡 고대 군주의 브리간딘',   rate:0.015, kind:'armor',  itemId:'ancient_brigandine' },
+  { id:'a_divine_fluted',     label:'🛡 천신의 플루티드 아머',   rate:0.010, kind:'armor',  itemId:'divine_fluted' },
+];
+
 const BLESS_SHOP_ITEMS = [
   {
     id:'card1', name:'카드 1뽑', cost:1,
@@ -3729,70 +3733,50 @@ function buyBlessItem(id){
       if (!confirm(`⚠ 보유 카드 한도(${inventoryLimit()}장)에 도달했습니다.\n상자 결과가 카드일 경우 지급이 누락될 수 있습니다. 그래도 진행할까요?`)) return;
     }
     p.blessing -= it.cost;
-    // 보상 추첨 (합 100%):
-    //  유니크 70 · 영웅 10 · 스탯P 5
-    //  무기:  성왕의엘라하 2.5 · 명왕의레퀴엠 2.5 · 고대군주의엑스칼리버 1.5 · 천신의아스트레이아 1.0
-    //  방어구: 성왕의큐이라스 2.5 · 명왕의크루오르 2.5 · 고대군주의브리간딘 1.5 · 천신의플루티드아머 1.0
-    const r = Math.random();
+    // 가중 추첨 — BLESS_BOX_REWARDS (admin에서 조정 가능)
+    const totalW = BLESS_BOX_REWARDS.reduce((s, x) => s + (x.rate || 0), 0) || 1;
+    let pick = Math.random() * totalW;
+    let chosen = BLESS_BOX_REWARDS[BLESS_BOX_REWARDS.length - 1];
+    for (const rw of BLESS_BOX_REWARDS){
+      pick -= (rw.rate || 0);
+      if (pick <= 0){ chosen = rw; break; }
+    }
     let resultMsg = '';
-    const giveWeapon = (id) => {
-      const w = WEAPONS.find(x => x.id === id);
-      if (!w) return null;
-      if (!p.weapons) p.weapons = [];
-      p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
-      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ <b>${w.name}</b>을(를) 획득하셨습니다!`);
-      return `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
-    };
-    const giveArmor = (id) => {
-      const a = ARMORS.find(x => x.id === id);
-      if (!a) return null;
-      if (!p.armors) p.armors = [];
-      p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
-      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 <b>${a.name}</b>을(를) 획득하셨습니다!`);
-      return `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
-    };
-    if (r < 0.70){
-      // 유니크 카드 70%
-      const pool = CARDS.filter(c => c.grade === 'unique' && c.id !== 'basic_atk');
+    if (chosen.id === 'unique_card' || chosen.id === 'hero_card'){
+      const grade = chosen.id === 'unique_card' ? 'unique' : 'hero';
+      const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk');
       const card = pool[Math.floor(Math.random() * pool.length)];
       if (card){
+        const emoji = grade === 'hero' ? '⭐' : '🔮';
         if (GAME.inventory.length >= inventoryLimit()){
-          resultMsg = `📦 🔮 유니크 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
+          resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
         } else {
           GAME.inventory.push(card);
-          resultMsg = `📦 🔮 유니크 카드 획득 — ${card.name}`;
+          resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 획득 — ${card.name}`;
         }
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🔮 유니크 카드 [${card.name}]을(를) 획득하셨습니다!`);
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`);
       }
-    } else if (r < 0.80){
-      // 영웅 카드 10%
-      const pool = CARDS.filter(c => c.grade === 'hero' && c.id !== 'basic_atk');
-      const card = pool[Math.floor(Math.random() * pool.length)];
-      if (card){
-        if (GAME.inventory.length >= inventoryLimit()){
-          resultMsg = `📦 ⭐ 영웅 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
-        } else {
-          GAME.inventory.push(card);
-          resultMsg = `📦 ⭐⭐ 영웅 카드 획득 — ${card.name} ⭐⭐`;
-        }
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⭐ 영웅 카드 [${card.name}]을(를) 획득하셨습니다!`);
-      }
-    } else if (r < 0.85){
-      // 스탯 포인트 5%
+    } else if (chosen.id === 'stat_point'){
       p.xpUp = (p.xpUp || 0) + 1;
       resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
       chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`);
+    } else if (chosen.kind === 'weapon'){
+      const w = WEAPONS.find(x => x.id === chosen.itemId);
+      if (w){
+        if (!p.weapons) p.weapons = [];
+        p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
+        resultMsg = `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ <b>${w.name}</b>을(를) 획득하셨습니다!`);
+      }
+    } else if (chosen.kind === 'armor'){
+      const a = ARMORS.find(x => x.id === chosen.itemId);
+      if (a){
+        if (!p.armors) p.armors = [];
+        p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+        resultMsg = `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 <b>${a.name}</b>을(를) 획득하셨습니다!`);
+      }
     }
-    // 무기 풀 — 누적 7.5%
-    else if (r < 0.875) resultMsg = giveWeapon('saint_elaha')      || resultMsg;
-    else if (r < 0.900) resultMsg = giveWeapon('lord_requiem')     || resultMsg;
-    else if (r < 0.915) resultMsg = giveWeapon('ancient_excalibur')|| resultMsg;
-    else if (r < 0.925) resultMsg = giveWeapon('divine_elaha')     || resultMsg;
-    // 방어구 풀 — 누적 7.5%
-    else if (r < 0.950) resultMsg = giveArmor('saint_cuirass')     || resultMsg;
-    else if (r < 0.975) resultMsg = giveArmor('lord_cruor')        || resultMsg;
-    else if (r < 0.990) resultMsg = giveArmor('ancient_brigandine')|| resultMsg;
-    else                resultMsg = giveArmor('divine_fluted')     || resultMsg;
     setBlessMsg(resultMsg, 'ok');
     setTimeout(() => alert(resultMsg), 200);
     renderSheet();
@@ -10325,17 +10309,9 @@ function adminQuickResetStats(){
 // 시스템 설정
 function refreshAdminSystem(){
   try { _adminUpdateOnlineCount(); } catch(e){}
-  $('adminGachaCost1').value = GACHA.cost1;
-  $('adminGachaCost10').value = GACHA.cost10;
-  $('adminRateNormal').value = GACHA.table[0].rate;
-  $('adminRateRare').value   = GACHA.table[1].rate;
-  $('adminRateUnique').value = GACHA.table[2].rate;
-  $('adminRateHero').value   = GACHA.table[3].rate;
-  // 저레벨 가챠 할인표
-  for (let lv = 1; lv <= 9; lv++){
-    const el = $('adminLvCost' + lv);
-    if (el) el.value = GACHA_LV_COST1[lv] || 0;
-  }
+  // 4종 카드샵 + 축복 상자 렌더
+  try { renderAdminGachaShops(); } catch(e){ console.warn('[adminGachaShops]', e); }
+  try { renderAdminBlessBoxRates(); } catch(e){ console.warn('[adminBlessBoxRates]', e); }
   // 카드 판매가
   if ($('adminSellNormal')) $('adminSellNormal').value = CARD_SELL_PRICE.normal;
   if ($('adminSellRare'))   $('adminSellRare').value   = CARD_SELL_PRICE.rare;
@@ -10358,26 +10334,74 @@ function refreshAdminSystem(){
   fillBossSel('adminRaidMistBossSel', RAID_BOSSES.mist, mist.bossId);
 }
 
-function adminApplyGacha(){
-  GACHA.cost1 = parseFloat($('adminGachaCost1').value) || 500;
-  GACHA.cost10 = parseFloat($('adminGachaCost10').value) || 4500;
-  GACHA.table[0].rate = parseFloat($('adminRateNormal').value) || 0.739;
-  GACHA.table[1].rate = parseFloat($('adminRateRare').value)   || 0.25;
-  GACHA.table[2].rate = parseFloat($('adminRateUnique').value) || 0.01;
-  GACHA.table[3].rate = parseFloat($('adminRateHero').value)   || 0.001;
-  const total = GACHA.table.reduce((s,t) => s+t.rate, 0);
-  alert(`✔ 가챠 설정 적용 (확률 합계: ${(total*100).toFixed(1)}%)`);
+// ─── 4종 카드샵 (GACHA_SHOPS) 가격·확률 admin UI ───
+const _GACHA_SHOP_EDIT_ORDER = ['normal','rare','unique','hero'];
+const _GACHA_GRADE_ORDER = ['normal','rare','unique','hero'];
+function renderAdminGachaShops(){
+  const el = $('adminGachaShops');
+  if (!el) return;
+  el.innerHTML = _GACHA_SHOP_EDIT_ORDER.map(sid => {
+    const s = GACHA_SHOPS[sid]; if (!s) return '';
+    const rateRows = _GACHA_GRADE_ORDER.map(g => {
+      const t = (s.table||[]).find(x => x.grade === g);
+      const v = t ? t.rate : 0;
+      return `<label style="margin-right:6px;">${gradeKr(g)} <input type="number" step="0.001" min="0" max="1" id="ag_${sid}_${g}" value="${v}" style="width:60px;"></label>`;
+    }).join('');
+    return `<div style="border:1px solid #aaa;border-radius:4px;padding:6px;margin-bottom:4px;background:#f8f8f8;color:#000;">
+      <b style="color:#7E181E;">${s.label}</b>
+      <label style="margin-left:8px;">1뽑 <input type="number" id="ag_${sid}_c1" value="${s.cost1||0}" style="width:80px;"> G</label>
+      <label style="margin-left:4px;">10뽑 <input type="number" id="ag_${sid}_c10" value="${s.cost10||0}" style="width:80px;"> G</label>
+      <div style="margin-top:4px;">${rateRows}</div>
+    </div>`;
+  }).join('');
+}
+function adminApplyGachaShops(){
+  const sums = [];
+  for (const sid of _GACHA_SHOP_EDIT_ORDER){
+    const s = GACHA_SHOPS[sid]; if (!s) continue;
+    const c1  = parseFloat($('ag_'+sid+'_c1').value);  if (!isNaN(c1))  s.cost1  = c1;
+    const c10 = parseFloat($('ag_'+sid+'_c10').value); if (!isNaN(c10)) s.cost10 = c10;
+    const newTable = [];
+    let sum = 0;
+    for (const g of _GACHA_GRADE_ORDER){
+      const v = parseFloat($('ag_'+sid+'_'+g).value);
+      if (!isNaN(v) && v > 0){ newTable.push({ grade:g, rate:v }); sum += v; }
+    }
+    if (newTable.length){ s.table = newTable; }
+    sums.push(`${s.label} ${(sum*100).toFixed(1)}%`);
+  }
+  alert('✔ 카드샵 가격·확률 적용\n\n' + sums.join('\n'));
 }
 
-function adminApplyLvCost(){
-  for (let lv = 1; lv <= 9; lv++){
-    const el = $('adminLvCost' + lv);
-    if (el){
-      const v = parseInt(el.value);
-      if (!isNaN(v) && v >= 0) GACHA_LV_COST1[lv] = v;
-    }
+// ─── 축복의 랜덤 상자 보상 확률 admin UI ───
+function renderAdminBlessBoxRates(){
+  const el = $('adminBlessBoxRates');
+  if (!el) return;
+  el.innerHTML = BLESS_BOX_REWARDS.map((rw, i) =>
+    `<label style="display:flex;align-items:center;gap:4px;font-size:11px;color:#000;background:#f8f8f8;border:1px solid #ccc;padding:2px 4px;border-radius:3px;">
+      <span style="flex:1;">${rw.label}</span>
+      <input type="number" step="0.001" min="0" max="1" id="abr_${i}" value="${rw.rate}" style="width:64px;">
+    </label>`
+  ).join('');
+  _updateBlessBoxSum();
+}
+function _updateBlessBoxSum(){
+  let sum = 0;
+  for (let i = 0; i < BLESS_BOX_REWARDS.length; i++){
+    const v = parseFloat(($('abr_'+i)||{}).value);
+    sum += isNaN(v) ? 0 : v;
   }
-  alert('✔ 저레벨 할인표 적용');
+  const el = $('adminBlessBoxSum');
+  if (el) el.textContent = `현재 합계: ${(sum*100).toFixed(1)}% (1.0 = 100% 권장)`;
+}
+function adminApplyBlessBoxRates(){
+  let sum = 0;
+  for (let i = 0; i < BLESS_BOX_REWARDS.length; i++){
+    const v = parseFloat($('abr_'+i).value);
+    if (!isNaN(v) && v >= 0){ BLESS_BOX_REWARDS[i].rate = v; sum += v; }
+  }
+  _updateBlessBoxSum();
+  alert(`✔ 축복의 랜덤 상자 확률 적용 (합계 ${(sum*100).toFixed(1)}%)`);
 }
 
 function adminApplySellPrice(){
