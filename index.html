@@ -2314,7 +2314,7 @@ const CARDS = [
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.90,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5 ~ 10 랜덤 데미지 *5 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'3턴 동안 상대방의 타격을 모두 시전자 HP 회복으로 변환 / 상대방의 버프 강탈, 디버프 반사', fx:{type:'multi',effects:[{type:'stealBuff',turns:3},{type:'voodoo',turns:3}]} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프와 반사막·회피를 강탈하고, 시전자에게 걸린 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealBuff'},{type:'stealDefenses'},{type:'debuffReflect'}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
@@ -6056,6 +6056,7 @@ function _buildCombatCtx(kind, caster){
     // 회피·부두 — 시전자에게 부여, 데미지 받을 때 대상의 evade/voodoo 체크
     setCastEvade(e){ if (isP) c.myEvade = e; else c.monEvade = e; },
     targEvade(){ return isP ? c.monEvade : c.myEvade; },
+    clearTargEvade(){ if (isP) c.monEvade = null; else c.myEvade = null; },
     setCastVoodoo(v){ if (isP) c.myVoodoo = v; else c.monVoodoo = v; },
     targVoodoo(){ return isP ? c.monVoodoo : c.myVoodoo; },
     setCastStealth(turns){ if (isP) c.myStealth = turns; else c.monStealth = turns; },
@@ -6221,6 +6222,60 @@ function applyCardEffect(card, ctx){
     if (t === 'voodoo'){
       ctx.setCastVoodoo && ctx.setCastVoodoo({ turns: fx.turns });
       ctx.log(`  🌀 ${ctx.castName} ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
+      return;
+    }
+    if (t === 'stealDefenses'){
+      // 시전 시점에 적의 반사막/회피를 시전자에게 강탈 (상위 등급 카드 정책)
+      const stolen = [];
+      const targRefl = ctx.targReflect && ctx.targReflect();
+      if (targRefl){
+        ctx.setCastReflect && ctx.setCastReflect(targRefl);
+        ctx.clearTargReflect && ctx.clearTargReflect();
+        stolen.push('반사막');
+      }
+      const targEv = ctx.targEvade && ctx.targEvade();
+      if (targEv){
+        ctx.setCastEvade && ctx.setCastEvade(targEv);
+        ctx.clearTargEvade && ctx.clearTargEvade();
+        stolen.push('회피');
+      }
+      if (stolen.length){
+        ctx.log(`  🌀 ${ctx.castName} → ${ctx.targName}의 ${stolen.join('·')} 강탈!`, ctx.castLogCls || 'heal');
+      }
+      return;
+    }
+    if (t === 'debuffReflect'){
+      // 시전 시점 시전자에게 걸린 디버프(stat 음수 turnBuffs + 영구 음수 castBuffs)를 적에게 반사
+      const cb = ctx.castBuffs;
+      const myTbs = ctx.castTurnBuffs;
+      const tbObj = ctx.targBuffs;
+      const moved = [];
+      // 음수 turnBuffs: 시전자에서 제거 후 적에게 동일 turns로 이전
+      for (let i = myTbs.length - 1; i >= 0; i--){
+        const item = myTbs[i];
+        if ((item.value||0) < 0){
+          // 시전자 측에서 제거 (decay 패턴 — castBuffs[stat] -= value)
+          cb[item.stat] = (cb[item.stat]||0) - item.value;
+          myTbs.splice(i, 1);
+          // 적에게 추가
+          _addTurnBuff(tbObj, ctx.targTurnBuffs, item.stat, item.value, item.turns);
+          moved.push(`${item.stat.toUpperCase()} ${item.value}${item.turns?`(${item.turns}턴)`:''}`);
+        }
+      }
+      // 영구 음수 castBuffs도 적에게 이동
+      for (const k of Object.keys(cb)){
+        if ((cb[k]||0) < 0){
+          const v = cb[k];
+          tbObj[k] = (tbObj[k]||0) + v;
+          cb[k] = 0;
+          moved.push(`${k.toUpperCase()} ${v}`);
+        }
+      }
+      if (moved.length){
+        ctx.log(`  🌀 ${ctx.castName}에게 걸린 디버프 → ${ctx.targName}에게 반사: ${moved.join(', ')}`, ctx.castLogCls || 'heal');
+      } else {
+        ctx.log(`  · ${ctx.castName} 반사할 디버프 없음`, 'info');
+      }
       return;
     }
     if (t === 'stealth'){
@@ -6746,6 +6801,7 @@ function _buildTrainCtx(caster){
     // 회피·부두
     setCastEvade(e){ if (isMe) c.myEvade = e; else opp.evade = e; },
     targEvade(){ return isMe ? opp.evade : c.myEvade; },
+    clearTargEvade(){ if (isMe) opp.evade = null; else c.myEvade = null; },
     setCastVoodoo(v){ if (isMe) c.myVoodoo = v; else opp.voodoo = v; },
     targVoodoo(){ return isMe ? opp.voodoo : c.myVoodoo; },
     setCastStealth(turns){ if (isMe) c.myStealth = turns; else opp.stealth = turns; },
@@ -6869,10 +6925,10 @@ function huntEnd(result){
       // 카드 파괴 — 장착 중 grade in (rare/unique/hero)
       var candidates = [];
       for (var ci = 0; ci < GAME.myDeck.length; ci++){
-        var c = GAME.myDeck[ci];
-        if (!c || c.id === 'basic_atk') continue;
-        if (c.grade === 'normal') continue;
-        candidates.push({ slot: ci, card: c });
+        var cd = GAME.myDeck[ci];
+        if (!cd || cd.id === 'basic_atk') continue;
+        if (cd.grade === 'normal') continue;
+        candidates.push({ slot: ci, card: cd });
       }
       if (candidates.length){
         var gradeOrder = { rare:1, unique:2, hero:3 };
