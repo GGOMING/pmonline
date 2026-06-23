@@ -244,15 +244,16 @@
     min-height:calc(100vh - 12px);
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
-  /* 전투 중 채팅창 — 게임 박스 아래에 가로로 길게. 페이지 스크롤로 같이 내려감 */
+  /* 전투 중 채팅창 — flex wrap으로 게임 박스 옆 또는 아래(자동)에 배치. 페이지 스크롤로 같이 내려감 */
   body.combat-active:not(.layout-vertical) #pg-main.active {
-    flex-direction:column !important;
-    align-items:center !important;
+    flex-wrap:wrap;
+    align-items:flex-start !important;
   }
   body.combat-active:not(.layout-vertical) #chat {
     position:static; transform:none;
-    align-self:center;
+    align-self:auto;
     width:96vw; max-width:1400px;
+    flex:0 0 auto;
     height:auto; max-height:280px;
     margin-top:10px;
     flex-direction:column;
