@@ -244,15 +244,16 @@
     min-height:calc(100vh - 12px);
   }
   body.combat-active:not(.layout-vertical) #game { width:1980px; max-width:99vw; padding:8px; }
-  /* 전투 중 채팅창 — 우측 상단 고정 미니 사이즈로 노출 */
+  /* 전투 중 채팅창 — 화면 하단 가로로 긴 형태 (덱을 가리지 않도록) */
   body.combat-active:not(.layout-vertical) #chat {
-    position:fixed; top:14px; right:14px;
-    width:280px; max-height:calc(100vh - 28px);
-    z-index:200;
-    box-shadow:-2px 2px 12px rgba(0,0,0,0.6);
+    position:fixed; left:50%; bottom:8px; transform:translateX(-50%);
+    width:92vw; max-width:1400px; height:180px; max-height:180px;
+    z-index:200; flex-direction:column;
+    box-shadow:0 -2px 12px rgba(0,0,0,0.6);
     border:2px solid #7E181E;
+    background:#fff;
   }
-  body.combat-active:not(.layout-vertical) #chatMsgs { max-height:none; }
+  body.combat-active:not(.layout-vertical) #chatMsgs { flex:1; max-height:none; overflow-y:auto; }
   /* 모바일 전투 중에는 채팅창 숨김 (좁아서 표시 어려움) */
   body.combat-active.layout-vertical #chat { display:none; }
   body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
@@ -2280,7 +2281,7 @@ const CARDS = [
   { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +11 증가', fx:{type:'buff',def:11} },
   { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +10 증가', fx:{type:'buff',def:10} },
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
-  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 동안 공격력*0.5 만큼 HP 회복', fx:{type:'hotStat',stats:['str'],weaponBonus:true,mult:0.5,turns:2} },
+  { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'2턴 동안 적에게 가한 데미지의 50%를 HP로 흡수 / [시전자 STR 10 이상일 때만 발동]', statReq:{str:10}, fx:{type:'lifeleech',turns:2,pct:0.5} },
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
   { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 공격력 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
@@ -3626,9 +3627,21 @@ function inventoryLimit(){
 
 // ─── 축복의 상점 ───
 const BLESS_SHOP_ITEMS = [
-  { id:'card1',  name:'카드 1뽑',           cost:1,   icon:'assets/wc3_reforged_used/card1.png',  tooltip:'여신의 축복 1개로 카드 1장을 뽑는다. 가챠 확률은 카드샵과 동일.' },
-  { id:'card20', name:'카드 20뽑',          cost:10,  icon:'assets/wc3_reforged_used/card20.png', tooltip:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다.' },
-  { id:'box',    name:'축복의 랜덤 상자',   cost:100, icon:'assets/wc3_reforged_used/Legendary Chest.jpg',  tooltip:'여신의 축복을 담은 신성한 상자이다. 유니크 카드, 영웅 카드, 스탯 포인트 중 한 가지를 얻을 수 있다.' },
+  {
+    id:'card1', name:'카드 1뽑', cost:1,
+    icon:'assets/wc3_reforged_used/card1.png',
+    desc:'여신의 축복 1개로 카드 1장을 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
+  },
+  {
+    id:'card20', name:'카드 20뽑', cost:10,
+    icon:'assets/wc3_reforged_used/card20.png',
+    desc:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
+  },
+  {
+    id:'box', name:'축복의 랜덤 상자', cost:100,
+    icon:'assets/wc3_reforged_used/Legendary Chest.jpg',
+    desc:'여신의 축복을 담은 신성한 상자. 유니크 카드, 영웅 카드, 스탯 포인트 중 한 가지를 얻을 수 있다.',
+  },
 ];
 function openBlessShop(){
   showContent('blessshop');
@@ -3646,12 +3659,13 @@ function refreshBlessShop(){
       ? 'background:#a02050;color:#fff;cursor:pointer;'
       : 'background:#777;color:#ccc;cursor:not-allowed;';
     const iconEnc = it.icon.replace(/ /g, '%20');
-    const tip = (it.tooltip || '').replace(/"/g, '&quot;');
+    const desc = (it.desc || '').replace(/</g, '&lt;');
     return `<div style="display:flex;align-items:center;gap:14px;padding:12px;background:#fff;border:2px solid #c9a26b;border-radius:6px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
-      <img src="${iconEnc}" title="${tip}" style="width:72px;height:72px;object-fit:contain;background:#000;border:1px solid #888;flex:none;cursor:help;">
-      <div style="flex:1;">
-        <div style="font-size:16px;font-weight:bold;color:#7E181E;" title="${tip}">${it.name}</div>
-        <div style="font-size:12px;color:#555;margin-top:4px;">필요: <b style="color:#ffd700;">✨ 축복 ${it.cost}</b></div>
+      <img src="${iconEnc}" style="width:72px;height:72px;object-fit:contain;background:#000;border:1px solid #888;flex:none;">
+      <div style="flex:1;min-width:0;">
+        <div style="font-size:16px;font-weight:bold;color:#7E181E;">${it.name}</div>
+        <div style="font-size:12px;color:#444;margin-top:4px;line-height:1.5;">${desc}</div>
+        <div style="font-size:12px;color:#555;margin-top:6px;">필요: <b style="color:#a02050;">✨ 축복 ${it.cost}</b></div>
       </div>
       <button onclick="buyBlessItem('${it.id}')" ${can?'':'disabled'} style="padding:10px 22px;font-size:14px;font-weight:bold;border:0;border-radius:4px;${btnStyle}">${can?'구매':'축복 부족'}</button>
     </div>`;
@@ -3676,11 +3690,11 @@ function buyBlessItem(id){
     }
     if (!confirm(`✨ 여신의 축복 ${it.cost}개로 ${it.name}을(를) 진행할까요?`)) return;
     p.blessing -= it.cost;
-    // 가챠 풀
+    // 가챠 풀 — 축복 상점은 영웅 뽑기 확률표 그대로 사용
     const pool = CARDS.filter(c => c.id !== 'basic_atk');
     const results = [];
     for (let i = 0; i < n; i++){
-      const grade = pickGachaGrade();
+      const grade = pickGachaGradeFor('hero');
       const gPool = pool.filter(c => c.grade === grade);
       const card = gPool[Math.floor(Math.random() * gPool.length)];
       if (!card) continue;
@@ -5921,7 +5935,7 @@ function huntNextTurn(){
   }
   if (!checkAlive()) return;
 
-  // 턴 종료 시 도트/핫 처리
+  // 턴 종료 시 도트/회복 처리
   huntProcessTicks();
   if (!checkAlive()) return;
 
@@ -5980,6 +5994,7 @@ function _ensureCombatExt(c){
   c.myEvade ||= null; c.monEvade ||= null;       // {turns, pct}
   c.myVoodoo ||= null; c.monVoodoo ||= null;     // {turns}
   c.myStealth ||= 0; c.monStealth ||= 0;         // 은신 후 기습/맹독 사용 가능 잔여 턴 (정수)
+  c.myLeech ||= null; c.monLeech ||= null;       // 뱀파이어릭 오라 — {turns, pct} 받는 데미지의 pct만큼 회복
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -6061,6 +6076,9 @@ function _buildCombatCtx(kind, caster){
     targVoodoo(){ return isP ? c.monVoodoo : c.myVoodoo; },
     setCastStealth(turns){ if (isP) c.myStealth = turns; else c.monStealth = turns; },
     getCastStealth(){ return isP ? (c.myStealth||0) : (c.monStealth||0); },
+    setCastLeech(l){ if (isP) c.myLeech = l; else c.monLeech = l; },
+    castLeech(){ return isP ? c.myLeech : c.monLeech; },
+    targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
 function _addTurnBuff(buffs, turnBuffs, stat, value, turns){
@@ -6180,6 +6198,15 @@ function applyCardEffect(card, ctx){
       ctx.targObj.hp -= dmg;
       ctx.addDmg(dmg);
       ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span>`, ctx.castLogCls);
+      // 흡혈성 회복 (뱀파이어릭 오라) — 시전자가 leech 상태면 가한 데미지의 일부를 시전자 HP로 흡수
+      const lc = ctx.castLeech && ctx.castLeech();
+      if (lc && lc.turns > 0 && lc.pct > 0){
+        const heal = Math.max(1, Math.floor(dmg * lc.pct));
+        const before = ctx.castObj.hp;
+        ctx.castObj.hp = Math.min(ctx.castObj.hpMax || (before + heal), before + heal);
+        const got = ctx.castObj.hp - before;
+        if (got > 0) ctx.log(`  🩸 ${ctx.castName} 흡혈 +${got}`, 'heal');
+      }
       const refl = ctx.targReflect();
       if (refl && refl.pct > 0){
         const r = Math.max(1, Math.floor(dmg * refl.pct));
@@ -6217,6 +6244,12 @@ function applyCardEffect(card, ctx){
     if (t === 'evadeBuff'){
       ctx.setCastEvade && ctx.setCastEvade({ turns: fx.turns, pct: fx.pct });
       ctx.log(`  ✓ ${ctx.castName} ${fx.turns}턴 회피 ${Math.floor((fx.pct||0)*100)}% 부여`, 'heal');
+      return;
+    }
+    if (t === 'lifeleech'){
+      // 시전자에게 흡혈성 상태 부여 — 가한 데미지의 pct만큼 HP 흡수 (turns 동안)
+      ctx.setCastLeech && ctx.setCastLeech({ turns: fx.turns, pct: fx.pct });
+      ctx.log(`  🩸 ${ctx.castName} ${fx.turns}턴 동안 가한 데미지 ${Math.floor((fx.pct||0)*100)}% HP 흡수`, 'heal');
       return;
     }
     if (t === 'voodoo'){
@@ -6459,7 +6492,7 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'hot'){
       ctx.castHots.push({heal:fx.heal, turns:fx.turns});
-      ctx.log(`  + ${ctx.castName} 핫 ${fx.heal}×${fx.turns}턴`, 'heal');
+      ctx.log(`  + ${ctx.castName} 지속 회복 ${fx.heal}×${fx.turns}턴`, 'heal');
       return;
     }
     if (t === 'hotStat'){
@@ -6467,13 +6500,13 @@ function applyCardEffect(card, ctx){
       if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus||0);
       const heal = Math.max(1, Math.floor(base * (fx.mult||1)));
       ctx.castHots.push({heal, turns:fx.turns});
-      ctx.log(`  + ${ctx.castName} 핫 ${heal}×${fx.turns}턴`, 'heal');
+      ctx.log(`  + ${ctx.castName} 지속 회복 ${heal}×${fx.turns}턴`, 'heal');
       return;
     }
     if (t === 'mot'){
       const amt = fx.mp ?? fx.heal ?? 0;
       ctx.castMpHots.push({heal:amt, turns:fx.turns});
-      ctx.log(`  + ${ctx.castName} MP 핫 ${amt}×${fx.turns}턴`, 'heal');
+      ctx.log(`  + ${ctx.castName} MP 지속 회복 ${amt}×${fx.turns}턴`, 'heal');
       return;
     }
     if (t === 'lifesteal'){
@@ -6664,7 +6697,7 @@ function applyCardEffect(card, ctx){
   }
 }
 
-// 통합 도트/핫/턴버프 처리
+// 통합 도트/회복/턴버프 처리
 function processCombatTicks(kind){
   let c, opp, log;
   if (kind === 'hunt'){ c = GAME.huntCombat; opp = c.monster; log = huntLog; }
@@ -6684,13 +6717,13 @@ function processCombatTicks(kind){
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
   for (const d of c.monSelfDots){ let dmg = d.dmg; if (d.pct) dmg = Math.floor(opp.hpMax * d.pct); if (d.mpPct) dmg = Math.floor((opp.mp||0) * d.mpPct); opp.hp -= dmg; log(`  ☠ 자해 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
   c.monSelfDots = c.monSelfDots.filter(d=>d.turns>0);
-  // 핫
-  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); log(`  + 나 핫 +${h.heal}`, 'heal'); h.turns--; }
+  // 지속 회복
+  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); log(`  + 나 회복 +${h.heal}`, 'heal'); h.turns--; }
   c.myHots = c.myHots.filter(h=>h.turns>0);
-  for (const h of c.monHots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); log(`  + ${opp.name} 핫 +${h.heal}`, 'heal'); h.turns--; }
+  for (const h of c.monHots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); log(`  + ${opp.name} 회복 +${h.heal}`, 'heal'); h.turns--; }
   c.monHots = c.monHots.filter(h=>h.turns>0);
-  // MP 핫
-  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); log(`  + 나 MP 핫 +${h.heal}`, 'heal'); h.turns--; }
+  // MP 지속 회복
+  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); log(`  + 나 MP 회복 +${h.heal}`, 'heal'); h.turns--; }
   c.myMpHots = c.myMpHots.filter(h=>h.turns>0);
   for (const h of c.monMpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
   c.monMpHots = c.monMpHots.filter(h=>h.turns>0);
@@ -6716,6 +6749,9 @@ function processCombatTicks(kind){
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) log(`  · 은신 종료`, 'info'); }
   if (c.monStealth && c.monStealth > 0){ c.monStealth--; if (c.monStealth === 0) log(`  · ${opp.name} 은신 종료`, 'info'); }
+  // 흡혈성(뱀파이어릭) 감소
+  if (c.myLeech){ c.myLeech.turns--; if (c.myLeech.turns<=0){ c.myLeech = null; log(`  · 흡혈 효과 종료`, 'info'); } }
+  if (c.monLeech){ c.monLeech.turns--; if (c.monLeech.turns<=0){ c.monLeech = null; log(`  · ${opp.name} 흡혈 효과 종료`, 'info'); } }
   // 개구리 변신 카운터 감소
   if (c.myFrog && c.myFrog > 0){ c.myFrog--; if (c.myFrog === 0) log(`  🐸 → 사람 모습으로 돌아왔습니다.`, 'sys'); }
   if (c.monFrog && c.monFrog > 0){ c.monFrog--; if (c.monFrog === 0) log(`  🐸 → ${opp.name}이(가) 사람 모습으로 돌아왔습니다.`, 'sys'); }
@@ -6750,12 +6786,14 @@ function _ensureTrainExt(){
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   c.myEvade ||= null; c.myVoodoo ||= null;
   c.myStealth ||= 0;
+  c.myLeech ||= null;
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   o.turnBuffs ||= []; o.mpHots ||= []; o.stun ||= 0; o.reflect ||= null; o.selfDots ||= [];
   o.castedBy ||= [];
   o.evade ||= null; o.voodoo ||= null;
   o.stealth ||= 0;
+  o.leech ||= null;
 }
 function _buildTrainCtx(caster){
   _ensureTrainExt();
@@ -6806,6 +6844,9 @@ function _buildTrainCtx(caster){
     targVoodoo(){ return isMe ? opp.voodoo : c.myVoodoo; },
     setCastStealth(turns){ if (isMe) c.myStealth = turns; else opp.stealth = turns; },
     getCastStealth(){ return isMe ? (c.myStealth||0) : (opp.stealth||0); },
+    setCastLeech(l){ if (isMe) c.myLeech = l; else opp.leech = l; },
+    castLeech(){ return isMe ? c.myLeech : opp.leech; },
+    targLeech(){ return isMe ? opp.leech : c.myLeech; },
   };
 }
 function isTrainStunned(caster){
@@ -6831,11 +6872,11 @@ function processTrainTicks(){
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
   for (const d of opp.selfDots){ opp.hp -= d.dmg; trainLog(`  ☠ 자해 도트 → 상대 -${d.dmg}`, 'hit'); d.turns--; }
   opp.selfDots = opp.selfDots.filter(d=>d.turns>0);
-  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); trainLog(`  + 핫 → 나 +${h.heal}`, 'heal'); h.turns--; }
+  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); trainLog(`  + 회복 → 나 +${h.heal}`, 'heal'); h.turns--; }
   c.myHots = c.myHots.filter(h=>h.turns>0);
-  for (const h of opp.hots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); trainLog(`  + [상대] 핫 → 상대 +${h.heal}`, 'opp'); h.turns--; }
+  for (const h of opp.hots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); trainLog(`  + [상대] 회복 → 상대 +${h.heal}`, 'opp'); h.turns--; }
   opp.hots = opp.hots.filter(h=>h.turns>0);
-  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); trainLog(`  + MP 핫 → 나 +${h.heal}`, 'heal'); h.turns--; }
+  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); trainLog(`  + MP 회복 → 나 +${h.heal}`, 'heal'); h.turns--; }
   c.myMpHots = c.myMpHots.filter(h=>h.turns>0);
   for (const h of opp.mpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
   opp.mpHots = opp.mpHots.filter(h=>h.turns>0);
@@ -6857,6 +6898,9 @@ function processTrainTicks(){
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) trainLog(`  · 은신 종료`, 'info'); }
   if (opp.stealth && opp.stealth > 0){ opp.stealth--; if (opp.stealth === 0) trainLog(`  · ${opp.name} 은신 종료`, 'info'); }
+  // 흡혈성(뱀파이어릭) 감소
+  if (c.myLeech){ c.myLeech.turns--; if (c.myLeech.turns<=0){ c.myLeech = null; trainLog(`  · 흡혈 효과 종료`, 'info'); } }
+  if (opp.leech){ opp.leech.turns--; if (opp.leech.turns<=0){ opp.leech = null; trainLog(`  · ${opp.name} 흡혈 효과 종료`, 'info'); } }
 }
 
 function huntFlee(){
@@ -7664,14 +7708,14 @@ function processDots(c){
   // 내 핫
   for (const h of c.myHots){
     GAME.player.hp = Math.min(GAME.player.hpMax, GAME.player.hp + h.heal);
-    trainLog(`  + 핫 → 나 +${h.heal}`, 'heal');
+    trainLog(`  + 회복 → 나 +${h.heal}`, 'heal');
     h.turns--;
   }
   c.myHots = c.myHots.filter(h=>h.turns>0);
   // 적 핫
   for (const h of c.opp.hots){
     c.opp.hp = Math.min(c.opp.hpMax, c.opp.hp + h.heal);
-    trainLog(`  + [상대] 핫 → 상대 +${h.heal}`, 'opp');
+    trainLog(`  + [상대] 회복 → 상대 +${h.heal}`, 'opp');
     h.turns--;
   }
   c.opp.hots = c.opp.hots.filter(h=>h.turns>0);
@@ -7799,7 +7843,7 @@ function _trainApplyCard_legacy(card, caster){
     } else {
       opp.hots.push({heal:fx.heal, turns:fx.turns});
     }
-    trainLog(`  + ${caster==='me'?'나':'상대'} 핫 ${fx.heal}×${fx.turns}턴`, 'heal');
+    trainLog(`  + ${caster==='me'?'나':'상대'} 지속 회복 ${fx.heal}×${fx.turns}턴`, 'heal');
   }
   else if (fx.type === 'lifesteal'){
     const dmg = rnd(fx.min, fx.max);
