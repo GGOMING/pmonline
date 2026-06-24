@@ -1208,12 +1208,12 @@
       <div style="display:flex;flex-direction:column;flex:1;" id="main-statbox">
       <table class="stat">
         <colgroup>
-          <col style="width:8%;">
-          <col style="width:17%;">
-          <col style="width:8%;">
-          <col style="width:17%;">
-          <col style="width:8%;">
-          <col style="width:42%;">
+          <col style="width:9%;">
+          <col style="width:19%;">
+          <col style="width:9%;">
+          <col style="width:19%;">
+          <col style="width:9%;">
+          <col style="width:35%;">
         </colgroup>
         <tr>
           <td class="lbl">레벨</td><td class="val" id="s_level">-</td>
@@ -1238,7 +1238,12 @@
         <tr>
           <td class="lbl">INT</td><td class="val"><span id="s_int">-</span> <button class="statup-btn" onclick="addStat('int')">＋</button></td>
           <td class="lbl">CON</td><td class="val"><span id="s_con">-</span> <button class="statup-btn" onclick="addStat('con')">＋</button></td>
-          <td class="lbl" colspan="2" style="text-align:left;padding-left:8px;">✨ 여신의 축복 <b id="s_blessing" style="color:#ffd700;float:right;padding-right:8px;">0</b></td>
+          <td colspan="2" style="padding:0;background:#2e53b2;">
+            <div style="display:flex;height:20px;align-items:stretch;">
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#FFFF99;font-weight:bold;border-right:1px solid #FFFF99;">✨ 여신의 축복</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;"><b id="s_blessing" style="color:#ffd700;">0</b>&nbsp;개</div>
+            </div>
+          </td>
         </tr>
       </table>
       <div class="main-bars">
