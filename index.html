@@ -1217,17 +1217,17 @@
         </colgroup>
         <tr>
           <td class="lbl">레벨</td><td class="val" id="s_level">-</td>
-          <td class="lbl">경험치</td><td class="val" id="s_xp">-</td>
-          <td class="lbl">HP</td><td class="val" id="s_hp">- (-)</td>
-        </tr>
-        <tr>
-          <td class="lbl">골드</td><td class="val" id="s_gold">-</td>
           <td class="lbl">스탯 P</td><td class="val"><span id="s_xpup">-</span></td>
-          <td class="lbl">MP</td><td class="val" id="s_mp">- (-)</td>
+          <td class="lbl">경험치</td><td class="val" id="s_xp">-</td>
         </tr>
         <tr>
           <td class="lbl">공격력</td><td class="val" id="s_atk">- - -</td>
           <td class="lbl">방어력</td><td class="val" id="s_def">-</td>
+          <td class="lbl">골드</td><td class="val" id="s_gold">-</td>
+        </tr>
+        <tr>
+          <td class="lbl">HP</td><td class="val" id="s_hp">- (-)</td>
+          <td class="lbl">MP</td><td class="val" id="s_mp">- (-)</td>
           <td class="lbl">무기</td><td class="val" id="s_weapon">(+)</td>
         </tr>
         <tr>
@@ -2301,10 +2301,10 @@ const CARDS = [
   { id:'r30', name:'쿠루징웨이브',   grade:'rare', icon:'armor',    text:'[INT + 35] 데미지', fx:{type:'dmgStat',stats:['int'],bonus:35} },
 
   // ───── 유니크 카드 6종 ─────
-  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 공격력] *3으로 공격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
+  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 무기] *3으로 공격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
   { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
-  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 공격력] *3으로 공격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
-  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'(DEX + 공격력] *3으로 공격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
+  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 무기] *3으로 공격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
+  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'[DEX + 무기] *3으로 공격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 동안 10-25 랜덤 데미지 (소환의식 없음)', fx:{type:'dot',turns:10,min:10,max:25} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
 
@@ -2321,7 +2321,7 @@ const CARDS = [
   { id:'r34', name:'스피드스크롤',       grade:'rare', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
   { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +5 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:5} },
   { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 공격력 +5 증가 / 상대방 방어력 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
-  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'무기 +40% 증가 / 방어구 +40% 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',stats:{atk:0.4,def:0.4}} },
+  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'무기 보너스 +40% / 방어구 보너스 +40% / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
   { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
   { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT*2 데미지 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
   { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기] *3 데미지 / 시전자 공격력 및 방어력 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
@@ -2361,6 +2361,16 @@ function showPage(id){
 // ─── 전투 모드 토글 (가로 3-column 그리드 활성화) ───
 function setCombatMode(active){
   document.body.classList.toggle('combat-active', !!active);
+  if (active){
+    // 전투 진입 시 페이지는 맨 위로, 채팅창은 가장 최근 메시지(하단)로 고정
+    setTimeout(() => {
+      try { window.scrollTo({ top: 0, left: 0, behavior: 'auto' }); } catch(e){ try { window.scrollTo(0, 0); } catch(_){} }
+      try {
+        const m = document.getElementById('chatMsgs');
+        if (m) m.scrollTop = m.scrollHeight;
+      } catch(e){}
+    }, 50);
+  }
 }
 
 // ─── 레이아웃 모드 (PC 가로 / 모바일 세로) ───
@@ -6221,7 +6231,11 @@ function applyCardEffect(card, ctx){
         const before = ctx.castObj.hp;
         ctx.castObj.hp = Math.min(ctx.castObj.hpMax || (before + heal), before + heal);
         const got = ctx.castObj.hp - before;
-        if (got > 0) ctx.log(`  🩸 ${ctx.castName} 흡혈 +${got}`, 'heal');
+        if (got > 0){
+          ctx.log(`  🩸 ${ctx.castName} 흡혈 +${got}`, 'heal');
+        } else {
+          ctx.log(`  🩸 ${ctx.castName} 흡혈 발동 (HP 최대치 — 회복 0)`, 'heal');
+        }
       }
       const refl = ctx.targReflect();
       if (refl && refl.pct > 0){
@@ -6347,7 +6361,8 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'dmgStat'){
       let base = statSum(fx.stats);
-      if (fx.weaponBonus && ctx.castObj.weapon) base += ctx.castObj.weapon.atkBonus;
+      // 무기 공격력 — weapon.atkBonus (장착 무기 자체의 추가 공격력)
+      if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus || 0);
       if (fx.bonus) base += fx.bonus;
       doDmg(base * (fx.mult || 1));
       return;
@@ -6442,10 +6457,18 @@ function applyCardEffect(card, ctx){
     if (t === 'pctBuff'){
       const msgs = [];
       for (const [k, pct] of Object.entries(fx.stats)){
-        const base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
+        let base;
+        if (fx.equipBase){
+          // 장비 기반 — 순수 weapon.atkBonus / armor.defBonus의 %만큼 buff (전투 중 buff 증가분 무시)
+          if (k === 'atk')      base = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
+          else if (k === 'def') base = (ctx.castObj.armor  && ctx.castObj.armor.defBonus)  || 0;
+          else                  base = (ctx.castObj[k]||0);
+        } else {
+          base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
+        }
         const d = Math.floor(base * pct);
         _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0);
-        msgs.push(`${k} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
+        msgs.push(`${k} ${pct>=0?'+':''}${d}${fx.equipBase?` (장비 ${Math.floor(pct*100)}%)`:` ${Math.floor(pct*100)}%`}`);
       }
       ctx.log(`  + ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
@@ -8892,7 +8915,14 @@ function renderSheet(){
   const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   setText('s_name', p.name);
   setText('s_level', p.level);
-  setText('s_xp', (p.xp||0).toLocaleString());
+  // 경험치: 현재 / 잔여 (진척률%)
+  {
+    const cur = p.xp || 0;
+    const need = (typeof xpForNextLevel === 'function') ? xpForNextLevel(p.level) : 0;
+    const remain = Math.max(0, need - cur);
+    const pct = need > 0 ? Math.floor(cur / need * 100) : 0;
+    setText('s_xp', `${cur.toLocaleString()} / ${remain.toLocaleString()} (${pct}%)`);
+  }
   setText('s_xpup', (p.xpUp||0).toLocaleString());
   setText('s_blessing', (p.blessing||0).toLocaleString());
   const isMobile = document.body.classList.contains('layout-vertical');
@@ -9498,6 +9528,11 @@ async function initChat(){
     if (!error && Array.isArray(data)){
       data.reverse().forEach(_renderChatRow);
     }
+    // 옛 메시지 일괄 로드 후 가장 최근 메시지로 강제 스크롤
+    try {
+      const m = document.getElementById('chatMsgs');
+      if (m){ m.scrollTop = m.scrollHeight; setTimeout(() => { m.scrollTop = m.scrollHeight; }, 50); }
+    } catch(e){}
   } catch(e){ console.warn('[initChat fetch]', e); }
   // 옵션: 6시간 이상 된 옛 메시지 정리 RPC 호출 (서버에 chat_cleanup_old 함수가 있을 때만 동작)
   try { sb.rpc('chat_cleanup_old'); } catch(e){}
@@ -9538,6 +9573,28 @@ async function _teardownChat(){
 window.addEventListener('beforeunload', () => {
   try { if (_chatChannel) _chatChannel.untrack(); } catch(e){}
 });
+
+// chatMsgs 크기 변동 시 자동으로 맨 아래(최근 메시지)로 고정
+(function autoStickChatBottom(){
+  function stick(){
+    const m = document.getElementById('chatMsgs');
+    if (m) m.scrollTop = m.scrollHeight;
+  }
+  function init(){
+    const m = document.getElementById('chatMsgs');
+    if (!m){ setTimeout(init, 200); return; }
+    stick();
+    if (typeof ResizeObserver !== 'undefined'){
+      try { new ResizeObserver(stick).observe(m); } catch(e){}
+      try { new ResizeObserver(stick).observe(document.getElementById('chat') || document.body); } catch(e){}
+    }
+    // 페이지 로드 직후 한 번 더 (메시지 fetch 완료 시점 대비)
+    setTimeout(stick, 300);
+    setTimeout(stick, 1000);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+  else init();
+})();
 
 // PC 메인 화면에서 채팅창 높이를 게임 박스에 동기화 (전투 모드/모바일은 자체 CSS 우선)
 (function syncChatHeightToGame(){
