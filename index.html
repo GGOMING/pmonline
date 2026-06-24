@@ -705,7 +705,7 @@
   /* 등급별 테두리 (수행 화면 mini deck) */
   table.deck tr.icons td.grade-rare   { border:2px solid #3399ff; background:#001833; }
   table.deck tr.icons td.grade-unique { border:2px solid #a335ee; background:#160028; box-shadow:inset 0 0 6px rgba(163,53,238,.35); }
-  table.deck tr.icons td.grade-hero   { border:2px solid #ffd700; background:#2a2000; box-shadow:inset 0 0 8px rgba(255,215,0,.5); }
+  table.deck tr.icons td.grade-hero   { border:2px solid #dc143c; background:#2a0008; box-shadow:inset 0 0 8px rgba(220,20,60,.5); }
   table.deck tr.icons td.grade-normal { border:1px solid #555; }
   table.deck.mini tr.icons td .card-ico { width:66px; height:63px; }
 
@@ -812,9 +812,10 @@
   .gacha-result-grid .gc .ef { font-size:10px; color:#ccc; margin-top:3px; line-height:1.3; min-height:26px; text-align:left; }
   .gacha-result-grid .gc.rare   { border-color:#3399ff; box-shadow:0 0 6px #3399ff; }
   .gacha-result-grid .gc.unique { border-color:#a335ee; box-shadow:0 0 8px #a335ee; animation:glowPurple 1s ease-in-out 2; }
-  .gacha-result-grid .gc.hero   { border-color:#ffd700; box-shadow:0 0 12px #ffd700; animation:glowGold 1s ease-in-out 3; }
-  @keyframes glowPurple { 0%,100%{box-shadow:0 0 8px #a335ee;} 50%{box-shadow:0 0 18px #a335ee, 0 0 30px #fff;} }
-  @keyframes glowGold   { 0%,100%{box-shadow:0 0 12px #ffd700;} 50%{box-shadow:0 0 25px #ffd700, 0 0 40px #fff;} }
+  .gacha-result-grid .gc.hero   { border-color:#dc143c; box-shadow:0 0 12px #dc143c; animation:glowCrimson 1s ease-in-out 3; }
+  @keyframes glowPurple  { 0%,100%{box-shadow:0 0 8px #a335ee;} 50%{box-shadow:0 0 18px #a335ee, 0 0 30px #fff;} }
+  @keyframes glowCrimson { 0%,100%{box-shadow:0 0 12px #dc143c;} 50%{box-shadow:0 0 25px #dc143c, 0 0 40px #fff;} }
+  @keyframes glowGold    { 0%,100%{box-shadow:0 0 12px #ffd700;} 50%{box-shadow:0 0 25px #ffd700, 0 0 40px #fff;} }
 
   /* 인벤토리 보기 모달 (카드 선택 모달 재활용) */
 
@@ -930,7 +931,7 @@
   .card-grid .cg-item:hover { border-color:#ff0; }
   .card-grid .cg-item.rare   { border-color:#3399ff; }
   .card-grid .cg-item.unique { border-color:#a335ee; }
-  .card-grid .cg-item.hero   { border-color:#ffd700; }
+  .card-grid .cg-item.hero   { border-color:#dc143c; }
   .card-grid .cg-item .ico { width:88px; height:84px; flex:none; background:#111; }
   .card-grid .cg-item .ico svg { width:100%; height:100%; }
   .card-grid .cg-item .ico img { width:100%; height:100%; image-rendering:pixelated; display:block; object-fit:contain; }
@@ -1979,7 +1980,7 @@
             </td>
             <td class="lbl">영웅 (10,000G/장)</td>
             <td class="val"><span id="sell_hero_count">0</span>장
-              <button class="mini-btn" onclick="sellAllByGrade('hero')" style="background:#ffd700;color:#3a1a00;">전부 판매</button>
+              <button class="mini-btn" onclick="sellAllByGrade('hero')" style="background:#dc143c;color:#fff;">전부 판매</button>
             </td>
           </tr>
         </table>
@@ -3164,7 +3165,7 @@ const GACHA_SHOPS = {
     ],
   },
   hero: {
-    label: '영웅 뽑기', icon: 'assets/wc3_reforged_used/cardshop_hero.png',
+    label: '영웅 뽑기', icon: 'assets/wc3_reforged_used/cardshop_hero.jpg',
     cost1: 10000, cost10: 90000,
     maxGradeKr: '영웅',
     table: [
@@ -3298,7 +3299,7 @@ function refreshShopUI(){
 }
 
 const _GACHA_SHOP_ORDER = ['normal','rare','unique','hero','legend'];
-const _GRADE_COLORS = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700', legend:'#ff6600' };
+const _GRADE_COLORS = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
 function renderGachaShopGrid(){
   const el = $('gachaShopGrid');
   if (!el) return;
@@ -3933,7 +3934,7 @@ function renderHonorDetail(idx){
   // 덱 (15개 슬롯)
   const deck = (r.myDeck || []).slice(0, 15);
   while (deck.length < 15) deck.push(BASIC_ATTACK);
-  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700' };
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c' };
   const deckHtml = deck.map((c, i) => {
     const borderColor = gradeColor[c.grade] || '#bbb';
     return `<div style="width:64px;text-align:center;" title="${(c.name||'').replace(/"/g,'&quot;')} — ${(c.text||'').replace(/"/g,'&quot;')}">
@@ -5887,7 +5888,7 @@ function renderHuntBattle(){
 function renderHuntDeck(tbl, deck, slotsTotal, currentTurn){
   const cols = 5;
   const rows = Math.ceil(slotsTotal / cols);
-  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#ffd700' };
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c' };
   let html = '';
   for (let r = 0; r < rows; r++){
     // 아이콘 행
@@ -8199,7 +8200,7 @@ function cardIcon(card){
 
 // ─── 카드 아이콘 SVG 라이브러리 ───
 function cardIconSvg(type, grade){
-  const c = grade==='hero'   ? '#ffd700' :
+  const c = grade==='hero'   ? '#dc143c' :
             grade==='unique' ? '#a335ee' :
             grade==='rare'   ? '#99ccff' : '#ffffff';
   const icons = {
