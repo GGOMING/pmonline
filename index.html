@@ -3315,7 +3315,7 @@ function renderGachaShopGrid(){
       return `<div style="background:#f0f0f0;border:2px dashed ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);opacity:0.85;">
         <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;filter:grayscale(40%);">
         <div style="font-size:14px;font-weight:bold;color:${border};">${s.label} 🔒</div>
-        <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의 카드를<br>획득할 수 있습니다.</div>
+        <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
         <div style="margin-top:8px;padding:6px;background:#ddd;color:#555;font-size:11px;font-weight:bold;border-radius:3px;">추후 오픈 예정</div>
       </div>`;
     }
@@ -3324,7 +3324,7 @@ function renderGachaShopGrid(){
     return `<div style="background:#fff;border:2px solid ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
       <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;">
       <div style="font-size:14px;font-weight:bold;color:${border};">${s.label}</div>
-      <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의 카드를<br>획득할 수 있습니다.</div>
+      <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
       <div style="display:flex;gap:4px;justify-content:center;margin-top:6px;">
         <button onclick="doGachaShop('${id}', 1)" ${can1?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can1?'#2e53b2':'#888'};color:#fff;border:0;cursor:${can1?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;">1뽑<br><small>${s.cost1.toLocaleString()} G</small></button>
         <button onclick="doGachaShop('${id}', 10)" ${can10?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can10?'#a02050':'#888'};color:#fff;border:0;cursor:${can10?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;">10뽑<br><small>${s.cost10.toLocaleString()} G</small></button>
@@ -4552,8 +4552,8 @@ function raidNextTurn(){
   const p = GAME.player;
   const m = c.monster;
   const slot = c.turn - 1;
-  const playerCard = GAME.myDeck[slot] || BASIC_ATTACK;
-  const monCard = m.deck[slot] || BASIC_ATTACK;
+  const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
+  const monCard = _dedupCardForTurn(m.deck, slot);
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
@@ -5259,8 +5259,8 @@ function rankNextTurn(){
   const p = GAME.player;
   const m = c.opponent;
   const slot = c.turn - 1;
-  const playerCard = GAME.myDeck[slot] || BASIC_ATTACK;
-  const monCard = m.deck[slot] || BASIC_ATTACK;
+  const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
+  const monCard = _dedupCardForTurn(m.deck, slot);
 
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
@@ -5931,6 +5931,16 @@ function huntLog(msg, cls='info'){
   }
 }
 
+// 덱에서 같은 카드 id가 이번 슬롯보다 앞에 이미 있으면 기본 공격으로 대체 (중복 카드 1회만 발동)
+function _dedupCardForTurn(deck, slot){
+  const card = deck[slot] || BASIC_ATTACK;
+  if (!card || card.id === 'basic_atk') return card;
+  for (let i = 0; i < slot; i++){
+    if (deck[i] && deck[i].id === card.id) return BASIC_ATTACK;
+  }
+  return card;
+}
+
 // ─── 자동 전투 (다음 턴) ───
 function huntNextTurn(){
   const c = GAME.huntCombat;
@@ -5944,8 +5954,8 @@ function huntNextTurn(){
   const p = GAME.player;
   const m = c.monster;
   const slot = c.turn - 1;
-  const playerCard = GAME.myDeck[slot] || BASIC_ATTACK;
-  const monsterCard = m.deck[slot] || BASIC_ATTACK;
+  const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
+  const monsterCard = _dedupCardForTurn(m.deck, slot);
 
   // DEX 비교 (동점은 사용자 선공)
   const pDex = p.dex + c.myBuffs.dex;
@@ -7505,6 +7515,17 @@ function selectCardForSlot(cardId){
             `현재 슬롯 ${_cardPickSlot + 1} 앞에 [${reqName}] 카드가 없어\n` +
             `전투에서 시전 실패할 수 있습니다.\n\n` +
             `그래도 이대로 장착하시겠습니까?`
+          );
+          if (!ok) return;
+        }
+      }
+      if (card.id !== 'basic_atk'){
+        const dupExists = (GAME.myDeck || []).some((c, i) => c && i !== _cardPickSlot && c.id === card.id);
+        if (dupExists){
+          const ok = confirm(
+            `「${card.name}」 카드가 이미 덱에 있습니다.\n\n` +
+            `중복된 카드를 장착할 경우 한 번만 발동됩니다.\n\n` +
+            `그래도 장착하시겠습니까?`
           );
           if (!ok) return;
         }
