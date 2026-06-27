@@ -167,11 +167,13 @@
   }
   .login-banner {
     width:500px; height:200px;
-    background: radial-gradient(ellipse at center,
-      #e8f4ff 0%,
-      #b5d6f2 30%,
-      #7099d4 70%,
-      #4a6fa8 100%);
+    background:
+      url('assets/main.png') center/cover no-repeat,
+      radial-gradient(ellipse at center,
+        #e8f4ff 0%,
+        #b5d6f2 30%,
+        #7099d4 70%,
+        #4a6fa8 100%);
     border:1px solid #555;
     position:relative;
     display:flex; align-items:flex-end; justify-content:center;
@@ -545,16 +547,15 @@
   }
   .profile-photo-box img { width:100%; height:100%; object-fit:cover; display:block; }
   .heal-banner {
-    height:140px;
     background:
       radial-gradient(ellipse 60% 70% at 50% 60%, rgba(255,255,255,.45), transparent 60%),
       radial-gradient(ellipse 80% 80% at 50% 100%, rgba(70,140,200,.6), transparent 70%),
       linear-gradient(to bottom, #b8dcf0 0%, #6ea3d4 50%, #2e5a92 100%);
     position:relative;
-    display:flex; align-items:center; justify-content:center;
     overflow:hidden;
     border-bottom:1px solid #555;
   }
+  .heal-banner-img { display:block; width:100%; height:auto; position:relative; z-index:1; }
   .heal-banner::before {
     content:""; position:absolute; inset:0;
     background-image:
@@ -565,7 +566,8 @@
       radial-gradient(circle at 50% 50%, rgba(255,255,255,.4) 0, transparent 4.5%);
   }
   .heal-title {
-    position:relative; z-index:2;
+    position:absolute; left:0; right:0; bottom:36px;
+    text-align:center; z-index:3;
     color:#fff; font-size:28px; font-weight:bold;
     letter-spacing:6px; font-family:"바탕",Batang,serif;
     text-shadow:2px 2px 6px rgba(0,30,80,.7), 0 0 18px rgba(180,220,255,.6);
@@ -739,19 +741,19 @@
   .shop-page { background:#fff; border:1px solid #888; margin-top:5px; }
   .shop-head { background:#7E181E; color:#fff; padding:6px 10px; font-weight:bold; font-size:13px; }
   .shop-banner {
-    height:120px;
     background:
       radial-gradient(ellipse 60% 70% at 50% 50%, rgba(255,255,200,.5), transparent 70%),
       linear-gradient(135deg, #4a1a6e 0%, #8b3aaa 40%, #c95fd4 75%, #f0a0f5 100%);
     position:relative;
-    display:flex; align-items:center; justify-content:center;
     overflow:hidden;
   }
+  .shop-banner-img { display:block; width:100%; height:auto; position:relative; z-index:1; }
   .shop-title {
+    position:absolute; left:0; right:0; bottom:14px;
+    text-align:center; z-index:3;
     color:#fff; font-size:30px; font-weight:bold;
     letter-spacing:10px; font-family:"바탕",Batang,serif;
     text-shadow:2px 2px 8px rgba(0,0,0,.6), 0 0 20px rgba(255,220,255,.7);
-    position:relative; z-index:2;
   }
   .shop-sparkle { position:absolute; inset:0; pointer-events:none; }
   .shop-sparkle span {
@@ -863,7 +865,7 @@
   table.stat.enemy-stat td { background:#5a2020; border-color:#ffaaaa; }
   table.stat.enemy-stat td.lbl { background:#5a2020; color:#ffaaaa; }
   table.stat.enemy-stat td.val { background:#5a2020; color:#fff; }
-  .mon-portrait-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:6px; }
+  .mon-portrait-row { display:flex; gap:8px; align-items:flex-start; margin-bottom:2px; }
   .mon-portrait { width:84px; height:84px; flex:none; background:#000; border:2px solid #ffaaaa; padding:1px; image-rendering:pixelated; }
   .mon-portrait img { width:100%; height:100%; object-fit:contain; display:block; image-rendering:pixelated; }
   .mon-portrait-row > table.stat.enemy-stat { flex:1; margin-bottom:0; }
@@ -1111,10 +1113,10 @@
         <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
           <b>현재 활성 raid 강제 갱신:</b>
           <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (active_key 무작위)</button>
-          <span style="font-size:11px;color:#666;">— 1시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 잡몹 99 리셋</span>
+          <span style="font-size:11px;color:#666;">— 1시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 몬스터 99 리셋</span>
         </div>
         <div style="margin:4px 0;">
-          새벽의 언덕: 잡몹 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
+          새벽의 언덕: 몬스터 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
           <button class="admin-btn small" onclick="adminResetRaid('dawn')">세션 리셋</button>
           <button class="admin-btn small" onclick="adminBossPhase('dawn')">보스 단계로 이동</button>
           <button class="admin-btn small" onclick="adminKillBoss('dawn')">보스 즉시 처치</button>
@@ -1122,7 +1124,7 @@
           <button class="admin-btn small" onclick="adminSetBoss('dawn')">보스 교체</button>
         </div>
         <div style="margin:4px 0;">
-          안개의 숲: 잡몹 <b id="adminRaidMistMon">-</b>, 보스 HP <b id="adminRaidMistHp">-</b>
+          안개의 숲: 몬스터 <b id="adminRaidMistMon">-</b>, 보스 HP <b id="adminRaidMistHp">-</b>
           <button class="admin-btn small" onclick="adminResetRaid('mist')">세션 리셋</button>
           <button class="admin-btn small" onclick="adminBossPhase('mist')">보스 단계로 이동</button>
           <button class="admin-btn small" onclick="adminKillBoss('mist')">보스 즉시 처치</button>
@@ -1426,7 +1428,7 @@
           <tr>
             <td class="lbl">INT</td><td class="val" id="o_int">-</td>
             <td class="lbl">CON</td><td class="val" id="o_con">-</td>
-            <td class="lbl">공격</td><td class="val" id="o_atk">- - -</td>
+            <td class="lbl">공격력</td><td class="val" id="o_atk">- - -</td>
           </tr>
         </table>
 
@@ -1483,15 +1485,22 @@
         <div class="raid-banner" id="raid_banner">
           <div class="raid-banner-title" id="raid_banner_title">공격대</div>
         </div>
-        <div class="raid-info">
-          <div class="raid-info-row"><span class="lbl">세션 종료까지</span> <b id="raid_remaining">-</b></div>
-          <div class="raid-info-row"><span class="lbl">남은 잡몹</span> <b id="raid_mon_count">-</b> / 99</div>
-          <div class="raid-info-row" id="raid_boss_row" hidden>
-            <span class="lbl">보스</span> <b id="raid_boss_name">-</b>
-            <div class="boss-hpbar"><i id="raid_boss_hp_fill"></i><span id="raid_boss_hp_text">- / -</span></div>
+        <div class="raid-info" style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:1;">
+            <div class="raid-info-row"><span class="lbl">세션 종료까지</span> <b id="raid_remaining">-</b></div>
+            <div class="raid-info-row"><span class="lbl">남은 몬스터</span> <b id="raid_mon_count">-</b> / 99</div>
+            <div class="raid-info-row" id="raid_boss_row" hidden>
+              <span class="lbl">보스</span> <b id="raid_boss_name">-</b>
+              <div class="boss-hpbar"><i id="raid_boss_hp_fill"></i><span id="raid_boss_hp_text">- / -</span></div>
+            </div>
           </div>
+          <button id="raid_reset_btn" onclick="requestRaidManualReset()" disabled
+            title="여신의 축복 2개를 소모해 공격대 전체를 초기화합니다. 보스 처치 후에만 사용 가능 (정해진 시간 리셋엔 영향 없음)."
+            style="flex:none;padding:8px 14px;font-size:12px;font-weight:bold;background:#ffd700;color:#3a1a00;border:1px solid #b88600;border-radius:4px;cursor:pointer;white-space:nowrap;">
+            ✨2 공격대 초기화
+          </button>
         </div>
-        <div class="raid-tip" id="raid_tip">잡몹 99마리를 처치하면 보스가 등장합니다.</div>
+        <div class="raid-tip" id="raid_tip">몬스터 99마리를 처치하면 보스가 등장합니다.</div>
         <div class="hunt-actions">
           <button class="btn-go" id="raid_challenge_btn" onclick="raidChallenge()">▶ 도전</button>
           <button class="btn-back" onclick="exitRaid()">돌아가기</button>
@@ -1505,14 +1514,15 @@
         <div class="combat-grid">
           <!-- 좌측: 내 정보 + 내 덱 -->
           <div class="col-left">
-            <div class="col-title title-mine">내 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span class="p-combat-level">-</span></div>
+                  <b class="p-combat-name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat">
-                <tr>
-                  <td class="lbl">이름</td><td class="val p-combat-name">-</td>
-                  <td class="lbl">Lv</td><td class="val p-combat-level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val p-combat-hp">- / -</td>
                   <td class="lbl">MP</td><td class="val p-combat-mp">- / -</td>
@@ -1526,7 +1536,13 @@
                   <td class="lbl">CON</td><td class="val p-combat-con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val p-combat-atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val p-combat-atk">- - -</td><td class="lbl">방어력</td><td class="val p-combat-def">- - -</td>
+                </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val p-combat-armor" colspan="3">-</td>
                 </tr>
               </table>
             </div>
@@ -1549,14 +1565,15 @@
 
           <!-- 우측: 상대 정보 + 덱 -->
           <div class="col-right">
-            <div class="col-title">상대 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><img id="rd_portrait" src="" alt=""></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><img id="rd_portrait" src="" alt=""></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span id="rd_level">-</span></div>
+                  <b id="rd_name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat enemy-stat">
-                <tr>
-                  <td class="lbl">상대</td><td class="val" id="rd_name">-</td>
-                  <td class="lbl">Lv</td><td class="val" id="rd_level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val" id="rd_hp">- / -</td>
                   <td class="lbl">MP</td><td class="val" id="rd_mp">- / -</td>
@@ -1570,7 +1587,13 @@
                   <td class="lbl">CON</td><td class="val" id="rd_con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val" id="rd_atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val" id="rd_atk">- - -</td><td class="lbl">방어력</td><td class="val" id="rd_def">- - -</td>
+                </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val" id="rd_weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val" id="rd_armor" colspan="3">-</td>
                 </tr>
               </table>
             </div>
@@ -1624,14 +1647,15 @@
         <div class="combat-grid">
           <!-- 좌측: 내 정보 + 내 덱 -->
           <div class="col-left">
-            <div class="col-title title-mine">내 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span class="p-combat-level">-</span></div>
+                  <b class="p-combat-name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat">
-                <tr>
-                  <td class="lbl">이름</td><td class="val p-combat-name">-</td>
-                  <td class="lbl">Lv</td><td class="val p-combat-level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val p-combat-hp">- / -</td>
                   <td class="lbl">MP</td><td class="val p-combat-mp">- / -</td>
@@ -1645,7 +1669,7 @@
                   <td class="lbl">CON</td><td class="val p-combat-con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val p-combat-atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val p-combat-atk">- - -</td><td class="lbl">방어력</td><td class="val p-combat-def">- - -</td>
                 </tr>
                 <tr>
                   <td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td>
@@ -1674,14 +1698,15 @@
 
           <!-- 우측: 상대 정보 + 덱 -->
           <div class="col-right">
-            <div class="col-title">상대 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><div id="rk_avatar" style="width:100%;height:100%;background:#5a2020;color:#fff;font-size:36px;font-weight:bold;display:flex;align-items:center;justify-content:center;overflow:hidden;">⚔</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><div id="rk_avatar" style="width:100%;height:100%;background:#5a2020;color:#fff;font-size:36px;font-weight:bold;display:flex;align-items:center;justify-content:center;overflow:hidden;">⚔</div></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span id="rk_level">-</span></div>
+                  <b id="rk_name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat enemy-stat">
-                <tr>
-                  <td class="lbl">상대</td><td class="val" id="rk_name">-</td>
-                  <td class="lbl">Lv</td><td class="val" id="rk_level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val" id="rk_hp">- / -</td>
                   <td class="lbl">MP</td><td class="val" id="rk_mp">- / -</td>
@@ -1695,7 +1720,7 @@
                   <td class="lbl">CON</td><td class="val" id="rk_con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val" id="rk_atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val" id="rk_atk">- - -</td><td class="lbl">방어력</td><td class="val" id="rk_def">- - -</td>
                 </tr>
                 <tr>
                   <td class="lbl">무기</td><td class="val" id="rk_weapon" colspan="3">-</td>
@@ -1734,14 +1759,15 @@
         <div class="combat-grid">
           <!-- 좌측: 내 정보 + 내 덱 -->
           <div class="col-left">
-            <div class="col-title title-mine">내 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span class="p-combat-level">-</span></div>
+                  <b class="p-combat-name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat">
-                <tr>
-                  <td class="lbl">이름</td><td class="val p-combat-name">-</td>
-                  <td class="lbl">Lv</td><td class="val p-combat-level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val p-combat-hp">- / -</td>
                   <td class="lbl">MP</td><td class="val p-combat-mp">- / -</td>
@@ -1755,7 +1781,13 @@
                   <td class="lbl">CON</td><td class="val p-combat-con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val p-combat-atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val p-combat-atk">- - -</td><td class="lbl">방어력</td><td class="val p-combat-def">- - -</td>
+                </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val p-combat-armor" colspan="3">-</td>
                 </tr>
               </table>
             </div>
@@ -1778,14 +1810,15 @@
 
           <!-- 우측: 몬스터 정보 + 덱 -->
           <div class="col-right">
-            <div class="col-title">상대 정보</div>
             <div class="mon-portrait-row">
-              <div class="mon-portrait"><img id="m_portrait" src="" alt=""></div>
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><img id="m_portrait" src="" alt=""></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span id="m_level">-</span></div>
+                  <b id="m_name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
               <table class="stat enemy-stat">
-                <tr>
-                  <td class="lbl">이름</td><td class="val" id="m_name">-</td>
-                  <td class="lbl">Lv</td><td class="val" id="m_level">-</td>
-                </tr>
                 <tr>
                   <td class="lbl">HP</td><td class="val" id="m_hp">- / -</td>
                   <td class="lbl">MP</td><td class="val" id="m_mp">- / -</td>
@@ -1799,7 +1832,13 @@
                   <td class="lbl">CON</td><td class="val" id="m_con">-</td>
                 </tr>
                 <tr>
-                  <td class="lbl">공격</td><td class="val" id="m_atk" colspan="3">- - -</td>
+                  <td class="lbl">공격력</td><td class="val" id="m_atk">- - -</td><td class="lbl">방어력</td><td class="val" id="m_def">- - -</td>
+                </tr>
+                <tr>
+                  <td class="lbl">무기</td><td class="val" id="m_weapon" colspan="3">-</td>
+                </tr>
+                <tr>
+                  <td class="lbl">방어구</td><td class="val" id="m_armor" colspan="3">-</td>
                 </tr>
               </table>
             </div>
@@ -1922,6 +1961,7 @@
       <div class="shop-page">
         <div class="shop-head">카드샵 — 카드 뽑기</div>
         <div class="shop-banner">
+          <img class="shop-banner-img" src="assets/카드샵.png" alt="">
           <div class="shop-title">카 드 샵</div>
           <div class="shop-sparkle">
             <span></span><span></span><span></span><span></span><span></span>
@@ -1955,6 +1995,7 @@
         <div class="gacha-result-wrap" id="gachaResult" hidden>
           <div class="gacha-result-title">획득 카드</div>
           <div class="gacha-result-grid" id="gachaResultGrid"></div>
+          <div id="gachaResultActions" style="margin-top:10px;text-align:center;"></div>
         </div>
 
         <!-- 카드 판매 -->
@@ -2075,6 +2116,7 @@
     <div class="content-pane" id="content-heal" hidden>
       <div class="heal-page">
         <div class="heal-banner">
+          <img class="heal-banner-img" src="assets/회복소.jpg" alt="">
           <div class="heal-title">회복의 샘물</div>
           <div class="heal-droplets">
             <span></span><span></span><span></span><span></span><span></span>
@@ -2175,6 +2217,22 @@
   </div>
 </div>
 
+<!-- 매크로 방지 — 덧셈 캡차 모달 (닫기 버튼 없음, 정답 맞춰야만 사라짐) -->
+<div id="captchaOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9999;justify-content:center;align-items:center;">
+  <div style="background:#1a1238;border:2px solid #ffd700;border-radius:6px;padding:24px 28px;width:320px;text-align:center;box-shadow:0 0 24px rgba(255,215,0,.3);">
+    <div style="font-size:22px;margin-bottom:10px;">🛡️</div>
+    <h2 style="color:#ffd700;font-size:18px;margin:0 0 8px;text-shadow:1px 1px 0 #000;">매크로 방지</h2>
+    <p style="color:#fff;font-size:12px;margin:0 0 14px;">아래 덧셈 문제의 정답을 입력해주세요.</p>
+    <div id="captcha_q" style="font-size:24px;color:#fff;font-weight:bold;margin:8px 0 14px;">- + - = ?</div>
+    <input id="captcha_input" type="number" inputmode="numeric" autocomplete="off"
+      style="width:140px;padding:8px 10px;font-size:18px;text-align:center;border:1px solid #ffd700;border-radius:4px;background:#0a0a1f;color:#fff;"
+      onkeydown="if(event.key==='Enter'){event.preventDefault();submitCaptcha();}">
+    <div id="captcha_msg" style="color:#ff7e7e;font-size:12px;min-height:16px;margin:8px 0 6px;"></div>
+    <button onclick="submitCaptcha()"
+      style="padding:8px 24px;font-size:14px;font-weight:bold;background:#ffd700;color:#3a1a00;border:0;border-radius:4px;cursor:pointer;">확인</button>
+  </div>
+</div>
+
 <script>
 /* ===============================================================
    여신전쟁 v3 — 로그인/메인/채팅 핵심 골격
@@ -2194,13 +2252,13 @@ const CARDS = [
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
   { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'공격력 +8 증가', fx:{type:'buff',atk:8} },
-  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어력 +8 증가', fx:{type:'buff',def:8} },
-  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어력 +8 증가', fx:{type:'buff',def:8} },
+  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어력 +9 증가', fx:{type:'buff',def:9} },
+  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어력 +9 증가', fx:{type:'buff',def:9} },
   { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 ~ 20 랜덤 데미지 / 매턴 STR +3 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
   { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'DEX +5, STR +2', fx:{type:'buff',dex:5,str:2} },
   { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'DEX + CON 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
   { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'DEX + 공격력으로 타격', fx:{type:'dmgStat',stats:['dex']} },
-  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)*2만큼 공격 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2} },
+  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)로 2회 타격 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2} },
   { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3 증가', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
   { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'STR 수치 만큼 1회 공격, 상대방 CON -2, 최대 HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
   { id:'n11', name:'돌던지기',       grade:'normal', icon:'hammer', text:'Str + Dex + 5 데미지', fx:{type:'dmgStat',stats:['str','dex'],bonus:5} },
@@ -2229,16 +2287,16 @@ const CARDS = [
   { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'[STR + DEX + 공격력]만큼 타격, 상대방 DEX -2 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
   { id:'n35', name:'베어폼',         grade:'normal', icon:'paw',    text:'시전자 INT를 전부 STR로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'str'} },
   { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'상대방 방어력 -5 감소 및 2턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
-  { id:'n37', name:'블러드러스트',   grade:'normal', icon:'blood',  text:'시전자 HP -25%, STR*3만큼 타격', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.25},{type:'pctBuff',stats:{str:2.0}}]} },
+  { id:'n37', name:'블러드러스트',   grade:'normal', icon:'blood',  text:'시전자 HP -25%, STR로 3회 타격', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.25},{type:'dmgStat',stats:['str'],mult:3}]} },
   { id:'n38', name:'새크리파이스',   grade:'normal', icon:'cross',  text:'자신의 HP 20% 희생 후 상대방에게 같은 수치의 고정 데미지', fx:{type:'sacrifice',hpPct:0.20,dmgToEnemy:true} },
   { id:'n39', name:'서펜트와드',     grade:'normal', icon:'paw',    text:'5 ~ 15 데미지 코브라와드 소환 (소환의식 불필요)', fx:{type:'dmg',min:5,max:15} },
   { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 동안 시전자 MP 20씩 회복', fx:{type:'mot',turns:3,mp:20} },
   { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP 50 사용', fx:{type:'mpCost',amount:50} },
   { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 데미지를 10 ~ 20으로 강화 / [라이즈데드] 선행 필요', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
-  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어 +15 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:15} },
-  { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(STR + 공격력) *2만큼 공격', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
+  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어 +17 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:17} },
+  { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(STR + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
   { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'[5 ~ 상대방 CON] 랜덤 데미지로 2회 공격', fx:{type:'dmgHits',min:5,max:25,hits:2} },
-  { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'시전자 (STR + CON) *2만큼 공격', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
+  { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'시전자 (STR + CON)로 2회 타격', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
   { id:'n47', name:'슬로우',         grade:'normal', icon:'web',    text:'상대방 DEX -40% 감소', fx:{type:'pctDebuff',stats:{dex:-0.4}} },
   { id:'n48', name:'슬로우포이즌',   grade:'normal', icon:'venom',  text:'8 고정 데미지 / 상대방 DEX -40% 감소', fx:{type:'multi',effects:[{type:'dmg',min:8,max:8},{type:'pctDebuff',stats:{dex:-0.4}}]} },
   { id:'n49', name:'시폰마나',       grade:'normal', icon:'drain',  text:'상대방 INT만큼 MP 흡수', fx:{type:'mpDrain',stat:'int',source:'target'} },
@@ -2247,7 +2305,7 @@ const CARDS = [
   { id:'n52', name:'언홀리프렌지',   grade:'normal', icon:'rage',   text:'시전자 STR +50% 증가 / 4턴 동안 HP -5%씩 감소', fx:{type:'multi',effects:[{type:'pctBuff',stats:{str:0.5}},{type:'dotSelf',turns:4,pct:0.05}]} },
   { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어력 +3 증가', fx:{type:'buff',def:3,turns:5} },
   { id:'n54', name:'영혼흡수',       grade:'normal', icon:'soul',   text:'상대방 INT 50% 흡수', fx:{type:'statSteal',stats:['int'],pct:0.5} },
-  { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(DEX + 무기 공격력) *2만큼 타격', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
+  { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(DEX + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
   { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'공격력 +40% 증가 / [STR 10 or DEX 10 이상일 경우 시전 가능]', fx:{type:'pctBuff',stats:{atk:0.4}} },
   { id:'n57', name:'이너파이어',     grade:'normal', icon:'aura',   text:'INT 절반만큼 STR 및 DEX 증가', fx:{type:'buffFromStat',source:'int',mult:0.5,addsTo:['str','dex']} },
   { id:'n58', name:'자폭',           grade:'normal', icon:'bomb',   text:'상대방에게 15 ~ 50 랜덤 데미지, 시전자에게도 15 ~ 50 랜덤 데미지', fx:{type:'dmgSelf',min:15,max:50,selfMin:15,selfMax:50} },
@@ -2255,7 +2313,7 @@ const CARDS = [
   { id:'n60', name:'지능증가',       grade:'normal', icon:'brain',  text:'INT +6 증가', fx:{type:'buff',int:6} },
   { id:'n61', name:'철제검',         grade:'normal', icon:'sword',  text:'공격력 +5 증가', fx:{type:'buff',atk:5} },
   { id:'n62', name:'철제방어구',     grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
-  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어력 +5 증가', fx:{type:'buff',def:5} },
+  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어력 +6 증가', fx:{type:'buff',def:6} },
   { id:'n64', name:'커즈',           grade:'normal', icon:'curse',  text:'4턴 동안 상대방 DEX -20% 감소', fx:{type:'pctDebuff',stats:{dex:-0.2},turns:4} },
   { id:'n65', name:'콜드애로우',     grade:'normal', icon:'ice',    text:'INT*1.8 데미지 / 적 DEX -20% 감소 / 시전자 INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:1.8},{type:'pctDebuff',stats:{dex:-0.2}},{type:'mpCost',stat:'int',mult:1.5}]} },
   { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 ~ 20 랜덤 데미지, 매턴 INT +3씩 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
@@ -2276,13 +2334,13 @@ const CARDS = [
 
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
-  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어력 +5씩 증가', fx:{type:'buff',def:5,turns:3} },
+  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어력 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
   { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10 ~ 25 랜덤 데미지, 매턴 HP 5씩 흡수 / [소환의식] 선행 필요', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
-  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격력 +5, 방어력 +5 증가 / 상대방 공격력 -5, 방어력 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:5},{type:'debuff',atk:-5,def:-5}]} },
+  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격력 +5, 방어력 +6 증가 / 상대방 공격력 -5, 방어력 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
   { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'상대방 MP*0.2 데미지 (최대 60) / 상대방 MP -50% 감소 및 기본공격으로 타격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
   { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'공격력 +12 증가', fx:{type:'buff',atk:12} },
-  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +11 증가', fx:{type:'buff',def:11} },
-  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +10 증가', fx:{type:'buff',def:10} },
+  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +12 증가', fx:{type:'buff',def:12} },
+  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +11 증가', fx:{type:'buff',def:11} },
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
   { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'시전 다음 턴부터 2턴 동안 적에게 가한 데미지의 50%를 HP로 흡수 / [시전자 STR 10 이상일 때만 발동]', statReq:{str:10}, fx:{type:'lifeleech',turns:2,pct:0.5} },
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
@@ -2291,7 +2349,7 @@ const CARDS = [
   { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
   { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 동안 10 고정 데미지', fx:{type:'dot',turns:4,dmg:10} },
   { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'[STR+공격력] 데미지 / 상대방 30% 확률로 1턴 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
-  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어력 +5 증가 및 3회 동안 상대방 공격의 70%를 반사', fx:{type:'multi',effects:[{type:'buff',def:5},{type:'reflect',hits:3,pct:0.7}]} },
+  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어력 +6 증가 및 3회 동안 상대방 공격의 70%를 반사', fx:{type:'multi',effects:[{type:'buff',def:6},{type:'reflect',hits:3,pct:0.7}]} },
   { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'[DEX + 35] 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
@@ -2300,22 +2358,22 @@ const CARDS = [
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'pctDebuff',stats:{dex:-0.5},turns:3},{type:'dispel'}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
   { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
-  { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'INT*3 데미지 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
+  { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'INT로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
   { id:'r27', name:'캐리언비틀즈',   grade:'rare', icon:'paw',      text:'10-20 데미지 / 3턴 5 고정데미지 (소환의식 없음)', fx:{type:'multi',effects:[{type:'dmg',min:10,max:20},{type:'dot',turns:3,dmg:5}]} },
   { id:'r28', name:'캐리언스웜',     grade:'rare', icon:'soul',     text:'2턴 동안 15 데미지 / 상대방 STR -3, DEX -3 감소 / INT*2 MP 소모', fx:{type:'multi',effects:[{type:'dot',turns:2,dmg:15},{type:'debuff',str:-3,dex:-3},{type:'mpCost',stat:'int',mult:2}]} },
-  { id:'r29', name:'코로시브브레스', grade:'rare', icon:'sword2',   text:'INT*2 데미지 / 4턴 동안 8 고정 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'dot',turns:4,dmg:8}]} },
+  { id:'r29', name:'코로시브브레스', grade:'rare', icon:'sword2',   text:'INT로 2회 타격 / 4턴 동안 8 고정 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'dot',turns:4,dmg:8}]} },
   { id:'r30', name:'쿠루징웨이브',   grade:'rare', icon:'armor',    text:'[INT + 35] 데미지', fx:{type:'dmgStat',stats:['int'],bonus:35} },
 
   // ───── 유니크 카드 6종 ─────
-  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 무기] *3으로 공격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
+  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
   { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
-  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 무기] *3으로 공격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
-  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'[DEX + 무기] *3으로 공격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
+  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
+  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 동안 10-25 랜덤 데미지 (소환의식 없음)', fx:{type:'dot',turns:10,min:10,max:25} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'90% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.90,frog:true} },
+  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5 ~ 10 랜덤 데미지 *5 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프와 반사막·회피를 강탈하고, 시전자에게 걸린 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealBuff'},{type:'stealDefenses'},{type:'debuffReflect'}]} },
@@ -2325,12 +2383,12 @@ const CARDS = [
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
   { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'r34', name:'스피드스크롤',       grade:'rare', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
-  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +5 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:5} },
+  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:6} },
   { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 공격력 +5 증가 / 상대방 방어력 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
-  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'무기 보너스 +40% / 방어구 보너스 +40% / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
+  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'(무기 + 누적 공격 버프) ×40% 만큼 공격력 증가 / (방어구 + 누적 방어 버프) ×40% 만큼 방어력 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
   { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
-  { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT*2 데미지 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
-  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기] *3 데미지 / 시전자 공격력 및 방어력 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
+  { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT로 2회 타격 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
+  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 공격력 및 방어력 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -3370,6 +3428,7 @@ function doGachaShop(shopId, n){
       <div class="ef">${c.text||''}</div>
     </div>
   `).join('');
+  _renderGachaResultActions(results);
   const heroes = results.filter(c => c.grade === 'hero').length;
   const uniques = results.filter(c => c.grade === 'unique').length;
   let msg = `✔ ${s.label} ${n}뽑 완료 (-${cost.toLocaleString()} G)`;
@@ -3385,6 +3444,49 @@ function doGachaShop(shopId, n){
 
 // 카드 판매 가격 (관리자 패널에서 편집 가능)
 const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000 };
+
+// 가챠 직후 즉시 판매 — 결과 카드를 인벤토리에서 제거하고 골드 환급
+function _sellGachaResults(results){
+  const p = GAME.player;
+  if (!Array.isArray(results) || results.length === 0) return;
+  // 유니크 이상 포함 시 한 번 더 확인
+  const hasHigh = results.some(c => c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend');
+  if (hasHigh){
+    if (!confirm(`⚠ 유니크 이상 카드가 포함되어 있습니다.\n\n총 ${results.length}장을 즉시 판매하시겠습니까?`)) return;
+  }
+  let total = 0;
+  // 참조 기반으로 마지막부터 splice — 동일 카드 중복도 안전하게 제거
+  for (let i = results.length - 1; i >= 0; i--){
+    const card = results[i];
+    const idx = GAME.inventory.lastIndexOf(card);
+    if (idx >= 0){
+      GAME.inventory.splice(idx, 1);
+      total += CARD_SELL_PRICE[card.grade] || 1;
+    }
+  }
+  p.gold += total;
+  toast(`💰 ${results.length}장 판매 +${total.toLocaleString()}G`);
+  try { renderSheet(); } catch(e){}
+  try { renderDeck(); } catch(e){}
+  try { refreshShopUI(); } catch(e){}
+  saveGame();
+  // 액션 영역 비우기 (중복 판매 방지)
+  const act = $('gachaResultActions');
+  if (act) act.innerHTML = `<div style="color:#7eff7e;font-size:12px;">✔ 판매 완료 (+${total.toLocaleString()}G)</div>`;
+}
+
+// 가챠 결과창 액션 영역 렌더링 (1뽑=판매, 다수=모두 판매)
+let _lastGachaResults = null;
+function _renderGachaResultActions(results){
+  const act = $('gachaResultActions');
+  if (!act) return;
+  _lastGachaResults = results;
+  const total = results.reduce((s, c) => s + (CARD_SELL_PRICE[c.grade] || 1), 0);
+  const label = results.length === 1
+    ? `💰 판매 (+${total.toLocaleString()}G)`
+    : `💰 모두 판매 (+${total.toLocaleString()}G)`;
+  act.innerHTML = `<button onclick="_sellGachaResults(_lastGachaResults)" style="background:#b8860b;color:#fff;border:0;padding:8px 22px;font-size:13px;font-weight:bold;cursor:pointer;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.3);">${label}</button>`;
+}
 // CARD_SELL_PRICE는 const로 선언했지만 객체 내부 값은 변경 가능 (관리자 패널이 직접 변경)
 
 function sellAllByGrade(grade){
@@ -4013,6 +4115,7 @@ function doGacha(n){
       <div class="ef">${c.text||''}</div>
     </div>
   `).join('');
+  _renderGachaResultActions(results);
 
   // 메시지
   const heroes = results.filter(c=>c.grade==='hero').length;
@@ -4205,7 +4308,7 @@ async function checkRaidReset(raidKey){
   }
 }
 
-// 잡몹 카운트는 플레이어가 잡지 않으면 줄지 않음 (NPC 자동 시뮬레이션 제거)
+// 몬스터 카운트는 플레이어가 잡지 않으면 줄지 않음 (NPC 자동 시뮬레이션 제거)
 function simulateRaidProgress(raidKey){
   const r = GAME.raid[raidKey];
   if (!r.sessionStart) return;
@@ -4252,6 +4355,14 @@ async function openActiveRaid(){
 }
 
 async function openRaid(raidKey){
+  // 매크로 방지 — 3% 확률 덧셈 캡차 통과 후 진입
+  if (!openRaid._captchaPassed && Math.random() < CAPTCHA_RATE){
+    showCaptcha(() => {
+      openRaid._captchaPassed = true;
+      try { openRaid(raidKey); } finally { openRaid._captchaPassed = false; }
+    });
+    return;
+  }
   const p = GAME.player;
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
@@ -4323,9 +4434,16 @@ function renderRaidLobby(){
     btn.disabled = false;
     $('raid_tip').innerHTML = `<b style="color:#a02050;">보스 단계!</b> 보스 HP는 누적으로 깎입니다. 마지막 최종 타격를 친 유저가 보상을 받습니다.`;
   } else {
-    btn.textContent = `▶ 잡몹 도전 (남은 ${r.monsterCount}/99)`;
+    btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/99)`;
     btn.disabled = false;
-    $('raid_tip').textContent = '잡몹 99마리를 모두 처치하면 보스가 등장합니다. 잡몹 수는 모든 유저 공유로 줄어듭니다.';
+    $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
+  }
+  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화
+  const resetBtn = $('raid_reset_btn');
+  if (resetBtn){
+    resetBtn.disabled = !r.bossDefeated;
+    resetBtn.style.opacity = r.bossDefeated ? '1' : '0.45';
+    resetBtn.style.cursor  = r.bossDefeated ? 'pointer' : 'not-allowed';
   }
 }
 
@@ -4334,7 +4452,7 @@ function raidChallenge(){
   if (r.bossDefeated){ toast('보스가 이미 처치되었습니다.'); return; }
   setCombatMode(true);
   if (r.monsterCount > 0){
-    // 잡몹 전투
+    // 몬스터 전투
     startRaidMobBattle();
   } else {
     // 보스 전투
@@ -4342,7 +4460,60 @@ function raidChallenge(){
   }
 }
 
-// 공격대 잡몹 생성 — Lv 25~40 분포 (25~30 40%, 30~35 50%, 35~40 10%)
+// 여신의 축복 2개를 소모하여 현재 공격대를 전체 초기화 (실시간 공유)
+// 정해진 시간(매시 정각) 리셋에는 영향 없음 — session_start 유지
+async function requestRaidManualReset(){
+  const p = GAME.player;
+  const raidKey = GAME.currentRaid;
+  // 보스 처치 후에만 초기화 허용 (UI는 disabled지만 안전장치)
+  const rNow = GAME.raid && GAME.raid[raidKey];
+  if (!rNow || !rNow.bossDefeated){
+    toast('보스 처치 후에만 초기화할 수 있습니다.');
+    return;
+  }
+  const r = GAME.raid[raidKey];
+  if (!r){ toast('공격대 상태를 불러올 수 없습니다.'); return; }
+  if ((p.blessing||0) < 2){
+    toast('✨ 여신의 축복이 부족합니다. (필요: 2)');
+    return;
+  }
+  if (!confirm(`✨ 여신의 축복 2개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 99마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 매시 정각 자동 리셋엔 영향 없음`)) return;
+  // 새 보스 선정 (클라이언트에서 랜덤 — RPC에 전달)
+  const bossList = RAID_BOSSES[raidKey];
+  const boss = bossList[Math.floor(Math.random() * bossList.length)];
+  if (!sb){
+    toast('오프라인 상태에서는 초기화할 수 없습니다.');
+    return;
+  }
+  try {
+    const { error } = await sb.rpc('raid_manual_reset', {
+      p_active_key: raidKey,
+      p_boss_id: boss.id,
+      p_boss_hp_max: boss.hp,
+    });
+    if (error){
+      console.warn('[raid_manual_reset]', error);
+      toast('초기화 실패: ' + (error.message || '서버 오류'));
+      return;
+    }
+    p.blessing = Math.max(0, (p.blessing||0) - 2);
+    // 본인 pending 몬스터도 초기화 (다음 도전 시 새 몬스터부터)
+    p.pendingRaidMob = null;
+    saveGame();
+    try { renderSheet(); } catch(e){}
+    try { chatSys(`✨ ${p.name}님이 여신의 축복 2개로 공격대를 초기화했습니다!`); } catch(e){}
+    toast('공격대 초기화 완료');
+    // realtime UPDATE 신호로 다른 클라이언트도 자동 갱신 (loadRaidFromCloud → renderRaidLobby)
+    await loadRaidFromCloud();
+    try { updateRaidUI(); } catch(e){}
+    try { renderRaidLobby(); } catch(e){}
+  } catch(e){
+    console.warn('[raid_manual_reset]', e);
+    toast('초기화 실패: ' + (e.message||e));
+  }
+}
+
+// 공격대 몬스터 생성 — Lv 25~40 분포 (25~30 40%, 30~35 50%, 35~40 10%)
 function generateRaidMob(){
   const roll = Math.random();
   let lvMin, lvMax;
@@ -4386,7 +4557,7 @@ function startRaidMobBattle(){
   const p = GAME.player;
   let monster;
   const pending = p.pendingRaidMob;
-  // 같은 raid 키 + 같은 세션 + HP 남아있는 잡몹이 있으면 복원
+  // 같은 raid 키 + 같은 세션 + HP 남아있는 몬스터이 있으면 복원
   if (pending && pending.raidKey === raidKey
       && Number(pending.sessionStart) === Number(r.sessionStart)
       && pending.monster && pending.monster.hp > 0){
@@ -4416,7 +4587,7 @@ function startRaidMobBattle(){
   $('raid-battle').hidden = false;
   $('raid-result').hidden = true;
   _autoFocusBtn('raidNextBtn');
-  $('raid_battle_title').textContent = `공격대 잡몹 — ${monster.name} (Lv ${monster.level})`;
+  $('raid_battle_title').textContent = `공격대 몬스터 — ${monster.name} (Lv ${monster.level})`;
   if ($('raidLog')) $('raidLog').innerHTML = '';
   renderRaidBattle();
   if (monster.hp < monster.hpMax){
@@ -4436,6 +4607,8 @@ async function startRaidBossBattle(){
   const bossDef = RAID_BOSSES[raidKey].find(b => b.id === r.bossId);
   console.log('[raid boss] start with hp', r.bossHp, '/', r.bossHpMax, 'defeated:', r.bossDefeated);
   // 보스는 누적 HP 유지 (r.bossHp 사용)
+  // 모든 보스는 글라디우스(+15) + 로리카 세그멘타타(+15) 착용 — 평타 atk·실효 def에 보너스 반영
+  const W_BONUS = 15, A_BONUS = 15;
   const boss = {
     id: bossDef.id,
     name: bossDef.name,
@@ -4444,10 +4617,10 @@ async function startRaidBossBattle(){
     str: bossDef.str, dex: bossDef.dex, int: bossDef.int, con: bossDef.con,
     hp: r.bossHp, hpMax: (r.bossHpMax || bossDef.hpMax || 10000),
     mp: 200, mpMax: 200,
-    atk: bossDef.atk.slice(),
-    def: bossDef.con,
-    weapon: { atkBonus: 20 },
-    armor: { defBonus: 10 },
+    atk: bossDef.atk.map(v => v + W_BONUS),
+    def: bossDef.con + A_BONUS,
+    weapon: { id:'gladius',        name:'글라디우스',         atkBonus: W_BONUS },
+    armor:  { id:'lorica_segment', name:'로리카 세그멘타타', defBonus: A_BONUS },
     deck: makeBossDeck(),
     atkType: '특수',
   };
@@ -4519,6 +4692,9 @@ function renderRaidBattle(){
   $('rd_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rd_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rd_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
+  $('rd_def').textContent = (m.def || 0);
+  $('rd_weapon').textContent = m.weapon ? `${m.weapon.name||'-'} (+${m.weapon.atkBonus||0})` : '-';
+  $('rd_armor').textContent  = m.armor  ? `${m.armor.name||'-'} (+${m.armor.defBonus||0})`   : '-';
 
   const hpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
@@ -4652,16 +4828,16 @@ async function raidEnd(result){
   let bodyHtml = '';
 
   if (c.mode === 'mob'){
-    // 잡몹 모드
+    // 몬스터 모드
     if (result === 'time'){
       if (p.hp > m.hp) outcome = 'win';
       else if (p.hp < m.hp) outcome = 'lose';
       else outcome = 'win';
     }
     if (outcome === 'win'){
-      // 잡몹 처치 — pendingRaidMob 제거 (다음 도전 시 새 잡몹)
+      // 몬스터 처치 — pendingRaidMob 제거 (다음 도전 시 새 몬스터)
       p.pendingRaidMob = null;
-      // 잡몹 카운트 차감 — 클라우드 RPC (참여자 등록 포함)
+      // 몬스터 카운트 차감 — 클라우드 RPC (참여자 등록 포함)
       let remain = r.monsterCount;
       if (sb){
         try {
@@ -4675,10 +4851,10 @@ async function raidEnd(result){
       const gold = m.gold + 50;
       const xp = m.xp + 15;
       p.gold += gold; p.xp += xp;
-      raidLog(`🏆 잡몹 처치! +${gold}G, +${xp}XP`, 'sys');
-      bodyHtml = `<p style="color:#060;">🏆 잡몹 처치 성공!</p>
+      raidLog(`🏆 몬스터 처치! +${gold}G, +${xp}XP`, 'sys');
+      bodyHtml = `<p style="color:#060;">🏆 몬스터 처치 성공!</p>
         <p>보상: <b>+${gold}G, +${xp}XP</b></p>
-        <p>남은 잡몹: <b>${remain}/99</b></p>`;
+        <p>남은 몬스터: <b>${remain}/99</b></p>`;
       let raidMobLvUp = false;
       let raidMobBonus = 0;
       while (p.xp >= xpForNextLevel(p.level)){
@@ -4694,29 +4870,29 @@ async function raidEnd(result){
         _scheduleLvUpAlert();
       }
       if (r.monsterCount === 0){
-        bodyHtml += `<p style="color:#a02050; font-size:14px;">⚡ 잡몹 정리 완료! 보스 단계 진입!</p>`;
+        bodyHtml += `<p style="color:#a02050; font-size:14px;">⚡ 몬스터 정리 완료! 보스 단계 진입!</p>`;
         chatSys(`★ 공격대 보스 단계 진입! 최종 타격를 노려보세요.`);
       }
     } else if (outcome === 'lose'){
       // 공격대 패배 패널티 없음. HP/MP는 0으로 (회복 후 재진입)
       p.hp = 0;
       p.mp = 0;
-      // 잡몹 잔여 HP 저장 — 다음 도전 시 이어서
+      // 몬스터 잔여 HP 저장 — 다음 도전 시 이어서
       if (m.hp > 0){
         p.pendingRaidMob = { raidKey: c.raidKey, sessionStart: r.sessionStart, monster: m };
       } else {
         p.pendingRaidMob = null;
       }
       bodyHtml = `<p style="color:#a00;">💀 패배... HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
-        <p style="font-size:11px;color:#666;">잡몹 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 회복 후 다시 도전하면 이어서 사냥합니다.</p>`;
+        <p style="font-size:11px;color:#666;">몬스터 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 회복 후 다시 도전하면 이어서 사냥합니다.</p>`;
     } else {
-      // time / flee — 잡몹이 살아있으면 저장
+      // time / flee — 몬스터이 살아있으면 저장
       if (m.hp > 0){
         p.pendingRaidMob = { raidKey: c.raidKey, sessionStart: r.sessionStart, monster: m };
       } else {
         p.pendingRaidMob = null;
       }
-      bodyHtml = `<p>${outcome==='flee'?'기권':'턴 종료'}. 잡몹 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 다음 도전 시 이어집니다.</p>`;
+      bodyHtml = `<p>${outcome==='flee'?'기권':'턴 종료'}. 몬스터 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 다음 도전 시 이어집니다.</p>`;
     }
   } else if (c.mode === 'boss'){
     // 보스 모드 — 클라우드 RPC에 누적 데미지 위임
@@ -4791,7 +4967,7 @@ async function raidEnd(result){
     }
   }
   renderSheet();
-  $('raid_result_title').textContent = `공격대 결과 — ${c.mode==='mob'?'잡몹':'보스'}`;
+  $('raid_result_title').textContent = `공격대 결과 — ${c.mode==='mob'?'몬스터':'보스'}`;
   $('raid_result_body').innerHTML = bodyHtml;
   $('raid-battle').hidden = true;
   $('raid-result').hidden = false;
@@ -4917,7 +5093,7 @@ async function fetchOverallRank(){
 
 async function loadRankingFromCloud(){
   if (!sb) return false;
-  try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('rank_check_reset', e); }
+  // rank_check_reset 은 호출자(openRank/checkRankingReset)에서 한 번만 수행 — 중복 RPC 제거로 렉 완화
   try {
     const { data, error } = await sb.from('ranking_global')
       .select('rank, slot, user_id').order('rank', { ascending: true });
@@ -4934,10 +5110,8 @@ async function loadRankingFromCloud(){
 
 async function subscribeRanking(){
   if (!sb) return;
-  if (_rankChannel){
-    try { await sb.removeChannel(_rankChannel); } catch(e){}
-    _rankChannel = null;
-  }
+  // 이미 구독 중이면 재구독 비용 회피
+  if (_rankChannel) return;
   _rankChannel = sb.channel('ranking-global')
     .on('postgres_changes',
       { event: '*', schema: 'public', table: 'ranking_global' },
@@ -5032,16 +5206,31 @@ function getRankBonus(){
 }
 
 async function openRank(){
-  await checkRankingReset();
-  if (sb){
-    await loadRankingFromCloud();
-    await subscribeRanking();
-  }
+  // 1) UI 즉시 노출 — 캐시된 slots로 바로 그려서 메뉴 클릭 지연 제거
   showContent('rank');
   $('rank-list').hidden = false;
   $('rank-battle').hidden = true;
   $('rank-result').hidden = true;
-  renderRankList();
+  if (GAME.ranking && Array.isArray(GAME.ranking.slots) && GAME.ranking.slots.length){
+    renderRankList();
+  } else if ($('rank_table')) {
+    $('rank_table').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#aaa;">랭킹 로딩 중…</td></tr>';
+  }
+  // 2) 클라우드 동기화는 백그라운드 (await로 메인 스레드 막지 않음)
+  (async () => {
+    try {
+      if (sb){
+        try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('[rank_check_reset]', e); }
+        await loadRankingFromCloud();
+        await subscribeRanking();
+      } else {
+        await checkRankingReset();
+      }
+      if ($('content-rank') && !$('content-rank').hidden && !$('rank-list').hidden){
+        renderRankList();
+      }
+    } catch(e){ console.warn('[openRank sync]', e); }
+  })();
 }
 
 function renderRankList(){
@@ -5088,7 +5277,13 @@ function renderRankList(){
   $('rank_table').innerHTML = html;
 }
 
+let _rankChallengeBusy = false;
 function challengeRank(targetRank){
+  if (_rankChallengeBusy) return; // 중복 클릭 방지
+  _rankChallengeBusy = true;
+  // 짧은 쿨다운 후 자동 해제 (전투 진입 실패 시에도 다시 클릭 가능)
+  setTimeout(() => { _rankChallengeBusy = false; }, 800);
+
   if (GAME.player && GAME.player.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
     openHeal();
@@ -5101,6 +5296,16 @@ function challengeRank(targetRank){
   if (!allowed){ toast('도전할 수 없는 순위입니다.'); return; }
 
   const opponent = GAME.ranking.slots[targetRank - 1];
+  if (!opponent || !opponent.name){
+    toast('상대 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+    if (sb) loadRankingFromCloud().then(() => { try { renderRankList(); } catch(e){} }).catch(()=>{});
+    return;
+  }
+  if (!Array.isArray(opponent.deck) || opponent.deck.length === 0){
+    toast('상대 덱이 비어있습니다. 다시 시도해주세요.');
+    if (sb) loadRankingFromCloud().then(() => { try { renderRankList(); } catch(e){} }).catch(()=>{});
+    return;
+  }
   startRankBattle(opponent, targetRank, 'attack');
 }
 
@@ -5201,6 +5406,7 @@ function renderRankBattle(){
   $('rk_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rk_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
+  $('rk_def').textContent = (m.def || 0);
   // 상대 아바타 — 슬롯에 avatar 있으면 이미지, NPC면 ⚔, 그 외면 첫 글자
   const avEl = $('rk_avatar');
   if (avEl){
@@ -5809,7 +6015,55 @@ function generateMonster(playerLv, tier){
 }
 
 // ─── 수행 진입 ───
+// ─── 매크로 방지 (덧셈 캡차) ───
+// 수행/공격대 진입 시 3% 확률로 발생, 정답 맞춰야만 진입 가능
+const CAPTCHA_RATE = 0.03;
+let _captchaCb = null;
+let _captchaAns = 0;
+function _captchaNewProblem(){
+  const a = Math.floor(Math.random() * 9) + 1;
+  const b = Math.floor(Math.random() * 9) + 1;
+  _captchaAns = a + b;
+  const q = $('captcha_q'); if (q) q.textContent = `${a} + ${b} = ?`;
+}
+function showCaptcha(onPass){
+  _captchaCb = onPass || null;
+  _captchaNewProblem();
+  const ov = $('captchaOverlay'); if (!ov) { if (onPass) onPass(); return; }
+  const inp = $('captcha_input'); if (inp) inp.value = '';
+  const msg = $('captcha_msg'); if (msg) msg.textContent = '';
+  ov.style.display = 'flex';
+  setTimeout(() => { try { $('captcha_input').focus(); } catch(e){} }, 60);
+}
+function submitCaptcha(){
+  const inp = $('captcha_input');
+  const v = inp ? parseInt(inp.value, 10) : NaN;
+  if (v === _captchaAns){
+    $('captchaOverlay').style.display = 'none';
+    const cb = _captchaCb;
+    _captchaCb = null;
+    if (typeof cb === 'function') cb();
+  } else {
+    // 오답 — 새 문제로 갱신 (매크로가 정답 학습 못하도록)
+    _captchaNewProblem();
+    if (inp){ inp.value = ''; try { inp.focus(); } catch(e){} }
+    const msg = $('captcha_msg'); if (msg) msg.textContent = '❌ 오답입니다. 새 문제로 다시 풀어주세요.';
+  }
+}
+function captchaGate(onPass){
+  if (Math.random() >= CAPTCHA_RATE){ if (onPass) onPass(); return; }
+  showCaptcha(onPass);
+}
+
 function openHunt(tier){
+  // 매크로 방지 — 3% 확률 덧셈 캡차 통과 후 진입
+  if (!openHunt._captchaPassed && Math.random() < CAPTCHA_RATE){
+    showCaptcha(() => {
+      openHunt._captchaPassed = true;
+      try { openHunt(tier); } finally { openHunt._captchaPassed = false; }
+    });
+    return;
+  }
   const p = GAME.player;
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
@@ -5866,6 +6120,9 @@ function renderHuntBattle(){
   $('m_hp').textContent  = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('m_mp').textContent  = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('m_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
+  $('m_def').textContent = (m.def || 0);
+  $('m_weapon').textContent = m.weapon ? `${m.weapon.name||'-'} (+${m.weapon.atkBonus||0})` : '-';
+  $('m_armor').textContent  = m.armor  ? `${m.armor.name||'-'} (+${m.armor.defBonus||0})`   : '-';
   $('m_race_badge').textContent = `(${raceKr(m.race)})`;
   // 몬스터 HP/MP 바
   const mhpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
@@ -6036,6 +6293,9 @@ function _ensureCombatExt(c){
   c.myVoodoo ||= null; c.monVoodoo ||= null;     // {turns}
   c.myStealth ||= 0; c.monStealth ||= 0;         // 은신 후 기습/맹독 사용 가능 잔여 턴 (정수)
   c.myLeech ||= null; c.monLeech ||= null;       // 뱀파이어릭 오라 — {turns, pct} 받는 데미지의 pct만큼 회복
+  // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
+  c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
+  c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -6080,6 +6340,8 @@ function _buildCombatCtx(kind, caster){
     targObj: isP ? opp : me,
     castBuffs: isP ? c.myBuffs : c.monBuffs,
     targBuffs: isP ? c.monBuffs : c.myBuffs,
+    castLockedBuffs: isP ? c.myLockedBuffs : c.monLockedBuffs,
+    targLockedBuffs: isP ? c.monLockedBuffs : c.myLockedBuffs,
     castTurnBuffs: isP ? c.myTurnBuffs : c.monTurnBuffs,
     targTurnBuffs: isP ? c.monTurnBuffs : c.myTurnBuffs,
     castDots: isP ? c.monDots : c.myDots,      // dots ON the enemy
@@ -6380,7 +6642,13 @@ function applyCardEffect(card, ctx){
       // 무기 공격력 — weapon.atkBonus (장착 무기 자체의 추가 공격력)
       if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus || 0);
       if (fx.bonus) base += fx.bonus;
-      doDmg(base * (fx.mult || 1));
+      const mult = fx.mult || 1;
+      // 정수 mult ≥ 2 는 다회 타격(매 hit마다 방어력 차감), 분수 mult는 단발 ×N
+      if (Number.isInteger(mult) && mult >= 2){
+        for (let i = 0; i < mult; i++) doDmg(base);
+      } else {
+        doDmg(base * mult);
+      }
       return;
     }
     if (t === 'dmgHits'){
@@ -6475,15 +6743,19 @@ function applyCardEffect(card, ctx){
       for (const [k, pct] of Object.entries(fx.stats)){
         let base;
         if (fx.equipBase){
-          // 장비 기반 — 순수 weapon.atkBonus / armor.defBonus의 %만큼 buff (전투 중 buff 증가분 무시)
-          if (k === 'atk')      base = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
-          else if (k === 'def') base = (ctx.castObj.armor  && ctx.castObj.armor.defBonus)  || 0;
-          else                  base = (ctx.castObj[k]||0);
+          // 장비 기반 — (장비 보너스 + 전투 중 누적 buff)의 %만큼 buff
+          if (k === 'atk')      base = ((ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0) + (ctx.castBuffs.atk || 0);
+          else if (k === 'def') base = ((ctx.castObj.armor  && ctx.castObj.armor.defBonus)  || 0) + (ctx.castBuffs.def || 0);
+          else                  base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
         } else {
           base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
         }
         const d = Math.floor(base * pct);
         _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0);
+        // 장비 기반 buff는 별도 lock 객체에도 누적 → dispel/zeroStat/stealBuff 면역
+        if (fx.equipBase && ctx.castLockedBuffs){
+          ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + d;
+        }
         msgs.push(`${k} ${pct>=0?'+':''}${d}${fx.equipBase?` (장비 ${Math.floor(pct*100)}%)`:` ${Math.floor(pct*100)}%`}`);
       }
       ctx.log(`  + ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -6502,15 +6774,17 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'zeroStat'){
-      let obj, buffs, tBuffs, name, logCls;
+      let obj, buffs, tBuffs, locked, name, logCls;
       if (fx.target === 'self'){
-        obj = ctx.castObj; buffs = ctx.castBuffs; tBuffs = ctx.castTurnBuffs; name = ctx.castName; logCls = 'opp';
+        obj = ctx.castObj; buffs = ctx.castBuffs; tBuffs = ctx.castTurnBuffs; locked = ctx.castLockedBuffs; name = ctx.castName; logCls = 'opp';
       } else {
         const tgt = _debuffTarget();
-        obj = tgt.obj; buffs = tgt.buffs; tBuffs = tgt.turnBuffs; name = tgt.name; logCls = tgt.logCls;
+        obj = tgt.obj; buffs = tgt.buffs; tBuffs = tgt.turnBuffs; locked = (tgt.obj===ctx.targObj ? ctx.targLockedBuffs : ctx.castLockedBuffs); name = tgt.name; logCls = tgt.logCls;
       }
       for (const k of fx.stats){
-        const cur = (obj[k]||0) + (buffs[k]||0);
+        // 장비 기반 buff(엔지업 등)는 보존 — 0으로 만들지 않고 locked 값을 남김
+        const lockedVal = (locked && locked[k]) || 0;
+        const cur = (obj[k]||0) + (buffs[k]||0) - lockedVal;
         _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0);
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
@@ -6573,12 +6847,14 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'cleanseSelfDebuff'){
-      // 시전자에게 걸린 디버프(stat 음수) 검사
+      // 시전자에게 걸린 디버프(stat 음수 + 자해 도트) 검사
       const cb = ctx.castBuffs;
       const tbs = ctx.castTurnBuffs;
+      const sd = ctx.castSelfDots;
       let has = false;
       for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0){ has = true; break; } }
       if (!has) for (const tb of tbs){ if ((tb.value||0) < 0){ has = true; break; } }
+      if (!has && sd && sd.length > 0) has = true;
       if (!has){
         ctx.log(`  ✱ ${ctx.castName} 디버프가 없어 발동 실패`, 'info');
         return;
@@ -6593,6 +6869,8 @@ function applyCardEffect(card, ctx){
       }
       // 영구 디버프(turnBuffs 없이 직접 음수로 누적된 값)도 0으로 복귀
       for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0) cb[k] = 0; }
+      // 시전자가 본인에게 건 자해 도트(언홀리프렌지·이몰레이션 등)도 제거
+      if (sd) sd.length = 0;
       // HP/MP 회복
       if (fx.hp){ ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + fx.hp); }
       if (fx.mp){ ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + fx.mp); }
@@ -6636,21 +6914,25 @@ function applyCardEffect(card, ctx){
       const tgt = fx.target || 'enemy';
       const b = tgt==='enemy' ? ctx.targBuffs : ctx.castBuffs;
       const tb = tgt==='enemy' ? ctx.targTurnBuffs : ctx.castTurnBuffs;
-      for (const k of Object.keys(b)) b[k] = 0;
+      const lb = tgt==='enemy' ? ctx.targLockedBuffs : ctx.castLockedBuffs;
+      for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0; // 장비 기반 buff(엔지업 등)는 보존
       tb.length = 0;
       ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거`, ctx.castLogCls);
       return;
     }
     if (t === 'stealBuff'){
+      const lb = ctx.targLockedBuffs || {};
       for (const k of Object.keys(ctx.targBuffs)){
-        if (ctx.targBuffs[k] > 0){
-          const v = ctx.targBuffs[k];
+        // 장비 기반 buff(엔지업 등)는 탈취 대상에서 제외 — locked 수치는 적 측에 남김
+        const stealable = (ctx.targBuffs[k]||0) - (lb[k]||0);
+        if (stealable > 0){
+          const v = stealable;
           if (fx.turns){
             _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, v, fx.turns);
           } else {
             ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + v;
           }
-          ctx.targBuffs[k] = 0;
+          ctx.targBuffs[k] -= v;
         }
       }
       ctx.log(`  + 적 버프 탈취${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -6851,6 +7133,7 @@ function _ensureTrainExt(){
   c.myEvade ||= null; c.myVoodoo ||= null;
   c.myStealth ||= 0;
   c.myLeech ||= null;
+  c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   o.turnBuffs ||= []; o.mpHots ||= []; o.stun ||= 0; o.reflect ||= null; o.selfDots ||= [];
@@ -6858,6 +7141,7 @@ function _ensureTrainExt(){
   o.evade ||= null; o.voodoo ||= null;
   o.stealth ||= 0;
   o.leech ||= null;
+  o.lockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
 }
 function _buildTrainCtx(caster){
   _ensureTrainExt();
@@ -6871,6 +7155,8 @@ function _buildTrainCtx(caster){
     targObj: isMe ? opp : me,
     castBuffs: isMe ? c.myBuffs : opp.buffs,
     targBuffs: isMe ? opp.buffs : c.myBuffs,
+    castLockedBuffs: isMe ? c.myLockedBuffs : opp.lockedBuffs,
+    targLockedBuffs: isMe ? opp.lockedBuffs : c.myLockedBuffs,
     castTurnBuffs: isMe ? c.myTurnBuffs : opp.turnBuffs,
     targTurnBuffs: isMe ? opp.turnBuffs : c.myTurnBuffs,
     castDots: isMe ? opp.dots : c.myDots,
@@ -8358,57 +8644,59 @@ const TUTORIAL_STEPS = [
   {
     icon:'🎮', title:'여신전쟁에 오신 것을 환영합니다!',
     body:`<p>당신은 이제 신화 속 영웅이 되어 카드 덱으로 전투를 펼치게 됩니다.</p>
-      <p>이 짧은 안내는 약 1분 정도 소요됩니다. 차근차근 따라와 주세요.</p>
-      <div class="tip">♻ 스탯 분배가 마음에 들지 않으면 언제든 <b>「프로필 관리 → 스탯 초기화」</b>에서 10,000G로 STR/DEX/INT/CON을 리셋할 수 있어요. 스탯 P는 그대로 돌려받으니 안심하세요!</div>`,
+      <p>이 짧은 안내는 약 1분 정도 소요됩니다. 차근차근 따라와 주세요.</p>`,
     target:null, page:'main', position:'center',
   },
   {
     icon:'🃏', title:'카드 덱 시스템',
     body:`<p>전투는 <b>덱 슬롯 1~10번</b>의 카드가 매 턴 순서대로 자동 발동됩니다.</p>
       <p>아래에 강조된 <b>카드 덱</b> 영역의 슬롯을 클릭해 보유 카드 중 원하는 것을 배치할 수 있어요.</p>
-      <div class="tip">🎯 발동 순서를 신경 써서 덱을 구성하면 전투 결과가 크게 달라집니다.</div>`,
+      <div class="tip">🎯 발동 순서를 신경 써서 덱을 구성하면 전투 결과가 크게 달라집니다.<br>
+        📈 <b>Lv 26부터 카드 덱이 15칸으로 확장</b>되어 더 긴 전투 시퀀스를 짤 수 있습니다.</div>`,
     target:'#main-deck', page:'main', position:'corner',
   },
   {
     icon:'📊', title:'스탯 (STR · DEX · INT · CON)',
     body:`<p>레벨업 시 받는 스탯 포인트의 분배가 전략의 핵심입니다.</p>
       <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력 ↑. 배쉬·슬램·도려내기 등 묵직한 근접 카드와 시너지. <i>정면 돌파형</i> 빌드의 기반.<br>
-         • <b style="color:#aaffaa;">DEX (민첩)</b> — 회피율·선공 결정. 시어링애로우·임페일·블랙애로우 등 명중 카드와 잘 맞음. <i>먼저 때리고 안 맞는</i> 빌드.<br>
-         • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·마나번 등으로 적 MP를 말리고 강력한 광역기를 굴리는 <i>마법사형</i> 빌드.<br>
+         • <b style="color:#aaffaa;">DEX (민첩)</b> — 선공 결정·기본공격력 보조. 시어링애로우·임페일·블랙애로우 등 DEX 스케일 원거리 카드와 잘 맞는 <i>속공형</i> 빌드.<br>
+         • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·파이어볼트처럼 <b>MP를 소모해 강력한 데미지</b>를 주는 <i>마법사형</i> 빌드.<br>
          • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력 ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
-      <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.</div>`,
+      <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.<br>
+        ♻ 스탯 분배가 마음에 들지 않으면 <b>「프로필 관리 → 스탯 초기화」</b>에서 10,000G로 STR/DEX/INT/CON을 리셋할 수 있어요. 스탯 P는 그대로 돌려받습니다.</div>`,
     target:'#main-statbox', page:'main', position:'corner',
   },
   {
     icon:'🗡️', title:'무기와 방어구',
-    body:`<p>강조된 <b>무기상점</b>·<b>방어구상점</b>에서 구매하거나, <b>공격대 레이드</b>의 보스 처치 시 드랍으로 장비를 얻을 수 있습니다.</p>
-      <p>• 무기 <b>atkBonus</b> → STR과 합산되어 공격력 ↑.<br>
-         • 방어구 <b>defBonus</b> → CON과 합산되어 받는 데미지 ↓.</p>
+    body:`<p>강조된 <b>무기상점</b>·<b>방어구상점</b>에서 구매하거나, <b>공격대 보스</b> 처치 시 드랍으로 장비를 얻을 수 있습니다.</p>
+      <p>• <b>무기</b> → 추가 공격력으로 데미지를 강화합니다.<br>
+         • <b>방어구</b> → 추가 방어력으로 받는 피해를 줄입니다.</p>
       <div class="tip">🛡️ 같은 레벨이라도 좋은 장비를 갖춘 쪽이 훨씬 강합니다.</div>`,
-    target:'#m-wshop', page:'main', position:'corner',
+    target:'#m-wshop, #m-ashop', page:'main', position:'corner',
   },
   {
     icon:'⚔', title:'수행 (사냥) & 회복의 샘물',
     body:`<p>가운데 큰 <b style="color:#ffd700;">수행</b> 버튼이 1:1 전투의 핵심입니다.</p>
       <p>승리하면 골드와 <b>경험치</b>를 얻고, 경험치가 쌓여 <b>레벨이 오를수록 더 강한 적</b>을 만나게 됩니다.</p>
       <p><b style="color:#88ddff;">회복의 샘물</b>은 깎인 HP·MP를 즉시 풀회복 (깎인 HP+MP의 10%, 보유 100G 미만이면 무료).</p>
-      <div class="tip">⚠️ HP가 0이 되면 자동으로 회복의 샘물로 이동합니다.</div>`,
+      <div class="tip">⚠️ HP가 0이 되면 자동으로 회복의 샘물로 이동합니다.<br>
+        💥 수행에서 패배하면 <b>아주 낮은 확률</b>로 보유 카드나 장비가 파괴될 수 있으니 주의하세요.</div>`,
     target:'#m-hunt', page:'main', position:'corner',
   },
   {
     icon:'🏆', title:'랭킹전 (초보 추천!)',
     body:`<p>극초반에는 강조된 <b style="color:#ffd700;">랭킹전</b>이 가장 좋은 사냥터입니다.</p>
       <p>10위부터 도전 가능, NPC는 Lv1 기본 캐릭터라 비교적 쉽게 이깁니다.</p>
-      <p>승리 시 경험치 + <b>50G</b>, 한 위씩 상승 (일일 보상 20회).</p>
-      <div class="tip">💰 <b>랭킹 등극 시 수행마다 골드 보너스</b> (1위 +100G ~ 10위 +10G).<br>
-        ⚠️ 회복의 샘물 이용 후 5% 확률로 방어전 발생 (1~5위).</div>`,
+      <p>승리 시 경험치 + <b>50G</b>를 얻고, 한 위씩 상승합니다.</p>
+      <div class="tip">💰 <b>랭킹 등극 시 수행마다 골드 보너스</b> (1위 +100G ~ 10위 +10G).</div>`,
     target:'#m-rank', page:'main', position:'corner',
   },
   {
     icon:'🛒', title:'카드샵 — 가챠로 카드 모으기',
     body:`<p>골드가 모이면 강조된 <b style="color:#ffd700;">카드샵</b>에서 가챠를 돌리세요.</p>
-      <p>레벨이 낮을수록 할인이 큽니다 — <b>Lv1은 1뽑에 단 100G!</b> Lv10부터 정상가 1,000G.</p>
-      <div class="tip">⭐ 10뽑은 10% 할인. 일반/레어/유니크/영웅 등급이 있습니다.</div>`,
+      <p>카드샵은 등장 카드의 최대 등급에 따라 <b>5개의 가챠</b>로 나뉩니다 — <b style="color:#bbb;">일반</b> / <b style="color:#3399ff;">레어</b> / <b style="color:#a335ee;">유니크</b> / <b style="color:#dc143c;">영웅</b> / <b style="color:#ffd700;">전설</b>.</p>
+      <p>상위 등급 가챠일수록 단가가 비싸지지만 더 강한 카드가 나옵니다. 초반엔 일반·레어부터 차곡차곡 모으는 것을 추천.</p>
+      <div class="tip">⭐ 10뽑은 10% 할인이 적용됩니다. 전설 가챠는 일정 조건을 충족해야 열립니다.</div>`,
     target:'#m-cardshop', page:'main', position:'corner',
   },
   {
@@ -8439,7 +8727,11 @@ let _tutorialIdx = 0;
 let _tutorialHighlightEl = null;
 function _tutorialClearHighlight(){
   if (_tutorialHighlightEl){
-    _tutorialHighlightEl.classList.remove('tutorial-highlight');
+    if (_tutorialHighlightEl.forEach){
+      _tutorialHighlightEl.forEach(el => el.classList.remove('tutorial-highlight'));
+    } else if (_tutorialHighlightEl.classList){
+      _tutorialHighlightEl.classList.remove('tutorial-highlight');
+    }
     _tutorialHighlightEl = null;
   }
 }
@@ -8447,14 +8739,13 @@ function _tutorialApplyHighlight(sel){
   _tutorialClearHighlight();
   if (!sel) return;
   try {
-    const el = document.querySelector(sel);
-    if (el){
-      el.classList.add('tutorial-highlight');
-      _tutorialHighlightEl = el;
-      // 모바일에선 하단에 모달이 있으므로 상단 정렬, 데스크탑은 중앙 정렬
-      const isMobile = window.matchMedia('(max-width: 700px)').matches;
-      try { el.scrollIntoView({ behavior:'smooth', block: isMobile ? 'start' : 'center' }); } catch(e){}
-    }
+    const els = document.querySelectorAll(sel);
+    if (!els.length) return;
+    els.forEach(el => el.classList.add('tutorial-highlight'));
+    _tutorialHighlightEl = els; // 배열/NodeList
+    // 첫 번째 요소를 화면에 맞춤
+    const isMobile = window.matchMedia('(max-width: 700px)').matches;
+    try { els[0].scrollIntoView({ behavior:'smooth', block: isMobile ? 'start' : 'center' }); } catch(e){}
   } catch(e){ console.warn('tutorial highlight', e); }
 }
 function _tutorialGoPage(pageId){
@@ -9020,6 +9311,9 @@ function renderSheet(){
   setClsHtml('p-combat-int', p.int + buffSpan(intDelta));
   setClsHtml('p-combat-con', p.con + buffSpan(conDelta));
   setClsHtml('p-combat-atk', atkAvg + buffSpan(atkDelta));
+  setClsHtml('p-combat-def', p.def + buffSpan(defDelta));
+  setCls('p-combat-weapon', p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-');
+  setCls('p-combat-armor',  p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-');
   // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
   const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
   const avHtml = hasAv
@@ -10702,10 +10996,10 @@ async function adminBroadcast(){
   alert('✔ 채팅창에 송출');
 }
 
-// 운영자: 공격대 강제 갱신 (active_key 무작위 재선정 + 새 보스 + 잡몹 99)
+// 운영자: 공격대 강제 갱신 (active_key 무작위 재선정 + 새 보스 + 몬스터 99)
 async function adminForceRaidReset(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (!confirm('현재 공격대를 즉시 갱신하시겠습니까?\n• active_key 무작위 재선정 (dawn/mist)\n• 새 보스 무작위 선정\n• 잡몹 99마리 리셋\n• 참여자 목록 초기화')) return;
+  if (!confirm('현재 공격대를 즉시 갱신하시겠습니까?\n• active_key 무작위 재선정 (dawn/mist)\n• 새 보스 무작위 선정\n• 몬스터 99마리 리셋\n• 참여자 목록 초기화')) return;
   try {
     const { error } = await sb.rpc('raid_admin_force_reset');
     if (error){ alert('강제 갱신 실패: ' + (error.message || error)); return; }
@@ -10720,7 +11014,7 @@ async function adminResetRaid(key){
     alert(`현재 활성 세션은 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」입니다.\n비활성 쪽 리셋은 의미가 없습니다. 「즉시 새 세션 시작」을 사용하세요.`);
     return;
   }
-  if (!confirm(`${key === 'dawn' ? '새벽의 언덕' : '안개의 숲'} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 잡몹 99마리\n• session_start 갱신`)) return;
+  if (!confirm(`${key === 'dawn' ? '새벽의 언덕' : '안개의 숲'} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 몬스터 99마리\n• session_start 갱신`)) return;
   const bossList = RAID_BOSSES[key];
   const boss = bossList[Math.floor(Math.random()*bossList.length)];
   try {
