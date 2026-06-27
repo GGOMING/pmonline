@@ -166,19 +166,17 @@
     display:flex; flex-direction:column; align-items:center;
   }
   .login-banner {
-    width:500px; height:200px;
-    background:
-      url('assets/main.png') center/cover no-repeat,
-      radial-gradient(ellipse at center,
-        #e8f4ff 0%,
-        #b5d6f2 30%,
-        #7099d4 70%,
-        #4a6fa8 100%);
+    width:500px;
+    background: radial-gradient(ellipse at center,
+      #e8f4ff 0%,
+      #b5d6f2 30%,
+      #7099d4 70%,
+      #4a6fa8 100%);
     border:1px solid #555;
     position:relative;
-    display:flex; align-items:flex-end; justify-content:center;
     overflow:hidden;
   }
+  .login-banner-img { display:block; width:100%; height:auto; position:relative; z-index:1; }
   .login-banner::before {
     content:""; position:absolute; inset:0;
     background-image:
@@ -189,10 +187,10 @@
       radial-gradient(circle at 85% 35%, rgba(255,255,255,.4) 0%, transparent 7%);
   }
   .login-banner .goddess {
-    position:relative; z-index:2;
+    position:absolute; left:0; right:0; bottom:14px;
+    text-align:center; z-index:3;
     color:#fff; font-size:42px; font-weight:bold; letter-spacing:8px;
     text-shadow:2px 2px 6px rgba(0,0,0,.5), 0 0 20px rgba(180,210,255,.7);
-    margin-bottom:30px;
     font-family:"바탕",Batang,serif;
   }
   .login-form {
@@ -965,6 +963,7 @@
   <button id="adminLoginBtn" onclick="showAdminAuth()">🔧 ADMIN</button>
   <div class="login-inner">
     <div class="login-banner">
+      <img class="login-banner-img" src="assets/main.png" alt="">
       <div class="goddess">여 신 전 쟁</div>
     </div>
     <div class="login-form">
@@ -2376,7 +2375,7 @@ const CARDS = [
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5 ~ 10 랜덤 데미지 *5 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프와 반사막·회피를 강탈하고, 시전자에게 걸린 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealBuff'},{type:'stealDefenses'},{type:'debuffReflect'}]} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
@@ -6488,8 +6487,9 @@ function applyCardEffect(card, ctx){
         return;
       }
       // 부두 (h04 빅베드부두) — 대상이 voodoo 상태면 데미지를 모두 HP 회복으로 변환
+      // 시전 턴(pending=true)에는 효과 발동 안 함 → 다음 턴부터 활성
       const vo = ctx.targVoodoo && ctx.targVoodoo();
-      if (vo && vo.turns > 0){
+      if (vo && vo.turns > 0 && !vo.pending){
         const heal = Math.max(1, Math.floor(raw));
         const before = ctx.targObj.hp;
         ctx.targObj.hp = Math.min(ctx.targObj.hpMax || ctx.targObj.hp + heal, ctx.targObj.hp + heal);
@@ -6531,9 +6531,10 @@ function applyCardEffect(card, ctx){
       let s = 0; for (const k of stats) s += (obj[k]||0) + (buffs[k]||0); return s;
     }
     // 부두 디버프 반사 — 대상이 voodoo면 디버프 적용 대상을 시전자로 swap
+    // 시전 턴(pending=true)에는 반사 안 함 → 다음 턴부터 활성
     function _debuffTarget(){
       const vo = ctx.targVoodoo && ctx.targVoodoo();
-      if (vo && vo.turns > 0){
+      if (vo && vo.turns > 0 && !vo.pending){
         ctx.log(`  🌀 ${ctx.targName} 부두 → 디버프 반사`, 'heal');
         return {
           obj: ctx.castObj, buffs: ctx.castBuffs, turnBuffs: ctx.castTurnBuffs,
@@ -6562,8 +6563,9 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'voodoo'){
-      ctx.setCastVoodoo && ctx.setCastVoodoo({ turns: fx.turns });
-      ctx.log(`  🌀 ${ctx.castName} ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
+      // 시전 턴엔 발동 안 됨 — turns+1, pending:true 로 시작 → 첫 decay에서 pending→false (leech와 동일 패턴)
+      ctx.setCastVoodoo && ctx.setCastVoodoo({ turns: (fx.turns||0) + 1, pending: true });
+      ctx.log(`  🌀 ${ctx.castName} 다음 턴부터 ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
       return;
     }
     if (t === 'stealDefenses'){
@@ -7082,8 +7084,8 @@ function processCombatTicks(kind){
   // 회피 / 부두 카운터 감소
   if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; log(`  · 회피 종료`, 'info'); } }
   if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
-  if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
-  if (c.monVoodoo){ c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
+  if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
+  if (c.monVoodoo){ if (c.monVoodoo.pending) c.monVoodoo.pending = false; c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) log(`  · 은신 종료`, 'info'); }
   if (c.monStealth && c.monStealth > 0){ c.monStealth--; if (c.monStealth === 0) log(`  · ${opp.name} 은신 종료`, 'info'); }
@@ -7243,8 +7245,8 @@ function processTrainTicks(){
   // 회피 / 부두 카운터 감소 (train 모드)
   if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; trainLog(`  · 회피 종료`, 'info'); } }
   if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
-  if (c.myVoodoo){ c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
-  if (opp.voodoo){ opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
+  if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
+  if (opp.voodoo){ if (opp.voodoo.pending) opp.voodoo.pending = false; opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) trainLog(`  · 은신 종료`, 'info'); }
   if (opp.stealth && opp.stealth > 0){ opp.stealth--; if (opp.stealth === 0) trainLog(`  · ${opp.name} 은신 종료`, 'info'); }
