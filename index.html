@@ -6641,8 +6641,12 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'dmgStat'){
       let base = statSum(fx.stats);
-      // 무기 공격력 — weapon.atkBonus (장착 무기 자체의 추가 공격력)
-      if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus || 0);
+      // 무기 공격력 — weapon.atkBonus + 누적 atk 버프 (전투 중 atk 강화 카드까지 합산)
+      if (fx.weaponBonus){
+        const wBonus = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
+        const atkBuff = (ctx.castBuffs && ctx.castBuffs.atk) || 0;
+        base += wBonus + atkBuff;
+      }
       if (fx.bonus) base += fx.bonus;
       const mult = fx.mult || 1;
       // 정수 mult ≥ 2 는 다회 타격(매 hit마다 방어력 차감), 분수 mult는 단발 ×N
@@ -6829,7 +6833,12 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'hotStat'){
       let base = statSum(fx.stats);
-      if (fx.weaponBonus && ctx.castObj.weapon) base += (ctx.castObj.weapon.atkBonus||0);
+      // 무기 공격력 — weapon.atkBonus + 누적 atk 버프 (dmgStat과 동일 정책)
+      if (fx.weaponBonus){
+        const wBonus = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
+        const atkBuff = (ctx.castBuffs && ctx.castBuffs.atk) || 0;
+        base += wBonus + atkBuff;
+      }
       const heal = Math.max(1, Math.floor(base * (fx.mult||1)));
       ctx.castHots.push({heal, turns:fx.turns});
       ctx.log(`  + ${ctx.castName} 지속 회복 ${heal}×${fx.turns}턴`, 'heal');
