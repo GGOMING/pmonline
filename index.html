@@ -4488,7 +4488,7 @@ async function requestRaidManualReset(){
     const { error } = await sb.rpc('raid_manual_reset', {
       p_active_key: raidKey,
       p_boss_id: boss.id,
-      p_boss_hp_max: boss.hp,
+      p_boss_hp_max: boss.hpMax || boss.hp || 10000,
     });
     if (error){
       console.warn('[raid_manual_reset]', error);
