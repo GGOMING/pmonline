@@ -1112,7 +1112,7 @@
         <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
           <b>현재 활성 raid 강제 갱신:</b>
           <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (active_key 무작위)</button>
-          <span style="font-size:11px;color:#666;">— 1시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 몬스터 99 리셋</span>
+          <span style="font-size:11px;color:#666;">— 4시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 몬스터 99 리셋</span>
         </div>
         <div style="margin:4px 0;">
           새벽의 언덕: 몬스터 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
@@ -2248,9 +2248,9 @@ const CARDS = [
   { id:'gold_throw', name:'돈 뿌리기', grade:'normal', icon:'gold', iconPath:'assets/wc3_reforged_used/BTNChestOfGold-Reforged.png', text:'상대에게 골드와 경험치를 준다.', monsterOnly:true, fx:{type:'noop'} },
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
-  { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'공격력 +8 증가', fx:{type:'buff',atk:8} },
-  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어력 +9 증가', fx:{type:'buff',def:9} },
-  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어력 +9 증가', fx:{type:'buff',def:9} },
+  { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'무기 +8 증가', fx:{type:'buff',atk:8} },
+  { id:'n02', name:'강철방어구',     grade:'normal', icon:'armor',  text:'방어구 +9 증가', fx:{type:'buff',def:9} },
+  { id:'n03', name:'강철방패',       grade:'normal', icon:'shield', text:'방어구 +9 증가', fx:{type:'buff',def:9} },
   { id:'n04', name:'곰소환',         grade:'normal', icon:'paw',    text:'5 ~ 20 랜덤 데미지 / 매턴 STR +3 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',str:3}]}, requires:'n41' },
   { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'DEX +5, STR +2', fx:{type:'buff',dex:5,str:2} },
   { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'DEX + CON 고정 데미지', fx:{type:'dmgStat',stats:['dex','con']} },
@@ -2263,10 +2263,10 @@ const CARDS = [
   { id:'n13', name:'디지즈클라우드', grade:'normal', icon:'cloud',  text:'6턴 동안 8 고정 데미지', fx:{type:'dot',turns:6,dmg:8} },
   { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'상대방 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
   { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'5 ~ 10 랜덤 데미지 / [소환의식] 선행 필요', fx:{type:'dmg',min:5,max:10}, requires:'n41' },
-  { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어력 +4 증가, 3턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
+  { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어구 +4 증가, 3턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
   { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수', fx:{type:'lifestealStat',stats:['con']} },
   { id:'n18', name:'라이프업',       grade:'normal', icon:'heart',  text:'최대 HP 30% 증가', fx:{type:'maxHpBuff',pct:0.3} },
-  { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'STR +4 증가, 공격력 +3 증가', fx:{type:'buff',str:4,atk:3} },
+  { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'STR +4 증가, 무기 +3 증가', fx:{type:'buff',str:4,atk:3} },
   { id:'n20', name:'리쥬베네이션',   grade:'normal', icon:'leaf',   text:'4턴 동안 HP 10씩 회복', fx:{type:'hot',turns:4,heal:10} },
   { id:'n21', name:'리퀴드파이어',   grade:'normal', icon:'fire',   text:'상대방 DEX -2, 3턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',dex:-2},{type:'dot',turns:3,dmg:10}]} },
   { id:'n22', name:'리플레시마나헬스', grade:'normal', icon:'flute', text:'HP 20, MP 20 회복', fx:{type:'heal',hp:20,mp:20} },
@@ -2274,23 +2274,23 @@ const CARDS = [
   { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'상대방 INT + CON 만큼 고정 데미지', fx:{type:'dmgStat',stats:['int','con']} },
   { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'상대방 DEX -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
   { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'상대방 버프 해제 후 시전자에게 적용, 4턴 동안 해당 버프 지속', fx:{type:'stealBuff',turns:4} },
-  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 공격력 +2 증가 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]} },
-  { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'상대방 공격력 -1 감소 / DEX 수치만큼 2회 타격', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
+  { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 무기 +2 증가 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]} },
+  { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'상대방 무기 -1 감소 / DEX 수치만큼 2회 타격', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
   { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100 회복', fx:{type:'sacrifice',hp:25,mp:100} },
-  { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
+  { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어구 +4 증가', fx:{type:'buff',def:4} },
   { id:'n31', name:'버닝오일',       grade:'normal', icon:'fire',   text:'5턴 동안 5 고정 데미지', fx:{type:'dot',turns:5,dmg:5} },
   { id:'n32', name:'버서커',         grade:'normal', icon:'rage',   text:'시전자 STR +8, DEX +8, 방어력 0, INT 0', fx:{type:'multi',effects:[{type:'buff',str:8,dex:8},{type:'zeroStat',target:'self',stats:['def','int']}]} },
   { id:'n33', name:'버서커스트렝스', grade:'normal', icon:'lance',  text:'STR +5 증가 / HP +15, MP +15 증가 및 회복', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'heal',hp:15,mp:15}]} },
-  { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'[STR + DEX + 공격력]만큼 타격, 상대방 DEX -2 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
+  { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'[STR + DEX + 무기]만큼 타격, 상대방 DEX -2 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
   { id:'n35', name:'베어폼',         grade:'normal', icon:'paw',    text:'시전자 INT를 전부 STR로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'str'} },
-  { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'상대방 방어력 -5 감소 및 2턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
+  { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'상대방 방어구 -5 감소 및 2턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
   { id:'n37', name:'블러드러스트',   grade:'normal', icon:'blood',  text:'시전자 HP -25%, STR로 3회 타격', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.25},{type:'dmgStat',stats:['str'],mult:3}]} },
   { id:'n38', name:'새크리파이스',   grade:'normal', icon:'cross',  text:'자신의 HP 20% 희생 후 상대방에게 같은 수치의 고정 데미지', fx:{type:'sacrifice',hpPct:0.20,dmgToEnemy:true} },
   { id:'n39', name:'서펜트와드',     grade:'normal', icon:'paw',    text:'5 ~ 15 데미지 코브라와드 소환 (소환의식 불필요)', fx:{type:'dmg',min:5,max:15} },
   { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 동안 시전자 MP 20씩 회복', fx:{type:'mot',turns:3,mp:20} },
   { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP 50 사용', fx:{type:'mpCost',amount:50} },
   { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'라이즈데드 데미지를 10 ~ 20으로 강화 / [라이즈데드] 선행 필요', fx:{type:'dmg',min:10,max:20}, requires:'n41' },
-  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어 +17 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:17} },
+  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어구 +17 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:17} },
   { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(STR + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
   { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'[5 ~ 상대방 CON] 랜덤 데미지로 2회 공격', fx:{type:'dmgHits',min:5,max:25,hits:2} },
   { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'시전자 (STR + CON)로 2회 타격', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
@@ -2300,26 +2300,26 @@ const CARDS = [
   { id:'n50', name:'썬더크랩',       grade:'normal', icon:'thunder',text:'상대방 올스탯 -30% 감소', fx:{type:'pctDebuff',stats:{str:-0.3,dex:-0.3,int:-0.3,con:-0.3}} },
   { id:'n51', name:'애볼리쉬매직',   grade:'normal', icon:'spark',  text:'상대방 버프 해제 / 시전자 INT만큼 MP소모', fx:{type:'multi',effects:[{type:'dispel'},{type:'mpCost',stat:'int'}]} },
   { id:'n52', name:'언홀리프렌지',   grade:'normal', icon:'rage',   text:'시전자 STR +50% 증가 / 4턴 동안 HP -5%씩 감소', fx:{type:'multi',effects:[{type:'pctBuff',stats:{str:0.5}},{type:'dotSelf',turns:4,pct:0.05}]} },
-  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어력 +3 증가', fx:{type:'buff',def:3,turns:5} },
+  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어구 +3 증가', fx:{type:'buff',def:3,turns:5} },
   { id:'n54', name:'영혼흡수',       grade:'normal', icon:'soul',   text:'상대방 INT 50% 흡수', fx:{type:'statSteal',stats:['int'],pct:0.5} },
   { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(DEX + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
-  { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'공격력 +40% 증가 / [STR 10 or DEX 10 이상일 경우 시전 가능]', fx:{type:'pctBuff',stats:{atk:0.4}} },
+  { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'무기 +40% 증가 / [STR 10 or DEX 10 이상일 경우 시전 가능]', fx:{type:'pctBuff',stats:{atk:0.4}} },
   { id:'n57', name:'이너파이어',     grade:'normal', icon:'aura',   text:'INT 절반만큼 STR 및 DEX 증가', fx:{type:'buffFromStat',source:'int',mult:0.5,addsTo:['str','dex']} },
   { id:'n58', name:'자폭',           grade:'normal', icon:'bomb',   text:'상대방에게 15 ~ 50 랜덤 데미지, 시전자에게도 15 ~ 50 랜덤 데미지', fx:{type:'dmgSelf',min:15,max:50,selfMin:15,selfMax:50} },
   { id:'n59', name:'전투의외장',     grade:'normal', icon:'sword',  text:'시전자 STR +5 증가 및 적 STR -50% 감소', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'pctDebuff',stats:{str:-0.5}}]} },
   { id:'n60', name:'지능증가',       grade:'normal', icon:'brain',  text:'INT +6 증가', fx:{type:'buff',int:6} },
-  { id:'n61', name:'철제검',         grade:'normal', icon:'sword',  text:'공격력 +5 증가', fx:{type:'buff',atk:5} },
-  { id:'n62', name:'철제방어구',     grade:'normal', icon:'armor',  text:'방어력 +4 증가', fx:{type:'buff',def:4} },
-  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어력 +6 증가', fx:{type:'buff',def:6} },
+  { id:'n61', name:'철제검',         grade:'normal', icon:'sword',  text:'무기 +5 증가', fx:{type:'buff',atk:5} },
+  { id:'n62', name:'철제방어구',     grade:'normal', icon:'armor',  text:'방어구 +4 증가', fx:{type:'buff',def:4} },
+  { id:'n63', name:'철제방패',       grade:'normal', icon:'shield', text:'방어구 +6 증가', fx:{type:'buff',def:6} },
   { id:'n64', name:'커즈',           grade:'normal', icon:'curse',  text:'4턴 동안 상대방 DEX -20% 감소', fx:{type:'pctDebuff',stats:{dex:-0.2},turns:4} },
   { id:'n65', name:'콜드애로우',     grade:'normal', icon:'ice',    text:'INT*1.8 데미지 / 적 DEX -20% 감소 / 시전자 INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:1.8},{type:'pctDebuff',stats:{dex:-0.2}},{type:'mpCost',stat:'int',mult:1.5}]} },
   { id:'n66', name:'퀼비스트소환',   grade:'normal', icon:'paw2',   text:'퀼비스트 5 ~ 20 랜덤 데미지, 매턴 INT +3씩 증가 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dmg',min:5,max:20},{type:'buff',int:3}]}, requires:'n41' },
   { id:'n67', name:'크로우폼',       grade:'normal', icon:'bird',   text:'시전자 INT를 전부 DEX로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'dex'} },
-  { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'상대방 STR, DEX, INT, 공격력 모두 -5씩 감소', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
+  { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'상대방 STR, DEX, INT, 무기 모두 -5씩 감소', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
   { id:'n69', name:'트롤리제네레이션', grade:'normal', icon:'cross', text:'5턴 턴당 CON*0.5만큼 HP 회복', fx:{type:'hotStat',stats:['con'],mult:0.5,turns:5} },
   { id:'n70', name:'파이어볼트',     grade:'normal', icon:'fire',   text:'INT*2.2 데미지 / INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2.2},{type:'mpCost',stat:'int',mult:1.5}]} },
   { id:'n71', name:'퍼지',           grade:'normal', icon:'holy',   text:'적 버프 제거 / 25 데미지 / 적 올스탯 -5 (Int 10 필요)', fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:25,max:25},{type:'debuff',str:-5,dex:-5,int:-5,con:-5}]} },
-  { id:'n72', name:'페어리파이어',   grade:'normal', icon:'ghost',  text:'5 고정 데미지 / 상대방 방어력 -10 감소', fx:{type:'multi',effects:[{type:'dmg',min:5,max:5},{type:'debuff',def:-10}]} },
+  { id:'n72', name:'페어리파이어',   grade:'normal', icon:'ghost',  text:'5 고정 데미지 / 상대방 방어구 -10 감소', fx:{type:'multi',effects:[{type:'dmg',min:5,max:5},{type:'debuff',def:-10}]} },
   { id:'n73', name:'포세션',         grade:'normal', icon:'ghost',  text:'상대방의 STR, DEX, INT를 복사하여 시전자 스탯으로 반영 / 시전자 무기 0, 방어구 0으로 감소', fx:{type:'statCopy',stats:['str','dex','int'],zeroWeapon:true,zeroArmor:true} },
   { id:'n74', name:'포이즌스피어',   grade:'normal', icon:'venom',  text:'기본공격으로 타격 / 2턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'basicAtk'},{type:'dot',turns:2,dmg:5}]} },
   { id:'n75', name:'폭탄',           grade:'normal', icon:'bomb',   text:'상대방의 STR + CON만큼 데미지', fx:{type:'dmgStat',stats:['str','con']} },
@@ -2331,22 +2331,22 @@ const CARDS = [
 
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
-  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어력 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
+  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어구 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
   { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'10 ~ 25 랜덤 데미지, 매턴 HP 5씩 흡수 / [소환의식] 선행 필요', fx:{type:'lifesteal',min:10,max:25,steal:5}, requires:'n41' },
-  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 공격력 +5, 방어력 +6 증가 / 상대방 공격력 -5, 방어력 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
+  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 무기 +5, 방어구 +6 증가 / 상대방 무기 -5, 방어구 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
   { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'상대방 MP*0.2 데미지 (최대 60) / 상대방 MP -50% 감소 및 기본공격으로 타격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
-  { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'공격력 +12 증가', fx:{type:'buff',atk:12} },
-  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어력 +12 증가', fx:{type:'buff',def:12} },
-  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어력 +11 증가', fx:{type:'buff',def:11} },
+  { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'무기 +12 증가', fx:{type:'buff',atk:12} },
+  { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어구 +12 증가', fx:{type:'buff',def:12} },
+  { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어구 +11 증가', fx:{type:'buff',def:11} },
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
   { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'시전 다음 턴부터 2턴 동안 적에게 가한 데미지의 50%를 HP로 흡수 / [시전자 STR 10 이상일 때만 발동]', statReq:{str:10}, fx:{type:'lifeleech',turns:2,pct:0.5} },
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
-  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 공격력 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
+  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 무기 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
   { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
   { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 동안 10 고정 데미지', fx:{type:'dot',turns:4,dmg:10} },
-  { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'[STR+공격력] 데미지 / 상대방 30% 확률로 1턴 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
-  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어력 +6 증가 및 3회 동안 상대방 공격의 70%를 반사', fx:{type:'multi',effects:[{type:'buff',def:6},{type:'reflect',hits:3,pct:0.7}]} },
+  { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'[STR+무기] 데미지 / 상대방 30% 확률로 1턴 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
+  { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어구 +6 증가 및 3회 동안 상대방 공격의 70%를 반사', fx:{type:'multi',effects:[{type:'buff',def:6},{type:'reflect',hits:3,pct:0.7}]} },
   { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'[DEX + 35] 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
@@ -2372,20 +2372,20 @@ const CARDS = [
   // ───── 영웅 카드 5종 ─────
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
-  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'5 ~ 10 랜덤 데미지 *5 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealBuff'},{type:'voodoo',turns:3}]} },
+  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
   { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'r34', name:'스피드스크롤',       grade:'rare', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
-  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:6} },
-  { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 공격력 +5 증가 / 상대방 방어력 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
-  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'(무기 + 누적 공격 버프) ×40% 만큼 공격력 증가 / (방어구 + 누적 방어 버프) ×40% 만큼 방어력 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
+  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어구 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:6} },
+  { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 무기 +5 증가 / 상대방 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
+  { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'(무기 + 누적 무기 버프) ×40% 만큼 무기 증가 / (방어구 + 누적 방어구 버프) ×40% 만큼 방어구 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
   { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
   { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT로 2회 타격 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
-  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 공격력 및 방어력 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
+  { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 무기 및 방어구 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -2395,7 +2395,7 @@ const GAME = {
   myDeck: Array(15).fill(BASIC_ATTACK), // 사용자 본인의 덱 (Lv 26+ 부터 11~15 슬롯 해금)
   inventory: [],   // 보유 카드 (가챠에서 획득) — 현재 단계에선 사용자가 모든 카드 보유한다고 가정 (훈련소 테스트용)
   chatUsers: [],  // 서버 연동 시 라이브 반영 예정
-  // 공격대 (1시간 세션, 매시 정각 리셋)
+  // 공격대 (4시간 세션, 0/4/8/12/16/20시 정각 리셋)
   raid: {
     dawn: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
     mist: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
@@ -3198,15 +3198,15 @@ const GACHA_SHOPS = {
     label: '일반 뽑기', icon: 'assets/wc3_reforged_used/cardshop_normal.png',
     cost1: 500, cost10: 4500,
     maxGradeKr: '일반',
-    table: [{ grade:'normal', rate:1.0 }],
+    table: [{ grade:'normal', rate:1.000 }],
   },
   rare: {
     label: '레어 뽑기', icon: 'assets/wc3_reforged_used/cardshop_rare.jpg',
     cost1: 1000, cost10: 9000,
     maxGradeKr: '레어',
     table: [
-      { grade:'normal', rate:0.65 },
-      { grade:'rare',   rate:0.35 },
+      { grade:'normal', rate:0.850 },
+      { grade:'rare',   rate:0.150 },
     ],
   },
   unique: {
@@ -3214,9 +3214,9 @@ const GACHA_SHOPS = {
     cost1: 5000, cost10: 45000,
     maxGradeKr: '유니크',
     table: [
-      { grade:'normal', rate:0.37 },
-      { grade:'rare',   rate:0.60 },
-      { grade:'unique', rate:0.03 },
+      { grade:'normal', rate:0.653 },
+      { grade:'rare',   rate:0.345 },
+      { grade:'unique', rate:0.002 },
     ],
   },
   hero: {
@@ -3224,10 +3224,10 @@ const GACHA_SHOPS = {
     cost1: 10000, cost10: 90000,
     maxGradeKr: '영웅',
     table: [
-      { grade:'normal', rate:0.20 },
-      { grade:'rare',   rate:0.72 },
-      { grade:'unique', rate:0.07 },
-      { grade:'hero',   rate:0.01 },
+      { grade:'normal', rate:0.450 },
+      { grade:'rare',   rate:0.544 },
+      { grade:'unique', rate:0.005 },
+      { grade:'hero',   rate:0.001 },
     ],
   },
   legend: {
@@ -3760,9 +3760,9 @@ const BLESS_SHOP_ITEMS = [
     desc:'여신의 축복 1개로 카드 1장을 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
   },
   {
-    id:'card20', name:'카드 20뽑', cost:10,
+    id:'card11', name:'카드 11뽑', cost:10,
     icon:'assets/wc3_reforged_used/card20.png',
-    desc:'여신의 축복 10개로 카드 20장을 한 번에 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
+    desc:'여신의 축복 10개로 카드 11장을 한 번에 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
   },
   {
     id:'box', name:'축복의 랜덤 상자', cost:100,
@@ -3807,8 +3807,8 @@ function buyBlessItem(id){
     setBlessMsg(`⚠ 여신의 축복이 부족합니다. (필요: ${it.cost})`, 'err');
     return;
   }
-  if (id === 'card1' || id === 'card20'){
-    const n = id === 'card1' ? 1 : 20;
+  if (id === 'card1' || id === 'card11'){
+    const n = id === 'card1' ? 1 : 11;
     // 인벤토리 한도 검사
     const room = inventoryLimit() - GAME.inventory.length;
     if (room < n){
@@ -4170,11 +4170,12 @@ const RAID_BOSSES = {
   ],
 };
 
-// 세션 시작 시각 (1시간 단위로 매시 정각)
+// 세션 시작 시각 (4시간 단위 — 0시/4시/8시/12시/16시/20시 정각)
 function getCurrentSessionStart(){
   const now = new Date();
   const sessionStart = new Date(now);
   sessionStart.setMinutes(0, 0, 0);
+  sessionStart.setHours(Math.floor(sessionStart.getHours() / 4) * 4);
   return sessionStart.getTime();
 }
 
@@ -4239,7 +4240,10 @@ async function claimRaidRewards(){
     const noteworthy = [];  // 채팅에 노출할 드랍 — 무기/방어구 전부 + 유니크 이상 카드
     for (const row of data){
       if (row.kind === 'card'){
-        const card = CARDS.find(c => c.id === row.item_id);
+        // 공격대 카드 보상 — 유니크 뽑기 풀·확률로 재추첨 (RPC가 결정한 카드 id 무시)
+        const grade = pickGachaGradeFor('unique');
+        const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
+        const card = pool.length ? pool[Math.floor(Math.random() * pool.length)] : null;
         if (card){
           if (GAME.inventory.length >= inventoryLimit()){
             lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}] · ⚠ 보유 한도(${inventoryLimit()}) 초과로 지급 누락`);
@@ -4326,7 +4330,7 @@ function updateRaidUI(){
     if (monEl) monEl.textContent = '-';
     return;
   }
-  const remainMs = (r.sessionStart + 1*3600*1000) - Date.now();
+  const remainMs = (r.sessionStart + 4*3600*1000) - Date.now();
   const remainSec = Math.max(0, Math.floor(remainMs / 1000));
   const h = Math.floor(remainSec / 3600);
   const m = Math.floor((remainSec % 3600) / 60);
@@ -4401,7 +4405,7 @@ function renderRaidLobby(){
   $('raid_banner').className = 'raid-banner' + (isDawn ? '' : ' mist');
 
   // 남은 시간
-  const remainMs = (r.sessionStart + 1*3600*1000) - Date.now();
+  const remainMs = (r.sessionStart + 4*3600*1000) - Date.now();
   const remainSec = Math.max(0, Math.floor(remainMs / 1000));
   const h = Math.floor(remainSec / 3600);
   const m = Math.floor((remainSec % 3600) / 60);
@@ -4530,12 +4534,16 @@ function generateRaidMob(){
   if (tpl.race === 'undead')   { intl += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
   const DIFF = 1.05;
+  // 공격대 일반 몬스터 기본 장비 (+5~+10) — 패널티 없으므로 본체 약화 없음
+  const wBonus = 5 + Math.floor(Math.random() * 6);
+  const aBonus = 5 + Math.floor(Math.random() * 6);
   const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * DIFF));
-  const atk = [
+  const baseAtk = [
     Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * DIFF)),
     Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * DIFF))
   ];
-  const def = Math.max(0, Math.round(con * 0.5 * DIFF));
+  const atk = [baseAtk[0] + wBonus, baseAtk[1] + wBonus];
+  const def = Math.max(0, Math.round(con * 0.5 * DIFF)) + aBonus;
   const deck = buildMonsterDeck(tpl.race, mLv, 15);
   const gold = Math.floor(mLv * (5 + Math.random() * 10));
   const xp   = Math.floor(mLv * (4 + Math.random() * 3));
@@ -4543,7 +4551,7 @@ function generateRaidMob(){
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
     str, dex, int: intl, con,
     hp, hpMax: hp, mp: 50, mpMax: 50,
-    atk, def, weapon:{atkBonus:0}, armor:{defBonus:0},
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck, gold, xp,
   };
 }
@@ -5937,7 +5945,7 @@ function _goldChestEncounterRate(lv){
 // 황금상자 몬스터 — HP 1, 무적, 10턴 무공격, 1000G + 동레벨 ×2.5 XP
 function makeGoldChestMonster(playerLv){
   const lv = Math.max(1, Math.min(25, playerLv|0));
-  // 동레벨 일반 몬스터 평균 xp ≈ lv * 5.5  →  ×2.5 = lv * 13.75
+  // 동레벨 일반 몬스터 평균 xp = lv × 5.5  →  ×2.5 = lv × 13.75
   const xp = Math.max(1, Math.floor(lv * 13.75));
   const goldThrow = CARDS.find(c => c.id === 'gold_throw');
   return {
@@ -5955,6 +5963,27 @@ function makeGoldChestMonster(playerLv){
     invincible: true,
     icon: 'assets/wc3_reforged_used/BTNBloodElfSupplyWagon-Reforged.png',
   };
+}
+
+// 새 골드 곡선 — 사용자 표 (10,000G 모으기까지 수행 횟수의 역수)
+// playerLv → 1회 수행당 평균 골드. Lv1=10, Lv10=96, Lv50=200, Lv100=333 등
+const _GOLD_PER_ATTEMPT_TABLE = [
+  10,19,29,39,48,58,68,77,87,96,                // Lv 1-10
+  106,116,125,135,141,143,143,145,147,147,      // Lv 11-20
+  149,152,152,154,156,156,159,161,161,164,      // Lv 21-30
+  167,167,169,169,172,175,175,179,179,182,      // Lv 31-40
+  182,185,185,189,189,192,196,196,200,200,      // Lv 41-50
+  204,204,208,208,213,213,213,217,217,222,      // Lv 51-60
+  222,227,227,233,233,233,238,238,244,244,      // Lv 61-70
+  250,250,250,256,256,263,263,263,270,270,      // Lv 71-80
+  270,278,278,286,286,286,294,294,294,303,      // Lv 81-90
+  303,303,313,313,313,323,323,323,323,333,      // Lv 91-100
+];
+function _goldDropFor(playerLv){
+  const lv = Math.max(1, Math.min(100, playerLv|0));
+  const mean = _GOLD_PER_ATTEMPT_TABLE[lv - 1];
+  // ±10% 자연 변동
+  return Math.max(1, Math.round(mean * (0.9 + Math.random() * 0.2)));
 }
 
 // ─── 몬스터 생성 ───
@@ -6018,30 +6047,35 @@ function generateMonster(playerLv, tier){
   if (tpl.race === 'undead')   { int += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
 
-  // HP는 약간 상향, 공격은 크게 하향, 방어는 상향 → 전투가 길어지되 패배는 거의 없음
-  const HP_MUL  = earlyEasy ? 1.20 : 1.05;
-  const ATK_MUL = earlyEasy ? 0.45 : 1.05;
-  const DEF_MUL = earlyEasy ? 1.50 : 1.05;
+  // 몬스터 기본 장비 (+5~+10) — 음수 디버프 노출 방지 / 본체 atk·HP는 그만큼 하향
+  const wBonus = 5 + Math.floor(Math.random() * 6); // 5~10
+  const aBonus = 5 + Math.floor(Math.random() * 6); // 5~10
+  // 기본 장비 도입으로 atk·def 상향분이 생기므로, MUL을 추가 약화 (수행 난이도 유지)
+  const HP_MUL  = earlyEasy ? 1.05 : 0.90;
+  const ATK_MUL = earlyEasy ? 0.35 : 0.75;
+  const DEF_MUL = earlyEasy ? 0.80 : 0.55;
   const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * HP_MUL));
-  const atk = [
+  const baseAtk = [
     Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * ATK_MUL)),
     Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * ATK_MUL))
   ];
-  const def = Math.max(0, Math.round(con * 0.5 * DEF_MUL));
+  // 무기 보너스를 atk 양끝에 합산 → 평타·weaponBonus 카드에 자동 반영
+  const atk = [baseAtk[0] + wBonus, baseAtk[1] + wBonus];
+  const def = Math.max(0, Math.round(con * 0.5 * DEF_MUL)) + aBonus;
 
   // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용
   const deckSize = tier === 1 ? 10 : 15;
   const deck = buildMonsterDeck(tpl.race, mLv, deckSize);
 
-  // 보상 (XP는 옛 공식의 약 50% 수준으로 조정 — 레벨업 속도 완화)
-  const gold = Math.floor(mLv * (5 + Math.random() * 10));
+  // 보상 — gold는 사용자 표 lookup ±10% 변동, xp는 평균 mLv × 5.5 (옛 공식)
+  const gold = _goldDropFor(playerLv);
   const xp   = Math.floor(mLv * (4 + Math.random() * 3));
 
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
     str, dex, int, con,
     hp, hpMax: hp, mp: 50, mpMax: 50,
-    atk, def, weapon:{atkBonus:0}, armor:{defBonus:0},
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck, gold, xp,
   };
 }
@@ -6329,6 +6363,7 @@ function _ensureCombatExt(c){
   c.myVoodoo ||= null; c.monVoodoo ||= null;     // {turns}
   c.myStealth ||= 0; c.monStealth ||= 0;         // 은신 후 기습/맹독 사용 가능 잔여 턴 (정수)
   c.myLeech ||= null; c.monLeech ||= null;       // 뱀파이어릭 오라 — {turns, pct} 받는 데미지의 pct만큼 회복
+  c.myVengeance ||= null; c.monVengeance ||= null; // 벤전스 — {turns, reflectMul, dmgReduce, pending}
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -6417,6 +6452,10 @@ function _buildCombatCtx(kind, caster){
     getCastStealth(){ return isP ? (c.myStealth||0) : (c.monStealth||0); },
     setCastLeech(l){ if (isP) c.myLeech = l; else c.monLeech = l; },
     castLeech(){ return isP ? c.myLeech : c.monLeech; },
+    setCastVengeance(v){ if (isP) c.myVengeance = v; else c.monVengeance = v; },
+    setTargVengeance(v){ if (isP) c.monVengeance = v; else c.myVengeance = v; },
+    castVengeance(){ return isP ? c.myVengeance : c.monVengeance; },
+    targVengeance(){ return isP ? c.monVengeance : c.myVengeance; },
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
@@ -6474,6 +6513,21 @@ function _isOffensiveCard(card){
   }
   return check(card && card.fx);
 }
+// 카드 효과 로그에서 stat 키를 한글로 표기 — atk → 무기, def → 방어구
+const _KOR_STAT_KEY = { atk:'무기', def:'방어구', str:'STR', dex:'DEX', int:'INT', con:'CON' };
+function _korStatKey(k){ return _KOR_STAT_KEY[k] || (k||'').toUpperCase(); }
+// 장비 수치 최소 +0 보장 — 무기/방어구가 디버프/자해로 음수가 되지 않게 클램프
+function _effWeapon(obj, buffs){
+  const base = (obj && obj.weapon && obj.weapon.atkBonus) || 0;
+  const delta = (buffs && buffs.atk) || 0;
+  return Math.max(0, base + delta);
+}
+function _effArmor(obj, buffs){
+  const base = (obj && obj.armor && obj.armor.defBonus) || 0;
+  const delta = (buffs && buffs.def) || 0;
+  return Math.max(0, base + delta);
+}
+
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return;
   // 은신 상태 요구 — 기습/맹독은 은신 시전 후 3턴 윈도우 안에서만 발동
@@ -6539,10 +6593,26 @@ function applyCardEffect(card, ctx){
         ctx.log(`  🌀 ${ctx.targName} 부두 → 데미지 ${heal} → 회복 +${got}`, 'heal');
         return;
       }
-      let dmg = Math.max(1, Math.floor(raw - (ctx.targBuffs.def||0) - (ctx.targObj.def||0)));
-      ctx.targObj.hp -= dmg;
-      ctx.addDmg(dmg);
-      ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span>`, ctx.castLogCls);
+      // 방어력 차감 — 방어구 본체 + buff를 0 하한으로 클램프한 뒤 con 기반 본체 def에 합산
+      const aBaseT = (ctx.targObj.armor && ctx.targObj.armor.defBonus) || 0;
+      const conBaseDefT = (ctx.targObj.def||0) - aBaseT;
+      let dmg = Math.max(1, Math.floor(raw - conBaseDefT - _effArmor(ctx.targObj, ctx.targBuffs)));
+      // 벤전스 — 대상이 벤전스 활성이면 받는 데미지 절반 + 시전자에게 1.5배 반사
+      const vg = ctx.targVengeance && ctx.targVengeance();
+      if (vg && vg.turns > 0 && !vg.pending){
+        const reduced  = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
+        const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
+        ctx.targObj.hp -= reduced;
+        ctx.addDmg(reduced);
+        // 반사 데미지 — 시전자에게 직접 차감 (방어력 무시·재반사 방지)
+        ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, ctx.castLogCls);
+        ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
+      } else {
+        ctx.targObj.hp -= dmg;
+        ctx.addDmg(dmg);
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span>`, ctx.castLogCls);
+      }
       // 흡혈성 회복 (뱀파이어릭 오라) — 시전자가 leech 상태면 가한 데미지의 일부를 시전자 HP로 흡수
       // 시전 턴엔 pending=true라 발동 안 함, 다음 턴 진입 시 매턴 처리에서 pending→false
       const lc = ctx.castLeech && ctx.castLeech();
@@ -6610,8 +6680,34 @@ function applyCardEffect(card, ctx){
       ctx.log(`  🌀 ${ctx.castName} 다음 턴부터 ${fx.turns}턴 부두 상태 — 받는 데미지 회복 변환 + 디버프 반사`, 'heal');
       return;
     }
+    if (t === 'vengeance'){
+      // 벤전스 — 시전 턴엔 발동 안 됨, 다음 턴부터 N턴 동안 받는 데미지 절반 + 1.5배 반사
+      ctx.setCastVengeance && ctx.setCastVengeance({
+        turns: (fx.turns||0) + 1,
+        reflectMul: fx.reflectMul || 1.5,
+        dmgReduce: fx.dmgReduce || 0.5,
+        pending: true,
+      });
+      ctx.log(`  ⚔ ${ctx.castName} 다음 턴부터 ${fx.turns}턴 벤전스 — 받는 데미지 ${Math.floor((fx.dmgReduce||0.5)*100)}% 감소 / ${fx.reflectMul||1.5}배 반사`, 'heal');
+      return;
+    }
+    if (t === 'stealVengeance'){
+      // 영웅 등급 전용 — 적의 벤전스 상태를 통째로 빼앗아 시전자에게 부여
+      const targVg = ctx.targVengeance && ctx.targVengeance();
+      if (targVg && targVg.turns > 0){
+        ctx.setCastVengeance && ctx.setCastVengeance({ ...targVg });
+        ctx.setTargVengeance && ctx.setTargVengeance(null);
+        ctx.log(`  🌀 ${ctx.castName} → ${ctx.targName}의 벤전스 흡수!`, ctx.castLogCls || 'heal');
+      }
+      return;
+    }
     if (t === 'stealDefenses'){
       // 시전 시점에 적의 반사막/회피를 시전자에게 강탈 (상위 등급 카드 정책)
+      // 벤전스 — 적이 벤전스 활성이면 강탈 불가 메시지 (벤전스 자체는 안 뺏김)
+      const targVg = ctx.targVengeance && ctx.targVengeance();
+      if (targVg && targVg.turns > 0){
+        ctx.log(`  ✱ 벤전스 강탈 실패 — 너무 강력한 효과이다. 강탈할 수 없다.`, 'info');
+      }
       const stolen = [];
       const targRefl = ctx.targReflect && ctx.targReflect();
       if (targRefl){
@@ -6672,7 +6768,14 @@ function applyCardEffect(card, ctx){
       ctx.log(`  🥷 ${ctx.castName} 은신 상태 (${turns}턴 동안 기습·맹독 사용 가능)`, 'heal');
       return;
     }
-    if (t === 'basicAtk'){ doDmg(rnd(ctx.castObj.atk[0], ctx.castObj.atk[1]) + (ctx.castBuffs.atk||0)); return; }
+    if (t === 'basicAtk'){
+      // 평타 = (atk range - 무기 본체) + 무기 실효치(clamp 0 이상)
+      const wBase = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
+      const lo = (ctx.castObj.atk[0]||0) - wBase;
+      const hi = (ctx.castObj.atk[1]||0) - wBase;
+      doDmg(rnd(lo, hi) + _effWeapon(ctx.castObj, ctx.castBuffs));
+      return;
+    }
     if (t === 'dmg'){ doDmg(rnd(fx.min, fx.max)); return; }
     if (t === 'dmgSelf'){
       doDmg(rnd(fx.min, fx.max));
@@ -6683,11 +6786,9 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'dmgStat'){
       let base = statSum(fx.stats);
-      // 무기 공격력 — weapon.atkBonus + 누적 atk 버프 (전투 중 atk 강화 카드까지 합산)
+      // 무기 공격력 — (weapon.atkBonus + 누적 atk 버프) 최소 0 보장
       if (fx.weaponBonus){
-        const wBonus = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
-        const atkBuff = (ctx.castBuffs && ctx.castBuffs.atk) || 0;
-        base += wBonus + atkBuff;
+        base += _effWeapon(ctx.castObj, ctx.castBuffs);
       }
       if (fx.bonus) base += fx.bonus;
       const mult = fx.mult || 1;
@@ -6709,6 +6810,17 @@ function applyCardEffect(card, ctx){
           return;
         }
         const dmg = Math.max(1, Math.floor(raw));
+        const vg = ctx.targVengeance && ctx.targVengeance();
+        if (vg && vg.turns > 0 && !vg.pending){
+          const reduced  = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
+          const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
+          ctx.targObj.hp -= reduced;
+          ctx.addDmg(reduced);
+          ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
+          ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, ctx.castLogCls);
+          ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
+          return;
+        }
         ctx.targObj.hp -= dmg;
         ctx.addDmg(dmg);
         ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시)</span>`, ctx.castLogCls);
@@ -6774,7 +6886,7 @@ function applyCardEffect(card, ctx){
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance') continue;
         _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, fx[k], fx.turns||0);
-        msgs.push(`${k}${fx[k]>=0?'+':''}${fx[k]}`);
+        msgs.push(`${_korStatKey(k)} ${fx[k]>=0?'+':''}${fx[k]}`);
       }
       ctx.log(`  + ${ctx.castName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
@@ -6785,7 +6897,7 @@ function applyCardEffect(card, ctx){
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance') continue;
         _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0);
-        msgs.push(`${k}${fx[k]>=0?'+':''}${fx[k]}`);
+        msgs.push(`${_korStatKey(k)} ${fx[k]>=0?'+':''}${fx[k]}`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
       return;
@@ -6808,7 +6920,7 @@ function applyCardEffect(card, ctx){
         if (fx.equipBase && ctx.castLockedBuffs){
           ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + d;
         }
-        msgs.push(`${k} ${pct>=0?'+':''}${d}${fx.equipBase?` (장비 ${Math.floor(pct*100)}%)`:` ${Math.floor(pct*100)}%`}`);
+        msgs.push(`${_korStatKey(k)} ${pct>=0?'+':''}${d}${fx.equipBase?` (장비 ${Math.floor(pct*100)}%)`:` ${Math.floor(pct*100)}%`}`);
       }
       ctx.log(`  + ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
@@ -6820,7 +6932,7 @@ function applyCardEffect(card, ctx){
         const base = (tgt.obj[k]||0) + (tgt.buffs[k]||0);
         const d = Math.floor(base * pct);
         _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0);
-        msgs.push(`${k} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
+        msgs.push(`${_korStatKey(k)} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
       return;
@@ -6879,11 +6991,9 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'hotStat'){
       let base = statSum(fx.stats);
-      // 무기 공격력 — weapon.atkBonus + 누적 atk 버프 (dmgStat과 동일 정책)
+      // 무기 공격력 — 최소 0 보장
       if (fx.weaponBonus){
-        const wBonus = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
-        const atkBuff = (ctx.castBuffs && ctx.castBuffs.atk) || 0;
-        base += wBonus + atkBuff;
+        base += _effWeapon(ctx.castObj, ctx.castBuffs);
       }
       const heal = Math.max(1, Math.floor(base * (fx.mult||1)));
       ctx.castHots.push({heal, turns:fx.turns});
@@ -6972,6 +7082,11 @@ function applyCardEffect(card, ctx){
       const b = tgt==='enemy' ? ctx.targBuffs : ctx.castBuffs;
       const tb = tgt==='enemy' ? ctx.targTurnBuffs : ctx.castTurnBuffs;
       const lb = tgt==='enemy' ? ctx.targLockedBuffs : ctx.castLockedBuffs;
+      // 벤전스 — 해제 대상에 벤전스 활성이면 제거 불가 메시지
+      const targVg = tgt==='enemy' ? (ctx.targVengeance && ctx.targVengeance()) : (ctx.castVengeance && ctx.castVengeance());
+      if (targVg && targVg.turns > 0){
+        ctx.log(`  ✱ 벤전스 해제 실패 — 너무 강력한 효과이다. 해제할 수 없다.`, 'info');
+      }
       for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0; // 장비 기반 buff(엔지업 등)는 보존
       tb.length = 0;
       ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거`, ctx.castLogCls);
@@ -6979,6 +7094,11 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'stealBuff'){
       const lb = ctx.targLockedBuffs || {};
+      // 벤전스 — 적이 벤전스 활성이면 강탈 불가 메시지
+      const targVg = ctx.targVengeance && ctx.targVengeance();
+      if (targVg && targVg.turns > 0){
+        ctx.log(`  ✱ 벤전스 흡수 실패 — 너무 강력한 효과이다. 흡수할 수 없다.`, 'info');
+      }
       for (const k of Object.keys(ctx.targBuffs)){
         // 장비 기반 buff(엔지업 등)는 탈취 대상에서 제외 — locked 수치는 적 측에 남김
         const stealable = (ctx.targBuffs[k]||0) - (lb[k]||0);
@@ -7082,6 +7202,8 @@ function applyCardEffect(card, ctx){
       }
       return;
     }
+    // noop — 의도된 빈 효과 (황금상자 '돈 뿌리기' 등). 로그 X
+    if (t === 'noop') return;
     // Fallback: unknown fx
     ctx.log(`  (미구현 효과: ${t})`, 'info');
   }
@@ -7102,11 +7224,38 @@ function processCombatTicks(kind){
   _ensureCombatExt(c);
   const me = GAME.player;
   function rollDot(d){ if (d.min!=null && d.max!=null) return rnd(d.min, d.max); return d.dmg; }
-  // 도트 (적이 받는)
-  for (const d of c.monDots){ const dmg = rollDot(d); opp.hp -= dmg; c.statsMyDmg += dmg; log(`  ☠ 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
+  // 벤전스 헬퍼 — target에 vengeance 활성 시 데미지 절반 + reflector(시전자측)에 1.5배 반사
+  function _vgDot(target, reflector, dmg, vg, log, targName, srcName, srcCls){
+    if (vg && vg.turns > 0 && !vg.pending){
+      const reduced = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
+      const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
+      target.hp -= reduced;
+      reflector.hp = Math.max(0, reflector.hp - reflected);
+      log(`  ☠ 도트 → ${targName} -${reduced} <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, srcCls);
+      log(`  ↺ 벤전스 반사 → ${srcName} -${reflected}`, srcCls === 'hit' ? 'opp' : 'hit');
+      return reduced;
+    }
+    target.hp -= dmg;
+    return dmg;
+  }
+  // 도트 (적이 받는) — 적 vengeance 시 내가 반사 받음 (무적 몬스터는 skip)
+  for (const d of c.monDots){
+    const dmg = rollDot(d);
+    if (opp.invincible){ d.turns--; continue; }
+    const applied = _vgDot(opp, me, dmg, c.monVengeance, log, opp.name, '나', 'hit');
+    c.statsMyDmg += applied;
+    if (!c.monVengeance || c.monVengeance.pending) log(`  ☠ 도트 → ${opp.name} -${dmg}`, 'hit');
+    d.turns--;
+  }
   c.monDots = c.monDots.filter(d=>d.turns>0);
-  // 도트 (내가 받는)
-  for (const d of c.myDots){ const dmg = rollDot(d); me.hp -= dmg; c.statsMonDmg += dmg; log(`  ☠ 도트 → 나 -${dmg}`, 'opp'); d.turns--; }
+  // 도트 (내가 받는) — 내 vengeance 시 적이 반사 받음
+  for (const d of c.myDots){
+    const dmg = rollDot(d);
+    const applied = _vgDot(me, opp, dmg, c.myVengeance, log, '나', opp.name, 'opp');
+    c.statsMonDmg += applied;
+    if (!c.myVengeance || c.myVengeance.pending) log(`  ☠ 도트 → 나 -${dmg}`, 'opp');
+    d.turns--;
+  }
   c.myDots = c.myDots.filter(d=>d.turns>0);
   // 자해 도트 (나) — pct/mpPct는 매 턴 재계산
   for (const d of c.mySelfDots){ let dmg = d.dmg; if (d.pct) dmg = Math.floor(me.hpMax * d.pct); if (d.mpPct) dmg = Math.floor((me.mp||0) * d.mpPct); me.hp -= dmg; log(`  ☠ 자해 도트 → 나 -${dmg}`, 'opp'); d.turns--; }
@@ -7142,6 +7291,8 @@ function processCombatTicks(kind){
   if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
   if (c.monVoodoo){ if (c.monVoodoo.pending) c.monVoodoo.pending = false; c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
+  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; log(`  · 벤전스 종료`, 'info'); } }
+  if (c.monVengeance){ if (c.monVengeance.pending) c.monVengeance.pending = false; c.monVengeance.turns--; if (c.monVengeance.turns<=0){ c.monVengeance = null; log(`  · ${opp.name} 벤전스 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) log(`  · 은신 종료`, 'info'); }
   if (c.monStealth && c.monStealth > 0){ c.monStealth--; if (c.monStealth === 0) log(`  · ${opp.name} 은신 종료`, 'info'); }
@@ -7191,6 +7342,7 @@ function _ensureTrainExt(){
   c.myEvade ||= null; c.myVoodoo ||= null;
   c.myStealth ||= 0;
   c.myLeech ||= null;
+  c.myVengeance ||= null;
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -7199,6 +7351,7 @@ function _ensureTrainExt(){
   o.evade ||= null; o.voodoo ||= null;
   o.stealth ||= 0;
   o.leech ||= null;
+  o.vengeance ||= null;
   o.lockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
 }
 function _buildTrainCtx(caster){
@@ -7254,6 +7407,10 @@ function _buildTrainCtx(caster){
     getCastStealth(){ return isMe ? (c.myStealth||0) : (opp.stealth||0); },
     setCastLeech(l){ if (isMe) c.myLeech = l; else opp.leech = l; },
     castLeech(){ return isMe ? c.myLeech : opp.leech; },
+    setCastVengeance(v){ if (isMe) c.myVengeance = v; else opp.vengeance = v; },
+    setTargVengeance(v){ if (isMe) opp.vengeance = v; else c.myVengeance = v; },
+    castVengeance(){ return isMe ? c.myVengeance : opp.vengeance; },
+    targVengeance(){ return isMe ? opp.vengeance : c.myVengeance; },
     targLeech(){ return isMe ? opp.leech : c.myLeech; },
   };
 }
@@ -7303,6 +7460,8 @@ function processTrainTicks(){
   if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
   if (opp.voodoo){ if (opp.voodoo.pending) opp.voodoo.pending = false; opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
+  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; trainLog(`  · 벤전스 종료`, 'info'); } }
+  if (opp.vengeance){ if (opp.vengeance.pending) opp.vengeance.pending = false; opp.vengeance.turns--; if (opp.vengeance.turns<=0){ opp.vengeance = null; trainLog(`  · ${opp.name} 벤전스 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) trainLog(`  · 은신 종료`, 'info'); }
   if (opp.stealth && opp.stealth > 0){ opp.stealth--; if (opp.stealth === 0) trainLog(`  · ${opp.name} 은신 종료`, 'info'); }
@@ -8767,7 +8926,7 @@ const TUTORIAL_STEPS = [
   },
   {
     icon:'🐉', title:'공격대 — 함께 보스 사냥',
-    body:`<p>강조된 <b>공격대</b>는 1시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
+    body:`<p>강조된 <b>공격대</b>는 4시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
       <p>몬스터 99마리 + 보스를 다른 유저들과 함께 처치하면 보상이 분배됩니다.</p>
       <div class="tip">🎁 참여자 전원에게 보스 처치 시 카드 1뽑 자동 지급. <b>최종 타격(막타)은 여러 유저가 동시에 칠 수 있으니</b>, 채팅으로 서로 소통하며 다 같이 막타를 쳐 보세요!</div>`,
     target:'#m-raid', page:'main', position:'corner',
@@ -8970,9 +9129,29 @@ function _autoFocusBtn(id){
   } catch(e){}
 }
 // 레벨업 경험치 곡선 (release 기준)
+// 사용자 표 — 다음 레벨까지 필요한 수행 횟수 (Lv 1~50: 1.2배, Lv 51~100: 1.1배 둔화)
+const _ATTEMPTS_TO_LEVEL_UP = [
+  5,6,7,9,10,12,15,18,21,26,                                          // Lv 1-10
+  31,37,45,53,64,77,92,111,133,160,                                   // Lv 11-20
+  192,230,276,331,397,477,572,687,824,989,                            // Lv 21-30
+  1187,1424,1709,2051,2461,2953,3544,4253,5103,6124,                  // Lv 31-40
+  7349,8819,10582,12699,15239,18286,21944,26332,31599,37918,          // Lv 41-50
+  41710,45881,50470,55516,61068,67175,73892,81282,89410,98351,        // Lv 51-60
+  108186,119004,130905,143995,158395,174234,191658,210824,231906,255097, // Lv 61-70
+  280606,308667,339534,373487,410836,451919,497111,546822,601505,661655, // Lv 71-80
+  727821,800603,880663,968729,1065602,1172162,1289378,1418316,1560148,1716163, // Lv 81-90
+  1887779,2076557,2284213,2512634,2763897,3040287,3344316,3678747,4046622,4451284, // Lv 91-100
+];
+function _attemptsToLevelUp(lv){
+  const L = Math.max(1, Math.min(100, lv|0));
+  return _ATTEMPTS_TO_LEVEL_UP[L - 1];
+}
+// xpForNextLevel = (평균 보상 XP/회) × (필요 수행 횟수)
+//   평균 XP/회 = playerLv × 5.5 (generateMonster의 xp = mLv × (4 + rand×3) 평균)
 function xpForNextLevel(lv){
-  if (lv < 30) return Math.floor(50 + Math.pow(lv, 1.3) * 25);
-  return Math.floor(50 + Math.pow(30, 1.3) * 25 + Math.pow(lv-29, 1.7) * 150);
+  const L = Math.max(1, lv|0);
+  const avgXp = L * 5.5;
+  return Math.round(avgXp * _attemptsToLevelUp(L));
 }
 
 // 누적된 경험치가 레벨업 임계를 넘었으면 자동으로 레벨업 처리
@@ -9299,13 +9478,18 @@ function renderSheet(){
   const setText = (id, val) => { const el = $(id); if (el) el.textContent = val; };
   setText('s_name', p.name);
   setText('s_level', p.level);
-  // 경험치: 현재 / 잔여 (진척률%)
+  // 경험치: 데스크탑 = 현재/잔여 (nn%), 모바일 = nn% 만
   {
     const cur = p.xp || 0;
     const need = (typeof xpForNextLevel === 'function') ? xpForNextLevel(p.level) : 0;
     const remain = Math.max(0, need - cur);
     const pct = need > 0 ? Math.floor(cur / need * 100) : 0;
-    setText('s_xp', `${cur.toLocaleString()} / ${remain.toLocaleString()} (${pct}%)`);
+    const _isMobile = document.body.classList.contains('layout-vertical');
+    if (_isMobile){
+      setText('s_xp', `${pct}%`);
+    } else {
+      setText('s_xp', `${cur.toLocaleString()} / ${remain.toLocaleString()} (${pct}%)`);
+    }
   }
   setText('s_xpup', (p.xpUp||0).toLocaleString());
   setText('s_blessing', (p.blessing||0).toLocaleString());
@@ -9340,19 +9524,27 @@ function renderSheet(){
   setHtml('s_int', p.int + buffSpan(intDelta));
   setHtml('s_con', p.con + buffSpan(conDelta));
   const atkAvg = Math.round((p.atk[0] + p.atk[1]) / 2);
-  setHtml('s_atk', atkAvg + buffSpan(atkDelta));
-  if (isMobile){
-    setText('s_weapon', '+' + (p.weapon.atkBonus||0));
-    setText('s_armor',  '+' + (p.armor.defBonus||0));
-  } else {
-    // PC: 셀이 자동 확장되지 않도록 내부 span에 max-width+ellipsis. 풀 이름은 title로.
-    const wTxt = (p.weapon.name||'') + ' (+' + p.weapon.atkBonus + ')';
-    const aTxt = (p.armor.name||'')  + ' (+' + p.armor.defBonus  + ')';
-    const wrap = (txt) => `<span style="display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
-    const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt);
-    const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt);
+  // 공격력/방어력 — base 값만 (delta 표시 안 함, 무기/방어구 칸으로 이동)
+  setHtml('s_atk', atkAvg);
+  {
+    // 무기/방어구 delta는 본체 합산이 0 미만이 되지 않도록 클램프
+    const wBase = (p.weapon && p.weapon.atkBonus) || 0;
+    const aBase = (p.armor  && p.armor.defBonus)  || 0;
+    const wEff  = Math.max(-wBase, atkDelta);
+    const aEff  = Math.max(-aBase, defDelta);
+    if (isMobile){
+      setHtml('s_weapon', '+' + wBase + buffSpan(wEff));
+      setHtml('s_armor',  '+' + aBase + buffSpan(aEff));
+    } else {
+      // PC: 셀이 자동 확장되지 않도록 내부 span에 max-width+ellipsis. 풀 이름은 title로.
+      const wTxt = (p.weapon.name||'') + ' (+' + wBase + ')';
+      const aTxt = (p.armor.name||'')  + ' (+' + aBase + ')';
+      const wrap = (txt) => `<span style="display:inline-block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:middle;" title="${txt.replace(/"/g,'&quot;')}">${txt.replace(/</g,'&lt;')}</span>`;
+      const ws = $('s_weapon'); if (ws) ws.innerHTML = wrap(wTxt) + buffSpan(wEff);
+      const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt) + buffSpan(aEff);
+    }
   }
-  setHtml('s_def', p.def + buffSpan(defDelta));
+  setHtml('s_def', p.def);
   if ($('myRank')){
     const r = (GAME.ranking && GAME.ranking.myRank) || 0;
     $('myRank').textContent = r === 0 ? '미등록' : (r + '위');
@@ -9376,10 +9568,18 @@ function renderSheet(){
   setClsHtml('p-combat-dex', p.dex + buffSpan(dexDelta));
   setClsHtml('p-combat-int', p.int + buffSpan(intDelta));
   setClsHtml('p-combat-con', p.con + buffSpan(conDelta));
-  setClsHtml('p-combat-atk', atkAvg + buffSpan(atkDelta));
-  setClsHtml('p-combat-def', p.def + buffSpan(defDelta));
-  setCls('p-combat-weapon', p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-');
-  setCls('p-combat-armor',  p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-');
+  // 공격력/방어력 칸 — base 값만 (delta 표시 안 함)
+  setCls('p-combat-atk', atkAvg);
+  setCls('p-combat-def', p.def);
+  // 무기/방어구 칸에 buff/debuff delta 표시 (장비 본체 합산이 0 미만이 되지 않도록 클램프)
+  {
+    const wBase = (p.weapon && p.weapon.atkBonus) || 0;
+    const aBase = (p.armor  && p.armor.defBonus)  || 0;
+    const wEff  = Math.max(-wBase, atkDelta);
+    const aEff  = Math.max(-aBase, defDelta);
+    setClsHtml('p-combat-weapon', (p.weapon ? `${p.weapon.name||'-'} (+${wBase})` : '-') + buffSpan(wEff));
+    setClsHtml('p-combat-armor',  (p.armor  ? `${p.armor.name||'-'} (+${aBase})`   : '-') + buffSpan(aEff));
+  }
   // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
   const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
   const avHtml = hasAv
