@@ -746,6 +746,9 @@
     overflow:hidden;
   }
   .shop-banner-img { display:block; width:100%; height:auto; position:relative; z-index:1; }
+  /* 가챠 카드 — PC: 5칸 한 줄 / 모바일(layout-vertical): 3+2 */
+  #gachaShopGrid > div { flex: 0 0 calc(20% - 8px); }
+  body.layout-vertical #gachaShopGrid > div { flex: 0 0 calc(33.33% - 7px); }
   .shop-title {
     position:absolute; left:0; right:0; bottom:14px;
     text-align:center; z-index:3;
@@ -1992,11 +1995,17 @@
           사냥으로는 카드가 드랍되지 않으며, 오직 카드샵에서만 카드를 얻을 수 있습니다.
         </div>
 
-        <table class="shop-rates">
+        <table class="shop-rates" style="width:100%;">
+          <colgroup>
+            <col style="width:60px;">
+            <col>
+            <col style="width:60px;">
+            <col>
+          </colgroup>
           <tr>
-            <td class="lbl">현재 골드</td>
+            <td class="lbl">골드</td>
             <td class="val"><b id="shop_gold">-</b> G</td>
-            <td class="lbl">보유 카드</td>
+            <td class="lbl">카드</td>
             <td class="val">
               총 <b id="shop_inv_total">0</b>장 · 도감 <b id="shop_inv_unique">0</b>종
               <button class="mini-btn" onclick="openInventoryView()" style="background:#666;margin-left:8px;">보유 카드 보기</button>
@@ -2004,7 +2013,7 @@
           </tr>
         </table>
 
-        <div id="gachaShopGrid" style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px;padding:8px 0;"></div>
+        <div id="gachaShopGrid" style="display:flex;flex-wrap:wrap;justify-content:center;gap:10px;padding:8px 0;"></div>
 
         <div class="shop-actions">
           <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
@@ -3412,15 +3421,15 @@ function renderGachaShopGrid(){
   const el = $('gachaShopGrid');
   if (!el) return;
   const p = GAME.player;
-  // 5칸 grid로 자동 확장
-  el.style.gridTemplateColumns = `repeat(${_GACHA_SHOP_ORDER.length},1fr)`;
+  // PC: 5칸 한 줄 / 모바일: 3+2 (CSS 미디어쿼리로 제어)
+  const cardStyle = 'min-width:0;box-sizing:border-box;';
   const html = _GACHA_SHOP_ORDER.map(id => {
     const s = GACHA_SHOPS[id];
     const border = _GRADE_COLORS[id] || '#888';
     const iconUrl = s.icon.replace(/ /g,'%20');
     if (s.locked){
       // 잠금 카드 — 추후 오픈 예정
-      return `<div style="background:#f0f0f0;border:2px dashed ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);opacity:0.85;">
+      return `<div style="${cardStyle}background:#f0f0f0;border:2px dashed ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);opacity:0.85;">
         <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;filter:grayscale(40%);">
         <div style="font-size:14px;font-weight:bold;color:${border};">${s.label} 🔒</div>
         <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
@@ -3429,7 +3438,7 @@ function renderGachaShopGrid(){
     }
     const can1  = p.gold >= s.cost1;
     const can10 = p.gold >= s.cost10;
-    return `<div style="background:#fff;border:2px solid ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
+    return `<div style="${cardStyle}background:#fff;border:2px solid ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.15);">
       <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;">
       <div style="font-size:14px;font-weight:bold;color:${border};">${s.label}</div>
       <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
