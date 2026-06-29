@@ -4698,8 +4698,16 @@ function renderRaidBattle(){
   $('rd_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rd_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   $('rd_def').textContent = (m.def || 0);
-  $('rd_weapon').textContent = m.weapon ? `${m.weapon.name||'-'} (+${m.weapon.atkBonus||0})` : '-';
-  $('rd_armor').textContent  = m.armor  ? `${m.armor.name||'-'} (+${m.armor.defBonus||0})`   : '-';
+  {
+    const mb = (c && c.monBuffs) || {};
+    const wBase = (m.weapon && m.weapon.atkBonus) || 0;
+    const aBase = (m.armor  && m.armor.defBonus)  || 0;
+    const wEff  = Math.max(-wBase, mb.atk|0);
+    const aEff  = Math.max(-aBase, mb.def|0);
+    const span  = (d) => d ? ` <span style="font-size:10px;color:${d>0?'#7eff7e':'#ff7e7e'};">(${d>0?'+':''}${d})</span>` : '';
+    $('rd_weapon').innerHTML = (m.weapon ? `${m.weapon.name||'-'} (+${wBase})` : '-') + span(wEff);
+    $('rd_armor').innerHTML  = (m.armor  ? `${m.armor.name||'-'} (+${aBase})`   : '-') + span(aEff);
+  }
 
   const hpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
@@ -5424,10 +5432,18 @@ function renderRankBattle(){
       avEl.innerHTML = (m.name||'?').charAt(0);
     }
   }
-  // 상대 장비
-  const ow = m.weapon, oa = m.armor;
-  $('rk_weapon').textContent = ow ? `${ow.name||'-'} (+${ow.atkBonus||0})` : '-';
-  $('rk_armor').textContent  = oa ? `${oa.name||'-'} (+${oa.defBonus||0})` : '-';
+  // 상대 장비 — buff/debuff delta는 무기/방어구 칸에, 최소 +0 클램프
+  {
+    const ow = m.weapon, oa = m.armor;
+    const mb = (c && c.monBuffs) || {};
+    const wBase = (ow && ow.atkBonus) || 0;
+    const aBase = (oa && oa.defBonus) || 0;
+    const wEff  = Math.max(-wBase, mb.atk|0);
+    const aEff  = Math.max(-aBase, mb.def|0);
+    const span  = (d) => d ? ` <span style="font-size:10px;color:${d>0?'#7eff7e':'#ff7e7e'};">(${d>0?'+':''}${d})</span>` : '';
+    $('rk_weapon').innerHTML = (ow ? `${ow.name||'-'} (+${wBase})` : '-') + span(wEff);
+    $('rk_armor').innerHTML  = (oa ? `${oa.name||'-'} (+${aBase})` : '-') + span(aEff);
+  }
   // 내 장비 (p-combat-weapon / p-combat-armor 클래스)
   const p = GAME.player;
   if (p){
@@ -6187,8 +6203,16 @@ function renderHuntBattle(){
   $('m_mp').textContent  = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('m_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   $('m_def').textContent = (m.def || 0);
-  $('m_weapon').textContent = m.weapon ? `${m.weapon.name||'-'} (+${m.weapon.atkBonus||0})` : '-';
-  $('m_armor').textContent  = m.armor  ? `${m.armor.name||'-'} (+${m.armor.defBonus||0})`   : '-';
+  {
+    const mb = (c && c.monBuffs) || {};
+    const wBase = (m.weapon && m.weapon.atkBonus) || 0;
+    const aBase = (m.armor  && m.armor.defBonus)  || 0;
+    const wEff  = Math.max(-wBase, mb.atk|0);
+    const aEff  = Math.max(-aBase, mb.def|0);
+    const span  = (d) => d ? ` <span style="font-size:10px;color:${d>0?'#7eff7e':'#ff7e7e'};">(${d>0?'+':''}${d})</span>` : '';
+    $('m_weapon').innerHTML = (m.weapon ? `${m.weapon.name||'-'} (+${wBase})` : '-') + span(wEff);
+    $('m_armor').innerHTML  = (m.armor  ? `${m.armor.name||'-'} (+${aBase})`   : '-') + span(aEff);
+  }
   $('m_race_badge').textContent = `(${raceKr(m.race)})`;
   // 몬스터 HP/MP 바
   const mhpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
