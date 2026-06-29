@@ -9270,11 +9270,19 @@ function trackHuntResult(outcome){
   }
 }
 
-// 자동 focus 헬퍼 — autoFocus 권한이 있을 때만 동작
+// 자동 focus 헬퍼 — autoFocus 권한이 있을 때만 버튼에 focus
+// 권한이 없으면 매번 활성 element를 blur해서 스페이스바 연타로 재발동되지 않게 차단
 function _autoFocusBtn(id){
   try {
-    if (!GAME.player || !GAME.player.autoFocus) return;
     const el = document.getElementById(id);
+    if (!GAME.player || !GAME.player.autoFocus){
+      // 권한 없음 — 현재 focus된 요소(보통 직전 클릭한 버튼)를 명시적으로 해제
+      try {
+        const ae = document.activeElement;
+        if (ae && typeof ae.blur === 'function' && ae !== document.body){ ae.blur(); }
+      } catch(e){}
+      return;
+    }
     if (el && !el.disabled){
       // 미세 지연으로 표시 직후 안정적으로 focus
       setTimeout(() => { try { el.focus({preventScroll:true}); } catch(e){ el.focus(); } }, 30);
