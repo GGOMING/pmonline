@@ -2038,7 +2038,7 @@
               <div style="font-size:11px;color:#555;line-height:1.6;">
                 • PNG / JPEG / WebP / GIF, 원본 최대 <b>1 MB</b><br>
                 • 자동으로 <b>256×256</b>으로 축소 + JPEG 압축<br>
-                • 변경 비용: <b style="color:#7E181E;">10,000 G</b> (첫 설정은 무료)
+                • 변경 비용: <b style="color:#7E181E;">10,000 G</b>
               </div>
               <div style="margin-top:8px;">
                 <button class="btn-go" onclick="openAvatarPicker()" style="background:#2e7d32;">사진 선택·변경</button>
@@ -9266,12 +9266,12 @@ let _pendingAvatarIsChange = false;
 
 function openAvatarPicker(){
   if (!GAME.player){ alert('로그인 후 사용하세요.'); return; }
-  const isChange = !!GAME.player.avatar;
-  if (isChange && GAME.player.gold < AVATAR_CHANGE_COST){
+  // 첫 설정·변경 구분 없이 항상 10,000G 부과
+  if (GAME.player.gold < AVATAR_CHANGE_COST){
     alert(`프로필 사진 변경에 ${AVATAR_CHANGE_COST.toLocaleString()}G가 필요합니다.\n현재 보유: ${GAME.player.gold.toLocaleString()}G`);
     return;
   }
-  _pendingAvatarIsChange = isChange;
+  _pendingAvatarIsChange = true;
   _openAvatarFilePicker();
 }
 function _openAvatarFilePicker(){
@@ -9303,12 +9303,8 @@ function _openAvatarFilePicker(){
 }
 function _showAvatarPreview(){
   if (!_pendingAvatarDataUrl) return;
-  const isChange = _pendingAvatarIsChange;
   $('avatarPreviewImg').src = _pendingAvatarDataUrl;
-  const msg = isChange
-    ? `이 사진으로 변경하시겠습니까?<br>비용: <b style="color:#7E181E;">${AVATAR_CHANGE_COST.toLocaleString()} G</b><br><span style="color:#a02050;font-size:11px;">⚠ 부적절한 사진 적발 시 계정이 삭제될 수 있습니다.</span>`
-    : `이 사진으로 프로필을 설정하시겠습니까? <span style="color:#060;">(첫 설정 무료)</span><br><span style="color:#a02050;font-size:11px;">⚠ 부적절한 사진 적발 시 계정이 삭제될 수 있습니다.</span>`;
-  $('avatarPreviewMsg').innerHTML = msg;
+  $('avatarPreviewMsg').innerHTML = `이 사진으로 변경하시겠습니까?<br>비용: <b style="color:#7E181E;">${AVATAR_CHANGE_COST.toLocaleString()} G</b><br><span style="color:#a02050;font-size:11px;">⚠ 부적절한 사진 적발 시 계정이 삭제될 수 있습니다.</span>`;
   $('avatarPreviewBg').classList.add('on');
 }
 function cancelAvatarPreview(){
@@ -9326,14 +9322,13 @@ function reselectAvatarPreview(){
 }
 function confirmAvatarPreview(){
   if (!_pendingAvatarDataUrl || !GAME.player) return;
-  const isChange = _pendingAvatarIsChange;
   // 변경 비용 재확인 (그 사이 골드가 줄었을 수도)
-  if (isChange && GAME.player.gold < AVATAR_CHANGE_COST){
+  if (GAME.player.gold < AVATAR_CHANGE_COST){
     alert(`프로필 사진 변경에 ${AVATAR_CHANGE_COST.toLocaleString()}G가 필요합니다.`);
     return;
   }
   GAME.player.avatar = _pendingAvatarDataUrl;
-  if (isChange) GAME.player.gold -= AVATAR_CHANGE_COST;
+  GAME.player.gold -= AVATAR_CHANGE_COST;
   _pendingAvatarDataUrl = null;
   _pendingAvatarIsChange = false;
   const bg = $('avatarPreviewBg');
@@ -9341,7 +9336,7 @@ function confirmAvatarPreview(){
   renderSheet();
   _renderProfilePage();
   saveGame();
-  toast(isChange ? `프로필 사진 변경 완료 (-${AVATAR_CHANGE_COST.toLocaleString()}G)` : '프로필 사진이 설정되었습니다.');
+  toast(`프로필 사진 변경 완료 (-${AVATAR_CHANGE_COST.toLocaleString()}G)`);
 }
 
 function profileRemoveAvatar(){
