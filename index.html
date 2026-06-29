@@ -1304,6 +1304,7 @@
           <td id="m-raid" class="row2" onclick="openActiveRaid()">공격대</td>
         </tr></table>
         <table><tr>
+          <td class="row3" onclick="openCardCodex()" style="color:#2e53b2;">📖 카드 도감</td>
           <td id="m-profile" class="row3" onclick="openProfilePage()">프로필 관리</td>
           <td class="row3" onclick="openHonor()" style="color:#a02050;">🏆 명예의 전당</td>
           <td class="row3" onclick="openBlessShop()" style="color:#b8860b;">✨ 축복의 상점</td>
@@ -1886,6 +1887,29 @@
       </div>
     </div>
 
+    <!-- 카드 도감 컨텐츠 -->
+    <div class="content-pane" id="content-codex" hidden>
+      <div class="shop-page">
+        <div class="shop-head">📖 카드 도감</div>
+        <div class="shop-desc">
+          현재 게임에 등장하는 모든 카드를 등급별로 볼 수 있습니다.<br>
+          <span style="font-size:11px;color:#666;">기본공격·황금상자 전용 카드는 제외</span>
+        </div>
+        <div class="grade-filter" style="border-top:1px solid #aaa;">
+          <button onclick="filterCodexGrade('all')" class="active" id="cg_all">전체</button>
+          <button onclick="filterCodexGrade('normal')" id="cg_normal">일반</button>
+          <button onclick="filterCodexGrade('rare')" id="cg_rare">레어</button>
+          <button onclick="filterCodexGrade('unique')" id="cg_unique">유니크</button>
+          <button onclick="filterCodexGrade('hero')" id="cg_hero">영웅</button>
+          <span id="codexCount" style="float:right;font-size:11px;color:#555;line-height:24px;padding-right:4px;">총 - 종</span>
+        </div>
+        <div class="card-grid" id="codexGrid" style="padding:8px;"></div>
+        <div style="text-align:center;padding:10px;">
+          <button class="btn-go" onclick="showContent('main')">← 메인으로</button>
+        </div>
+      </div>
+    </div>
+
     <!-- 명예의 전당 컨텐츠 -->
     <div class="content-pane" id="content-honor" hidden>
       <div class="shop-page">
@@ -2386,6 +2410,7 @@ const CARDS = [
   { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'10턴 동안 10-25 랜덤 데미지 (소환의식 없음)', fx:{type:'dot',turns:10,min:10,max:25} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
+  { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +5 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:5,max:15},{stat:'def',min:5,max:15}]} },
 
   // ───── 영웅 카드 5종 ─────
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
@@ -2404,6 +2429,7 @@ const CARDS = [
   { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
   { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT로 2회 타격 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
   { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 무기 및 방어구 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
+  { id:'r41', name:'사령의 로드',       grade:'rare', icon:'wand',     iconPath:'assets/wc3_reforged_used/BTNWandSkull-Reforged.png', text:'INT × (1.0~2.0배 랜덤)으로 2회 타격 (각 hit 독립 시행) / MP 50 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],multMin:1.0,multMax:2.0,hits:2},{type:'mpCost',amount:50}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -3408,8 +3434,8 @@ function renderGachaShopGrid(){
       <div style="font-size:14px;font-weight:bold;color:${border};">${s.label}</div>
       <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:stretch;margin-top:6px;">
-        <button onclick="doGachaShop('${id}', 1)" ${can1?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can1?'#2e53b2':'#888'};color:#fff;border:0;cursor:${can1?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;width:100%;">1뽑 <small>(${s.cost1.toLocaleString()} G)</small></button>
-        <button onclick="doGachaShop('${id}', 10)" ${can10?'':'disabled'} style="padding:6px 10px;font-size:11px;background:${can10?'#a02050':'#888'};color:#fff;border:0;cursor:${can10?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;width:100%;">10뽑 <small>(${s.cost10.toLocaleString()} G)</small></button>
+        <button onclick="doGachaShop('${id}', 1)" ${can1?'':'disabled'} style="padding:6px 4px;font-size:11px;background:${can1?'#2e53b2':'#888'};color:#fff;border:0;cursor:${can1?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;width:100%;line-height:1.3;">1뽑<br><small style="font-weight:normal;">(${s.cost1.toLocaleString()} G)</small></button>
+        <button onclick="doGachaShop('${id}', 10)" ${can10?'':'disabled'} style="padding:6px 4px;font-size:11px;background:${can10?'#a02050':'#888'};color:#fff;border:0;cursor:${can10?'pointer':'not-allowed'};border-radius:3px;font-weight:bold;width:100%;line-height:1.3;">10뽑<br><small style="font-weight:normal;">(${s.cost10.toLocaleString()} G)</small></button>
       </div>
     </div>`;
   }).join('');
@@ -4008,6 +4034,46 @@ function _honorAvatarHtml(r, size){
   }
   return `<div style="width:${sz}px;height:${sz}px;background:#000;color:#FFFF99;font-size:${Math.floor(sz*0.5)}px;font-weight:bold;display:flex;align-items:center;justify-content:center;border:1px solid #888;">${(r.name||'?').charAt(0).toUpperCase()}</div>`;
 }
+// ─── 카드 도감 ───
+let _codexFilter = 'all';
+function openCardCodex(){
+  _codexFilter = 'all';
+  document.querySelectorAll('#content-codex .grade-filter button').forEach(b => b.classList.remove('active'));
+  const a = document.getElementById('cg_all'); if (a) a.classList.add('active');
+  renderCodexGrid();
+  showContent('codex');
+}
+function filterCodexGrade(g){
+  _codexFilter = g;
+  document.querySelectorAll('#content-codex .grade-filter button').forEach(b => b.classList.remove('active'));
+  const b = document.getElementById('cg_'+g); if (b) b.classList.add('active');
+  renderCodexGrid();
+}
+function renderCodexGrid(){
+  // basic_atk + 몬스터 전용 카드 제외
+  const pool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
+  // 등급 순서대로 정렬 (normal → rare → unique → hero → legend)
+  const order = { normal:1, rare:2, unique:3, hero:4, legend:5 };
+  pool.sort((a,b) => (order[a.grade]||9) - (order[b.grade]||9) || a.name.localeCompare(b.name, 'ko'));
+  const list = (_codexFilter === 'all') ? pool : pool.filter(c => c.grade === _codexFilter);
+  const el = $('codexGrid');
+  const cnt = $('codexCount');
+  if (cnt) cnt.textContent = `총 ${list.length} 종` + (_codexFilter==='all' ? '' : ` / 전체 ${pool.length}`);
+  if (!el) return;
+  if (!list.length){
+    el.innerHTML = '<div style="grid-column:1/-1;text-align:center;padding:20px;color:#888;">해당 등급의 카드가 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = list.map(c => `<div class="cg-item ${c.grade}" style="cursor:default;">
+    <div class="ico">${cardIcon(c)}</div>
+    <div class="info">
+      <div class="nm">${c.name}</div>
+      <div class="gr">[${gradeKr(c.grade)}]</div>
+      <div class="ef">${c.text||''}</div>
+    </div>
+  </div>`).join('');
+}
+
 function renderHonorList(){
   const el = $('honorList');
   if (!_honorRankers || _honorRankers.length === 0){
@@ -6846,6 +6912,15 @@ function applyCardEffect(card, ctx){
         base += _effWeapon(ctx.castObj, ctx.castBuffs);
       }
       if (fx.bonus) base += fx.bonus;
+      // multMin/multMax + hits — 각 hit마다 랜덤 배율 독립 시행
+      if (fx.multMin != null && fx.multMax != null){
+        const hits = Math.max(1, fx.hits || 1);
+        for (let i = 0; i < hits; i++){
+          const m = fx.multMin + Math.random() * (fx.multMax - fx.multMin);
+          doDmg(base * m);
+        }
+        return;
+      }
       const mult = fx.mult || 1;
       // 정수 mult ≥ 2 는 다회 타격(매 hit마다 방어력 차감), 분수 mult는 단발 ×N
       if (Number.isInteger(mult) && mult >= 2){
@@ -6935,6 +7010,20 @@ function applyCardEffect(card, ctx){
       const add = fx.amount || Math.floor(ctx.castObj.mpMax * (fx.pct||0));
       ctx.castObj.mpMax += add; ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + add);
       ctx.log(`  + 최대 MP +${add}`, 'heal'); return;
+    }
+    if (t === 'randomBuff'){
+      // 각 stat마다 min~max 사이 정수 랜덤 buff (독립 시행)
+      const list = Array.isArray(fx.stats) ? fx.stats : [];
+      const msgs = [];
+      for (const it of list){
+        const stat = it.stat;
+        const mn = it.min|0, mx = it.max|0;
+        const val = mn + Math.floor(Math.random() * (mx - mn + 1));
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, stat, val, fx.turns||0);
+        msgs.push(`${_korStatKey(stat)} +${val} <span style="color:#888;font-size:10px;">(${mn}~${mx} 랜덤)</span>`);
+      }
+      ctx.log(`  + ${ctx.castName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
+      return;
     }
     if (t === 'buff'){
       const msgs = [];
