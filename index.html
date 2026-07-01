@@ -1225,6 +1225,14 @@
       </div>
 
       <div class="sys-group">
+        <h4>🔑 관리자 비밀번호 변경</h4>
+        <label>새 비밀번호: <input type="password" id="adminNewPw1" maxlength="30" style="width:140px;font-size:11px;" placeholder="6자 이상"></label>
+        <label style="margin-left:6px;">확인: <input type="password" id="adminNewPw2" maxlength="30" style="width:140px;font-size:11px;"></label>
+        <button class="admin-btn" onclick="adminChangeAdminPassword()">비밀번호 변경</button>
+        <div id="adminChangePwStatus" style="font-size:11px;margin-top:4px;min-height:14px;color:#666;"></div>
+      </div>
+
+      <div class="sys-group">
         <h4>랭킹전</h4>
         <button class="admin-btn" onclick="adminResetRanking()">랭킹 초기화</button>
         <span style="font-size:11px;color:#666;">매일 0시 자동 리셋</span>
@@ -11814,6 +11822,52 @@ async function adminKillBoss(key){
     refreshAdminSystem();
     alert('✔ 보스 처치 완료');
   } catch(e){ alert('보스 처치 실패: ' + (e.message||e)); }
+}
+
+// 관리자 비밀번호 변경 — Supabase Auth 계정(admin@pmonline.system)의 password 갱신
+async function adminChangeAdminPassword(){
+  const el = $('adminChangePwStatus');
+  const pw1 = ($('adminNewPw1').value || '').trim();
+  const pw2 = ($('adminNewPw2').value || '').trim();
+  if (!pw1 || pw1.length < 6){
+    el.style.color = '#a00';
+    el.textContent = '✗ 비밀번호는 6자 이상 입력해 주세요.';
+    return;
+  }
+  if (pw1 !== pw2){
+    el.style.color = '#a00';
+    el.textContent = '✗ 새 비밀번호 확인이 일치하지 않습니다.';
+    return;
+  }
+  if (!sb){
+    el.style.color = '#a00';
+    el.textContent = '✗ 서버 연결이 필요합니다.';
+    return;
+  }
+  if (!confirm('관리자 계정 비밀번호를 변경하시겠습니까?\n\n변경 후 새 비밀번호로 다시 관리자 로그인이 필요합니다.')) return;
+  try {
+    // 현재 세션이 관리자로 로그인된 상태여야 함 (관리자 패널 진입 시 이미 signIn되어 있음)
+    const { data: ud } = await sb.auth.getUser();
+    if (!ud || !ud.user || ud.user.email !== ADMIN_EMAIL){
+      el.style.color = '#a00';
+      el.textContent = '✗ 관리자 세션이 아닙니다. 로그아웃 후 다시 관리자 로그인 해 주세요.';
+      return;
+    }
+    const { error } = await sb.auth.updateUser({ password: pw1 });
+    if (error){
+      el.style.color = '#a00';
+      el.textContent = '✗ 변경 실패: ' + (error.message || error);
+      return;
+    }
+    el.style.color = '#060';
+    el.textContent = '✔ 관리자 비밀번호가 변경되었습니다. 다음 로그인부터 새 비밀번호를 사용하세요.';
+    $('adminNewPw1').value = '';
+    $('adminNewPw2').value = '';
+    try { toast('🔑 관리자 비밀번호 변경 완료'); } catch(e){}
+  } catch(e){
+    el.style.color = '#a00';
+    el.textContent = '✗ 오류: ' + (e.message || e);
+  }
 }
 
 function adminResetRanking(){
