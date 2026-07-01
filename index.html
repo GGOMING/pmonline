@@ -74,11 +74,11 @@
   }
   /* 튜토리얼 — 모바일 */
   @media (max-width: 700px){
-    .tutorial-overlay { justify-content:stretch; align-items:flex-end; }
+    .tutorial-overlay { justify-content:stretch; align-items:flex-start; }
     .tutorial-overlay .tutorial-modal {
       width:auto; max-width:none; flex:1; margin:6px;
       max-height:42vh; overflow-y:auto;
-      box-shadow:0 -4px 20px rgba(255,215,0,0.5);
+      box-shadow:0 4px 20px rgba(255,215,0,0.5);
     }
     .tutorial-overlay.center { justify-content:center; align-items:center; }
     .tutorial-overlay.center .tutorial-modal {
@@ -343,6 +343,75 @@
   .statup-btn.reset { background:#ffcccc; color:#7E181E; font-size:9px; padding:0 6px; }
   .statup-btn.reset:hover { background:#ff8888; color:#fff; }
 
+  /* 명예의 전당 1위 금메달 — 황금 glow + pulse */
+  @keyframes goldSparkle {
+    0%, 100% {
+      filter: drop-shadow(0 0 4px #ffd700) drop-shadow(0 0 10px rgba(255,215,0,.7)) hue-rotate(-10deg) saturate(1.4) brightness(1.1);
+      transform: scale(1) rotate(0deg);
+    }
+    50% {
+      filter: drop-shadow(0 0 10px #fff2a0) drop-shadow(0 0 20px rgba(255,215,0,1)) hue-rotate(-10deg) saturate(1.6) brightness(1.25);
+      transform: scale(1.15) rotate(4deg);
+    }
+  }
+  @keyframes goldSpark {
+    0%   { opacity:0; transform: scale(0.4) rotate(0deg); }
+    50%  { opacity:1; transform: scale(1.2) rotate(180deg); }
+    100% { opacity:0; transform: scale(0.4) rotate(360deg); }
+  }
+  .gold-medal {
+    display:inline-block;
+    animation: goldSparkle 1.6s ease-in-out infinite;
+    position:relative;
+    z-index:1;
+  }
+  .gold-medal-wrap { position:relative; display:inline-block; }
+  .gold-medal-wrap::before,
+  .gold-medal-wrap::after {
+    content:"✦";
+    position:absolute;
+    color:#ffe27a;
+    font-size:12px;
+    text-shadow:0 0 6px #ffd700, 0 0 12px rgba(255,215,0,.7);
+    pointer-events:none;
+    animation: goldSpark 1.8s ease-in-out infinite;
+  }
+  .gold-medal-wrap::before { top:-4px; left:-6px; animation-delay:0s; }
+  .gold-medal-wrap::after  { bottom:-4px; right:-6px; animation-delay:0.9s; }
+  /* 2등 은메달 — 은색 glow + 정적 스파클 */
+  .silver-medal {
+    display:inline-block;
+    filter: drop-shadow(0 0 4px #d0d0d0) drop-shadow(0 0 10px rgba(200,200,200,.7)) saturate(0.5) brightness(1.15);
+  }
+  .silver-medal-wrap { position:relative; display:inline-block; }
+  .silver-medal-wrap::before,
+  .silver-medal-wrap::after {
+    content:"✦";
+    position:absolute;
+    color:#eaeaea;
+    font-size:11px;
+    text-shadow:0 0 5px #d0d0d0, 0 0 10px rgba(200,200,200,.7);
+    pointer-events:none;
+  }
+  .silver-medal-wrap::before { top:-4px; left:-6px; }
+  .silver-medal-wrap::after  { bottom:-4px; right:-6px; }
+  /* 3등 동메달 — 동색 glow + 정적 스파클 */
+  .bronze-medal {
+    display:inline-block;
+    filter: drop-shadow(0 0 4px #cd7f32) drop-shadow(0 0 10px rgba(205,127,50,.7)) hue-rotate(15deg) saturate(1.4) brightness(1.05);
+  }
+  .bronze-medal-wrap { position:relative; display:inline-block; }
+  .bronze-medal-wrap::before,
+  .bronze-medal-wrap::after {
+    content:"✦";
+    position:absolute;
+    color:#e5a068;
+    font-size:11px;
+    text-shadow:0 0 5px #cd7f32, 0 0 10px rgba(205,127,50,.7);
+    pointer-events:none;
+  }
+  .bronze-medal-wrap::before { top:-4px; left:-6px; }
+  .bronze-medal-wrap::after  { bottom:-4px; right:-6px; }
   /* 명예의 전당 행 호버 */
   #honorList .honor-row:hover { background:#fde9c8; }
   /* HP/MP 바 */
@@ -803,6 +872,10 @@
   .gacha-result-grid {
     display:grid; grid-template-columns:repeat(5, 1fr); gap:6px;
   }
+  /* 축복 결과 팝업 — JS에서 결과 개수별로 5+6 두 줄(가운데 정렬)을 별도 그리드로 그림 */
+  #blessGachaResultGrid { display:block; }
+  #blessGachaResultGrid > div.gc-row { display:grid; gap:6px; }
+  #blessGachaResultGrid > div.gc-row + div.gc-row { margin-top:6px; }
   .gacha-result-grid .gc {
     background:#000; padding:5px; border:2px solid #444; color:#fff;
     text-align:center; font-size:11px; min-width:0;
@@ -1033,6 +1106,21 @@
             <input id="regAuth" maxlength="6" placeholder="6자리 숫자">
             <button type="button" onclick="verifyPhoneAuth()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
             <div id="regAuthStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
+          </td>
+        </tr>
+        <tr>
+          <td class="lbl">이메일</td>
+          <td>
+            <input id="regEmail" type="email" placeholder="example@email.com" style="width:180px;">
+            <button type="button" onclick="sendEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 발송</button>
+          </td>
+        </tr>
+        <tr>
+          <td class="lbl">이메일 코드</td>
+          <td>
+            <input id="regEmailCode" maxlength="6" placeholder="6자리 숫자">
+            <button type="button" onclick="verifyEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
+            <div id="regEmailStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
           </td>
         </tr>
       </table>
@@ -2246,6 +2334,24 @@
   </div>
 </div>
 
+<!-- 축복 가챠 결과 팝업 -->
+<div class="modal-bg" id="blessGachaResultBg" onclick="if(event.target.id==='blessGachaResultBg')closeBlessGachaResult()">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      ✨ <span id="blessGachaResultTitle">여신의 축복 — 결과</span>
+      <span class="modal-close" onclick="closeBlessGachaResult()">[ 닫기 ]</span>
+    </div>
+    <div style="padding:12px 16px;">
+      <div id="blessGachaResultSummary" style="font-size:13px;font-weight:bold;color:#7E181E;margin-bottom:8px;text-align:center;"></div>
+      <div id="blessGachaResultGrid" class="gacha-result-grid"></div>
+      <div id="blessGachaResultActions" style="margin-top:10px;text-align:center;"></div>
+      <div style="text-align:center;margin-top:12px;">
+        <button class="btn-go" onclick="closeBlessGachaResult()">확인</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- 토스트 -->
 <div class="toast" id="toast"></div>
 
@@ -2641,6 +2747,7 @@ async function cloudSaveNow(){
     user_id: ud.user.id,
     nickname: GAME.player.name,
     phone: GAME.player.phone || null,
+    email: GAME.player.email || null,
     data: buildSavePayload(),
   };
   const { error } = await sb.from('saves').upsert(payload, { onConflict: 'user_id' });
@@ -2671,6 +2778,14 @@ async function cloudPhoneTaken(phone){
     if (error){ console.warn('[phoneExists]', error); return false; }
     return !!data;
   } catch(e){ console.warn('[phoneExists]', e); return false; }
+}
+async function cloudEmailTaken(email){
+  if (!sb || !email) return false;
+  try {
+    const { data, error } = await sb.rpc('email_exists', { check_email: email });
+    if (error){ console.warn('[emailExists]', error); return false; }
+    return !!data;
+  } catch(e){ console.warn('[emailExists]', e); return false; }
 }
 async function cloudSignOut(){
   if (sb) { try { await sb.auth.signOut(); } catch(e){} }
@@ -3494,8 +3609,14 @@ function doGachaShop(shopId, n){
   if (heroes) msg += ` · ⭐ 영웅 ${heroes}장!`;
   if (uniques) msg += ` · 🔮 유니크 ${uniques}장!`;
   setShopMsg(msg, 'ok');
-  if (heroes) chatSys(`★ ${p.name}님이 ${s.label}에서 ⭐ 영웅 카드 ${heroes}장을 뽑으셨습니다!`);
-  else if (uniques) chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 ${uniques}장 획득`);
+  const heroCards   = results.filter(c => c.grade === 'hero');
+  const uniqueCards = results.filter(c => c.grade === 'unique');
+  if (heroCards.length){
+    chatSys(`★ ${p.name}님이 ${s.label}에서 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+  }
+  if (uniqueCards.length){
+    chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+  }
   renderSheet();
   refreshShopUI();
   saveGame();
@@ -3861,6 +3982,57 @@ function refreshBlessShop(){
   }).join('');
   $('blessShopList').innerHTML = list;
 }
+// 축복 가챠 결과 팝업 — 카드 그리드 + 즉시 판매 버튼
+function showBlessGachaResult(label, results){
+  const bg = $('blessGachaResultBg');
+  if (!bg) return;
+  $('blessGachaResultTitle').textContent = `✨ ${label} 결과`;
+  const heroes  = results.filter(c => c.grade === 'hero').length;
+  const uniques = results.filter(c => c.grade === 'unique').length;
+  const rares   = results.filter(c => c.grade === 'rare').length;
+  let sum = `총 ${results.length}장`;
+  if (heroes)  sum += ` · <span style="color:#dc143c;">⭐ 영웅 ${heroes}</span>`;
+  if (uniques) sum += ` · <span style="color:#a335ee;">🔮 유니크 ${uniques}</span>`;
+  if (rares)   sum += ` · <span style="color:#3399ff;">레어 ${rares}</span>`;
+  $('blessGachaResultSummary').innerHTML = sum;
+  const _cardHtml = (c) => `<div class="gc ${c.grade}">
+    <div class="ico">${cardIcon(c)}</div>
+    <div class="nm">${c.name}</div>
+    <div class="gr">[${gradeKr(c.grade)}]</div>
+    <div class="ef">${c.text||''}</div>
+  </div>`;
+  if (results.length === 11){
+    // 첫 줄 5개(가운데) + 둘째 줄 6개 — 카드 폭은 동일(1/6)
+    const row1 = results.slice(0, 5).map(_cardHtml).join('');
+    const row2 = results.slice(5).map(_cardHtml).join('');
+    $('blessGachaResultGrid').innerHTML = `
+      <div class="gc-row" style="grid-template-columns:repeat(5,1fr);max-width:83.33%;margin:0 auto;">${row1}</div>
+      <div class="gc-row" style="grid-template-columns:repeat(6,1fr);">${row2}</div>
+    `;
+  } else {
+    // 1뽑 등 그 외 — 결과 개수만큼 균등 배치 (최대 6컬럼)
+    const cols = Math.min(6, results.length || 1);
+    $('blessGachaResultGrid').innerHTML = `
+      <div class="gc-row" style="grid-template-columns:repeat(${cols},1fr);max-width:${cols/6*100}%;margin:0 auto;">${results.map(_cardHtml).join('')}</div>
+    `;
+  }
+  // 즉시 판매 액션
+  const act = $('blessGachaResultActions');
+  if (act && results.length){
+    const total = results.reduce((s, c) => s + (CARD_SELL_PRICE[c.grade] || 1), 0);
+    const label2 = results.length === 1
+      ? `💰 판매 (+${total.toLocaleString()}G)`
+      : `💰 모두 판매 (+${total.toLocaleString()}G)`;
+    _lastGachaResults = results;
+    act.innerHTML = `<button onclick="_sellGachaResults(_lastGachaResults); document.getElementById('blessGachaResultActions').innerHTML = '<div style=\\'color:#7eff7e;font-size:12px;\\'>✔ 판매 완료</div>'" style="background:#b8860b;color:#fff;border:0;padding:8px 22px;font-size:13px;font-weight:bold;cursor:pointer;border-radius:4px;box-shadow:0 2px 4px rgba(0,0,0,.3);">${label2}</button>`;
+  }
+  bg.classList.add('on');
+}
+function closeBlessGachaResult(){
+  const bg = $('blessGachaResultBg');
+  if (bg) bg.classList.remove('on');
+}
+
 function buyBlessItem(id){
   const p = GAME.player;
   const it = BLESS_SHOP_ITEMS.find(x => x.id === id);
@@ -3896,11 +4068,19 @@ function buyBlessItem(id){
     if (heroes) msg += ` · ⭐ 영웅 ${heroes}장!`;
     if (uniques) msg += ` · 🔮 유니크 ${uniques}장!`;
     setBlessMsg(msg, 'ok');
-    if (heroes) chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 ${heroes}장을 뽑으셨습니다!`);
-    else if (uniques) chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 ${uniques}장을 획득하셨습니다!`);
+    const heroCards   = results.filter(c => c.grade === 'hero');
+    const uniqueCards = results.filter(c => c.grade === 'unique');
+    if (heroCards.length){
+      chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+    }
+    if (uniqueCards.length){
+      chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+    }
     renderSheet();
     refreshBlessShop();
     saveGame();
+    // 결과 팝업 띄우기
+    showBlessGachaResult(it.name, results);
     return;
   }
   if (id === 'box'){
@@ -4098,7 +4278,12 @@ function renderHonorList(){
     const rowBg = isMe ? 'background:linear-gradient(90deg,#fff7c0,#ffe07a);border-left:4px solid #ff6600;' : '';
     const meTag = isMe ? '<span style="background:#ff6600;color:#fff;padding:1px 6px;border-radius:3px;font-size:10px;margin-left:4px;">나</span>' : '';
     return `<div class="honor-row" onclick="renderHonorDetail(${i})" style="display:flex;align-items:center;gap:8px;padding:6px;border-bottom:1px solid #eee;cursor:pointer;${rowBg}">
-      <div style="width:28px;text-align:center;font-weight:bold;color:#7E181E;font-size:14px;">${medal}</div>
+      <div style="width:36px;text-align:center;font-weight:bold;color:#7E181E;font-size:${i < 3 ? '26px' : '14px'};line-height:1;">${
+        i === 0 ? `<span class="gold-medal-wrap"><span class="gold-medal">${medal}</span></span>` :
+        i === 1 ? `<span class="silver-medal-wrap"><span class="silver-medal">${medal}</span></span>` :
+        i === 2 ? `<span class="bronze-medal-wrap"><span class="bronze-medal">${medal}</span></span>` :
+        medal
+      }</div>
       ${_honorAvatarHtml(r, 40)}
       <div style="flex:1;min-width:0;">
         <div style="font-weight:bold;color:#000;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(r.name||'?')}${meTag}</div>
@@ -4229,8 +4414,16 @@ function doGacha(n){
   setShopMsg(msg, 'ok');
 
   // 채팅 알림
-  if (heroes) chatSys(`★ ${p.name}님이 영웅 카드 ${heroes}장을 뽑으셨습니다!`);
-  else if (uniques) chatSys(`★ ${p.name}님이 유니크 카드 ${uniques}장 획득`);
+  {
+    const heroCards   = results.filter(c => c.grade === 'hero');
+    const uniqueCards = results.filter(c => c.grade === 'unique');
+    if (heroCards.length){
+      chatSys(`★ ${p.name}님이 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+    }
+    if (uniqueCards.length){
+      chatSys(`★ ${p.name}님이 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+    }
+  }
 
   renderSheet();
   refreshShopUI();
@@ -5368,16 +5561,20 @@ function renderRankList(){
   let html = `<tr>
     <th>순위</th><th>이름</th><th>레벨</th><th>덱 (대표 카드)</th><th>행동</th>
   </tr>`;
+  const myNameCurr = (GAME.player && GAME.player.name) || null;
   for (let i = 0; i < 10; i++){
     const rank = i + 1;
     const slot = GAME.ranking.slots[i];
-    const isMe = (myRank === rank);
+    // 본인 슬롯 판별 — 등록 순위 또는 이름 일치. myRank 계산 어긋나도 이름으로 안전 필터
+    const isMe = (myRank === rank) || (slot && myNameCurr && slot.name === myNameCurr);
     const rowClass = isMe ? 'me' : (rank === 1 ? 'first' : '');
 
-    // 도전 가능 여부
+    // 도전 가능 여부 (본인 슬롯은 무조건 제외)
     let canChallenge = false;
-    if (myRank === 0 && rank === 10) canChallenge = true;
-    else if (myRank > 1 && rank === myRank - 1) canChallenge = true;
+    if (!isMe){
+      if (myRank === 0 && rank === 10) canChallenge = true;
+      else if (myRank > 1 && rank === myRank - 1) canChallenge = true;
+    }
     // 자기 자리 또는 자기 위에서 너무 멀면 도전 불가
 
     const numCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
@@ -5397,7 +5594,7 @@ function renderRankList(){
 }
 
 let _rankChallengeBusy = false;
-function challengeRank(targetRank){
+async function challengeRank(targetRank){
   if (_rankChallengeBusy) return; // 중복 클릭 방지
   _rankChallengeBusy = true;
   // 짧은 쿨다운 후 자동 해제 (전투 진입 실패 시에도 다시 클릭 가능)
@@ -5417,6 +5614,18 @@ function challengeRank(targetRank){
   const opponent = GAME.ranking.slots[targetRank - 1];
   if (!opponent || !opponent.name){
     toast('상대 정보를 불러오는 중입니다. 잠시 후 다시 시도해주세요.');
+    if (sb) loadRankingFromCloud().then(() => { try { renderRankList(); } catch(e){} }).catch(()=>{});
+    return;
+  }
+  // 본인 슬롯에는 도전 불가 (동기화가 어긋나 자신과 매칭되는 상황 방지)
+  const myName = GAME.player && GAME.player.name;
+  let myUid = null;
+  if (sb){ try { myUid = await _getMyUserId(); } catch(e){} }
+  const isSelf =
+    (opponent.user_id && myUid && opponent.user_id === myUid) ||
+    (opponent.name && myName && opponent.name === myName);
+  if (isSelf){
+    toast('본인 슬롯에는 도전할 수 없습니다. 랭킹 정보를 다시 불러옵니다.');
     if (sb) loadRankingFromCloud().then(() => { try { renderRankList(); } catch(e){} }).catch(()=>{});
     return;
   }
@@ -5692,7 +5901,10 @@ async function rankEnd(result){
       bodyHtml = `<p style="color:#060;">🏆 승리! <b>${c.targetRank}위</b>로 등록되었습니다.</p>
         ${rewardLine}
         <p>랭킹 보너스: <b>+${getRankBonus()} G</b> / 수행마다 자동 적용됩니다.</p>`;
-      chatSys(`★ ${p.name}님이 랭킹 ${c.targetRank}위에 등록되었습니다!`);
+      // NPC 상대는 채팅에 올리지 않음 — 유저 vs 유저 역전만 알림
+      if (c.opponent && c.opponent.isNPC === false){
+        chatSys(`★ ${p.name}님이 ${c.opponent.name||'?'}님을 꺾고 랭킹 ${c.targetRank}위에 등록되었습니다!`);
+      }
     } else {
       bodyHtml = `<p style="color:#a00;">💀 패배... 랭킹 변동 없음</p>
         <p style="font-size:11px;color:#666;">팁: 회복의 샘물에서 회복 후 다시 도전하세요.</p>`;
@@ -7758,7 +7970,7 @@ function huntEnd(result){
         try { alert('☠ 패배 페널티 ☠\n\n' + kindKr + ' 「' + destroyed.name + '」이(가) 영구 파괴되었습니다.'); } catch(e){}
       }, 300);
     }
-    chatSys('★ ' + p.name + '님이 ' + m.name + '에게 패배하셨습니다.');
+    // 일반 패배 알림은 채팅에 올리지 않음 — 파괴(destroyed) 발생 시에만 위에서 chatSys 처리
   } else if (outcome === 'flee'){
     huntLog(`🏃 도주 완료`, 'sys');
   }
@@ -9123,7 +9335,8 @@ function _tutorialApplyHighlight(sel){
     _tutorialHighlightEl = els; // 배열/NodeList
     // 첫 번째 요소를 화면에 맞춤
     const isMobile = window.matchMedia('(max-width: 700px)').matches;
-    try { els[0].scrollIntoView({ behavior:'smooth', block: isMobile ? 'start' : 'center' }); } catch(e){}
+    // 모바일에선 튜토리얼 모달이 상단에 붙으므로 하이라이트 요소는 하단(=end)에 두어 겹치지 않게
+    try { els[0].scrollIntoView({ behavior:'smooth', block: isMobile ? 'end' : 'center' }); } catch(e){}
   } catch(e){ console.warn('tutorial highlight', e); }
 }
 function _tutorialGoPage(pageId){
@@ -9933,6 +10146,13 @@ async function doLogin(){
       // 로컬 캐시에도 저장 (오프라인 대비)
       addAccount(GAME.player.name);
       saveGame();
+      // 재접속 시 랭킹전 자동 초기화 — 이전에 등록된 슬롯이 있다면 NPC로 교체 후 미등록 상태
+      try {
+        if (sb) await loadRankingFromCloud();
+        if (GAME.ranking && GAME.ranking.myRank >= 1){
+          await demoteFromRank();
+        }
+      } catch(e){ console.warn('[login rank reset]', e); }
       enterMain();
       return;
     } catch(e){
@@ -10076,6 +10296,79 @@ function checkPwMatch(){
   if (pw === pw2){ el.style.color = '#060'; el.textContent = '✓ 비밀번호가 일치합니다.'; }
   else { el.style.color = '#a00'; el.textContent = '✗ 비밀번호가 일치하지 않습니다.'; }
 }
+// ─── 이메일 본인 인증 (Supabase Email OTP + Resend SMTP) ───
+let _regEmailOk = false;
+let _regVerifiedEmail = '';
+async function sendEmailOtp(){
+  const email = ($('regEmail').value || '').trim().toLowerCase();
+  const el = $('regEmailStatus');
+  _regEmailOk = false;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    el.style.color = '#a00';
+    el.textContent = '이메일 형식이 올바르지 않습니다.';
+    return;
+  }
+  if (!sb){
+    el.style.color = '#a00';
+    el.textContent = '서버 연결이 필요합니다.';
+    return;
+  }
+  // 중복 검사 — 이미 다른 계정이 사용 중인 이메일 차단
+  const taken = await cloudEmailTaken(email);
+  if (taken){
+    el.style.color = '#a00';
+    el.textContent = '이미 가입된 이메일입니다.';
+    return;
+  }
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true }, // OTP 검증을 위해 임시 계정 생성 허용
+    });
+    if (error){
+      el.style.color = '#a00';
+      el.textContent = '발송 실패: ' + (error.message || '');
+      return;
+    }
+    el.style.color = '#666';
+    el.textContent = `${email} 로 인증 코드 발송됨 (메일함 확인)`;
+  } catch(e){
+    el.style.color = '#a00';
+    el.textContent = '발송 중 오류: ' + (e.message||e);
+  }
+}
+async function verifyEmailOtp(){
+  const email = ($('regEmail').value || '').trim().toLowerCase();
+  const code  = ($('regEmailCode').value || '').trim();
+  const el = $('regEmailStatus');
+  if (!email || !code){
+    el.style.color = '#a00';
+    el.textContent = '이메일과 코드를 모두 입력해 주세요.';
+    return;
+  }
+  try {
+    const { data, error } = await sb.auth.verifyOtp({
+      email, token: code, type: 'email',
+    });
+    if (error){
+      el.style.color = '#a00';
+      el.textContent = '✗ ' + (error.message || '인증번호가 일치하지 않습니다.');
+      _regEmailOk = false;
+      return;
+    }
+    // 검증 성공 — 곧바로 signOut. 게임 가입은 별도 닉네임 hex Auth 흐름으로 진행
+    try { await sb.auth.signOut(); } catch(e){}
+    _regEmailOk = true;
+    _regVerifiedEmail = email;
+    el.style.color = '#060';
+    el.textContent = '✓ 이메일 인증이 완료되었습니다.';
+  } catch(e){
+    el.style.color = '#a00';
+    el.textContent = '인증 중 오류: ' + (e.message||e);
+    _regEmailOk = false;
+  }
+}
+
 function sendPhoneAuth(){
   const phone = ($('regPhone').value || '').trim();
   if (!/^010-?\d{3,4}-?\d{4}$/.test(phone)){
@@ -10114,21 +10407,25 @@ async function doRegisterSubmit(){
   if (!pw || pw.length < 6){ alert('비밀번호는 6자 이상 입력해 주세요.'); return; }
   if (pw !== pw2){ alert('비밀번호 확인이 일치하지 않습니다.'); return; }
   if (!_regAuthOk){ alert('휴대폰 본인인증을 완료해 주세요.'); return; }
+  if (!_regEmailOk){ alert('이메일 본인인증을 완료해 주세요.'); return; }
   if (!phone || phone.length < 10 || phone.length > 11){
     alert('휴대폰 번호를 정확히 입력해 주세요 (숫자 10~11자리).'); return;
   }
   const finalName = name.slice(0,6);
+  const finalEmail = _regVerifiedEmail;
 
-  // 클라우드: 닉네임·휴대폰 중복 + Auth 가입
+  // 클라우드: 닉네임·휴대폰·이메일 중복 + Auth 가입
   if (sb){
     const nickTaken = await cloudNicknameTaken(finalName);
     if (nickTaken){ alert('해당 아이디는 이미 사용 중입니다. 다른 아이디로 가입해 주세요.'); return; }
     const phoneTaken = await cloudPhoneTaken(phone);
     if (phoneTaken){ alert('해당 휴대폰 번호로 이미 가입된 계정이 있습니다.'); return; }
+    const emailTaken = await cloudEmailTaken(finalEmail);
+    if (emailTaken){ alert('해당 이메일로 이미 가입된 계정이 있습니다.'); return; }
     const { error } = await sb.auth.signUp({
       email: nickToEmail(finalName),
       password: pw,
-      options: { data: { nickname: finalName, phone } },
+      options: { data: { nickname: finalName, phone, contact_email: finalEmail } },
     });
     if (error){
       alert('회원가입 실패: ' + (error.message || error));
@@ -10137,6 +10434,7 @@ async function doRegisterSubmit(){
     // 신규 캐릭터 셋업
     GAME.player = newCharacter(finalName, say || '잘 부탁드립니다.', pw);
     GAME.player.phone = phone;
+    GAME.player.email = finalEmail;
     calcDerived(GAME.player);
     GAME.player.hp = GAME.player.hpMax;
     GAME.player.mp = GAME.player.mpMax;
