@@ -6244,6 +6244,22 @@ function buildMonsterDeck(race, mLv, deckSize){
     }
   }
 
+  // ── 소환 카드는 덱에 1장만 (한 마리만 소환) — 중복 시 뒷쪽부터 BASIC으로 교체 ──
+  const _isSummonCard = c => {
+    const fx = c && c.fx;
+    if (!fx) return false;
+    if (fx.type === 'dot' && fx.summon) return true;
+    if (fx.type === 'multi' && Array.isArray(fx.effects) && fx.effects.some(e => e && e.type === 'dot' && e.summon)) return true;
+    return false;
+  };
+  let _seenSummon = false;
+  for (let i = 0; i < deck.length; i++){
+    if (_isSummonCard(deck[i])){
+      if (_seenSummon) deck[i] = BASIC_ATTACK;
+      else _seenSummon = true;
+    }
+  }
+
   // ── 선행 카드 의존성 보장 ──
   // 1) 의존 카드의 requires가 덱에 없으면 BASIC_ATTACK 한 자리를 requires 카드로 대체
   const needsSet = new Set();
@@ -7422,7 +7438,15 @@ function applyCardEffect(card, ctx){
       const entry = {dmg:fx.dmg, turns:fx.turns};
       if (fx.min != null && fx.max != null){ entry.min = fx.min; entry.max = fx.max; entry.dmg = rnd(fx.min, fx.max); }
       if (fx.growth) entry.growth = fx.growth;   // 매 턴 dmg 증가 (캐리언비틀즈 등)
-      if (fx.summon) entry.summon = true;        // 소환 dot — 흡수/해제 등 영향 X (dot은 원래 dispel 대상 아님, 표시용)
+      if (fx.summon){
+        entry.summon = true;
+        // 소환수는 한 마리만 — 기존 소환 dot 제거 후 신규 소환수로 교체
+        let replaced = 0;
+        for (let i = ctx.castDots.length - 1; i >= 0; i--){
+          if (ctx.castDots[i].summon){ ctx.castDots.splice(i, 1); replaced++; }
+        }
+        if (replaced > 0) ctx.log(`  · 기존 소환수 → 새 소환수로 교체`, ctx.castLogCls);
+      }
       ctx.castDots.push(entry);
       ctx.log(`  + ${ctx.targName} 도트 ${fx.min!=null?`${fx.min}-${fx.max}`:fx.dmg}×${fx.turns}턴${fx.growth?` (+${fx.growth}/턴)`:''}`, ctx.castLogCls);
       return;
