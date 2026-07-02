@@ -2545,7 +2545,7 @@ const CARDS = [
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
   { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
-  { id:'r34', name:'스피드스크롤',       grade:'unique', icon:'spark',    text:'이번 턴 행동 없음 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
+  { id:'r34', name:'스피드스크롤',       grade:'unique', icon:'spark',    text:'이번 턴 행동 없음 / 시전 턴 받는 데미지 50% 감소 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
   { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어구 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:6} },
   { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 무기 +5 증가 / 상대방 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
   { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'(무기 + 누적 무기 버프) ×40% 만큼 무기 증가 / (방어구 + 누적 방어구 버프) ×40% 만큼 방어구 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
@@ -2738,6 +2738,11 @@ function applySavePayload(d){
   if (GAME.player.weapon.id === 'basic_club' && GAME.player.weapon.name === '몽둥이'){
     GAME.player.weapon.name = '훈련용 목검';
   }
+  // 파생 스탯 재계산 — 로직 변경(CON→def 제거 등) 반영. 저장된 옛 def·atk·hpMax·mpMax를 새 공식으로 자동 마이그레이션
+  try { calcDerived(GAME.player); } catch(e){ console.warn('[applySavePayload calcDerived]', e); }
+  // HP/MP는 새 max를 초과하지 않도록 클램프 (초과 시 max로 맞춤)
+  if (GAME.player.hp > GAME.player.hpMax) GAME.player.hp = GAME.player.hpMax;
+  if (GAME.player.mp > GAME.player.mpMax) GAME.player.mp = GAME.player.mpMax;
   return true;
 }
 
@@ -5050,6 +5055,10 @@ function raidNextTurn(){
   const slot = c.turn - 1;
   const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
   const monCard = _dedupCardForTurn(m.deck, slot);
+  // 스피드스크롤 pre-scan
+  _ensureCombatExt(c);
+  if (playerCard && playerCard.fx && playerCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
+  if (monCard && monCard.fx && monCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
@@ -5811,6 +5820,11 @@ function rankNextTurn(){
   const slot = c.turn - 1;
   const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
   const monCard = _dedupCardForTurn(m.deck, slot);
+
+  // 스피드스크롤 pre-scan
+  _ensureCombatExt(c);
+  if (playerCard && playerCard.fx && playerCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
+  if (monCard && monCard.fx && monCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
 
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
@@ -6632,6 +6646,11 @@ function huntNextTurn(){
   const playerCard = _dedupCardForTurn(GAME.myDeck, slot);
   const monsterCard = _dedupCardForTurn(m.deck, slot);
 
+  // 스피드스크롤 pre-scan — 이번 턴 슬롯 카드가 doubleCastNext면 선/후공 순서 이전에 실드 활성화
+  _ensureCombatExt(c);
+  if (playerCard && playerCard.fx && playerCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
+  if (monsterCard && monsterCard.fx && monsterCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
+
   // DEX 비교 (동점은 사용자 선공)
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
@@ -6714,6 +6733,7 @@ function _ensureCombatExt(c){
   c.myStealth ||= 0; c.monStealth ||= 0;         // 은신 후 기습/맹독 사용 가능 잔여 턴 (정수)
   c.myLeech ||= null; c.monLeech ||= null;       // 뱀파이어릭 오라 — {turns, pct} 받는 데미지의 pct만큼 회복
   c.myVengeance ||= null; c.monVengeance ||= null; // 벤전스 — {turns, reflectMul, dmgReduce, pending}
+  c.myScrollGuardTurn ||= 0; c.monScrollGuardTurn ||= 0; // 스피드스크롤 — 시전 턴에만 받는 데미지 50% 감소
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -6806,6 +6826,8 @@ function _buildCombatCtx(kind, caster){
     setTargVengeance(v){ if (isP) c.monVengeance = v; else c.myVengeance = v; },
     castVengeance(){ return isP ? c.myVengeance : c.monVengeance; },
     targVengeance(){ return isP ? c.monVengeance : c.myVengeance; },
+    setCastScrollGuard(turn){ if (isP) c.myScrollGuardTurn = turn; else c.monScrollGuardTurn = turn; },
+    targScrollGuard(){ return isP ? c.monScrollGuardTurn : c.myScrollGuardTurn; }, // 대상(공격받는 쪽)의 스크롤 실드 활성 턴
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
@@ -6821,7 +6843,10 @@ function _castCardWithDoubleCheck(card, ctx){
   const fx = card.fx;
   if (fx && fx.type === 'doubleCastNext'){
     ctx.setCastDouble(1);
-    ctx.log(`  ✦ ${card.name} — 다음 턴 카드를 2회 발동합니다`, 'info');
+    // 스피드스크롤 시전 턴에 자신이 받는 데미지 50% 감소 — 현재 턴 번호를 기록해두면 됨
+    const curTurn = (ctx.c && ctx.c.turn) || 0;
+    ctx.setCastScrollGuard(curTurn);
+    ctx.log(`  ✦ ${card.name} — 이번 턴 받는 데미지 50% 감소 · 다음 턴 카드를 2회 발동합니다`, 'info');
     return true; // 스피드스크롤 자체는 정상 시전
   }
   // 일반 카드 발동 — 시전 성공 여부 획득
@@ -6871,7 +6896,14 @@ function _dealIgnoreDef(ctx, raw){
     ctx.log(`  💰 ${ctx.targName}은(는) 데미지를 받지 않는다!`, 'info');
     return;
   }
-  const dmg = Math.max(1, Math.floor(raw));
+  let dmg = Math.max(1, Math.floor(raw));
+  // 스피드스크롤 실드 — 시전한 그 턴에 받는 데미지 50% 감소 (벤전스와 별개, 벤전스보다 먼저 적용)
+  const _sgTurn = ctx.targScrollGuard ? ctx.targScrollGuard() : 0;
+  const _curTurn = (ctx.c && ctx.c.turn) || 0;
+  const _sgActive = _sgTurn && _sgTurn === _curTurn;
+  if (_sgActive){
+    dmg = Math.max(1, Math.floor(dmg * 0.5));
+  }
   const vg = ctx.targVengeance && ctx.targVengeance();
   if (vg && vg.turns > 0 && !vg.pending){
     const reduced   = Math.max(1, Math.floor(dmg * (vg.dmgReduce  || 0.5)));
@@ -6879,13 +6911,15 @@ function _dealIgnoreDef(ctx, raw){
     ctx.targObj.hp -= reduced;
     ctx.addDmg(reduced);
     ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
-    ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, ctx.castLogCls);
+    const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
+    ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>`, ctx.castLogCls);
     ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
     return;
   }
   ctx.targObj.hp -= dmg;
   ctx.addDmg(dmg);
-  ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시)</span>`, ctx.castLogCls);
+  const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
+  ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시${_sgNote})</span>`, ctx.castLogCls);
 }
 // 카드 효과 로그에서 stat 키를 한글로 표기 — atk → 무기, def → 방어구
 const _KOR_STAT_KEY = { atk:'무기', def:'방어구', str:'STR', dex:'DEX', int:'INT', con:'CON' };
@@ -6973,6 +7007,13 @@ function applyCardEffect(card, ctx){
       const aBaseT = (ctx.targObj.armor && ctx.targObj.armor.defBonus) || 0;
       const conBaseDefT = (ctx.targObj.def||0) - aBaseT;
       let dmg = Math.max(1, Math.floor(raw - conBaseDefT - _effArmor(ctx.targObj, ctx.targBuffs)));
+      // 스피드스크롤 실드 — 시전한 그 턴에 받는 데미지 50% 감소
+      const _sgTurn = ctx.targScrollGuard ? ctx.targScrollGuard() : 0;
+      const _curTurn = (ctx.c && ctx.c.turn) || 0;
+      const _sgActive = _sgTurn && _sgTurn === _curTurn;
+      if (_sgActive){
+        dmg = Math.max(1, Math.floor(dmg * 0.5));
+      }
       // 벤전스 — 대상이 벤전스 활성이면 받는 데미지 절반 + 시전자에게 1.5배 반사
       const vg = ctx.targVengeance && ctx.targVengeance();
       if (vg && vg.turns > 0 && !vg.pending){
@@ -6982,12 +7023,14 @@ function applyCardEffect(card, ctx){
         ctx.addDmg(reduced);
         // 반사 데미지 — 시전자에게 직접 차감 (방어력 무시·재반사 방지)
         ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
-        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, ctx.castLogCls);
+        const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>`, ctx.castLogCls);
         ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
       } else {
         ctx.targObj.hp -= dmg;
         ctx.addDmg(dmg);
-        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span>`, ctx.castLogCls);
+        const _sgNote = _sgActive ? ' <span style="color:#888;font-size:10px;">(스크롤실드 50% 감소)</span>' : '';
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span>${_sgNote}`, ctx.castLogCls);
       }
       // 흡혈성 회복 (뱀파이어릭 오라) — 시전자가 leech 상태면 가한 데미지의 일부를 시전자 HP로 흡수
       // 시전 턴엔 pending=true라 발동 안 함, 다음 턴 진입 시 매턴 처리에서 pending→false
@@ -7205,7 +7248,12 @@ function applyCardEffect(card, ctx){
           ctx.log(`  💰 ${ctx.targName}은(는) 데미지를 받지 않는다!`, 'info');
           return;
         }
-        const dmg = Math.max(1, Math.floor(raw));
+        let dmg = Math.max(1, Math.floor(raw));
+        // 스피드스크롤 실드 — 시전한 그 턴에 받는 데미지 50% 감소 (벤전스보다 먼저)
+        const _sgTurn = ctx.targScrollGuard ? ctx.targScrollGuard() : 0;
+        const _curTurn = (ctx.c && ctx.c.turn) || 0;
+        const _sgActive = _sgTurn && _sgTurn === _curTurn;
+        if (_sgActive){ dmg = Math.max(1, Math.floor(dmg * 0.5)); }
         const vg = ctx.targVengeance && ctx.targVengeance();
         if (vg && vg.turns > 0 && !vg.pending){
           const reduced  = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
@@ -7213,13 +7261,15 @@ function applyCardEffect(card, ctx){
           ctx.targObj.hp -= reduced;
           ctx.addDmg(reduced);
           ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
-          ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, ctx.castLogCls);
+          const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
+          ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>`, ctx.castLogCls);
           ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
           return;
         }
         ctx.targObj.hp -= dmg;
         ctx.addDmg(dmg);
-        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시)</span>`, ctx.castLogCls);
+        const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
+        ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시${_sgNote})</span>`, ctx.castLogCls);
       }
       for (let i = 0; i < fx.hits; i++){
         if (doesDmg){
@@ -7764,6 +7814,7 @@ function _ensureTrainExt(){
   c.myStealth ||= 0;
   c.myLeech ||= null;
   c.myVengeance ||= null;
+  c.myScrollGuardTurn ||= 0;
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   const o = c.opp;
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -7773,6 +7824,7 @@ function _ensureTrainExt(){
   o.stealth ||= 0;
   o.leech ||= null;
   o.vengeance ||= null;
+  o.scrollGuardTurn ||= 0;
   o.lockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
 }
 function _buildTrainCtx(caster){
@@ -7832,6 +7884,8 @@ function _buildTrainCtx(caster){
     setTargVengeance(v){ if (isMe) opp.vengeance = v; else c.myVengeance = v; },
     castVengeance(){ return isMe ? c.myVengeance : opp.vengeance; },
     targVengeance(){ return isMe ? opp.vengeance : c.myVengeance; },
+    setCastScrollGuard(turn){ if (isMe) c.myScrollGuardTurn = turn; else opp.scrollGuardTurn = turn; },
+    targScrollGuard(){ return isMe ? (opp.scrollGuardTurn||0) : (c.myScrollGuardTurn||0); },
     targLeech(){ return isMe ? opp.leech : c.myLeech; },
   };
 }
@@ -8556,6 +8610,10 @@ function trainNextTurn(){
   const slot = c.turn - 1;
   const myCard = GAME.myDeck[slot] || BASIC_ATTACK;
   const oppCard = opp.deck[slot] || BASIC_ATTACK;
+  // 스피드스크롤 pre-scan
+  _ensureTrainExt();
+  if (myCard && myCard.fx && myCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
+  if (oppCard && oppCard.fx && oppCard.fx.type === 'doubleCastNext') opp.scrollGuardTurn = c.turn;
   const myDex = me.dex + c.myBuffs.dex;
   const oppDex = opp.dex + opp.buffs.dex;
   const playerFirst = myDex >= oppDex;
