@@ -1112,15 +1112,6 @@
           <td class="lbl">이메일</td>
           <td>
             <input id="regEmail" type="email" placeholder="example@email.com" style="width:180px;">
-            <button type="button" onclick="sendEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 발송</button>
-          </td>
-        </tr>
-        <tr>
-          <td class="lbl">이메일 코드</td>
-          <td>
-            <input id="regEmailCode" maxlength="6" placeholder="6자리 숫자">
-            <button type="button" onclick="verifyEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
-            <div id="regEmailStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
           </td>
         </tr>
       </table>
@@ -10573,79 +10564,6 @@ function checkPwMatch(){
   if (pw === pw2){ el.style.color = '#060'; el.textContent = '✓ 비밀번호가 일치합니다.'; }
   else { el.style.color = '#a00'; el.textContent = '✗ 비밀번호가 일치하지 않습니다.'; }
 }
-// ─── 이메일 본인 인증 (Supabase Email OTP + Resend SMTP) ───
-let _regEmailOk = false;
-let _regVerifiedEmail = '';
-async function sendEmailOtp(){
-  const email = ($('regEmail').value || '').trim().toLowerCase();
-  const el = $('regEmailStatus');
-  _regEmailOk = false;
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    el.style.color = '#a00';
-    el.textContent = '이메일 형식이 올바르지 않습니다.';
-    return;
-  }
-  if (!sb){
-    el.style.color = '#a00';
-    el.textContent = '서버 연결이 필요합니다.';
-    return;
-  }
-  // 중복 검사 — 이미 다른 계정이 사용 중인 이메일 차단
-  const taken = await cloudEmailTaken(email);
-  if (taken){
-    el.style.color = '#a00';
-    el.textContent = '이미 가입된 이메일입니다.';
-    return;
-  }
-  try {
-    const { error } = await sb.auth.signInWithOtp({
-      email,
-      options: { shouldCreateUser: true }, // OTP 검증을 위해 임시 계정 생성 허용
-    });
-    if (error){
-      el.style.color = '#a00';
-      el.textContent = '발송 실패: ' + (error.message || '');
-      return;
-    }
-    el.style.color = '#666';
-    el.textContent = `${email} 로 인증 코드 발송됨 (메일함 확인)`;
-  } catch(e){
-    el.style.color = '#a00';
-    el.textContent = '발송 중 오류: ' + (e.message||e);
-  }
-}
-async function verifyEmailOtp(){
-  const email = ($('regEmail').value || '').trim().toLowerCase();
-  const code  = ($('regEmailCode').value || '').trim();
-  const el = $('regEmailStatus');
-  if (!email || !code){
-    el.style.color = '#a00';
-    el.textContent = '이메일과 코드를 모두 입력해 주세요.';
-    return;
-  }
-  try {
-    const { data, error } = await sb.auth.verifyOtp({
-      email, token: code, type: 'email',
-    });
-    if (error){
-      el.style.color = '#a00';
-      el.textContent = '✗ ' + (error.message || '인증번호가 일치하지 않습니다.');
-      _regEmailOk = false;
-      return;
-    }
-    // 검증 성공 — 곧바로 signOut. 게임 가입은 별도 닉네임 hex Auth 흐름으로 진행
-    try { await sb.auth.signOut(); } catch(e){}
-    _regEmailOk = true;
-    _regVerifiedEmail = email;
-    el.style.color = '#060';
-    el.textContent = '✓ 이메일 인증이 완료되었습니다.';
-  } catch(e){
-    el.style.color = '#a00';
-    el.textContent = '인증 중 오류: ' + (e.message||e);
-    _regEmailOk = false;
-  }
-}
-
 function sendPhoneAuth(){
   const phone = ($('regPhone').value || '').trim();
   if (!/^010-?\d{3,4}-?\d{4}$/.test(phone)){
@@ -10684,12 +10602,11 @@ async function doRegisterSubmit(){
   if (!pw || pw.length < 6){ alert('비밀번호는 6자 이상 입력해 주세요.'); return; }
   if (pw !== pw2){ alert('비밀번호 확인이 일치하지 않습니다.'); return; }
   if (!_regAuthOk){ alert('휴대폰 본인인증을 완료해 주세요.'); return; }
-  if (!_regEmailOk){ alert('이메일 본인인증을 완료해 주세요.'); return; }
   if (!phone || phone.length < 10 || phone.length > 11){
     alert('휴대폰 번호를 정확히 입력해 주세요 (숫자 10~11자리).'); return;
   }
   const finalName = name.slice(0,6);
-  const finalEmail = _regVerifiedEmail;
+  const finalEmail = ($('regEmail').value || '').trim().toLowerCase();
 
   // 클라우드: 닉네임·휴대폰·이메일 중복 + Auth 가입
   if (sb){
