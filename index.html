@@ -2750,7 +2750,8 @@ let _cloudSaveTimer = null;
 function cloudSaveDebounced(){
   if (!sb || !GAME.player) return;
   if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
-  _cloudSaveTimer = setTimeout(() => { cloudSaveNow().catch(e => console.warn('cloudSave', e)); }, 2500);
+  // 500ms — 유저가 잠깐만 멈춰도 저장 나가도록 짧게
+  _cloudSaveTimer = setTimeout(() => { cloudSaveNow().catch(e => console.warn('cloudSave', e)); }, 500);
 }
 async function cloudSaveNow(){
   if (!sb || !GAME.player) return false;
@@ -2767,13 +2768,98 @@ async function cloudSaveNow(){
   if (error){ console.warn('[cloudSave]', error); return false; }
   return true;
 }
+// beforeunload / visibilitychange 시점의 강제 플러시 — fetch keepalive로 브라우저 unload 이후에도 요청 완료 보장
+// 세션 토큰은 localStorage에서 동기적으로 읽어와 async 대기 없이 즉시 발송
+function _getSbSessionSync(){
+  try {
+    const raw = localStorage.getItem('yeoshin_sb_session');
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch(e){ return null; }
+}
+function cloudSaveBeacon(){
+  if (!GAME.player) return false;
+  const sess = _getSbSessionSync();
+  const token = sess && (sess.access_token || (sess.currentSession && sess.currentSession.access_token));
+  const userId = sess && (sess.user && sess.user.id || (sess.currentSession && sess.currentSession.user && sess.currentSession.user.id));
+  if (!token || !userId) return false;
+  const payload = {
+    user_id: userId,
+    nickname: GAME.player.name,
+    phone: GAME.player.phone || null,
+    email: GAME.player.email || null,
+    data: buildSavePayload(),
+  };
+  try {
+    fetch(`${SUPABASE_URL}/rest/v1/saves?on_conflict=user_id`, {
+      method: 'POST',
+      keepalive: true,
+      headers: {
+        'apikey': SUPABASE_ANON,
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates,return=minimal',
+      },
+      body: JSON.stringify(payload),
+    }).catch(()=>{});
+    return true;
+  } catch(e){ return false; }
+}
+// unload/hidden 시점 강제 플러시 — debounce 타이머 취소하고 keepalive fetch로 마지막 상태 밀어넣기
+function _flushCloudSaveOnUnload(){
+  try {
+    if (_cloudSaveTimer){ clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; }
+    // 로컬 최종 상태 재보장 (localStorage.setItem은 sync)
+    try { if (GAME.player) saveGameLocalOnly(); } catch(e){}
+    cloudSaveBeacon();
+  } catch(e){}
+}
+// localStorage만 갱신 (cloudSave 재트리거 없이) — flushOnUnload 내부에서 안전하게 호출용
+function saveGameLocalOnly(){
+  try {
+    if (!GAME.player) return;
+    const key = currentSaveKey();
+    if (!key) return;
+    const data = {
+      player: GAME.player,
+      myDeck: GAME.myDeck.map(c => c ? c.id : 'basic_atk'),
+      inventory: GAME.inventory.map(c => c.id),
+      ranking: GAME.ranking,
+      raid: GAME.raid,
+      savedAt: Date.now(),
+    };
+    localStorage.setItem(key, JSON.stringify(data));
+  } catch(e){}
+}
 async function cloudLoad(){
   if (!sb) return false;
   const { data: ud } = await sb.auth.getUser();
   if (!ud || !ud.user) return false;
-  const { data: row, error } = await sb.from('saves').select('data').eq('user_id', ud.user.id).maybeSingle();
+  const { data: row, error } = await sb.from('saves').select('data,nickname').eq('user_id', ud.user.id).maybeSingle();
   if (error){ console.warn('[cloudLoad]', error); return false; }
   if (!row || !row.data) return false;
+  // 로컬 캐시가 클라우드보다 신선하면 로컬 우선 (탭 unload 시 클라우드 flush 실패 케이스 복구)
+  //  - 조건: 동일 닉네임의 로컬 저장의 savedAt이 클라우드보다 뒤(더 큰 값)
+  try {
+    const localName = row.nickname || (row.data.player && row.data.player.name);
+    if (localName){
+      const localRaw = localStorage.getItem(saveKeyFor(localName));
+      if (localRaw){
+        const localData = JSON.parse(localRaw);
+        const localAt = localData && localData.savedAt || 0;
+        const cloudAt = row.data && row.data.savedAt || 0;
+        if (localAt > cloudAt){
+          console.log(`[cloudLoad] 로컬(${new Date(localAt).toLocaleString()})이 클라우드(${new Date(cloudAt).toLocaleString()})보다 신선 — 로컬 우선 적용 후 클라우드 재업로드`);
+          const ok = applySavePayload(localData);
+          if (ok){
+            // 신선 로컬을 클라우드로 밀어넣기 (비동기, 실패해도 진행)
+            cloudSaveNow().catch(e => console.warn('[cloudLoad reupload]', e));
+            return true;
+          }
+        }
+      }
+    }
+  } catch(e){ console.warn('[cloudLoad local-check]', e); }
   return applySavePayload(row.data);
 }
 async function cloudNicknameTaken(nick){
@@ -5296,6 +5382,9 @@ async function raidEnd(result){
     }
   }
   renderSheet();
+  // 공격대 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
+  try { saveGame(); } catch(e){ console.warn('[raidEnd saveGame]', e); }
+  cloudSaveNow().catch(e => console.warn('[raidEnd cloudSave]', e));
   $('raid_result_title').textContent = `공격대 결과 — ${c.mode==='mob'?'몬스터':'보스'}`;
   $('raid_result_body').innerHTML = bodyHtml;
   $('raid-battle').hidden = true;
@@ -5968,8 +6057,14 @@ async function rankEnd(result){
   }
   if (outcome === 'win'){
     saveGame();
+    cloudSaveNow().catch(e => console.warn('[rankEnd cloudSave]', e));
   } else if (c.mode === 'defense'){
     saveGame();  // 패배 시 랭킹 초기화 결과도 저장
+    cloudSaveNow().catch(e => console.warn('[rankEnd cloudSave]', e));
+  } else {
+    // 승리도 방어패배도 아닌 케이스(공격 패배 등) — HP/골드 변화도 저장 필요
+    saveGame();
+    cloudSaveNow().catch(e => console.warn('[rankEnd cloudSave]', e));
   }
   renderSheet();
   $('rank_result_title').textContent = `랭킹전 결과 — ${c.mode==='attack'?'도전':'방어전'}`;
@@ -8150,6 +8245,9 @@ function huntEnd(result){
   try { trackHuntResult(outcome); } catch(e){ console.warn('[trackHuntResult]', e); }
   renderSheet();
   renderDeck();
+  // 수행 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
+  try { saveGame(); } catch(e){ console.warn('[huntEnd saveGame]', e); }
+  cloudSaveNow().catch(e => console.warn('[huntEnd cloudSave]', e));
 
   showHuntResult(outcome, {gold, xp, lvUp, lvBonus, lostGold, m, beforeHp:c.playerHpBefore, rankBonus});
 }
@@ -10202,6 +10300,8 @@ function resetStats(){
   toast(`✔ 스탯 초기화 완료. -${COST}G, 스탯 포인트 ${usedPoints} 환급`);
   chatSys(`★ ${p.name}님이 스탯을 초기화하였습니다.`);
   saveGame();
+  // 중요 액션 — 클라우드 즉시 flush (탭 즉시 종료 시 유실 방지)
+  cloudSaveNow().catch(e => console.warn('[resetStats cloudSave]', e));
 }
 
 // ─── 카드 덱 프리셋 (3개) ───
@@ -10818,7 +10918,13 @@ async function _teardownChat(){
 }
 window.addEventListener('beforeunload', () => {
   try { if (_chatChannel) _chatChannel.untrack(); } catch(e){}
+  _flushCloudSaveOnUnload();
 });
+// 모바일 Safari 등 beforeunload 미발동 대비 — 탭이 backgrounded/hidden 되는 순간에도 플러시
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'hidden') _flushCloudSaveOnUnload();
+});
+window.addEventListener('pagehide', () => { _flushCloudSaveOnUnload(); });
 
 // chatMsgs 크기 변동 시 자동으로 맨 아래(최근 메시지)로 고정
 (function autoStickChatBottom(){
