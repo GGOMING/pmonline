@@ -6847,9 +6847,31 @@ function _buildCombatCtx(kind, caster){
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
-function _addTurnBuff(buffs, turnBuffs, stat, value, turns){
+// CON/INT buff → HP/MP 최대치 동기화
+// - 증가: 늘어난 양만큼 현재치도 함께 증가
+// - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 160/200 → 최대 -20 → 144/180)
+function _syncPoolOnStatChange(obj, stat, delta){
+  if (!obj || !delta) return;
+  let maxKey, curKey, mult;
+  if (stat === 'con'){ maxKey='hpMax'; curKey='hp'; mult=2; }
+  else if (stat === 'int'){ maxKey='mpMax'; curKey='mp'; mult=5; }
+  else return;
+  const oldMax = obj[maxKey] || 0;
+  const newMax = Math.max(1, oldMax + delta * mult);
+  const oldCur = obj[curKey] || 0;
+  if (newMax >= oldMax){
+    obj[maxKey] = newMax;
+    obj[curKey] = Math.min(newMax, oldCur + (newMax - oldMax));
+  } else {
+    const ratio = oldMax > 0 ? oldCur / oldMax : 1;
+    obj[maxKey] = newMax;
+    obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
+  }
+}
+function _addTurnBuff(buffs, turnBuffs, stat, value, turns, obj){
   buffs[stat] = (buffs[stat]||0) + value;
   if (turns) turnBuffs.push({stat, value, turns});
+  if (obj) _syncPoolOnStatChange(obj, stat, value);
 }
 // 스피드스크롤(doubleCastNext) 메커니즘 — 모든 전투 모드의 카드 발동 공통 wrapper
 // - doubleCastNext 카드 자체는 효과 없이 시전자에 ready 플래그만 set
@@ -7173,9 +7195,10 @@ function applyCardEffect(card, ctx){
         if ((item.value||0) < 0){
           // 시전자 측에서 제거 (decay 패턴 — castBuffs[stat] -= value)
           cb[item.stat] = (cb[item.stat]||0) - item.value;
+          _syncPoolOnStatChange(ctx.castObj, item.stat, -item.value);
           myTbs.splice(i, 1);
           // 적에게 추가
-          _addTurnBuff(tbObj, ctx.targTurnBuffs, item.stat, item.value, item.turns);
+          _addTurnBuff(tbObj, ctx.targTurnBuffs, item.stat, item.value, item.turns, ctx.targObj);
           moved.push(`${item.stat.toUpperCase()} ${item.value}${item.turns?`(${item.turns}턴)`:''}`);
         }
       }
@@ -7184,7 +7207,9 @@ function applyCardEffect(card, ctx){
         if ((cb[k]||0) < 0){
           const v = cb[k];
           tbObj[k] = (tbObj[k]||0) + v;
+          _syncPoolOnStatChange(ctx.targObj, k, v);
           cb[k] = 0;
+          _syncPoolOnStatChange(ctx.castObj, k, -v);
           moved.push(`${k.toUpperCase()} ${v}`);
         }
       }
@@ -7204,10 +7229,16 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'basicAtk'){
-      // 평타 = (atk range - 무기 본체) + 무기 실효치(clamp 0 이상)
-      const wBase = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
-      const lo = (ctx.castObj.atk[0]||0) - wBase;
-      const hi = (ctx.castObj.atk[1]||0) - wBase;
+      // 평타 — STR/DEX/INT buff 실시간 반영 (calcDerived와 동일 공식)
+      const eStr = (ctx.castObj.str||0) + (ctx.castBuffs.str||0);
+      const eDex = (ctx.castObj.dex||0) + (ctx.castBuffs.dex||0);
+      const eInt = (ctx.castObj.int||0) + (ctx.castBuffs.int||0);
+      const wBonus = (ctx.castObj.weapon && ctx.castObj.weapon.atkBonus) || 0;
+      const wBase = eStr + wBonus + eDex * 0.5 + eInt * 0.5;
+      const atkLo = Math.max(2, Math.round(wBase * 0.6));
+      const atkHi = Math.max(5, Math.round(wBase * 1.0));
+      const lo = atkLo - wBonus;
+      const hi = atkHi - wBonus;
       doDmg(rnd(lo, hi) + _effWeapon(ctx.castObj, ctx.castBuffs));
       return;
     }
@@ -7351,7 +7382,7 @@ function applyCardEffect(card, ctx){
         const stat = it.stat;
         const mn = it.min|0, mx = it.max|0;
         const val = mn + Math.floor(Math.random() * (mx - mn + 1));
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, stat, val, fx.turns||0);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, stat, val, fx.turns||0, ctx.castObj);
         msgs.push(`${_korStatKey(stat)} +${val} <span style="color:#888;font-size:10px;">(${mn}~${mx} 랜덤)</span>`);
       }
       ctx.log(`  + ${ctx.castName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -7361,7 +7392,7 @@ function applyCardEffect(card, ctx){
       const msgs = [];
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance'||k==='locked') continue;
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, fx[k], fx.turns||0);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, fx[k], fx.turns||0, ctx.castObj);
         // locked:true — dispel/stealBuff/zeroStat 면역 (LockedBuffs에도 누적, 엔지업과 동일 정책)
         if (fx.locked && ctx.castLockedBuffs){
           ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + fx[k];
@@ -7376,7 +7407,7 @@ function applyCardEffect(card, ctx){
       const msgs = [];
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance') continue;
-        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0, tgt.obj);
         msgs.push(`${_korStatKey(k)} ${fx[k]>=0?'+':''}${fx[k]}`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
@@ -7395,7 +7426,7 @@ function applyCardEffect(card, ctx){
           base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
         }
         const d = Math.floor(base * pct);
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0, ctx.castObj);
         // 장비 기반 buff는 별도 lock 객체에도 누적 → dispel/zeroStat/stealBuff 면역
         if (fx.equipBase && ctx.castLockedBuffs){
           ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + d;
@@ -7411,7 +7442,7 @@ function applyCardEffect(card, ctx){
       for (const [k, pct] of Object.entries(fx.stats)){
         const base = (tgt.obj[k]||0) + (tgt.buffs[k]||0);
         const d = Math.floor(base * pct);
-        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0, tgt.obj);
         msgs.push(`${_korStatKey(k)} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
@@ -7429,7 +7460,7 @@ function applyCardEffect(card, ctx){
         // 장비 기반 buff(엔지업 등)는 보존 — 0으로 만들지 않고 locked 값을 남김
         const lockedVal = (locked && locked[k]) || 0;
         const cur = (obj[k]||0) + (buffs[k]||0) - lockedVal;
-        _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0);
+        _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj);
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
       return;
@@ -7597,11 +7628,13 @@ function applyCardEffect(card, ctx){
         if (stealable > 0){
           const v = stealable;
           if (fx.turns){
-            _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, v, fx.turns);
+            _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, v, fx.turns, ctx.castObj);
           } else {
             ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + v;
+            _syncPoolOnStatChange(ctx.castObj, k, v);
           }
           ctx.targBuffs[k] -= v;
+          _syncPoolOnStatChange(ctx.targObj, k, -v);
         }
       }
       ctx.log(`  + 적 버프 탈취${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -7613,8 +7646,8 @@ function applyCardEffect(card, ctx){
       for (const k of fx.stats){
         const base = (ctx.targObj[k]||0) + (ctx.targBuffs[k]||0);
         const drained = Math.floor(base * (fx.pct||0.5));
-        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, -drained, fx.turns||0);
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, drained, fx.turns||0);
+        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, -drained, fx.turns||0, ctx.targObj);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, drained, fx.turns||0, ctx.castObj);
         msgs.push(`${k} ${drained}`);
       }
       ctx.log(`  + 적 ${msgs.join(', ')} 흡수${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -7768,15 +7801,17 @@ function processCombatTicks(kind){
   for (const h of c.monMpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
   c.monMpHots = c.monMpHots.filter(h=>h.turns>0);
   // 턴 버프 만료 (값 차감 후 제거)
-  function decayTurnBuffs(buffs, list){
+  function decayTurnBuffs(buffs, list, obj){
     for (const tb of list){ tb.turns--; }
     for (const tb of list.filter(x=>x.turns<=0)){
       buffs[tb.stat] = (buffs[tb.stat]||0) - tb.value;
+      // CON/INT buff 만료 시 최대 HP/MP 동기화 (pro-rata)
+      _syncPoolOnStatChange(obj, tb.stat, -tb.value);
     }
     return list.filter(x=>x.turns>0);
   }
-  c.myTurnBuffs = decayTurnBuffs(c.myBuffs, c.myTurnBuffs);
-  c.monTurnBuffs = decayTurnBuffs(c.monBuffs, c.monTurnBuffs);
+  c.myTurnBuffs = decayTurnBuffs(c.myBuffs, c.myTurnBuffs, me);
+  c.monTurnBuffs = decayTurnBuffs(c.monBuffs, c.monTurnBuffs, opp);
   // 행동불능 카운터는 isStunned()에서 소비 시 감소 (여기서는 감소하지 않음)
   // 반사막 감소 (턴 기반만; hits 기반은 doDmg에서 소비)
   if (c.myReflect && c.myReflect.turns != null){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
@@ -7944,13 +7979,16 @@ function processTrainTicks(){
   c.myMpHots = c.myMpHots.filter(h=>h.turns>0);
   for (const h of opp.mpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
   opp.mpHots = opp.mpHots.filter(h=>h.turns>0);
-  function decay(buffs, list){
+  function decay(buffs, list, obj){
     for (const tb of list) tb.turns--;
-    for (const tb of list.filter(x=>x.turns<=0)) buffs[tb.stat] = (buffs[tb.stat]||0) - tb.value;
+    for (const tb of list.filter(x=>x.turns<=0)){
+      buffs[tb.stat] = (buffs[tb.stat]||0) - tb.value;
+      _syncPoolOnStatChange(obj, tb.stat, -tb.value);
+    }
     return list.filter(x=>x.turns>0);
   }
-  c.myTurnBuffs = decay(c.myBuffs, c.myTurnBuffs);
-  opp.turnBuffs = decay(opp.buffs, opp.turnBuffs);
+  c.myTurnBuffs = decay(c.myBuffs, c.myTurnBuffs, me);
+  opp.turnBuffs = decay(opp.buffs, opp.turnBuffs, opp);
   // stun 카운터는 isTrainStunned에서 소비
   if (c.myReflect){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (opp.reflect){ opp.reflect.turns--; if (opp.reflect.turns<=0) opp.reflect = null; }
