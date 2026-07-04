@@ -2744,19 +2744,28 @@ function cloudSaveDebounced(){
   // 500ms — 유저가 잠깐만 멈춰도 저장 나가도록 짧게
   _cloudSaveTimer = setTimeout(() => { cloudSaveNow().catch(e => console.warn('cloudSave', e)); }, 500);
 }
+// 마지막 클라우드 저장 실패 원인을 전역에 저장 — alert에서 원인 노출용
+let _lastCloudSaveError = null;
 async function cloudSaveNow(){
-  if (!sb || !GAME.player) return false;
-  const { data: ud } = await sb.auth.getUser();
-  if (!ud || !ud.user) return false;
+  _lastCloudSaveError = null;
+  if (!sb){ _lastCloudSaveError = 'Supabase SDK 미로드'; return false; }
+  if (!GAME.player){ _lastCloudSaveError = 'GAME.player 없음'; return false; }
+  const { data: ud, error: uErr } = await sb.auth.getUser();
+  if (uErr){ _lastCloudSaveError = `세션 조회 실패: ${uErr.message||uErr}`; console.warn('[cloudSave getUser]', uErr); return false; }
+  if (!ud || !ud.user){ _lastCloudSaveError = '로그인 세션 없음 (auth.getUser → null)'; return false; }
   const payload = {
     user_id: ud.user.id,
     nickname: GAME.player.name,
     phone: GAME.player.phone || null,
-    email: GAME.player.email || null,
+    // email은 saves 테이블 컬럼에 없음 (인증 기능 미사용) — 필요 시 data.player.email로 접근
     data: buildSavePayload(),
   };
   const { error } = await sb.from('saves').upsert(payload, { onConflict: 'user_id' });
-  if (error){ console.warn('[cloudSave]', error); return false; }
+  if (error){
+    _lastCloudSaveError = `${error.code||''} ${error.message||''} ${error.details||''} ${error.hint||''}`.trim();
+    console.warn('[cloudSave upsert]', error);
+    return false;
+  }
   return true;
 }
 // beforeunload / visibilitychange 시점의 강제 플러시 — fetch keepalive로 브라우저 unload 이후에도 요청 완료 보장
@@ -2778,7 +2787,6 @@ function cloudSaveBeacon(){
     user_id: userId,
     nickname: GAME.player.name,
     phone: GAME.player.phone || null,
-    email: GAME.player.email || null,
     data: buildSavePayload(),
   };
   try {
@@ -10614,8 +10622,6 @@ async function doRegisterSubmit(){
     if (nickTaken){ alert('해당 아이디는 이미 사용 중입니다. 다른 아이디로 가입해 주세요.'); return; }
     const phoneTaken = await cloudPhoneTaken(phone);
     if (phoneTaken){ alert('해당 휴대폰 번호로 이미 가입된 계정이 있습니다.'); return; }
-    const emailTaken = await cloudEmailTaken(finalEmail);
-    if (emailTaken){ alert('해당 이메일로 이미 가입된 계정이 있습니다.'); return; }
     const authEmail = nickToEmail(finalName);
     const { data: signUpData, error } = await sb.auth.signUp({
       email: authEmail,
@@ -10655,12 +10661,12 @@ async function doRegisterSubmit(){
     // 클라우드 즉시 저장 (디바운스 미사용)
     const ok = await cloudSaveNow();
     if (!ok){
-      // 실패 원인 진단 로그
+      const reason = _lastCloudSaveError || '(원인 미상)';
       try {
         const { data: ud } = await sb.auth.getUser();
-        console.warn('[register cloudSave fail] session user:', ud && ud.user);
+        console.warn('[register cloudSave fail] session user:', ud && ud.user, 'reason:', reason);
       } catch(e){ console.warn('[register getUser]', e); }
-      alert('회원가입은 됐지만 데이터 저장에 실패했습니다.\n\nDevTools Console에서 상세 원인을 확인해 주세요.\n(Supabase RLS 정책 또는 세션 문제일 수 있음)');
+      alert(`회원가입은 됐지만 데이터 저장에 실패했습니다.\n\n원인: ${reason}\n\n대응:\n• "row-level security" 또는 "42501" 포함 → Supabase saves 테이블 RLS 정책 미비\n• "로그인 세션 없음" → Auth "Confirm email" OFF 필요\n• "relation ... does not exist" → saves 테이블 미생성`);
     }
     // 로컬 캐시도 저장
     saveGame();
