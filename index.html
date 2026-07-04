@@ -10616,14 +10616,29 @@ async function doRegisterSubmit(){
     if (phoneTaken){ alert('해당 휴대폰 번호로 이미 가입된 계정이 있습니다.'); return; }
     const emailTaken = await cloudEmailTaken(finalEmail);
     if (emailTaken){ alert('해당 이메일로 이미 가입된 계정이 있습니다.'); return; }
-    const { error } = await sb.auth.signUp({
-      email: nickToEmail(finalName),
+    const authEmail = nickToEmail(finalName);
+    const { data: signUpData, error } = await sb.auth.signUp({
+      email: authEmail,
       password: pw,
       options: { data: { nickname: finalName, phone, contact_email: finalEmail } },
     });
     if (error){
       alert('회원가입 실패: ' + (error.message || error));
       return;
+    }
+    // signUp이 세션을 즉시 안 주면 (Supabase "Confirm email" ON 상태 등) 직접 로그인
+    if (!signUpData || !signUpData.session){
+      const { error: siErr } = await sb.auth.signInWithPassword({ email: authEmail, password: pw });
+      if (siErr){
+        console.warn('[register signInAfterSignUp]', siErr);
+        const msg = (siErr.message || '').toLowerCase();
+        if (msg.includes('email not confirmed') || msg.includes('confirm')){
+          alert('회원가입은 됐지만 로그인 세션 생성 실패.\n\n[해결 방법]\nSupabase Dashboard → Authentication → Providers → Email → "Confirm email" 토글을 OFF로 변경 후 재시도해 주세요.\n\n(원인: 가짜 이메일 도메인 u@pmonline.local은 확인 메일을 받을 수 없음)');
+        } else {
+          alert('회원가입은 됐지만 로그인 세션 생성 실패: ' + (siErr.message || siErr));
+        }
+        return;
+      }
     }
     // 신규 캐릭터 셋업
     GAME.player = newCharacter(finalName, say || '잘 부탁드립니다.', pw);
@@ -10640,7 +10655,12 @@ async function doRegisterSubmit(){
     // 클라우드 즉시 저장 (디바운스 미사용)
     const ok = await cloudSaveNow();
     if (!ok){
-      alert('회원가입은 됐지만 데이터 저장에 실패했습니다. 새로고침 후 로그인해 주세요.');
+      // 실패 원인 진단 로그
+      try {
+        const { data: ud } = await sb.auth.getUser();
+        console.warn('[register cloudSave fail] session user:', ud && ud.user);
+      } catch(e){ console.warn('[register getUser]', e); }
+      alert('회원가입은 됐지만 데이터 저장에 실패했습니다.\n\nDevTools Console에서 상세 원인을 확인해 주세요.\n(Supabase RLS 정책 또는 세션 문제일 수 있음)');
     }
     // 로컬 캐시도 저장
     saveGame();
