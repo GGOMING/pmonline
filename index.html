@@ -6475,9 +6475,9 @@ function generateMonster(playerLv, tier){
   if (tier === 1) mLv = Math.min(25, mLv);
   if (tier === 2) mLv = Math.max(26, mLv);
 
-  // 스탯 계산 (사용자와 비슷한 성장 곡선)
-  const STAT_BASE = earlyEasy ? 3 : 4;
-  const STAT_GROW = earlyEasy ? 0.3 : 0.4;
+  // 스탯 계산 — earlyEasy(Lv≤10)는 기존 유지, 이후 구간은 base·grow 모두 완화
+  const STAT_BASE = earlyEasy ? 3 : 3;
+  const STAT_GROW = earlyEasy ? 0.3 : 0.35;
   let str = STAT_BASE + Math.floor(mLv * STAT_GROW);
   let dex = STAT_BASE + Math.floor(mLv * STAT_GROW);
   let int = STAT_BASE + Math.floor(mLv * STAT_GROW);
@@ -6492,7 +6492,8 @@ function generateMonster(playerLv, tier){
   const wBonus = 5 + Math.floor(Math.random() * 6); // 5~10
   const aBonus = 5 + Math.floor(Math.random() * 6); // 5~10
   // 기본 장비 도입으로 atk·def 상향분이 생기므로, MUL을 추가 약화 (수행 난이도 유지)
-  const HP_MUL  = earlyEasy ? 1.05 : 0.90;
+  // earlyEasy 구간은 그대로, 그 외 구간의 HP만 하향 (스탯 하향과 병행)
+  const HP_MUL  = earlyEasy ? 1.05 : 0.75;
   const ATK_MUL = earlyEasy ? 0.35 : 0.75;
   const DEF_MUL = earlyEasy ? 0.80 : 0.55;
   const hp  = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * HP_MUL));
