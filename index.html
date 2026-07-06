@@ -1093,25 +1093,18 @@
           </td>
         </tr>
         <tr>
-          <td class="lbl">휴대폰</td>
-          <td>
-            <input id="regPhone" maxlength="11" placeholder="01012345678 (- 제외하고 입력)">
-            <button type="button" onclick="sendPhoneAuth()" style="margin-left:4px;padding:2px 8px;">인증번호 발송</button>
-            <div style="font-size:11px;color:#777;margin-top:2px;">숫자만 입력 (하이픈 제외)</div>
-          </td>
-        </tr>
-        <tr>
-          <td class="lbl">인증번호</td>
-          <td>
-            <input id="regAuth" maxlength="6" placeholder="6자리 숫자">
-            <button type="button" onclick="verifyPhoneAuth()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
-            <div id="regAuthStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
-          </td>
-        </tr>
-        <tr>
           <td class="lbl">이메일</td>
           <td>
             <input id="regEmail" type="email" placeholder="example@email.com" style="width:180px;">
+            <button type="button" id="regEmailSendBtn" onclick="sendEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 발송</button>
+          </td>
+        </tr>
+        <tr>
+          <td class="lbl">이메일 코드</td>
+          <td>
+            <input id="regEmailCode" maxlength="6" placeholder="6자리 숫자" style="width:120px;">
+            <button type="button" onclick="verifyEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
+            <div id="regEmailStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
           </td>
         </tr>
       </table>
@@ -1121,7 +1114,7 @@
       <button class="alt" onclick="cancelRegister()">취소</button>
     </div>
     <div class="login-tip">
-      • 아이디 중복확인 + 휴대폰 본인인증 완료 후 가입 가능합니다.<br>
+      • 아이디 중복확인 + 이메일 인증 완료 후 가입 가능합니다.<br>
       • 시작값: HP 25/26, MP 25/25, 골드 100, XP 1
     </div>
   </div>
@@ -2756,8 +2749,7 @@ async function cloudSaveNow(){
   const payload = {
     user_id: ud.user.id,
     nickname: GAME.player.name,
-    phone: GAME.player.phone || null,
-    // email은 saves 테이블 컬럼에 없음 (인증 기능 미사용) — 필요 시 data.player.email로 접근
+    // phone·email은 saves 테이블 상단 컬럼에 포함하지 않음 (수집 안 함 / 컬럼 스키마 불일치 회피)
     data: buildSavePayload(),
   };
   const { error } = await sb.from('saves').upsert(payload, { onConflict: 'user_id' });
@@ -2786,7 +2778,6 @@ function cloudSaveBeacon(){
   const payload = {
     user_id: userId,
     nickname: GAME.player.name,
-    phone: GAME.player.phone || null,
     data: buildSavePayload(),
   };
   try {
@@ -2868,22 +2859,6 @@ async function cloudNicknameTaken(nick){
     if (error){ console.warn('[nicknameExists]', error); return false; }
     return !!data;
   } catch(e){ console.warn('[nicknameExists]', e); return false; }
-}
-async function cloudPhoneTaken(phone){
-  if (!sb || !phone) return false;
-  try {
-    const { data, error } = await sb.rpc('phone_exists', { check_phone: phone });
-    if (error){ console.warn('[phoneExists]', error); return false; }
-    return !!data;
-  } catch(e){ console.warn('[phoneExists]', e); return false; }
-}
-async function cloudEmailTaken(email){
-  if (!sb || !email) return false;
-  try {
-    const { data, error } = await sb.rpc('email_exists', { check_email: email });
-    if (error){ console.warn('[emailExists]', error); return false; }
-    return !!data;
-  } catch(e){ console.warn('[emailExists]', e); return false; }
 }
 async function cloudSignOut(){
   if (sb) { try { await sb.auth.signOut(); } catch(e){} }
@@ -6941,25 +6916,33 @@ function _buildCombatCtx(kind, caster){
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
-// CON/INT buff → HP/MP 최대치 동기화
+// stat buff → HP/MP 최대치 동기화
 // - 증가: 늘어난 양만큼 현재치도 함께 증가
 // - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 160/200 → 최대 -20 → 144/180)
+// HP 배수: STR/DEX/INT = +2/포인트, CON = +5/포인트  |  MP 배수: INT = +5/포인트
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
-  let maxKey, curKey, mult;
-  if (stat === 'con'){ maxKey='hpMax'; curKey='hp'; mult=2; }
-  else if (stat === 'int'){ maxKey='mpMax'; curKey='mp'; mult=5; }
-  else return;
-  const oldMax = obj[maxKey] || 0;
-  const newMax = Math.max(1, oldMax + delta * mult);
-  const oldCur = obj[curKey] || 0;
-  if (newMax >= oldMax){
-    obj[maxKey] = newMax;
-    obj[curKey] = Math.min(newMax, oldCur + (newMax - oldMax));
-  } else {
-    const ratio = oldMax > 0 ? oldCur / oldMax : 1;
-    obj[maxKey] = newMax;
-    obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
+  const _apply = (maxKey, curKey, deltaMax) => {
+    if (!deltaMax) return;
+    const oldMax = obj[maxKey] || 0;
+    const newMax = Math.max(1, oldMax + deltaMax);
+    const oldCur = obj[curKey] || 0;
+    if (newMax >= oldMax){
+      obj[maxKey] = newMax;
+      obj[curKey] = Math.min(newMax, oldCur + (newMax - oldMax));
+    } else {
+      const ratio = oldMax > 0 ? oldCur / oldMax : 1;
+      obj[maxKey] = newMax;
+      obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
+    }
+  };
+  if (stat === 'str' || stat === 'dex' || stat === 'int'){
+    _apply('hpMax', 'hp', delta * 2);
+  } else if (stat === 'con'){
+    _apply('hpMax', 'hp', delta * 5);
+  }
+  if (stat === 'int'){
+    _apply('mpMax', 'mp', delta * 5);
   }
 }
 function _addTurnBuff(buffs, turnBuffs, stat, value, turns, obj){
@@ -8114,6 +8097,75 @@ function huntFlee(){
   huntEnd('flee');
 }
 
+// ─── 여신의 축복으로 파괴 방지 ───
+// 비용:
+//   · 유니크 카드 / 장비(+15 이하) : 여신의 축복 1개
+//   · 영웅 카드 / 장비(+15 초과)   : 여신의 축복 3개
+//   · 레어 카드도 유니크와 동일하게 1개 (사용자 편의)
+// confirm 응답 전 새로고침·강제 종료 시 파괴 확정 (파괴는 이미 저장돼 있음)
+function _blessingCostForDestruction(destroyed){
+  if (!destroyed) return 0;
+  if (destroyed.kind === 'card'){
+    return destroyed.grade === 'hero' ? 3 : 1;  // rare / unique = 1, hero = 3
+  }
+  // 장비: bonus > 15 이면 3, 이하면 1
+  return (destroyed.bonus||0) > 15 ? 3 : 1;
+}
+function _restoreDestroyedItem(destroyed){
+  const p = GAME.player;
+  if (!p || !destroyed) return;
+  if (destroyed.kind === 'card' && destroyed.card){
+    GAME.inventory.push(destroyed.card);
+    if (destroyed.slot != null && GAME.myDeck[destroyed.slot] === BASIC_ATTACK){
+      GAME.myDeck[destroyed.slot] = destroyed.card;
+    }
+  } else if (destroyed.kind === 'weapon' && destroyed.item){
+    if (!p.weapons) p.weapons = [];
+    p.weapons.push(destroyed.item);
+    p.weapon = destroyed.item;
+    try { calcDerived(p); } catch(e){}
+  } else if (destroyed.kind === 'armor' && destroyed.item){
+    if (!p.armors) p.armors = [];
+    p.armors.push(destroyed.item);
+    p.armor = destroyed.item;
+    try { calcDerived(p); } catch(e){}
+  }
+}
+function _offerBlessingToPreventDestroy(destroyed){
+  const p = GAME.player;
+  if (!p || !destroyed) return;
+  const kindKr = destroyed.kind==='card' ? '카드' : destroyed.kind==='weapon' ? '무기' : '방어구';
+  const cost = _blessingCostForDestruction(destroyed);
+  const held = p.blessing || 0;
+  // 축복 부족 → 그냥 파괴 알림
+  if (held < cost){
+    try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.'); } catch(e){}
+    try { alert('보유하신 여신의 축복이 부족하여 장비가 즉시 파괴되었습니다.'); } catch(e){}
+    return;
+  }
+  // 축복 사용 제안 — confirm 응답 전 종료 시 파괴 확정
+  let msg = `☠ ${kindKr} 「${destroyed.name}」 파괴 위기!\n\n`;
+  msg += `✨ 여신의 축복 ${cost}개를 사용하여 파괴를 방지하시겠습니까?\n`;
+  msg += `(보유: ${held}개 → 사용 후: ${held - cost}개)\n\n`;
+  msg += `※ 이 창을 닫거나 새로고침하면 파괴가 확정됩니다.`;
+  let ok = false;
+  try { ok = confirm(msg); } catch(e){ ok = false; }
+  if (!ok){
+    try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.'); } catch(e){}
+    return;
+  }
+  // 축복 사용 → 아이템 복원 + 즉시 저장
+  p.blessing = held - cost;
+  _restoreDestroyedItem(destroyed);
+  GAME._lastHuntLoss.destroyed = null;
+  try { renderSheet(); } catch(e){}
+  try { renderDeck(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  cloudSaveNow().catch(e => console.warn('[blessingRestore cloudSave]', e));
+  try { alert(`✨ 여신의 축복 ${cost}개 사용\n\n${kindKr} 「${destroyed.name}」 파괴를 방지했습니다!\n(남은 축복: ${p.blessing}개)`); } catch(e){}
+  try { chatSys(`✨ ${p.name}님이 여신의 축복 ${cost}개로 ${kindKr} [${destroyed.name}] 파괴를 막았습니다.`); } catch(e){}
+}
+
 function huntEnd(result){
   const c = GAME.huntCombat;
   if (!c || c.finished) return;
@@ -8203,7 +8255,7 @@ function huntEnd(result){
         var invIdx = GAME.inventory.findIndex(function(c){ return c.id === chosen.card.id; });
         if (invIdx >= 0) GAME.inventory.splice(invIdx, 1);
         GAME.myDeck[chosen.slot] = BASIC_ATTACK;
-        destroyed = { kind: 'card', name: chosen.card.name };
+        destroyed = { kind: 'card', name: chosen.card.name, card: chosen.card, slot: chosen.slot, grade: chosen.card.grade };
       }
     } else if (lossRoll < 0.020){
       // 장비 파괴 — 장착 중 무기/방어구 (기본 장비 제외)
@@ -8212,6 +8264,7 @@ function huntEnd(result){
       if (p.armor  && p.armor.id  && p.armor.id  !== 'basic_cloth') equipped.push({ kind:'armor',  item:p.armor  });
       if (equipped.length){
         var ePick = equipped[Math.floor(Math.random() * equipped.length)];
+        var _bonus = ePick.kind === 'weapon' ? (ePick.item.atkBonus||0) : (ePick.item.defBonus||0);
         if (ePick.kind === 'weapon'){
           var widx = (p.weapons||[]).findIndex(function(x){ return x.id === ePick.item.id; });
           if (widx >= 0) p.weapons.splice(widx, 1);
@@ -8221,7 +8274,7 @@ function huntEnd(result){
           if (aidx >= 0) p.armors.splice(aidx, 1);
           p.armor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
         }
-        destroyed = { kind: ePick.kind, name: ePick.item.name };
+        destroyed = { kind: ePick.kind, name: ePick.item.name, item: ePick.item, bonus: _bonus };
       }
     }
     // 패배 정보를 결과창에서 사용
@@ -8230,11 +8283,9 @@ function huntEnd(result){
     if (destroyed){
       const kindKr = destroyed.kind==='card' ? '카드' : destroyed.kind==='weapon' ? '무기' : '방어구';
       huntLog('☠ ' + kindKr + ' 파괴됨 — ' + destroyed.name, 'opp');
-      // 채팅 공지 + 팝업
-      try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.'); } catch(e){}
-      setTimeout(() => {
-        try { alert('☠ 패배 페널티 ☠\n\n' + kindKr + ' 「' + destroyed.name + '」이(가) 영구 파괴되었습니다.'); } catch(e){}
-      }, 300);
+      // 결과창 렌더 이후 축복 사용 여부 확인. confirm 응답 전 새로고침/종료 시엔
+      // 이미 파괴 상태로 저장돼 있으므로 파괴가 확정됨 (요구사항)
+      setTimeout(() => { try { _offerBlessingToPreventDestroy(destroyed); } catch(e){ console.warn('[blessingOffer]', e); } }, 300);
     }
     // 일반 패배 알림은 채팅에 올리지 않음 — 파괴(destroyed) 발생 시에만 위에서 chatSys 처리
   } else if (outcome === 'flee'){
@@ -9831,9 +9882,11 @@ function checkLevelUp(){
 }
 
 function calcDerived(p){
-  // HP: CON 1당 +2 / 레벨업 1당 +2 (Lv1·CON5 기준 26)
-  // MP: INT 1당 +5 / 레벨업 1당 +1 (Lv1·INT5 기준 25)
-  p.hpMax = 26 + (p.level - 1) * 2 + (p.con - 5) * 2;
+  // HP: STR/DEX/INT 1당 +2, CON 1당 +5, 레벨업 1당 +2 (Lv1·전스탯5 기준 26)
+  // MP: INT 1당 +5, 레벨업 1당 +1 (Lv1·INT5 기준 25)
+  p.hpMax = 26 + (p.level - 1) * 2
+          + (p.str - 5) * 2 + (p.dex - 5) * 2 + (p.int - 5) * 2
+          + (p.con - 5) * 5;
   p.mpMax = 25 + (p.level - 1) * 1 + (p.int - 5) * 5;
   // 공격력 wBase: STR(1당 +1) + 무기.atkBonus + DEX*0.5 + INT*0.5. 표기는 반올림(round).
   // 최소값은 0.6배로 range 좁힘 — 평타가 너무 약하게 굴러나오지 않도록.
@@ -10265,10 +10318,16 @@ function addStat(stat){
     toast('스탯 포인트가 부족합니다. 사냥으로 레벨업하세요.');
     return;
   }
+  const oldHpMax = p.hpMax || 0;
+  const oldMpMax = p.mpMax || 0;
   p[stat] += 1;
   p.xpUp -= 1;
-  // 스탯 변경 시 HP/MP 최대치 변경되므로 풀회복 처리는 하지 않고, 그냥 최대치만 갱신
   calcDerived(p);
+  // 최대치 증가분만큼 현재치도 함께 증가 (버프 로직과 동일 정책)
+  const hpDelta = (p.hpMax || 0) - oldHpMax;
+  const mpDelta = (p.mpMax || 0) - oldMpMax;
+  if (hpDelta > 0) p.hp = Math.min(p.hpMax, (p.hp || 0) + hpDelta);
+  if (mpDelta > 0) p.mp = Math.min(p.mpMax, (p.mp || 0) + mpDelta);
   renderSheet();
   toast(`${stat.toUpperCase()} +1`);
   saveGame();
@@ -10518,16 +10577,21 @@ async function doLogout(){
 
 // ─── 회원가입 페이지 ───
 let _regDupOk = false;
-let _regAuthCode = null;
-let _regAuthOk = false;
+// 이메일 OTP 상태
+let _regEmailOk = false;
+let _regVerifiedEmail = '';
+let _regEmailCooldownTimer = null;
 
 function showRegisterPage(){
-  // 폼 초기화
-  ['regName','regPw','regPw2','regPhone','regAuth'].forEach(id => { if ($(id)) $(id).value = ''; });
+  ['regName','regPw','regPw2','regEmail','regEmailCode'].forEach(id => { if ($(id)) $(id).value = ''; });
   $('regNameStatus').textContent = '';
   $('regPwStatus').textContent = '';
-  $('regAuthStatus').textContent = '';
-  _regDupOk = false; _regAuthCode = null; _regAuthOk = false;
+  if ($('regEmailStatus')) $('regEmailStatus').textContent = '';
+  _regDupOk = false;
+  _regEmailOk = false;
+  _regVerifiedEmail = '';
+  if (_regEmailCooldownTimer){ clearInterval(_regEmailCooldownTimer); _regEmailCooldownTimer = null; }
+  const btn = $('regEmailSendBtn'); if (btn){ btn.disabled = false; btn.textContent = '인증 발송'; }
   showPage('register');
 }
 function cancelRegister(){
@@ -10572,61 +10636,126 @@ function checkPwMatch(){
   if (pw === pw2){ el.style.color = '#060'; el.textContent = '✓ 비밀번호가 일치합니다.'; }
   else { el.style.color = '#a00'; el.textContent = '✗ 비밀번호가 일치하지 않습니다.'; }
 }
-function sendPhoneAuth(){
-  const phone = ($('regPhone').value || '').trim();
-  if (!/^010-?\d{3,4}-?\d{4}$/.test(phone)){
-    alert('휴대폰 번호 형식이 올바르지 않습니다. 예: 010-1234-5678');
+// ─── 이메일 OTP (Supabase Auth + 커스텀 SMTP) ───
+async function sendEmailOtp(){
+  const el = $('regEmailStatus');
+  const btn = $('regEmailSendBtn');
+  const email = ($('regEmail').value || '').trim().toLowerCase();
+  _regEmailOk = false;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    el.style.color = '#a00'; el.textContent = '이메일 형식이 올바르지 않습니다.';
     return;
   }
-  _regAuthCode = String(Math.floor(100000 + Math.random()*900000));
-  _regAuthOk = false;
-  $('regAuthStatus').style.color = '#666';
-  $('regAuthStatus').textContent = '인증번호 발송됨';
-  // 데모용 — 실제 SMS 연동 전까지 alert로 노출
-  alert(`인증번호: ${_regAuthCode}\n\n(데모 — 실제 SMS 연동 전까지 화면에 표시)`);
-}
-function verifyPhoneAuth(){
-  const input = ($('regAuth').value || '').trim();
-  const el = $('regAuthStatus');
-  if (!_regAuthCode){ el.style.color = '#a00'; el.textContent = '먼저 인증번호를 발송해 주세요.'; return; }
-  if (input === _regAuthCode){
+  if (!sb){
+    el.style.color = '#a00'; el.textContent = '서버 연결이 필요합니다.';
+    return;
+  }
+  el.style.color = '#666'; el.textContent = '발송 중...';
+  try {
+    const { error } = await sb.auth.signInWithOtp({
+      email,
+      options: { shouldCreateUser: true }, // OTP 검증만 하고 곧바로 signOut — 임시 계정 생성 허용
+    });
+    if (error){
+      el.style.color = '#a00';
+      const msg = (error.message || '').toLowerCase();
+      if (msg.includes('rate') || msg.includes('too many')){
+        el.textContent = '✗ 재발송 대기 시간이 남아 있습니다. 잠시 후 다시 시도해 주세요.';
+      } else {
+        el.textContent = '✗ 발송 실패: ' + (error.message || '');
+      }
+      console.warn('[sendEmailOtp]', error);
+      return;
+    }
     el.style.color = '#060';
-    el.textContent = '✓ 본인인증이 완료되었습니다.';
-    _regAuthOk = true;
-  } else {
+    el.textContent = `✓ ${email} 로 인증 코드 발송 완료 (스팸함도 확인)`;
+    try { alert(`✉ 인증 이메일 발송 완료\n\n받는 사람: ${email}\n\n메일함(및 스팸함)에서 6자리 코드를 확인 후 입력해 주세요.\n코드는 10분간 유효합니다.`); } catch(e){}
+    // 60초 재발송 쿨다운
+    let left = 60;
+    btn.disabled = true;
+    btn.textContent = `재발송 (${left}s)`;
+    if (_regEmailCooldownTimer) clearInterval(_regEmailCooldownTimer);
+    _regEmailCooldownTimer = setInterval(() => {
+      left--;
+      if (left <= 0){
+        clearInterval(_regEmailCooldownTimer); _regEmailCooldownTimer = null;
+        btn.disabled = false; btn.textContent = '재발송';
+      } else {
+        btn.textContent = `재발송 (${left}s)`;
+      }
+    }, 1000);
+  } catch(e){
     el.style.color = '#a00';
-    el.textContent = '✗ 인증번호가 일치하지 않습니다.';
-    _regAuthOk = false;
+    el.textContent = '✗ 발송 중 오류: ' + (e.message || e);
+    console.warn('[sendEmailOtp exception]', e);
+  }
+}
+async function verifyEmailOtp(){
+  const el = $('regEmailStatus');
+  const email = ($('regEmail').value || '').trim().toLowerCase();
+  const code  = ($('regEmailCode').value || '').trim();
+  if (!email || !code){
+    el.style.color = '#a00'; el.textContent = '이메일과 코드를 모두 입력해 주세요.';
+    return;
+  }
+  if (!/^\d{6}$/.test(code)){
+    el.style.color = '#a00'; el.textContent = '코드는 6자리 숫자입니다.';
+    return;
+  }
+  if (!sb){
+    el.style.color = '#a00'; el.textContent = '서버 연결이 필요합니다.';
+    return;
+  }
+  el.style.color = '#666'; el.textContent = '확인 중...';
+  try {
+    const { error } = await sb.auth.verifyOtp({ email, token: code, type: 'email' });
+    if (error){
+      el.style.color = '#a00';
+      el.textContent = '✗ ' + (error.message || '인증번호가 일치하지 않습니다.');
+      _regEmailOk = false;
+      console.warn('[verifyEmailOtp]', error);
+      return;
+    }
+    // 검증 성공 — 임시 세션 즉시 로그아웃 (게임 가입은 별도 닉네임 hex Auth 흐름)
+    try { await sb.auth.signOut(); } catch(e){}
+    _regEmailOk = true;
+    _regVerifiedEmail = email;
+    el.style.color = '#060';
+    el.textContent = '✓ 이메일 인증 완료';
+  } catch(e){
+    el.style.color = '#a00';
+    el.textContent = '✗ 확인 중 오류: ' + (e.message || e);
+    _regEmailOk = false;
   }
 }
 async function doRegisterSubmit(){
   const name = ($('regName').value || '').trim();
   const pw   = ($('regPw').value || '').trim();
   const pw2  = ($('regPw2').value || '').trim();
-  const phoneRaw = ($('regPhone').value || '').trim();
-  const phone = phoneRaw.replace(/\D/g, ''); // 숫자만 (하이픈 등 제거)
   const say  = '';
   if (!_regDupOk){ alert('아이디 중복확인을 해주세요.'); return; }
   if (!pw || pw.length < 6){ alert('비밀번호는 6자 이상 입력해 주세요.'); return; }
   if (pw !== pw2){ alert('비밀번호 확인이 일치하지 않습니다.'); return; }
-  if (!_regAuthOk){ alert('휴대폰 본인인증을 완료해 주세요.'); return; }
-  if (!phone || phone.length < 10 || phone.length > 11){
-    alert('휴대폰 번호를 정확히 입력해 주세요 (숫자 10~11자리).'); return;
+  if (!_regEmailOk){ alert('이메일 인증을 완료해 주세요.'); return; }
+  // 인증 완료 후 입력값이 바뀌었으면 재인증 요구
+  const currentEmail = ($('regEmail').value || '').trim().toLowerCase();
+  if (currentEmail !== _regVerifiedEmail){
+    alert('이메일이 변경되었습니다. 다시 인증해 주세요.');
+    _regEmailOk = false;
+    return;
   }
   const finalName = name.slice(0,6);
-  const finalEmail = ($('regEmail').value || '').trim().toLowerCase();
+  const finalEmail = _regVerifiedEmail;
 
-  // 클라우드: 닉네임·휴대폰·이메일 중복 + Auth 가입
+  // 클라우드: 닉네임 중복 + Auth 가입
   if (sb){
     const nickTaken = await cloudNicknameTaken(finalName);
     if (nickTaken){ alert('해당 아이디는 이미 사용 중입니다. 다른 아이디로 가입해 주세요.'); return; }
-    const phoneTaken = await cloudPhoneTaken(phone);
-    if (phoneTaken){ alert('해당 휴대폰 번호로 이미 가입된 계정이 있습니다.'); return; }
     const authEmail = nickToEmail(finalName);
     const { data: signUpData, error } = await sb.auth.signUp({
       email: authEmail,
       password: pw,
-      options: { data: { nickname: finalName, phone, contact_email: finalEmail } },
+      options: { data: { nickname: finalName, contact_email: finalEmail } },
     });
     if (error){
       alert('회원가입 실패: ' + (error.message || error));
@@ -10648,7 +10777,6 @@ async function doRegisterSubmit(){
     }
     // 신규 캐릭터 셋업
     GAME.player = newCharacter(finalName, say || '잘 부탁드립니다.', pw);
-    GAME.player.phone = phone;
     GAME.player.email = finalEmail;
     calcDerived(GAME.player);
     GAME.player.hp = GAME.player.hpMax;
