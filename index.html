@@ -3987,10 +3987,10 @@ function sellSelectedCards(){
   saveGame();
 }
 
-// 보유 카드 한도: Lv 1~25 = 50장, Lv 26+ = 100장
+// 보유 카드 한도: Lv 1~25 = 100장, Lv 26+ = 200장
 function inventoryLimit(){
   const lv = (GAME.player && GAME.player.level) || 1;
-  return lv >= 26 ? 100 : 50;
+  return lv >= 26 ? 200 : 100;
 }
 
 // ─── 축복의 상점 ───
@@ -6377,11 +6377,15 @@ function generateMonsterFallback(playerLv, tier){
   };
 }
 
-// 황금상자 조우 확률 — Lv1 10% → Lv10 5.5% → Lv11~25 5.0% → Lv26+ 0%
+// 황금상자 조우 확률 — Lv1 20% → Lv10 10% → Lv11~25 5% → Lv26+ 0%
+const GOLD_CHEST_RATES = {
+  1:0.20, 2:0.18, 3:0.17, 4:0.16, 5:0.15,
+  6:0.14, 7:0.13, 8:0.12, 9:0.11, 10:0.10,
+};
 function _goldChestEncounterRate(lv){
   if (lv < 1 || lv > 25) return 0;
   if (lv >= 11) return 0.05;
-  return 0.10 - (lv - 1) * 0.005;
+  return GOLD_CHEST_RATES[lv] || 0;
 }
 // 황금상자 몬스터 — HP 1, 무적, 10턴 무공격, 1000G + 동레벨 ×2.5 XP
 function makeGoldChestMonster(playerLv){
