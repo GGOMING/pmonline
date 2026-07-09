@@ -2404,7 +2404,7 @@ const CARDS = [
   { id:'n05', name:'구울프렌지',     grade:'normal', icon:'skull',  text:'DEX +5, STR +2', fx:{type:'buff',dex:5,str:2} },
   { id:'n06', name:'기계양',         grade:'normal', icon:'gear',   text:'시전자 DEX + CON 만큼 고정 데미지 (방어력 무시)', fx:{type:'dmgStat',stats:['dex','con'],ignoreDef:true} },
   { id:'n07', name:'기본사격',       grade:'normal', icon:'arrow',  text:'DEX + 공격력으로 타격', fx:{type:'dmgStat',stats:['dex']} },
-  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'(DEX +2)로 2회 타격 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'dmgStat',stats:['dex'],bonus:2,mult:2} },
+  { id:'n08', name:'기습',           grade:'normal', icon:'dagger', text:'DEX*2로 2회 타격 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'dmgStat',stats:['dex'],mult:2,hits:2} },
   { id:'n09', name:'내추어스브레싱',  grade:'normal', icon:'undead', text:'올스탯 +3 증가', fx:{type:'buff',str:3,dex:3,int:3,con:3} },
   { id:'n10', name:'도려내기',       grade:'normal', icon:'axe',    text:'STR 수치 만큼 1회 공격, 상대방 CON -2, 최대 HP -10', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str']},{type:'debuff',con:-2},{type:'dmg',min:10,max:10}]} },
   { id:'n11', name:'돌던지기',       grade:'normal', icon:'hammer', text:'Str + Dex + 5 데미지', fx:{type:'dmgStat',stats:['str','dex'],bonus:5} },
@@ -3452,7 +3452,7 @@ const GACHA_SHOPS = {
   },
   rare: {
     label: '레어 뽑기', icon: 'assets/wc3_reforged_used/cardshop_rare.jpg',
-    cost1: 1000, cost10: 9000,
+    cost1: 3000, cost10: 27000,
     maxGradeKr: '레어',
     table: [
       { grade:'normal', rate:0.850 },
@@ -3464,9 +3464,9 @@ const GACHA_SHOPS = {
     cost1: 5000, cost10: 45000,
     maxGradeKr: '유니크',
     table: [
-      { grade:'normal', rate:0.653 },
+      { grade:'normal', rate:0.654 },
       { grade:'rare',   rate:0.345 },
-      { grade:'unique', rate:0.002 },
+      { grade:'unique', rate:0.001 },
     ],
   },
   hero: {
@@ -3474,10 +3474,10 @@ const GACHA_SHOPS = {
     cost1: 10000, cost10: 90000,
     maxGradeKr: '영웅',
     table: [
-      { grade:'normal', rate:0.450 },
-      { grade:'rare',   rate:0.544 },
-      { grade:'unique', rate:0.005 },
-      { grade:'hero',   rate:0.001 },
+      { grade:'normal', rate:0.5000 },
+      { grade:'rare',   rate:0.4980 },
+      { grade:'unique', rate:0.0019 },
+      { grade:'hero',   rate:0.0001 },
     ],
   },
   legend: {
@@ -6921,10 +6921,10 @@ function _buildCombatCtx(kind, caster){
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
-// stat buff → HP/MP 최대치 동기화
+// stat buff → MP 최대치 동기화 (HP는 반영하지 않음)
 // - 증가: 늘어난 양만큼 현재치도 함께 증가
-// - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 160/200 → 최대 -20 → 144/180)
-// HP 배수: STR/DEX/INT = +2/포인트, CON = +5/포인트  |  MP 배수: INT = +5/포인트
+// - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 60/80 → 최대 -20 → 45/60)
+// MP 배수: INT = +5/포인트 (calcDerived와 동일 배수)
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
   const _apply = (maxKey, curKey, deltaMax) => {
@@ -6941,11 +6941,6 @@ function _syncPoolOnStatChange(obj, stat, delta){
       obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
     }
   };
-  if (stat === 'str' || stat === 'dex' || stat === 'int'){
-    _apply('hpMax', 'hp', delta * 2);
-  } else if (stat === 'con'){
-    _apply('hpMax', 'hp', delta * 5);
-  }
   if (stat === 'int'){
     _apply('mpMax', 'mp', delta * 5);
   }
@@ -7360,7 +7355,13 @@ function applyCardEffect(card, ctx){
         return;
       }
       const mult = fx.mult || 1;
-      // 정수 mult ≥ 2 는 다회 타격(매 hit마다 방어력 차감), 분수 mult는 단발 ×N
+      // hits 명시 시 → mult는 hit당 배율. 매 hit마다 base×mult 데미지 (예: 기습 DEX×2 2회)
+      if (fx.hits != null){
+        const perHit = base * mult;
+        for (let i = 0; i < fx.hits; i++) dealFn(perHit);
+        return;
+      }
+      // 레거시: 정수 mult ≥ 2 는 다회 타격(매 hit마다 base 그대로), 분수 mult는 단발 ×N
       if (Number.isInteger(mult) && mult >= 2){
         for (let i = 0; i < mult; i++) dealFn(base);
       } else {
