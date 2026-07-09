@@ -2576,7 +2576,7 @@ const CARDS = [
   { id:'r30', name:'쿠루징웨이브',   grade:'rare', icon:'armor',    text:'[INT + 35] 데미지', fx:{type:'dmgStat',stats:['int'],bonus:35} },
 
   // ───── 유니크 카드 6종 ─────
-  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
+  { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  iconPath:'assets/wc3_reforged_used/BTNDrunkenDodge-Reforged.png', text:'[STR + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
   { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', iconPath:'assets/wc3_reforged_used/sworm.jpg', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
   { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   iconPath:'assets/wc3_reforged_used/rainoffire.jpg', text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
   { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', iconPath:'assets/wc3_reforged_used/blackarrow.jpg', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
@@ -2588,7 +2588,7 @@ const CARDS = [
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/demon.jpg', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/wc3_reforged_used/BTNSpiritOfVengeance-Reforged.png', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
