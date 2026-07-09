@@ -2387,7 +2387,64 @@ const $ = id => document.getElementById(id);
 const rnd = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
 
 // 개구리 변신 portrait — 개구리만들기 카드 그림 그대로
-const FROG_PORTRAIT_URL = 'assets/pmcards/rare_125.png';
+const FROG_PORTRAIT_URL = 'assets/wc3_reforged_used/BTNHex-Reforged.png';
+// 초상화 변신 카드 id 집합 — 시전 성공 시 초상화가 카드 이미지로 바뀜.
+// 여러 장 시전 시 스택으로 쌓이고 가장 마지막 것이 표시됨.
+// dispel/stealBuff로 버프가 사라지면 해당 측의 스택이 초기화됨.
+const TRANSFORM_CARD_IDS = new Set(['h02','h05']);
+// 현재 활성 전투 반환 (renderSheet에서 변신 여부 판정용)
+function _getActiveCombat(){
+  const list = [GAME.huntCombat, GAME.raidCombat, GAME.rankCombat, GAME.trainCombat];
+  for (const c of list){ if (c && !c.finished) return c; }
+  return null;
+}
+function _getMyTransformUrl(){
+  const c = _getActiveCombat();
+  if (!c) return null;
+  // 훈련 모드는 c.myTransforms만 씀 (opp쪽은 아래 함수에서)
+  const list = c.myTransforms || [];
+  return list.length ? list[list.length - 1].url : null;
+}
+function _getOppTransformUrl(c){
+  if (!c) return null;
+  const list = c.monTransforms || (c.opp && c.opp.transforms) || [];
+  return list.length ? list[list.length - 1].url : null;
+}
+// dispel/stealBuff로 대상 버프가 전부 사라지면 해당 측의 변신 스택도 초기화
+function _clearTransformsOnSide(ctx, side){
+  const c = ctx && ctx.c;
+  if (!c) return;
+  const isPlayerCaster = (ctx.caster === 'player' || ctx.caster === 'me');
+  const clearMy  = (side === 'cast' && isPlayerCaster) || (side === 'targ' && !isPlayerCaster);
+  const clearOpp = (side === 'cast' && !isPlayerCaster) || (side === 'targ' && isPlayerCaster);
+  if (clearMy){
+    if (Array.isArray(c.myTransforms)) c.myTransforms.length = 0;
+  }
+  if (clearOpp){
+    if (Array.isArray(c.monTransforms)) c.monTransforms.length = 0;
+    if (c.opp && Array.isArray(c.opp.transforms)) c.opp.transforms.length = 0;
+  }
+}
+// 카드 시전 후 호출 — 시전자 측 초상화 스택에 push (변신 카드일 때만)
+function _pushTransformIfNeeded(c, caster, card){
+  if (!c || !card || !card.iconPath) return;
+  if (!TRANSFORM_CARD_IDS.has(card.id)) return;
+  let list;
+  if (caster === 'player' || caster === 'me'){
+    if (!Array.isArray(c.myTransforms)) c.myTransforms = [];
+    list = c.myTransforms;
+  } else {
+    // hunt/raid/rank는 c.monTransforms, train은 opp.transforms
+    if (c.opp){
+      if (!Array.isArray(c.opp.transforms)) c.opp.transforms = [];
+      list = c.opp.transforms;
+    } else {
+      if (!Array.isArray(c.monTransforms)) c.monTransforms = [];
+      list = c.monTransforms;
+    }
+  }
+  list.push({ id: card.id, url: card.iconPath });
+}
 
 // ─── 카드 풀 (pmlist2.jpg Ver.12/04/13 기반) ───
 const CARDS = [
@@ -2512,19 +2569,19 @@ const CARDS = [
 
   // ───── 유니크 카드 6종 ─────
   { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  text:'[STR + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
-  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
-  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
-  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
-  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
+  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', iconPath:'assets/wc3_reforged_used/sworm.jpg', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
+  { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   iconPath:'assets/wc3_reforged_used/rainoffire.jpg', text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
+  { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', iconPath:'assets/wc3_reforged_used/blackarrow.jpg', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
+  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
   { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +5 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:5,max:15},{stat:'def',min:5,max:15}]} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
-  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
+  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
+  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/BTNHeroDemonHunter-Reforged.png', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
-  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
+  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
@@ -5059,7 +5116,10 @@ function renderRaidBattle(){
   const m = c.monster;
   $('raid_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
   $('rd_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
-  $('rd_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : monsterIconPath(m);
+  const _rdTrans = _getOppTransformUrl(c);
+  $('rd_portrait').src = (c.monFrog > 0)
+    ? FROG_PORTRAIT_URL
+    : (_rdTrans || monsterIconPath(m));
   $('rd_portrait').alt = m.name;
   $('rd_level').textContent = m.level;
   $('rd_str').textContent = m.str;
@@ -5815,16 +5875,21 @@ function renderRankBattle(){
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rk_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   $('rk_def').textContent = (m.def || 0);
-  // 상대 아바타 — 슬롯에 avatar 있으면 이미지, NPC면 ⚔, 그 외면 첫 글자
+  // 상대 아바타 — 변신 스택 top이 있으면 그 카드 이미지, 아니면 slot avatar → NPC 마크 → 이니셜 순
   const avEl = $('rk_avatar');
   if (avEl){
-    const hasAv = m.avatar && typeof m.avatar === 'string' && (m.avatar.startsWith('data:image') || m.avatar.startsWith('assets/') || m.avatar.startsWith('http'));
-    if (hasAv){
-      avEl.innerHTML = `<img src="${m.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
-    } else if (m.isNPC){
-      avEl.innerHTML = '⚔';
+    const _rkTrans = _getOppTransformUrl(c);
+    if (_rkTrans){
+      avEl.innerHTML = `<img src="${_rkTrans}" alt="변신" style="width:100%;height:100%;object-fit:cover;display:block;">`;
     } else {
-      avEl.innerHTML = (m.name||'?').charAt(0);
+      const hasAv = m.avatar && typeof m.avatar === 'string' && (m.avatar.startsWith('data:image') || m.avatar.startsWith('assets/') || m.avatar.startsWith('http'));
+      if (hasAv){
+        avEl.innerHTML = `<img src="${m.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+      } else if (m.isNPC){
+        avEl.innerHTML = '⚔';
+      } else {
+        avEl.innerHTML = (m.name||'?').charAt(0);
+      }
     }
   }
   // 상대 장비 — buff/debuff delta는 무기/방어구 칸에, 최소 +0 클램프
@@ -6622,7 +6687,10 @@ function renderHuntBattle(){
   $('hunt_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
 
   $('m_name').textContent = m.name + (c.monFrog > 0 ? ' 🐸' : '');
-  $('m_portrait').src = (c.monFrog > 0) ? FROG_PORTRAIT_URL : monsterIconPath(m);
+  const _monTrans = _getOppTransformUrl(c);
+  $('m_portrait').src = (c.monFrog > 0)
+    ? FROG_PORTRAIT_URL
+    : (_monTrans || monsterIconPath(m));
   $('m_portrait').alt = m.name;
   $('m_level').textContent = m.level;
   $('m_str').textContent = m.str + (c.monBuffs.str?` (${c.monBuffs.str>0?'+':''}${c.monBuffs.str})`:'');
@@ -6816,6 +6884,7 @@ function _ensureCombatExt(c){
   c.myReflect ||= null; c.monReflect ||= null;
   c.mySelfDots ||= [];  c.monSelfDots ||= [];
   c.castedByMe ||= []; c.castedByMon ||= [];
+  c.myTransforms ||= []; c.monTransforms ||= []; // 초상화 변신 스택 (아바타/데몬변신 등) — [{id, url}]
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   c.myFrog ||= 0; c.monFrog ||= 0;
   c.myEvade ||= null; c.monEvade ||= null;       // {turns, pct}
@@ -6856,6 +6925,7 @@ function recordCast(kind, caster, card){
   _ensureCombatExt(c);
   const list = caster === 'player' ? c.castedByMe : c.castedByMon;
   if (!list.includes(card.id)) list.push(card.id);
+  _pushTransformIfNeeded(c, caster, card);
 }
 function _buildCombatCtx(kind, caster){
   let c, opp, log;
@@ -7695,6 +7765,8 @@ function applyCardEffect(card, ctx){
       }
       for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0; // 장비 기반 buff(엔지업 등)는 보존
       tb.length = 0;
+      // 초상화 변신 스택도 함께 초기화 (해당 측 버프가 모두 사라짐)
+      _clearTransformsOnSide(ctx, tgt === 'enemy' ? 'targ' : 'cast');
       ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거`, ctx.castLogCls);
       return;
     }
@@ -7720,6 +7792,8 @@ function applyCardEffect(card, ctx){
           _syncPoolOnStatChange(ctx.targObj, k, -v);
         }
       }
+      // 대상의 버프가 모두 시전자로 이동 → 대상 측 초상화 변신 스택 초기화
+      _clearTransformsOnSide(ctx, 'targ');
       ctx.log(`  + 적 버프 탈취${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
     }
@@ -7951,6 +8025,7 @@ function _ensureTrainExt(){
   const c = GAME.trainCombat; if (!c) return;
   c.myTurnBuffs ||= []; c.myMpHots ||= []; c.myStun ||= 0; c.myReflect ||= null; c.mySelfDots ||= []; c.myFrog ||= 0; c.monFrog ||= 0;
   c.castedByMe ||= [];
+  c.myTransforms ||= []; // 초상화 변신 스택
   c.myDoubleCastReady ||= 0; c.monDoubleCastReady ||= 0;
   c.myEvade ||= null; c.myVoodoo ||= null;
   c.myStealth ||= 0;
@@ -7962,6 +8037,7 @@ function _ensureTrainExt(){
   o.dots ||= []; o.hots ||= []; o.buffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   o.turnBuffs ||= []; o.mpHots ||= []; o.stun ||= 0; o.reflect ||= null; o.selfDots ||= [];
   o.castedBy ||= [];
+  o.transforms ||= []; // 상대측 초상화 변신 스택
   o.evade ||= null; o.voodoo ||= null;
   o.stealth ||= 0;
   o.leech ||= null;
@@ -9052,6 +9128,7 @@ function trainApplyCard(card, caster){
   _castCardWithDoubleCheck(card, _buildTrainCtx(caster));
   const list = caster === 'me' ? c.castedByMe : c.opp.castedBy;
   if (!list.includes(card.id)) list.push(card.id);
+  _pushTransformIfNeeded(c, caster, card);
 }
 function _trainApplyCard_legacy(card, caster){
   const fx = card.fx;
@@ -9411,16 +9488,18 @@ const ICON_PMCARD_MAP = {
 
 // 카드 아이콘 — 카드별 iconPath 명시 시 우선, 이후 pmcards → wc3_icons → SVG fallback
 function cardIcon(card){
+  // 인라인 스타일로 컨테이너 100% 채움 — CSS 스코프 없는 컨테이너(명예의 전당 덱 등)에서도 정상 렌더
+  const IMG_STYLE = "width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:block;";
   if (card.iconPath){
-    return `<img src="${card.iconPath}" alt="${card.name}" class="wc3-icon" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
+    return `<img src="${card.iconPath}" alt="${card.name}" class="wc3-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
   }
   const pm = ICON_PMCARD_MAP[card.id];
   if (pm){
-    return `<img src="assets/pmcards/${pm}" alt="${card.name}" class="wc3-icon" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
+    return `<img src="assets/pmcards/${pm}" alt="${card.name}" class="wc3-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
   }
   const img = ICON_IMG_MAP[card.id];
   if (img){
-    return `<img src="assets/wc3_icons/${img}" alt="${card.name}" class="wc3-icon" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
+    return `<img src="assets/wc3_icons/${img}" alt="${card.name}" class="wc3-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
   }
   return cardIconSvg(card.icon||'sword', card.grade);
 }
@@ -10314,11 +10393,17 @@ function renderSheet(){
     setClsHtml('p-combat-weapon', (p.weapon ? `${p.weapon.name||'-'} (+${wBase})` : '-') + buffSpan(wEff));
     setClsHtml('p-combat-armor',  (p.armor  ? `${p.armor.name||'-'} (+${aBase})`   : '-') + buffSpan(aEff));
   }
-  // 본인 컴뱃 아바타: avatar(URL or dataUrl) 있으면 이미지, 없으면 첫 글자
-  const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
-  const avHtml = hasAv
-    ? `<img src="${p.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`
-    : (p.name||'?').charAt(0);
+  // 본인 컴뱃 아바타: 변신 스택 top이 있으면 그 카드 이미지, 아니면 avatar → 이미지·첫 글자 순
+  let avHtml;
+  const myTransUrl = _getMyTransformUrl();
+  if (myTransUrl){
+    avHtml = `<img src="${myTransUrl}" alt="변신" style="width:100%;height:100%;object-fit:cover;display:block;">`;
+  } else {
+    const hasAv = p.avatar && typeof p.avatar === 'string' && (p.avatar.startsWith('data:image') || p.avatar.startsWith('assets/') || p.avatar.startsWith('http'));
+    avHtml = hasAv
+      ? `<img src="${p.avatar}" alt="" style="width:100%;height:100%;object-fit:cover;display:block;">`
+      : (p.name||'?').charAt(0);
+  }
   document.querySelectorAll('.p-combat-avatar').forEach(el => { el.innerHTML = avHtml; });
   setWidth('bar-phc-fill', hpPct + '%');
   setWidth('bar-pmc-fill', mpPct + '%');
