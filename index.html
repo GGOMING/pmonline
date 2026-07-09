@@ -2391,7 +2391,8 @@ const FROG_PORTRAIT_URL = 'assets/wc3_reforged_used/BTNHex-Reforged.png';
 // 초상화 변신 카드 id 집합 — 시전 성공 시 초상화가 카드 이미지로 바뀜.
 // 여러 장 시전 시 스택으로 쌓이고 가장 마지막 것이 표시됨.
 // dispel/stealBuff로 버프가 사라지면 해당 측의 스택이 초기화됨.
-const TRANSFORM_CARD_IDS = new Set(['h02','h05']);
+// turns가 있는 카드(h03 벤전스)는 벤전스 종료 시점에 해당 id만 스택에서 제거.
+const TRANSFORM_CARD_IDS = new Set(['h02','h03','h05']);
 // 현재 활성 전투 반환 (renderSheet에서 변신 여부 판정용)
 function _getActiveCombat(){
   const list = [GAME.huntCombat, GAME.raidCombat, GAME.rankCombat, GAME.trainCombat];
@@ -2409,6 +2410,13 @@ function _getOppTransformUrl(c){
   if (!c) return null;
   const list = c.monTransforms || (c.opp && c.opp.transforms) || [];
   return list.length ? list[list.length - 1].url : null;
+}
+// 특정 카드 id의 변신 스택 항목만 제거 (자연 만료용 — 예: 벤전스 3턴 종료)
+function _removeTransformById(list, cardId){
+  if (!Array.isArray(list)) return;
+  for (let i = list.length - 1; i >= 0; i--){
+    if (list[i] && list[i].id === cardId) list.splice(i, 1);
+  }
 }
 // dispel/stealBuff로 대상 버프가 전부 사라지면 해당 측의 변신 스택도 초기화
 function _clearTransformsOnSide(ctx, side){
@@ -2578,8 +2586,8 @@ const CARDS = [
 
   // ───── 영웅 카드 5종 ─────
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
-  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/BTNHeroDemonHunter-Reforged.png', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
-  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
+  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/demon.jpg', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
+  { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/wc3_reforged_used/BTNSpiritOfVengeance-Reforged.png', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
@@ -7978,8 +7986,8 @@ function processCombatTicks(kind){
   if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
   if (c.monVoodoo){ if (c.monVoodoo.pending) c.monVoodoo.pending = false; c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
-  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; log(`  · 벤전스 종료`, 'info'); } }
-  if (c.monVengeance){ if (c.monVengeance.pending) c.monVengeance.pending = false; c.monVengeance.turns--; if (c.monVengeance.turns<=0){ c.monVengeance = null; log(`  · ${opp.name} 벤전스 종료`, 'info'); } }
+  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; _removeTransformById(c.myTransforms, 'h03'); log(`  · 벤전스 종료`, 'info'); } }
+  if (c.monVengeance){ if (c.monVengeance.pending) c.monVengeance.pending = false; c.monVengeance.turns--; if (c.monVengeance.turns<=0){ c.monVengeance = null; _removeTransformById(c.monTransforms, 'h03'); log(`  · ${opp.name} 벤전스 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) log(`  · 은신 종료`, 'info'); }
   if (c.monStealth && c.monStealth > 0){ c.monStealth--; if (c.monStealth === 0) log(`  · ${opp.name} 은신 종료`, 'info'); }
@@ -8156,8 +8164,8 @@ function processTrainTicks(){
   if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
   if (opp.voodoo){ if (opp.voodoo.pending) opp.voodoo.pending = false; opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
-  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; trainLog(`  · 벤전스 종료`, 'info'); } }
-  if (opp.vengeance){ if (opp.vengeance.pending) opp.vengeance.pending = false; opp.vengeance.turns--; if (opp.vengeance.turns<=0){ opp.vengeance = null; trainLog(`  · ${opp.name} 벤전스 종료`, 'info'); } }
+  if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; _removeTransformById(c.myTransforms, 'h03'); trainLog(`  · 벤전스 종료`, 'info'); } }
+  if (opp.vengeance){ if (opp.vengeance.pending) opp.vengeance.pending = false; opp.vengeance.turns--; if (opp.vengeance.turns<=0){ opp.vengeance = null; _removeTransformById(opp.transforms, 'h03'); trainLog(`  · ${opp.name} 벤전스 종료`, 'info'); } }
   // 은신 윈도우 감소
   if (c.myStealth && c.myStealth > 0){ c.myStealth--; if (c.myStealth === 0) trainLog(`  · 은신 종료`, 'info'); }
   if (opp.stealth && opp.stealth > 0){ opp.stealth--; if (opp.stealth === 0) trainLog(`  · ${opp.name} 은신 종료`, 'info'); }
