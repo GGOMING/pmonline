@@ -7260,11 +7260,10 @@ function _buildCombatCtx(kind, caster){
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
-// stat buff → HP/MP 최대치 동기화
+// stat buff → MP 최대치만 동기화 (HP는 어떤 stat buff에도 반영하지 않음)
 // - 증가: 늘어난 양만큼 현재치도 함께 증가
-// - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 60/80 → 최대 -20 → 45/60)
-// HP 배수: CON = +5/포인트 (calcDerived와 동일)  |  MP 배수: INT = +5/포인트
-// STR/DEX/INT buff은 HP에 반영 안 함 (calcDerived의 STR/DEX/INT 계수와 별개 — 임시 버프는 원작 감성 따라 HP엔 미반영)
+// - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일
+// MP 배수: INT = +5/포인트 (calcDerived와 동일 배수)
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
   const _apply = (maxKey, curKey, deltaMax) => {
@@ -7281,9 +7280,6 @@ function _syncPoolOnStatChange(obj, stat, delta){
       obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
     }
   };
-  if (stat === 'con'){
-    _apply('hpMax', 'hp', delta * 5);
-  }
   if (stat === 'int'){
     _apply('mpMax', 'mp', delta * 5);
   }
