@@ -711,6 +711,19 @@
     overflow:hidden;
   }
   .raid-banner.mist { background:linear-gradient(135deg, #0a2030 0%, #1a4060 50%, #608090 100%); }
+  .raid-banner.abyss {
+    background: radial-gradient(ellipse 70% 80% at 50% 50%, rgba(196,126,255,.35), transparent 70%),
+                linear-gradient(135deg, #0a001a 0%, #1a0033 50%, #4a148c 100%);
+  }
+  .raid-banner.abyss::after {
+    content:''; position:absolute; inset:0;
+    background-image: radial-gradient(1px 1px at 20% 30%, #fff, transparent),
+                      radial-gradient(1px 1px at 70% 50%, #ffdc80, transparent),
+                      radial-gradient(1px 1px at 40% 70%, #c47eff, transparent),
+                      radial-gradient(1px 1px at 85% 20%, #fff, transparent),
+                      radial-gradient(1px 1px at 15% 80%, #fff, transparent);
+    opacity:.9; pointer-events:none;
+  }
   .raid-banner-title {
     color:#fff; font-size:24px; font-weight:bold; letter-spacing:6px;
     font-family:"바탕",Batang,serif;
@@ -1393,6 +1406,9 @@
           <td class="row3" onclick="openBlessShop()" style="color:#b8860b;">✨ 축복의 상점</td>
           <td class="row3" onclick="window.open('https://open.kakao.com/o/gZeYwJAi','_blank','noopener,noreferrer')" style="color:#5a1a6b;">💬 오픈채팅방</td>
         </tr></table>
+        <table><tr>
+          <td id="m-abyss" class="row3" onclick="enterAbyssRaid()" style="color:#4a148c;font-weight:bold;background:linear-gradient(180deg,#1a0033,#0a001a);color:#c47eff;">🌌 잊혀진 성좌 (3차 · 테스트)</td>
+        </tr></table>
       </div>
 
       <div class="infoline">
@@ -1568,7 +1584,7 @@
         <div class="raid-info" style="display:flex;align-items:center;gap:12px;">
           <div style="flex:1;">
             <div class="raid-info-row"><span class="lbl">세션 종료까지</span> <b id="raid_remaining">-</b></div>
-            <div class="raid-info-row"><span class="lbl">남은 몬스터</span> <b id="raid_mon_count">-</b> / 99</div>
+            <div class="raid-info-row"><span class="lbl">남은 몬스터</span> <b id="raid_mon_count">-</b> / <span id="raid_mon_total">99</span></div>
             <div class="raid-info-row" id="raid_boss_row" hidden>
               <span class="lbl">보스</span> <b id="raid_boss_name">-</b>
               <div class="boss-hpbar"><i id="raid_boss_hp_fill"></i><span id="raid_boss_hp_text">- / -</span></div>
@@ -2613,8 +2629,10 @@ const GAME = {
   chatUsers: [],  // 서버 연동 시 라이브 반영 예정
   // 공격대 (4시간 세션, 0/4/8/12/16/20시 정각 리셋)
   raid: {
-    dawn: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
-    mist: { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    dawn:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    mist:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    // 3차 공격대 잊혀진 성좌 — Lv 40+, 6시간 세션 (0/6/12/18시 리셋). 테스트 중
+    abyss: { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
   },
   raidCombat: null,
   // 훈련소 상태
@@ -2775,6 +2793,10 @@ function applySavePayload(d){
   GAME.inventory = (d.inventory || []).map(id => CARDS.find(c => c.id === id)).filter(c => c);
   if (d.ranking) GAME.ranking = d.ranking;
   if (d.raid) GAME.raid = d.raid;
+  // 3차 공격대 마이그레이션 — 옛 저장엔 abyss 필드 없음
+  if (!GAME.raid.abyss){
+    GAME.raid.abyss = { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
+  }
   if (!GAME.player.weapons) GAME.player.weapons = [];
   if (!GAME.player.armors)  GAME.player.armors  = [];
   if (!GAME.player.weapon || !GAME.player.weapon.name || GAME.player.weapon.name === '맨손'){
@@ -3012,6 +3034,10 @@ function loadGame(name){
     }
     if (d.ranking) GAME.ranking = d.ranking;
     if (d.raid) GAME.raid = d.raid;
+  // 3차 공격대 마이그레이션 — 옛 저장엔 abyss 필드 없음
+  if (!GAME.raid.abyss){
+    GAME.raid.abyss = { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
+  }
     // 마이그레이션: 장비 인벤토리 없으면 초기화
     if (!GAME.player.weapons) GAME.player.weapons = [];
     if (!GAME.player.armors)  GAME.player.armors  = [];
@@ -4605,7 +4631,53 @@ const RAID_BOSSES = {
     { id:'beastmaster',  name:'비스트마스터', hpMax:10000, str:30, dex:30, int:20, con:35, atk:[55,100], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
     { id:'darkranger',   name:'다크 레인저',  hpMax:10000, str:25, dex:45, int:25, con:20, atk:[70,120], icon:'assets/wc3_icons/darkranger.gif' },
   ],
+  // 3차 공격대 「잊혀진 성좌」 — Lv 40+ (테스트 중, admin 비밀번호 gate)
+  // icon은 유저가 파일명 알려주면 채움
+  abyss: [
+    { id:'orion',    name:'오리온',     hpMax:100000, str:35, dex:45, int:25, con:30, atk:[90,160],  icon:'' },
+    { id:'perseus',  name:'페르세우스', hpMax:100000, str:45, dex:40, int:25, con:30, atk:[100,170], icon:'' },
+    { id:'hercules', name:'헤라클레스', hpMax:120000, str:55, dex:25, int:15, con:45, atk:[120,200], icon:'' },
+    { id:'apollo',   name:'아폴론',     hpMax:90000,  str:25, dex:30, int:50, con:30, atk:[70,130],  icon:'' },
+    { id:'artemis',  name:'아르테미스', hpMax:95000,  str:25, dex:50, int:30, con:25, atk:[90,160],  icon:'' },
+    { id:'hades',    name:'하데스',     hpMax:130000, str:40, dex:25, int:45, con:40, atk:[100,170], icon:'' },
+  ],
 };
+
+// 3차 공격대 잡몹 pool (20 템플릿, 가중 랜덤 스폰). weight 총합 = 대략 몹 분포 비율
+// baseHp/스탯: hunt monster 스케일 참조 (Lv에 따라 별도 스케일 곱해짐)
+const MONSTERS_ABYSS = [
+  // 반인반수 (4)
+  { id:'ab_centaur_archer', name:'켄타우로스 궁수',     race:'nightelf', lvRange:[40,48], baseHp:60, baseAtk:[45,75],  stats:{str:12,dex:22,int:8,con:12},  weight:15, elite:false, icon:'' },
+  { id:'ab_centaur_khan',   name:'켄타우로스 칸',       race:'orc',      lvRange:[48,55], baseHp:100,baseAtk:[60,110], stats:{str:25,dex:15,int:10,con:20}, weight:4,  elite:true,  icon:'' },
+  { id:'ab_satyr',          name:'사티로스',           race:'nightelf', lvRange:[40,46], baseHp:50, baseAtk:[40,65],  stats:{str:10,dex:20,int:12,con:10}, weight:15, elite:false, icon:'' },
+  { id:'ab_satyr_hellcaller',name:'사티로스 지옥술사', race:'undead',   lvRange:[46,54], baseHp:65, baseAtk:[40,70],  stats:{str:8,dex:12,int:25,con:12},  weight:12, elite:false, icon:'' },
+  // 요정·님프 (3)
+  { id:'ab_nymph_star',     name:'별의 님프',           race:'human',    lvRange:[44,52], baseHp:55, baseAtk:[35,60],  stats:{str:8,dex:14,int:22,con:14},  weight:12, elite:false, icon:'' },
+  { id:'ab_nymph_naiad',    name:'나이아드',           race:'nightelf', lvRange:[45,53], baseHp:65, baseAtk:[40,65],  stats:{str:10,dex:16,int:20,con:14}, weight:12, elite:false, icon:'' },
+  { id:'ab_nymph_dryad',    name:'드리아드',           race:'human',    lvRange:[45,52], baseHp:60, baseAtk:[35,60],  stats:{str:10,dex:14,int:20,con:16}, weight:12, elite:false, icon:'' },
+  // 하피 (3)
+  { id:'ab_harpy',          name:'하피',               race:'nightelf', lvRange:[42,50], baseHp:50, baseAtk:[45,80],  stats:{str:12,dex:24,int:8,con:8},   weight:15, elite:false, icon:'' },
+  { id:'ab_harpy_rogue',    name:'하피 도적',           race:'nightelf', lvRange:[48,55], baseHp:55, baseAtk:[50,85],  stats:{str:14,dex:26,int:10,con:10}, weight:12, elite:false, icon:'' },
+  { id:'ab_harpy_queen',    name:'하피 여왕',           race:'nightelf', lvRange:[55,60], baseHp:100,baseAtk:[70,120], stats:{str:18,dex:28,int:16,con:18}, weight:4,  elite:true,  icon:'' },
+  // 심연·바다 (3)
+  { id:'ab_hydra',          name:'히드라',             race:'beast',    lvRange:[50,58], baseHp:90, baseAtk:[55,100], stats:{str:22,dex:12,int:14,con:24}, weight:8,  elite:false, icon:'' },
+  { id:'ab_sea_giant',      name:'바다 거인',           race:'beast',    lvRange:[52,58], baseHp:110,baseAtk:[65,115], stats:{str:28,dex:10,int:12,con:28}, weight:8,  elite:false, icon:'' },
+  { id:'ab_sea_witch',      name:'바다 마녀',           race:'undead',   lvRange:[50,57], baseHp:70, baseAtk:[40,75],  stats:{str:10,dex:14,int:28,con:16}, weight:8,  elite:false, icon:'' },
+  // 거인·괴수 (3)
+  { id:'ab_ogre',           name:'오우거',             race:'orc',      lvRange:[45,52], baseHp:80, baseAtk:[55,95],  stats:{str:22,dex:8,int:6,con:22},   weight:15, elite:false, icon:'' },
+  { id:'ab_cyclops',        name:'사이클롭스',         race:'orc',      lvRange:[52,58], baseHp:110,baseAtk:[70,130], stats:{str:30,dex:10,int:8,con:25},  weight:6,  elite:true,  icon:'' },
+  { id:'ab_ogre_magi',      name:'오우거 마법사',       race:'orc',      lvRange:[50,57], baseHp:75, baseAtk:[45,80],  stats:{str:15,dex:10,int:25,con:18}, weight:8,  elite:false, icon:'' },
+  // 하데스의 군단 (2)
+  { id:'ab_skeleton_warrior',name:'하데스의 전사',      race:'undead',   lvRange:[48,55], baseHp:70, baseAtk:[55,90],  stats:{str:20,dex:14,int:8,con:18},  weight:10, elite:false, icon:'' },
+  { id:'ab_skeleton_archer', name:'하데스의 궁수',      race:'undead',   lvRange:[48,55], baseHp:60, baseAtk:[55,90],  stats:{str:12,dex:22,int:8,con:14},  weight:10, elite:false, icon:'' },
+  // 어둠의 사티로스 (2, 엘리트)
+  { id:'ab_satyr_shadowdancer',name:'사티로스 그림자춤꾼', race:'nightelf', lvRange:[55,60], baseHp:65, baseAtk:[55,95],  stats:{str:14,dex:28,int:16,con:12}, weight:6,  elite:true,  icon:'' },
+  { id:'ab_satyr_soulstealer', name:'사티로스 영혼도둑',  race:'undead',   lvRange:[55,60], baseHp:70, baseAtk:[45,80],  stats:{str:16,dex:12,int:28,con:16}, weight:7,  elite:true,  icon:'' },
+];
+const ABYSS_MOB_TOTAL = 199;   // 세션당 몹 수
+const ABYSS_MIN_LEVEL = 40;    // 입장 최소 레벨
+const ABYSS_SESSION_HOURS = 6; // 세션 리셋 주기 (시간)
+const ABYSS_ADMIN_PW = 'ekfru2';
 
 // 세션 시작 시각 (4시간 단위 — 0시/4시/8시/12시/16시/20시 정각)
 function getCurrentSessionStart(){
@@ -4614,6 +4686,74 @@ function getCurrentSessionStart(){
   sessionStart.setMinutes(0, 0, 0);
   sessionStart.setHours(Math.floor(sessionStart.getHours() / 4) * 4);
   return sessionStart.getTime();
+}
+// abyss 세션 시작 시각 (6시간 단위 — 0/6/12/18시 정각)
+function getAbyssSessionStart(){
+  const now = new Date();
+  const s = new Date(now);
+  s.setMinutes(0, 0, 0);
+  s.setHours(Math.floor(s.getHours() / ABYSS_SESSION_HOURS) * ABYSS_SESSION_HOURS);
+  return s.getTime();
+}
+// 로컬 abyss 리셋 — 6시간마다 mob count·보스 초기화
+function checkAbyssReset(){
+  if (!GAME.raid) GAME.raid = {};
+  if (!GAME.raid.abyss){
+    GAME.raid.abyss = { sessionStart:null, monsterCount:ABYSS_MOB_TOTAL, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
+  }
+  const r = GAME.raid.abyss;
+  const cur = getAbyssSessionStart();
+  if (r.sessionStart !== cur){
+    r.sessionStart = cur;
+    r.monsterCount = ABYSS_MOB_TOTAL;
+    const bs = RAID_BOSSES.abyss;
+    const b = bs[Math.floor(Math.random() * bs.length)];
+    r.bossId = b.id;
+    r.bossHpMax = b.hpMax;
+    r.bossHp = b.hpMax;
+    r.bossDefeated = false;
+    r.lastKiller = null;
+    r.lastNpcUpdate = Date.now();
+  }
+}
+// 가중 랜덤 abyss 몹 템플릿 선택
+function _pickAbyssTemplate(playerLv){
+  // 플레이어 레벨 범위 내 후보만
+  const cand = MONSTERS_ABYSS.filter(t => playerLv >= t.lvRange[0] - 3 && playerLv <= t.lvRange[1] + 5);
+  const pool = cand.length ? cand : MONSTERS_ABYSS;
+  const totalW = pool.reduce((s,t) => s + (t.weight||1), 0);
+  let r = Math.random() * totalW;
+  for (const t of pool){ r -= (t.weight||1); if (r <= 0) return t; }
+  return pool[pool.length - 1];
+}
+// abyss 몹 생성 (기존 generateMonster의 abyss 특화 버전)
+function generateAbyssMob(playerLv){
+  const tpl = _pickAbyssTemplate(playerLv);
+  // 몹 레벨 = 템플릿 lvRange 안, 유저 레벨 근처로 클램프
+  let mLv = Math.max(tpl.lvRange[0], Math.min(tpl.lvRange[1], playerLv));
+  mLv = Math.max(ABYSS_MIN_LEVEL, mLv);
+  const s = tpl.stats;
+  // HP: baseHp × (1 + (mLv-1)*0.25) × 2.5 (기존 raid보다 3배 강력)
+  const hp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 2.5));
+  // 무기·방어구 보너스 (엘리트는 더 크게)
+  const wBonus = tpl.elite ? 15 + Math.floor(Math.random() * 6) : 10 + Math.floor(Math.random() * 6);
+  const aBonus = tpl.elite ? 12 + Math.floor(Math.random() * 6) : 8  + Math.floor(Math.random() * 6);
+  const atk = [ tpl.baseAtk[0] + wBonus, tpl.baseAtk[1] + wBonus ];
+  const def = Math.max(0, Math.round(s.con * 0.5)) + aBonus;
+  const deck = buildMonsterDeck(tpl.race, mLv, 15);
+  // 몹 XP·골드 (기본값 — abyss 보상 계산 시 x7+250 / +200 규칙 적용)
+  const baseXp = Math.floor(mLv * (5 + Math.random() * 3));
+  const baseGold = Math.floor(mLv * 3 + Math.random() * mLv);
+  return {
+    id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
+    str:s.str, dex:s.dex, int:s.int, con:s.con,
+    hp, hpMax: hp, mp: 60, mpMax: 60,
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
+    deck, gold: baseGold, xp: baseXp,
+    icon: tpl.icon || '',
+    elite: !!tpl.elite,
+    _abyssTemplateId: tpl.id,
+  };
 }
 
 // ─── 공격대 클라우드 (실시간 공유) ───
@@ -4807,12 +4947,16 @@ async function openRaid(raidKey){
     openHeal();
     return;
   }
-  const minLv = raidKey === 'dawn' ? 15 : 25;
+  const minLv = raidKey === 'dawn' ? 15 : (raidKey === 'mist' ? 25 : ABYSS_MIN_LEVEL);
   if (p.level < minLv){
-    toast(`공격대(${raidKey==='dawn'?'새벽의언덕':'안개의숲'})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
+    const nm = raidKey==='dawn'?'새벽의언덕':(raidKey==='mist'?'안개의숲':'잊혀진 성좌');
+    toast(`공격대(${nm})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
     return;
   }
-  if (sb){
+  if (raidKey === 'abyss'){
+    // 3차 공격대는 테스트 중 — 클라우드 스킵, 로컬 리셋만 확인
+    checkAbyssReset();
+  } else if (sb){
     await loadRaidFromCloud();
     await subscribeRaid();
     if (GAME.raid.activeKey && GAME.raid.activeKey !== raidKey){
@@ -4830,25 +4974,38 @@ async function openRaid(raidKey){
   $('raid-result').hidden = true;
   renderRaidLobby();
 }
+// 잊혀진 성좌 진입 — 테스트 중이므로 admin 비밀번호 게이트
+function enterAbyssRaid(){
+  const pw = prompt('🌌 잊혀진 성좌 (3차 공격대) 🌌\n\n아직 테스트 중입니다.\n관리자 비밀번호를 입력해 주세요:');
+  if (pw === null) return;
+  if (pw !== ABYSS_ADMIN_PW){
+    alert('접근이 거부되었습니다.');
+    return;
+  }
+  openRaid('abyss');
+}
 
 function renderRaidLobby(){
   const raidKey = GAME.currentRaid;
   const r = GAME.raid[raidKey];
   const bossDef = (RAID_BOSSES[raidKey].find(b => b.id===r.bossId)) || {};
   const isDawn = raidKey === 'dawn';
-  const raidName = isDawn ? '공격대 — 새벽의 언덕' : '공격대 — 안개의 숲';
+  const isAbyss = raidKey === 'abyss';
+  const raidName = isAbyss ? '공격대 — 잊혀진 성좌' : (isDawn ? '공격대 — 새벽의 언덕' : '공격대 — 안개의 숲');
   $('raid_title').textContent = raidName;
-  $('raid_banner_title').textContent = isDawn ? '새 벽 의   언 덕' : '안 개 의   숲';
-  $('raid_banner').className = 'raid-banner' + (isDawn ? '' : ' mist');
+  $('raid_banner_title').textContent = isAbyss ? '잊 혀 진   성 좌' : (isDawn ? '새 벽 의   언 덕' : '안 개 의   숲');
+  $('raid_banner').className = 'raid-banner' + (isAbyss ? ' abyss' : (isDawn ? '' : ' mist'));
 
-  // 남은 시간
-  const remainMs = (r.sessionStart + 4*3600*1000) - Date.now();
+  // 남은 시간 (abyss는 6시간 세션, 나머지 4시간)
+  const cycleHrs = isAbyss ? ABYSS_SESSION_HOURS : 4;
+  const remainMs = (r.sessionStart + cycleHrs*3600*1000) - Date.now();
   const remainSec = Math.max(0, Math.floor(remainMs / 1000));
   const h = Math.floor(remainSec / 3600);
   const m = Math.floor((remainSec % 3600) / 60);
   const s = remainSec % 60;
   $('raid_remaining').textContent = `${h}시간 ${m}분 ${s}초`;
   $('raid_mon_count').textContent = r.monsterCount;
+  const monTotalEl = $('raid_mon_total'); if (monTotalEl) monTotalEl.textContent = isAbyss ? ABYSS_MOB_TOTAL : 99;
 
   const bossRow = $('raid_boss_row');
   if (r.monsterCount === 0){
@@ -4872,16 +5029,22 @@ function renderRaidLobby(){
     btn.disabled = false;
     $('raid_tip').innerHTML = `<b style="color:#a02050;">보스 단계!</b> 보스 HP는 누적으로 깎입니다. 마지막 최종 타격를 친 유저가 보상을 받습니다.`;
   } else {
-    btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/99)`;
+    const cap = isAbyss ? ABYSS_MOB_TOTAL : 99;
+    btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/${cap})`;
     btn.disabled = false;
-    $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
+    if (isAbyss){
+      $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 40+ · 테스트 중)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리 처치 시 올림포스 보스 등장. XP 대폭 상향 (몹 XP ×7 +250). 6시간 세션.`;
+    } else {
+      $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
+    }
   }
-  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화
+  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화. abyss는 축복 리셋 미지원 (테스트 중)
   const resetBtn = $('raid_reset_btn');
   if (resetBtn){
-    resetBtn.disabled = !r.bossDefeated;
-    resetBtn.style.opacity = r.bossDefeated ? '1' : '0.45';
-    resetBtn.style.cursor  = r.bossDefeated ? 'pointer' : 'not-allowed';
+    const canReset = r.bossDefeated && !isAbyss;
+    resetBtn.disabled = !canReset;
+    resetBtn.style.opacity = canReset ? '1' : '0.45';
+    resetBtn.style.cursor  = canReset ? 'pointer' : 'not-allowed';
   }
 }
 
@@ -5006,14 +5169,14 @@ function startRaidMobBattle(){
     monster = pending.monster;
     raidLog && true;  // 이어서 도전 안내는 아래에서
   } else {
-    monster = generateRaidMob();
+    monster = raidKey === 'abyss' ? generateAbyssMob(p.level) : generateRaidMob();
     p.pendingRaidMob = null;
   }
   GAME.raidCombat = {
     raidKey,
     mode: 'mob',
     monster,
-    maxTurns: GAME.player.level >= 26 ? 15 : 10,
+    maxTurns: raidKey === 'abyss' ? 20 : (GAME.player.level >= 26 ? 15 : 10),
     turn: 0,
     myBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
     monBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
@@ -5042,7 +5205,8 @@ function startRaidMobBattle(){
 async function startRaidBossBattle(){
   const raidKey = GAME.currentRaid;
   // 진입 직전에 클라우드 최신 boss_hp를 한 번 더 fetch (다른 사용자 누적 데미지 반영)
-  if (sb){
+  // abyss는 로컬 전용이므로 스킵
+  if (sb && raidKey !== 'abyss'){
     try { await loadRaidFromCloud(); } catch(e){ console.warn('[startRaidBoss reload]', e); }
   }
   const r = GAME.raid[raidKey];
@@ -5070,7 +5234,7 @@ async function startRaidBossBattle(){
     raidKey,
     mode: 'boss',
     monster: boss,
-    maxTurns: GAME.player.level >= 26 ? 15 : 10,
+    maxTurns: raidKey === 'abyss' ? 30 : (GAME.player.level >= 26 ? 15 : 10),
     turn: 0,
     myBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
     monBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
@@ -5294,9 +5458,11 @@ async function raidEnd(result){
     if (outcome === 'win'){
       // 몬스터 처치 — pendingRaidMob 제거 (다음 도전 시 새 몬스터)
       p.pendingRaidMob = null;
-      // 몬스터 카운트 차감 — 클라우드 RPC (참여자 등록 포함)
+      const isAbyssMob = c.raidKey === 'abyss';
+      const monTotalCap = isAbyssMob ? ABYSS_MOB_TOTAL : 99;
+      // 몬스터 카운트 차감 — abyss는 로컬만, 나머지는 클라우드 RPC
       let remain = r.monsterCount;
-      if (sb){
+      if (sb && !isAbyssMob){
         try {
           const { data, error } = await sb.rpc('raid_kill_mob');
           if (!error && typeof data === 'number'){ remain = data; r.monsterCount = data; }
@@ -5305,13 +5471,16 @@ async function raidEnd(result){
         if (r.monsterCount > 0) r.monsterCount--;
         remain = r.monsterCount;
       }
-      const gold = m.gold + 50;
-      const xp = m.xp + 15;
+      // 보상 — abyss는 x7 + 250 XP, +200G 추가 (엘리트는 2배)
+      const eliteMul = (m.elite ? 2 : 1);
+      const gold = isAbyssMob ? (m.gold + 200) * eliteMul : (m.gold + 50);
+      const xp   = isAbyssMob ? (m.xp * 7 + 250) * eliteMul : (m.xp + 15);
       p.gold += gold; p.xp += xp;
-      raidLog(`🏆 몬스터 처치! +${gold}G, +${xp}XP`, 'sys');
-      bodyHtml = `<p style="color:#060;">🏆 몬스터 처치 성공!</p>
+      const eliteTag = m.elite ? ' <span style="color:#a02050;font-weight:bold;">[엘리트]</span>' : '';
+      raidLog(`🏆 몬스터 처치!${eliteTag} +${gold}G, +${xp}XP`, 'sys');
+      bodyHtml = `<p style="color:#060;">🏆 몬스터 처치 성공!${eliteTag}</p>
         <p>보상: <b>+${gold}G, +${xp}XP</b></p>
-        <p>남은 몬스터: <b>${remain}/99</b></p>`;
+        <p>남은 몬스터: <b>${remain}/${monTotalCap}</b></p>`;
       let raidMobLvUp = false;
       let raidMobBonus = 0;
       while (p.xp >= xpForNextLevel(p.level)){
@@ -5352,11 +5521,12 @@ async function raidEnd(result){
       bodyHtml = `<p>${outcome==='flee'?'기권':'턴 종료'}. 몬스터 잔여 HP <b>${Math.max(0,m.hp)}/${m.hpMax}</b> — 다음 도전 시 이어집니다.</p>`;
     }
   } else if (c.mode === 'boss'){
-    // 보스 모드 — 클라우드 RPC에 누적 데미지 위임
+    const isAbyssBoss = c.raidKey === 'abyss';
+    // 보스 모드 — 클라우드 RPC에 누적 데미지 위임 (abyss는 로컬)
     const dealtTotal = c.statsMyDmg;
     let cloudKilled = false;
     let cloudOk = false;
-    if (sb && dealtTotal > 0){
+    if (sb && dealtTotal > 0 && !isAbyssBoss){
       try {
         const { data: dmgRows, error } = await sb.rpc('raid_deal_damage', { p_damage: dealtTotal });
         console.log('[raid_deal_damage] sent=' + dealtTotal,
@@ -5372,27 +5542,92 @@ async function raidEnd(result){
         }
       } catch(e){ console.warn('[raid_deal_damage]', e); }
     }
-    if (!cloudOk){
+    if (isAbyssBoss){
+      // 로컬 abyss: 누적 데미지 차감. 여러 시도로 boss.hp가 실제 차감돼 있으므로 그대로 사용
+      r.bossHp = Math.max(0, m.hp);
+      cloudKilled = r.bossHp === 0;
+    } else if (!cloudOk){
       // 클라우드 동기화 실패 또는 dealt=0 → 로컬 계산값 fallback
       r.bossHp = Math.max(0, m.hp);
     }
     const bossName = (RAID_BOSSES[c.raidKey].find(b => b.id === r.bossId) || {}).name || '보스';
-    const goldReward = Math.floor(dealtTotal * 0.5);
-    const xpReward   = Math.floor(dealtTotal * 0.1);
+    const goldReward = isAbyssBoss ? 5000 + Math.floor(dealtTotal * 0.5) : Math.floor(dealtTotal * 0.5);
+    const xpReward   = isAbyssBoss ? 5000 + Math.floor(dealtTotal * 0.1) : Math.floor(dealtTotal * 0.1);
 
     if (result === 'boss_kill' || cloudKilled){
       r.bossDefeated = true;
       r.lastKiller = p.name;
-      p.gold += goldReward;
-      p.xp += xpReward;
-      p.blessing = (p.blessing||0) + 1;  // 최종 타격자 확정 드롭
-      const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
-      const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
-      bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
-        <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
-        ${blessLine}
-        ${cardLine}
-        <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
+      if (isAbyssBoss){
+        // 3차 공격대 막타 특별 보상: 축복 +5, XP +30k, 골드 +5k, 영웅 뽑기 1뽑, 5% 전설 장비 드롭
+        const abyssGold = 5000 + goldReward;
+        const abyssXp   = 30000 + xpReward;
+        p.gold += abyssGold;
+        p.xp += abyssXp;
+        p.blessing = (p.blessing||0) + 5;
+        // 영웅 뽑기 확률표로 카드 1장 지급
+        const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
+        const grade = pickGachaGradeFor('hero');
+        const gPool = cardPool.filter(c => c.grade === grade);
+        const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
+        let cardBoxHtml = '';
+        if (card){
+          if (GAME.inventory.length < inventoryLimit()){
+            GAME.inventory.push(card);
+            cardBoxHtml = `<p style="color:#a02050;font-weight:bold;">🎁 영웅 뽑기 획득 — [${gradeKr(card.grade)}] ${card.name}</p>`;
+            try { chatSys(`★ ${p.name}님이 잊혀진 성좌 보스 처치로 [${gradeKr(card.grade)}] ${card.name} 획득!`); } catch(e){}
+          } else {
+            cardBoxHtml = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${card.name})</p>`;
+          }
+        }
+        // 5% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
+        let legendHtml = '';
+        if (Math.random() < 0.05){
+          const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
+          if (legendPool.length){
+            const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
+            if (pick.kind === 'weapon'){
+              const w = WEAPONS.find(x => x.id === pick.itemId);
+              if (w){
+                if (!p.weapons) p.weapons = [];
+                p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
+                legendHtml = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 무기 획득! ⚔ ${w.name} (+${w.atkBonus})</p>`;
+                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 무기 [${w.name}] 획득!`); } catch(e){}
+              }
+            } else if (pick.kind === 'armor'){
+              const a = ARMORS.find(x => x.id === pick.itemId);
+              if (a){
+                if (!p.armors) p.armors = [];
+                p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+                legendHtml = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 방어구 획득! 🛡 ${a.name} (+${a.defBonus})</p>`;
+                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 방어구 [${a.name}] 획득!`); } catch(e){}
+              }
+            }
+          }
+        }
+        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +5 (보유 ${p.blessing})</p>`;
+        bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 잊혀진 성좌 보스 ${bossName} 처치! 🏆🏆</p>
+          <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${abyssGold}G, +${abyssXp}XP</b></p>
+          ${blessLine}
+          ${cardBoxHtml}
+          ${legendHtml}
+          <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
+        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +5, XP +${abyssXp.toLocaleString()})`);
+      } else {
+        // 기존 dawn/mist
+        p.gold += goldReward;
+        p.xp += xpReward;
+        p.blessing = (p.blessing||0) + 1;
+        const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
+        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
+        bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
+          <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
+          ${blessLine}
+          ${cardLine}
+          <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
+        chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
+        // 본인 보상 즉시 수령 시도
+        if (sb){ setTimeout(() => claimRaidRewards(), 500); }
+      }
       let raidBossLvUp = false;
       let raidBossBonus = 0;
       while (p.xp >= xpForNextLevel(p.level)){
@@ -5407,18 +5642,44 @@ async function raidEnd(result){
         bodyHtml += _lvUpBoxHtml(raidBossBonus);
         _scheduleLvUpAlert();
       }
-      chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
-      // 본인 보상 즉시 수령 시도
-      if (sb){ setTimeout(() => claimRaidRewards(), 500); }
     } else if (result === 'lose'){
       p.hp = 0; p.mp = 0;
+      // abyss 보스는 참여자에게도 소액 보상 (여러 유저 협공 시스템의 로컬 근사)
+      let abyssPartHtml = '';
+      if (isAbyssBoss && dealtTotal >= 100){
+        p.xp += 5000;
+        const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
+        const grade = pickGachaGradeFor('hero');
+        const gPool = cardPool.filter(c => c.grade === grade);
+        const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
+        if (card && GAME.inventory.length < inventoryLimit()){
+          GAME.inventory.push(card);
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}</p>`;
+        } else {
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
+        }
+      }
       bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
         <p>이번 도전 입힌 데미지 <b>${dealtTotal}</b>는 보스 HP에 누적되었습니다.</p>
-        <p style="color:#666; font-size:11px;">최종 타격를 치지 못하면 보상이 없습니다.</p>
+        ${abyssPartHtml}
         <p>보스 잔여 HP: <b>${r.bossHp}/${r.bossHpMax}</b></p>`;
     } else if (result === 'time' || result === 'flee'){
+      let abyssPartHtml = '';
+      if (isAbyssBoss && dealtTotal >= 100 && result !== 'flee'){
+        p.xp += 5000;
+        const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
+        const grade = pickGachaGradeFor('hero');
+        const gPool = cardPool.filter(c => c.grade === grade);
+        const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
+        if (card && GAME.inventory.length < inventoryLimit()){
+          GAME.inventory.push(card);
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}</p>`;
+        } else {
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
+        }
+      }
       bodyHtml = `<p>${result==='flee'?'기권':'턴 종료'}. 입힌 누적 데미지 <b>${dealtTotal}</b> 반영됨.</p>
-        <p style="color:#666; font-size:11px;">최종 타격를 치지 못하면 보상이 없습니다.</p>
+        ${abyssPartHtml}
         <p>보스 잔여 HP: <b>${r.bossHp}/${r.bossHpMax}</b></p>
         <p style="font-size:11px;color:#666;">다시 도전해서 최종 타격를 노려보세요.</p>`;
     }
@@ -6999,10 +7260,11 @@ function _buildCombatCtx(kind, caster){
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
   };
 }
-// stat buff → MP 최대치 동기화 (HP는 반영하지 않음)
+// stat buff → HP/MP 최대치 동기화
 // - 증가: 늘어난 양만큼 현재치도 함께 증가
 // - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 60/80 → 최대 -20 → 45/60)
-// MP 배수: INT = +5/포인트 (calcDerived와 동일 배수)
+// HP 배수: CON = +5/포인트 (calcDerived와 동일)  |  MP 배수: INT = +5/포인트
+// STR/DEX/INT buff은 HP에 반영 안 함 (calcDerived의 STR/DEX/INT 계수와 별개 — 임시 버프는 원작 감성 따라 HP엔 미반영)
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
   const _apply = (maxKey, curKey, deltaMax) => {
@@ -7019,6 +7281,9 @@ function _syncPoolOnStatChange(obj, stat, delta){
       obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
     }
   };
+  if (stat === 'con'){
+    _apply('hpMax', 'hp', delta * 5);
+  }
   if (stat === 'int'){
     _apply('mpMax', 'mp', delta * 5);
   }
