@@ -4797,43 +4797,30 @@ function _assignDailyQuests(p){
   // 완벽 사냥꾼 hunt win 카운트 리셋
   p._dailyHuntPerfectCount = 0;
 }
-// 특정 delta counter 증가 후 관련 퀘스트 progress 반영
+// 특정 delta counter 증가 후 관련 퀘스트 progress 반영 (수령은 유저가 수동으로)
 function _bumpDailyCounter(field, delta, questId){
   const p = GAME.player;
   if (!p || !p._dailyCounters) return;
   p._dailyCounters[field] = (p._dailyCounters[field] || 0) + delta;
-  // 퀘스트 슬롯의 progress를 최신값으로 갱신 (advance 대신 절대값 세팅)
   if (p.dailyQuests && questId){
     const slot = p.dailyQuests.slots.find(s => s.id === questId);
     if (slot && !slot.claimed){
       const oldProgress = slot.progress || 0;
       slot.progress = Math.min(slot.target, p._dailyCounters[field]);
       if (slot.progress >= slot.target && oldProgress < slot.target){
-        _claimQuestAndBumpDaily(slot, questId);
+        _notifyQuestReady(questId, 'daily');
       }
     }
   }
 }
-// 슬롯 완료 처리 + 일일 완주 카운트 (advance 없이 직접 호출용)
-function _claimQuestAndBumpDaily(slot, questId){
-  const def = _findQuestDef(questId);
+// 완료 알림 (수령은 유저가 수동으로 하도록 유도)
+function _notifyQuestReady(questId, tab){
+  const def = tab === 'weekly'
+    ? WEEKLY_QUEST_POOL.find(q => q.id === questId)
+    : _findQuestDef(questId);
   if (!def) return;
-  _claimQuestReward(slot, def);
-  if (questId !== DAILY_QUEST_FIXED.id){
-    const p = GAME.player;
-    const daily = p.dailyQuests.slots.find(s => s.id === DAILY_QUEST_FIXED.id);
-    if (daily && !daily.claimed){
-      daily.progress = Math.min(daily.target, (daily.progress || 0) + 1);
-      if (daily.progress >= daily.target){
-        _claimQuestReward(daily, DAILY_QUEST_FIXED);
-        // 일일 완주 → 주간 「완벽주의자」 + 칭호 「근면성실」 진행
-        try { advanceWeeklyQuest('wq_daily_full_3', 1); } catch(e){}
-        try { bumpTitleCounter('daily_full_days', 1); } catch(e){}
-      }
-    }
-  }
+  try { toast(`🎉 「${def.name}」 완료! 퀘스트 창에서 수령하세요.`); } catch(e){}
   try { renderQuests(); } catch(e){}
-  saveGame();
 }
 // ─── 주간 퀘스트 ─────────────────────────────────────
 // 이번 주 앵커 (월요일 04:00 KST 기준) — 반환값은 그 월요일의 yyyy-mm-dd
@@ -4894,10 +4881,9 @@ function advanceWeeklyQuest(id, delta){
   const oldProgress = slot.progress || 0;
   slot.progress = Math.min(slot.target, oldProgress + (delta || 1));
   if (slot.progress >= slot.target && oldProgress < slot.target){
-    _claimQuestReward(slot, def);
-    try { renderQuests(); } catch(e){}
-    saveGame();
+    _notifyQuestReady(id, 'weekly');
   }
+  saveGame();
 }
 function _bumpWeeklyCounter(field, delta, questId){
   const p = GAME.player;
@@ -4909,10 +4895,7 @@ function _bumpWeeklyCounter(field, delta, questId){
       const oldProgress = slot.progress || 0;
       slot.progress = Math.min(slot.target, p._weeklyCounters[field]);
       if (slot.progress >= slot.target && oldProgress < slot.target){
-        const def = WEEKLY_QUEST_POOL.find(q => q.id === questId);
-        if (def) _claimQuestReward(slot, def);
-        try { renderQuests(); } catch(e){}
-        saveGame();
+        _notifyQuestReady(questId, 'weekly');
       }
     }
   }
@@ -4931,7 +4914,7 @@ function _findQuestDef(id){
   if (id === DAILY_QUEST_FIXED.id) return DAILY_QUEST_FIXED;
   return DAILY_QUEST_POOL.find(q => q.id === id) || null;
 }
-// 카운터 진행 (delta만큼 증가). 완료 시 자동 수령.
+// 카운터 진행 (delta만큼 증가). 완료 시 알림만, 수령은 유저가 수동으로.
 function advanceDailyQuest(id, delta){
   const p = GAME.player;
   if (!p || !p.dailyQuests) return;
@@ -4939,21 +4922,53 @@ function advanceDailyQuest(id, delta){
   if (!slot || slot.claimed) return;
   const def = _findQuestDef(id);
   if (!def) return;
-  slot.progress = Math.min(slot.target, (slot.progress || 0) + (delta || 1));
-  if (slot.progress >= slot.target && !slot.claimed){
-    _claimQuestReward(slot, def);
-    // 랜덤 슬롯 완료 → 일일 완주 카운트 증가
-    if (id !== DAILY_QUEST_FIXED.id){
-      const daily = p.dailyQuests.slots.find(s => s.id === DAILY_QUEST_FIXED.id);
-      if (daily && !daily.claimed){
-        daily.progress = Math.min(daily.target, (daily.progress || 0) + 1);
-        if (daily.progress >= daily.target){
-          _claimQuestReward(daily, DAILY_QUEST_FIXED);
-        }
+  const oldProgress = slot.progress || 0;
+  slot.progress = Math.min(slot.target, oldProgress + (delta || 1));
+  if (slot.progress >= slot.target && oldProgress < slot.target){
+    _notifyQuestReady(id, 'daily');
+  }
+  saveGame();
+}
+// ─── 수령 버튼 핸들러 ──────────────────────────
+function claimDailyQuest(id){
+  const p = GAME.player;
+  if (!p || !p.dailyQuests) return;
+  const slot = p.dailyQuests.slots.find(s => s.id === id);
+  if (!slot){ try{ toast('퀘스트를 찾을 수 없습니다.'); }catch(e){} return; }
+  if (slot.claimed){ try{ toast('이미 수령한 퀘스트입니다.'); }catch(e){} return; }
+  if (slot.progress < slot.target){ try{ toast('아직 완료되지 않았습니다.'); }catch(e){} return; }
+  const def = _findQuestDef(id);
+  if (!def) return;
+  _claimQuestReward(slot, def);
+  // 랜덤 슬롯 수령 → 일일 완주 카운트 증가 (완주 자체도 유저가 수동으로 수령해야 함)
+  if (id !== DAILY_QUEST_FIXED.id){
+    const daily = p.dailyQuests.slots.find(s => s.id === DAILY_QUEST_FIXED.id);
+    if (daily && !daily.claimed){
+      const oldP = daily.progress || 0;
+      daily.progress = Math.min(daily.target, oldP + 1);
+      if (daily.progress >= daily.target && oldP < daily.target){
+        _notifyQuestReady(DAILY_QUEST_FIXED.id, 'daily');
       }
     }
-    try { renderDailyQuests(); } catch(e){}
+  } else {
+    // 일일 완주 자체를 수령 → 주간 「완벽주의자」 + 칭호 「근면성실」 진행
+    try { advanceWeeklyQuest('wq_daily_full_3', 1); } catch(e){}
+    try { bumpTitleCounter('daily_full_days', 1); } catch(e){}
   }
+  try { renderQuests(); } catch(e){}
+  saveGame();
+}
+function claimWeeklyQuest(id){
+  const p = GAME.player;
+  if (!p || !p.weeklyQuests) return;
+  const slot = p.weeklyQuests.slots.find(s => s.id === id);
+  if (!slot){ try{ toast('퀘스트를 찾을 수 없습니다.'); }catch(e){} return; }
+  if (slot.claimed){ try{ toast('이미 수령한 퀘스트입니다.'); }catch(e){} return; }
+  if (slot.progress < slot.target){ try{ toast('아직 완료되지 않았습니다.'); }catch(e){} return; }
+  const def = WEEKLY_QUEST_POOL.find(q => q.id === id);
+  if (!def) return;
+  _claimQuestReward(slot, def);
+  try { renderQuests(); } catch(e){}
   saveGame();
 }
 // 퀘스트 보상 자동 수령
@@ -5048,6 +5063,7 @@ function renderQuests(){
     if (isWeekly) return WEEKLY_QUEST_POOL.find(q => q.id === id) || null;
     return _findQuestDef(id);
   };
+  const claimFn = isWeekly ? 'claimWeeklyQuest' : 'claimDailyQuest';
   el.innerHTML = slots.map(slot => {
     const def = findDef(slot.id) || {};
     const pct = Math.min(100, Math.round((slot.progress / slot.target) * 100));
@@ -5058,15 +5074,24 @@ function renderQuests(){
     if (def.xp)    rewards.push(`<b style="color:#2e53b2;">+${def.xp.toLocaleString()} XP</b>`);
     if (def.bless) rewards.push(`<b style="color:#a02050;">✨ 축복 +${def.bless}</b>`);
     if (def.card)  rewards.push(`<b style="color:#7E181E;">🎁 ${def.card === 'hero' ? '영웅' : def.card === 'unique' ? '유니크' : def.card === 'rare' ? '레어' : '일반'} 뽑기</b>`);
-    return `<div style="background:#fff;border:2px solid ${slot.claimed?'#5aaa5a':'#c9a26b'};border-radius:6px;padding:10px 12px;margin-bottom:8px;${isFixedDaily?'background:linear-gradient(180deg,#fff8e0,#fff);':''}">
+    const isReady = !slot.claimed && slot.progress >= slot.target;
+    let statusEl = '';
+    if (slot.claimed){
+      statusEl = '<span style="margin-left:auto;color:#5aaa5a;font-weight:bold;">✔ 수령 완료</span>';
+    } else if (isReady){
+      statusEl = `<button onclick="${claimFn}('${slot.id}')" style="margin-left:auto;background:linear-gradient(180deg,#f6c451,#c98d1a);color:#fff;border:1px solid #7a5a10;border-radius:4px;padding:4px 12px;font-weight:bold;font-size:12px;cursor:pointer;box-shadow:0 1px 2px rgba(0,0,0,.2);">🎁 수령</button>`;
+    }
+    const borderColor = slot.claimed ? '#5aaa5a' : (isReady ? '#e0a020' : '#c9a26b');
+    const barColor    = slot.claimed ? '#5aaa5a' : (isReady ? '#e0a020' : '#b88600');
+    return `<div style="background:#fff;border:2px solid ${borderColor};border-radius:6px;padding:10px 12px;margin-bottom:8px;${isFixedDaily?'background:linear-gradient(180deg,#fff8e0,#fff);':''}${isReady?'box-shadow:0 0 8px rgba(224,160,32,.4);':''}">
       <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px;">
         <span style="background:${dc};color:#fff;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:bold;">${def.diff||'-'}</span>
         <b style="font-size:14px;color:#333;">${isFixedDaily?'⭐ ':''}${def.name||'?'}</b>
-        ${slot.claimed?'<span style="margin-left:auto;color:#5aaa5a;font-weight:bold;">✔ 완료</span>':''}
+        ${statusEl}
       </div>
       <div style="font-size:12px;color:#555;margin-bottom:6px;">${def.desc||''}</div>
       <div style="background:#eee;border-radius:3px;height:14px;position:relative;overflow:hidden;margin-bottom:4px;">
-        <div style="background:${slot.claimed?'#5aaa5a':'#b88600'};width:${pct}%;height:100%;transition:width .3s;"></div>
+        <div style="background:${barColor};width:${pct}%;height:100%;transition:width .3s;"></div>
         <span style="position:absolute;left:50%;top:0;transform:translateX(-50%);font-size:11px;color:#fff;font-weight:bold;text-shadow:0 0 2px #000;line-height:14px;">${slot.progress.toLocaleString()}/${slot.target.toLocaleString()}</span>
       </div>
       <div style="font-size:11px;color:#666;">보상: ${rewards.join(' · ') || '-'}</div>
@@ -5122,6 +5147,7 @@ const TITLE_POOL = [
 function _ensureTitleState(p){
   if (!p) return;
   if (!Array.isArray(p.titles)) p.titles = [];
+  if (!Array.isArray(p.pendingTitles)) p.pendingTitles = [];
   if (typeof p.equippedTitle === 'undefined') p.equippedTitle = null;
   if (!p.titleCounters) p.titleCounters = {
     hunt_wins:0, hunt_streak_max:0, rank_defense_wins:0, rank_reached_min:9999,
@@ -5168,44 +5194,74 @@ function _getTitleCurrentValue(p, cond){
     default: return 0;
   }
 }
-// 모든 칭호 조건 재검사 → 새로 충족된 것만 획득 처리 + 팝업
-// 팝업 반복 방지: (1) 이미 보유한 칭호는 조건 재충족돼도 무시 (p.titles 체크)
-//                (2) 한 번의 재검사에서 여러 칭호가 동시 언락되면 팝업 1개로 묶음
-//                (3) 200ms 안에 여러 번 호출돼도 팝업 debounce로 1회만 표시
-let _titleUnlockPopupPending = null;
-let _titleUnlockPopupBuffer = [];
+// 모든 칭호 조건 재검사 → 새로 충족된 것만 pending 처리 + 알림 토스트
+// 반복 방지: (1) 이미 보유(claimed)한 칭호는 무시, (2) 이미 pending 상태인 칭호는 무시
+//            (3) 짧은 시간 안에 여러 번 호출돼도 토스트 debounce로 1회만 표시
+let _titleUnlockToastPending = null;
+let _titleUnlockToastBuffer = [];
 function checkTitleUnlocks(){
   const p = GAME.player;
   if (!p) return;
   _ensureTitleState(p);
   for (const t of TITLE_POOL){
     if (p.titles.includes(t.id)) continue;
+    if (p.pendingTitles.includes(t.id)) continue;
     const cur = _getTitleCurrentValue(p, t.cond);
     if (cur >= t.cond.target){
-      p.titles.push(t.id);
-      _titleUnlockPopupBuffer.push(t);
-      // 첫 획득 시 자동 장착 (선택적)
-      if (!p.equippedTitle) p.equippedTitle = t.id;
+      p.pendingTitles.push(t.id);
+      _titleUnlockToastBuffer.push(t);
     }
   }
-  if (_titleUnlockPopupBuffer.length > 0){
-    // 이미 예약된 팝업이 있으면 재활용 — 짧은 시간 안에 여러 번 언락돼도 팝업 1개로 통합
-    if (_titleUnlockPopupPending){ clearTimeout(_titleUnlockPopupPending); }
-    _titleUnlockPopupPending = setTimeout(() => {
-      const list = _titleUnlockPopupBuffer.slice();
-      _titleUnlockPopupBuffer = [];
-      _titleUnlockPopupPending = null;
+  if (_titleUnlockToastBuffer.length > 0){
+    if (_titleUnlockToastPending){ clearTimeout(_titleUnlockToastPending); }
+    _titleUnlockToastPending = setTimeout(() => {
+      const list = _titleUnlockToastBuffer.slice();
+      _titleUnlockToastBuffer = [];
+      _titleUnlockToastPending = null;
       if (list.length === 0) return;
       try {
-        const lines = list.map(t => `• 「${t.name}」 (${t.tier}) — ${t.desc}`);
         const header = list.length === 1
-          ? `🎖 새 칭호 획득!`
-          : `🎖 새 칭호 ${list.length}개 획득!`;
-        alert(`${header}\n\n${lines.join('\n')}\n\n프로필 관리 → 칭호 메뉴에서 장착할 수 있습니다.`);
+          ? `🎖 「${list[0].name}」 칭호 획득 대기!`
+          : `🎖 새 칭호 ${list.length}개 획득 대기!`;
+        toast(`${header} 프로필 관리에서 수령하세요.`);
       } catch(e){}
+      try { renderProfileTitles(); } catch(e){}
     }, 300);
   }
   saveGame();
+}
+// 칭호 수령 — pendingTitles → titles 이동, 첫 획득 시 자동 장착
+function claimTitle(id){
+  const p = GAME.player;
+  if (!p) return;
+  _ensureTitleState(p);
+  const idx = p.pendingTitles.indexOf(id);
+  if (idx < 0){ try{ toast('수령 대기 중인 칭호가 아닙니다.'); }catch(e){} return; }
+  const t = _findTitle(id);
+  if (!t) return;
+  p.pendingTitles.splice(idx, 1);
+  if (!p.titles.includes(id)) p.titles.push(id);
+  if (!p.equippedTitle) p.equippedTitle = id;
+  saveGame();
+  cloudSaveNow().catch(()=>{});
+  try { renderProfileTitles(); } catch(e){}
+  try { toast(`🎖 「${t.name}」 칭호 수령 완료!`); } catch(e){}
+}
+function claimAllTitles(){
+  const p = GAME.player;
+  if (!p) return;
+  _ensureTitleState(p);
+  if (!p.pendingTitles.length){ try{ toast('수령할 칭호가 없습니다.'); }catch(e){} return; }
+  const list = p.pendingTitles.slice();
+  list.forEach(id => {
+    if (!p.titles.includes(id)) p.titles.push(id);
+    if (!p.equippedTitle) p.equippedTitle = id;
+  });
+  p.pendingTitles = [];
+  saveGame();
+  cloudSaveNow().catch(()=>{});
+  try { renderProfileTitles(); } catch(e){}
+  try { toast(`🎖 ${list.length}개 칭호 수령 완료!`); } catch(e){}
 }
 // 카운터 증가 헬퍼 — 값 증가 후 자동 조건 재검사
 function bumpTitleCounter(field, delta){
@@ -5362,8 +5418,8 @@ function generateAbyssMob(playerLv){
   mLv = Math.max(ABYSS_MIN_LEVEL, mLv);
   const s = tpl.stats;
   // HP: baseHp × (1 + (mLv-1)*0.25) × 2.5 (기존 raid보다 3배 강력)
-  // HP 배수 1.25 — 기존 raid 대비 여전히 강력하지만 solo 시도 가능한 수준
-  const hp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 1.25));
+  // HP 배수 0.5 — 기존 1.25에서 40% (0.5) 수준으로 대폭 하향
+  const hp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.5));
   // 무기·방어구 보너스 (엘리트는 더 크게)
   const wBonus = tpl.elite ? 15 + Math.floor(Math.random() * 6) : 10 + Math.floor(Math.random() * 6);
   const aBonus = tpl.elite ? 12 + Math.floor(Math.random() * 6) : 8  + Math.floor(Math.random() * 6);
@@ -11250,35 +11306,55 @@ function renderProfileTitles(){
   const el = $('profileTitleList');
   if (!el) return;
   const owned = new Set(p.titles || []);
+  const pending = new Set(p.pendingTitles || []);
   const tierOrder = { '일반':1, '희귀':2, '영웅':3, '전설':4 };
   const items = TITLE_POOL.map(t => {
     const has = owned.has(t.id);
+    const isPending = pending.has(t.id);
     const isEq = p.equippedTitle === t.id;
     const cur = _getTitleCurrentValue(p, t.cond);
     const pct = Math.min(100, Math.round((cur / t.cond.target) * 100));
-    return { t, has, isEq, cur, pct };
+    return { t, has, isPending, isEq, cur, pct };
   }).sort((a, b) => {
-    // 획득한 것 먼저 + 등급 순
-    if (a.has !== b.has) return a.has ? -1 : 1;
+    // 수령 대기 먼저 → 획득한 것 → 미획득 (각각 내부적으로 등급 순)
+    const stateA = a.isPending ? 0 : (a.has ? 1 : 2);
+    const stateB = b.isPending ? 0 : (b.has ? 1 : 2);
+    if (stateA !== stateB) return stateA - stateB;
     return (tierOrder[b.t.tier] || 0) - (tierOrder[a.t.tier] || 0);
   });
-  el.innerHTML = items.map(({ t, has, isEq, cur, pct }) => {
-    const bg = isEq ? 'background:linear-gradient(180deg,#fff8e0,#fff);border:2px solid #ffb200;' :
-               has  ? 'background:#fff;border:2px solid #c9a26b;' :
-                      'background:#f0f0f0;border:2px dashed #bbb;opacity:0.75;';
+  // 상단 일괄 수령 버튼
+  const pendingCount = p.pendingTitles.length;
+  const header = pendingCount > 0
+    ? `<div style="background:linear-gradient(180deg,#fff2c0,#ffe090);border:2px solid #e0a020;border-radius:6px;padding:8px 12px;margin-bottom:10px;display:flex;align-items:center;gap:8px;box-shadow:0 0 8px rgba(224,160,32,.35);">
+        <b style="color:#7a5a10;font-size:13px;">🎖 수령 대기 중인 칭호 ${pendingCount}개</b>
+        <button onclick="claimAllTitles()" style="margin-left:auto;background:linear-gradient(180deg,#f6c451,#c98d1a);color:#fff;border:1px solid #7a5a10;border-radius:4px;padding:5px 14px;font-weight:bold;font-size:12px;cursor:pointer;">🎁 전체 수령</button>
+       </div>`
+    : '';
+  el.innerHTML = header + items.map(({ t, has, isPending, isEq, cur, pct }) => {
+    const bg = isPending ? 'background:linear-gradient(180deg,#fff8e0,#fff2c0);border:2px solid #e0a020;box-shadow:0 0 6px rgba(224,160,32,.35);' :
+               isEq      ? 'background:linear-gradient(180deg,#fff8e0,#fff);border:2px solid #ffb200;' :
+               has       ? 'background:#fff;border:2px solid #c9a26b;' :
+                           'background:#f0f0f0;border:2px dashed #bbb;opacity:0.75;';
     const badge = `<span style="display:inline-block;background:${t.color};color:#fff;padding:2px 8px;border-radius:3px;font-size:11px;font-weight:bold;">🎖 ${t.name}</span>`;
     const tierChip = `<span style="font-size:10px;color:#666;background:#f5f5f5;padding:1px 5px;border-radius:2px;margin-left:6px;">${t.tier}</span>`;
-    const btn = has
-      ? (isEq
-          ? `<button onclick="unequipTitle()" style="padding:4px 12px;font-size:11px;background:#a02050;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">해제</button>`
-          : `<button onclick="equipTitle('${t.id}')" style="padding:4px 12px;font-size:11px;background:#3a3a8a;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">장착</button>`)
-      : `<span style="color:#888;font-size:11px;">${cur.toLocaleString()}/${t.cond.target.toLocaleString()}</span>`;
-    const progressBar = has ? '' : `<div style="background:#e0e0e0;border-radius:3px;height:6px;margin-top:4px;overflow:hidden;"><div style="background:#b88600;width:${pct}%;height:100%;"></div></div>`;
+    let btn;
+    if (isPending){
+      btn = `<button onclick="claimTitle('${t.id}')" style="padding:4px 12px;font-size:11px;background:linear-gradient(180deg,#f6c451,#c98d1a);color:#fff;border:1px solid #7a5a10;border-radius:3px;cursor:pointer;font-weight:bold;">🎁 수령</button>`;
+    } else if (has){
+      btn = isEq
+        ? `<button onclick="unequipTitle()" style="padding:4px 12px;font-size:11px;background:#a02050;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">해제</button>`
+        : `<button onclick="equipTitle('${t.id}')" style="padding:4px 12px;font-size:11px;background:#3a3a8a;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">장착</button>`;
+    } else {
+      btn = `<span style="color:#888;font-size:11px;">${cur.toLocaleString()}/${t.cond.target.toLocaleString()}</span>`;
+    }
+    const progressBar = (has || isPending) ? '' : `<div style="background:#e0e0e0;border-radius:3px;height:6px;margin-top:4px;overflow:hidden;"><div style="background:#b88600;width:${pct}%;height:100%;"></div></div>`;
+    const statusLabel = isPending ? '<span style="margin-left:8px;color:#c98d1a;font-weight:bold;font-size:11px;">✨ 수령 대기</span>'
+                                  : (isEq ? '<span style="margin-left:8px;color:#a02050;font-weight:bold;font-size:11px;">★ 장착 중</span>' : '');
     return `<div style="padding:8px 12px;border-radius:6px;margin-bottom:6px;${bg}">
       <div style="display:flex;align-items:center;gap:6px;">
         ${badge}${tierChip}
         <span style="margin-left:auto;">${btn}</span>
-        ${isEq ? '<span style="margin-left:8px;color:#a02050;font-weight:bold;font-size:11px;">★ 장착 중</span>' : ''}
+        ${statusLabel}
       </div>
       <div style="font-size:11px;color:#555;margin-top:4px;">${t.desc}</div>
       ${progressBar}
