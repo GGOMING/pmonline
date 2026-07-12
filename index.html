@@ -1406,11 +1406,11 @@
           <td id="m-hunt" class="menu-hunt row2" onclick="openHunt()" style="font-weight:bold;">⚔ 수행 ⚔</td>
           <td class="row2" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
         </tr></table>
-        <!-- 3줄: 공격대 3종 (요구 레벨 표기) -->
+        <!-- 3줄: 공격대 3종 (파스텔 하늘색 통일) -->
         <table><tr>
-          <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')">⛅ 새벽의 언덕<br><small style="font-size:10px;font-weight:normal;color:#7a5030;">Lv. 25</small></td>
-          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')">🌫 안개의 숲<br><small style="font-size:10px;font-weight:normal;color:#405060;">Lv. 25</small></td>
-          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="color:#4a148c;font-weight:bold;background:linear-gradient(180deg,#1a0033,#0a001a);color:#c47eff;">🌌 잊혀진 성좌<br><small style="font-size:10px;font-weight:normal;color:#c47eff;">Lv. 40</small></td>
+          <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')"  style="background:#d6ecfa;color:#2a4a6b;">⛅ 새벽의 언덕 (Lv. 25)</td>
+          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')"  style="background:#d6ecfa;color:#2a4a6b;">🌫 안개의 숲 (Lv. 25)</td>
+          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="background:#d6ecfa;color:#2a4a6b;">🌌 잊혀진 성좌 (Lv. 40)</td>
         </tr></table>
         <!-- 4줄: 카드 도감·프로필·명예의 전당·축복의 상점·오픈채팅방 -->
         <table><tr>
@@ -1426,6 +1426,7 @@
         랭킹전 순위 : <b id="myRank">미등록</b><br>
         전체 유저 랭킹 : <b id="myOverallRank">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
         <div id="raid-status-summary" style="font-size:11px;color:#333;margin-top:6px;padding:6px 8px;background:#fff8e0;border:1px solid #c9a26b;border-radius:4px;">
+          <div id="raid-status-time"  style="line-height:1.6;text-align:center;font-weight:bold;color:#7E181E;border-bottom:1px dashed #c9a26b;padding-bottom:3px;margin-bottom:3px;">공격대 남은 시간 --:--:--</div>
           <div id="raid-status-dawn"  style="line-height:1.6;">⛅ 새벽의 언덕 — 로딩 중…</div>
           <div id="raid-status-mist"  style="line-height:1.6;">🌫 안개의 숲 — 로딩 중…</div>
           <div id="raid-status-abyss" style="line-height:1.6;">🌌 잊혀진 성좌 — 로딩 중…</div>
@@ -5544,10 +5545,37 @@ async function checkRaidReset(raidKey){
 async function checkAllRaidsReset(){
   if (sb){
     await loadRaidFromCloud();
+    // 클라우드 row 없거나 세션 비어있으면 로컬 초기화 fallback
+    ['dawn','mist'].forEach(k => {
+      if (!GAME.raid[k] || !GAME.raid[k].sessionStart){
+        try { _forceLocalRaidReset(k); } catch(e){}
+      }
+    });
+    if (!GAME.raid.abyss || !GAME.raid.abyss.sessionStart){
+      try { checkAbyssReset(); } catch(e){}
+    }
   } else {
-    ['dawn','mist'].forEach(k => checkRaidReset(k));
+    ['dawn','mist'].forEach(k => _forceLocalRaidReset(k));
     try { checkAbyssReset(); } catch(e){}
   }
+}
+// 로컬 리셋 헬퍼 (sb 무관, 세션 만료 시 강제 초기화)
+function _forceLocalRaidReset(raidKey){
+  const r = GAME.raid && GAME.raid[raidKey];
+  if (!r) return;
+  const currentSession = getCurrentSessionStart();
+  if (r.sessionStart === currentSession) return;
+  const bossList = RAID_BOSSES[raidKey];
+  if (!bossList || !bossList.length) return;
+  const boss = bossList[Math.floor(Math.random() * bossList.length)];
+  r.sessionStart = currentSession;
+  r.monsterCount = raidKey === 'abyss' ? ABYSS_MOB_TOTAL : 99;
+  r.bossId = boss.id;
+  r.bossHpMax = boss.hpMax;
+  r.bossHp = boss.hpMax;
+  r.bossDefeated = false;
+  r.lastKiller = null;
+  r.lastNpcUpdate = Date.now();
 }
 
 // 몬스터 카운트는 플레이어가 잡지 않으면 줄지 않음 (NPC 자동 시뮬레이션 제거)
@@ -5558,11 +5586,23 @@ function simulateRaidProgress(raidKey){
 }
 const RAND_NPC_NAMES = ['Scandal','Idgun','더울이','로보스팟','반지요정','선의기운','아그네시카','세이비아','머할려구','카드소'];
 
-// 메인 화면 공격대 현황 갱신 — dawn/mist/abyss 3줄
+// 메인 화면 공격대 현황 갱신 — 상단에 남은 시간(공통) + 각 raid 잔여 몬스터/보스 상태
 function updateRaidUI(){
+  _updateRaidTimeLine();
   _updateRaidSummaryLine('dawn',  '⛅ 새벽의 언덕',   'raid-status-dawn');
   _updateRaidSummaryLine('mist',  '🌫 안개의 숲',     'raid-status-mist');
   _updateRaidSummaryLine('abyss', '🌌 잊혀진 성좌',   'raid-status-abyss');
+}
+// 세션 리셋까지 남은 시간 (dawn/mist/abyss 공통 — 6h 사이클 앵커 기준으로 계산)
+function _updateRaidTimeLine(){
+  const el = $('raid-status-time'); if (!el) return;
+  const now = Date.now();
+  const cur = getCurrentSessionStart();
+  const nextReset = cur + RAID_SESSION_HOURS * 3600 * 1000;
+  const remain = Math.max(0, Math.floor((nextReset - now) / 1000));
+  const h = Math.floor(remain / 3600), m = Math.floor((remain % 3600) / 60), s = remain % 60;
+  const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  el.textContent = `공격대 남은 시간 ${timeStr}`;
 }
 function _updateRaidSummaryLine(raidKey, prefix, elId){
   const el = $(elId); if (!el) return;
@@ -5571,17 +5611,13 @@ function _updateRaidSummaryLine(raidKey, prefix, elId){
     el.innerHTML = `${prefix} — <span style="color:#999;">세션 로딩 중</span>`;
     return;
   }
-  const cycleMs = RAID_SESSION_HOURS * 3600 * 1000;
-  const remain = Math.max(0, Math.floor(((r.sessionStart + cycleMs) - Date.now()) / 1000));
-  const h = Math.floor(remain / 3600), m = Math.floor((remain % 3600) / 60), s = remain % 60;
-  const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   let monStr;
   if (r.bossDefeated) monStr = `<span style="color:#5aaa5a;font-weight:bold;">보스 처치 완료</span>`;
   else if (r.monsterCount === 0){
     const pct = r.bossHpMax > 0 ? Math.floor(r.bossHp / r.bossHpMax * 100) : 100;
     monStr = `<span style="color:#a02050;font-weight:bold;">보스 HP ${r.bossHp.toLocaleString()}/${r.bossHpMax.toLocaleString()} (${pct}%)</span>`;
-  } else monStr = `잔여 몹 <b>${r.monsterCount}</b>`;
-  el.innerHTML = `${prefix} — ${monStr} · <span style="color:#666;">${timeStr} 남음</span>`;
+  } else monStr = `잔여 몬스터 <b>${r.monsterCount}</b>`;
+  el.innerHTML = `${prefix} — ${monStr}`;
 }
 // 메인 화면 노출 중 매초 갱신
 let _raidSummaryTickerId = null;
