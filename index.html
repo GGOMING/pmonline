@@ -1204,12 +1204,12 @@
       <div class="sys-group">
         <h4>공격대 (보스전)</h4>
         <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
-          <b>현재 활성 raid 강제 갱신:</b>
-          <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (active_key 무작위)</button>
-          <span style="font-size:11px;color:#666;">— 4시간 기다리지 않고 즉시 dawn/mist 무작위 + 새 보스 + 몬스터 99 리셋</span>
+          <b>3개 공격대 전체 강제 리셋:</b>
+          <button class="admin-btn small danger" onclick="adminForceRaidReset()">⚡ 즉시 새 세션 시작 (dawn/mist/abyss)</button>
+          <span style="font-size:11px;color:#666;">— 6시간 기다리지 않고 즉시 3개 raid 모두 새 보스 + 몬스터 리셋</span>
         </div>
         <div style="margin:4px 0;">
-          새벽의 언덕: 몬스터 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
+          ⛅ 새벽의 언덕: 몬스터 <b id="adminRaidDawnMon">-</b>, 보스 HP <b id="adminRaidDawnHp">-</b>
           <button class="admin-btn small" onclick="adminResetRaid('dawn')">세션 리셋</button>
           <button class="admin-btn small" onclick="adminBossPhase('dawn')">보스 단계로 이동</button>
           <button class="admin-btn small" onclick="adminKillBoss('dawn')">보스 즉시 처치</button>
@@ -1217,12 +1217,20 @@
           <button class="admin-btn small" onclick="adminSetBoss('dawn')">보스 교체</button>
         </div>
         <div style="margin:4px 0;">
-          안개의 숲: 몬스터 <b id="adminRaidMistMon">-</b>, 보스 HP <b id="adminRaidMistHp">-</b>
+          🌫 안개의 숲: 몬스터 <b id="adminRaidMistMon">-</b>, 보스 HP <b id="adminRaidMistHp">-</b>
           <button class="admin-btn small" onclick="adminResetRaid('mist')">세션 리셋</button>
           <button class="admin-btn small" onclick="adminBossPhase('mist')">보스 단계로 이동</button>
           <button class="admin-btn small" onclick="adminKillBoss('mist')">보스 즉시 처치</button>
           <select id="adminRaidMistBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('mist')">보스 교체</button>
+        </div>
+        <div style="margin:4px 0;">
+          🌌 잊혀진 성좌: 몬스터 <b id="adminRaidAbyssMon">-</b>, 보스 HP <b id="adminRaidAbyssHp">-</b>
+          <button class="admin-btn small" onclick="adminResetRaid('abyss')">세션 리셋</button>
+          <button class="admin-btn small" onclick="adminBossPhase('abyss')">보스 단계로 이동</button>
+          <button class="admin-btn small" onclick="adminKillBoss('abyss')">보스 즉시 처치</button>
+          <select id="adminRaidAbyssBossSel" style="font-size:11px;"></select>
+          <button class="admin-btn small" onclick="adminSetBoss('abyss')">보스 교체</button>
         </div>
       </div>
 
@@ -2627,7 +2635,7 @@ const CARDS = [
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
   { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
   { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전자 MP*0.2 자해 데미지 / 상대방 MP -20%', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2},{type:'dispel'}]} },
-  { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'pctDebuff',stats:{dex:-0.5},turns:3},{type:'dispel'}]} },
+  { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'pctDebuff',stats:{dex:-0.5},turns:3}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
   { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
   { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'INT로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
@@ -2676,7 +2684,7 @@ const GAME = {
   raid: {
     dawn:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
     mist:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
-    // 3차 공격대 잊혀진 성좌 — Lv 40+, 6시간 세션 (0/6/12/18시 리셋). 테스트 중
+    // 3차 공격대 잊혀진 성좌 — Lv 40+, 6시간 세션 (0/6/12/18시 리셋)
     abyss: { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
   },
   raidCombat: null,
@@ -3229,6 +3237,9 @@ function doHeal(){
     setHealMsg(`⚠ 골드가 부족합니다. (필요: ${cost} G)`, 'err');
     return;
   }
+  const healedHp = Math.max(0, p.hpMax - p.hp);
+  const healedMp = Math.max(0, p.mpMax - p.mp);
+  const healedTotal = healedHp + healedMp;
   p.gold -= cost;
   p.hp = p.hpMax;
   p.mp = p.mpMax;
@@ -3236,6 +3247,7 @@ function doHeal(){
   updateHealUI();
   setHealMsg(`✔ 샘물의 힘으로 HP/MP가 완전히 회복되었습니다. (-${cost} G)`, 'ok');
   try { advanceDailyQuest('dq_heal_1', 1); } catch(e){}
+  try { bumpTitleCounter('total_heal_from_fountain', healedTotal); } catch(e){}
   // 방어전 트리거 굴림 — 랭킹 5위 이상(1~5위)에게만 5% 확률
   const myRank = (GAME.ranking && GAME.ranking.myRank) || 0;
   if (myRank >= 1 && myRank <= 5 && Math.random() < 0.05){
@@ -3443,6 +3455,7 @@ function buyWeapon(id){
   $('wshop_msg').textContent = `✔ ${w.name} 구매 → 보관함에 추가 (-${w.price}G)`;
   $('wshop_msg').className = 'heal-result ok';
   chatSys(`★ ${p.name}님이 ${w.name}을(를) 구매하셨습니다.`);
+  try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
 function equipWeapon(id){
@@ -3495,6 +3508,7 @@ function buyArmor(id){
   $('ashop_msg').textContent = `✔ ${a.name} 구매 → 보관함에 추가 (-${a.price}G)`;
   $('ashop_msg').className = 'heal-result ok';
   chatSys(`★ ${p.name}님이 ${a.name}을(를) 구매하셨습니다.`);
+  try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
 function equipArmor(id){
@@ -3695,6 +3709,7 @@ function _grantLv25Reward(p){
             `\n\n인벤토리(${isWeapon?'무기상점':'방어구상점'})에서 장착하실 수 있습니다.`);
     } catch(e){}
   }, 400);
+  try { checkTitleUnlocks(); } catch(e){}
 }
 
 function pickGachaGrade(){
@@ -4368,6 +4383,7 @@ function buyBlessItem(id){
     setTimeout(() => alert(resultMsg), 200);
     renderSheet();
     refreshBlessShop();
+    try { checkTitleUnlocks(); } catch(e){}
     saveGame();
     return;
   }
@@ -5106,43 +5122,53 @@ function renderQuests(){
 // 프로필 관리 페이지에서 획득 목록 확인 및 장착/해제 가능. 랭킹전·명예의 전당에서 노출.
 const TITLE_POOL = [
   // 레벨 (5)
-  { id:'title_lv10',           name:'새싹',              tier:'일반',  color:'#5aaa5a', desc:'Lv 10 도달',                             cond:{type:'level',                  target:10} },
-  { id:'title_lv25',           name:'정예',              tier:'일반',  color:'#3366cc', desc:'Lv 25 도달',                             cond:{type:'level',                  target:25} },
-  { id:'title_lv40',           name:'정복자',            tier:'희귀',  color:'#a335ee', desc:'Lv 40 도달',                             cond:{type:'level',                  target:40} },
-  { id:'title_lv60',           name:'마스터',            tier:'영웅',  color:'#dc143c', desc:'Lv 60 도달',                             cond:{type:'level',                  target:60} },
-  { id:'title_lv80',           name:'전설',              tier:'전설',  color:'#ffd700', desc:'Lv 80 도달',                             cond:{type:'level',                  target:80} },
+  { id:'title_lv5',            name:'새싹',              tier:'일반',  color:'#a8a8a8', desc:'Lv 5 도달',                              cond:{type:'level',                  target:5} },
+  { id:'title_lv10',           name:'입문',              tier:'일반',  color:'#a8a8a8', desc:'Lv 10 도달',                             cond:{type:'level',                  target:10} },
+  { id:'title_lv25',           name:'도전자',            tier:'일반',  color:'#a8a8a8', desc:'Lv 25 도달',                             cond:{type:'level',                  target:25} },
+  { id:'title_lv40',           name:'별자리 여행자',     tier:'희귀',  color:'#3366cc', desc:'Lv 40 도달',                             cond:{type:'level',                  target:40} },
+  { id:'title_lv60',           name:'정복자',            tier:'영웅',  color:'#ff3366', desc:'Lv 50 도달',                             cond:{type:'level',                  target:50} },
   // 수행 (5)
-  { id:'title_hunt_100',       name:'사냥 시작',         tier:'일반',  color:'#5aaa5a', desc:'수행 100회 승리 (누적)',                  cond:{type:'hunt_wins',              target:100} },
-  { id:'title_hunt_500',       name:'중견 사냥꾼',       tier:'희귀',  color:'#3366cc', desc:'수행 500회 승리 (누적)',                  cond:{type:'hunt_wins',              target:500} },
-  { id:'title_hunt_1000',      name:'백전용사',          tier:'영웅',  color:'#a335ee', desc:'수행 1,000회 승리 (누적)',                cond:{type:'hunt_wins',              target:1000} },
-  { id:'title_hunt_5000',      name:'살육자',            tier:'전설',  color:'#dc143c', desc:'수행 5,000회 승리 (누적)',                cond:{type:'hunt_wins',              target:5000} },
-  { id:'title_hunt_streak_20', name:'무패의 전설',       tier:'영웅',  color:'#a02050', desc:'수행 20연승 달성',                        cond:{type:'hunt_streak_max',        target:20} },
-  // 랭킹 (4)
-  { id:'title_rank_top10',     name:'도전자',            tier:'희귀',  color:'#3366cc', desc:'랭킹 10위 이내 진입',                    cond:{type:'rank_reached_le',        target:10} },
-  { id:'title_rank_top5',      name:'실력자',            tier:'영웅',  color:'#a335ee', desc:'랭킹 5위 이내 진입',                     cond:{type:'rank_reached_le',        target:5} },
-  { id:'title_rank_top1',      name:'정점',              tier:'전설',  color:'#ffd700', desc:'랭킹 1위 달성',                          cond:{type:'rank_reached_le',        target:1} },
-  { id:'title_defense_50',     name:'방어의 왕',         tier:'희귀',  color:'#7E181E', desc:'랭킹 방어전 50회 승리',                  cond:{type:'rank_defense_wins',      target:50} },
+  { id:'title_hunt_100',       name:'사냥 시작',         tier:'일반',  color:'#a8a8a8', desc:'수행 100회 승리 (누적)',                  cond:{type:'hunt_wins',              target:100} },
+  { id:'title_hunt_500',       name:'중견 사냥꾼',       tier:'일반',  color:'#a8a8a8', desc:'수행 500회 승리 (누적)',                  cond:{type:'hunt_wins',              target:500} },
+  { id:'title_hunt_1000',      name:'백전용사',          tier:'희귀',  color:'#a335ee', desc:'수행 1,000회 승리 (누적)',                cond:{type:'hunt_wins',              target:1000} },
+  { id:'title_hunt_5000',      name:'살육자',            tier:'영웅',  color:'#ff3366', desc:'수행 10,000회 승리 (누적)',               cond:{type:'hunt_wins',              target:10000} },
+  { id:'title_hunt_streak_20', name:'무패영웅',          tier:'영웅',  color:'#ff3366', desc:'수행 300연승 달성',                       cond:{type:'hunt_streak_max',        target:300} },
+  // 장비 강화 (4)
+  { id:'title_weapon_15',      name:'검을 쥔 자',        tier:'희귀',  color:'#a335ee', desc:'+15 이상의 무기 획득',                    cond:{type:'weapon_enchant_max',     target:15} },
+  { id:'title_armor_15',       name:'두려움을 잊은 자',  tier:'희귀',  color:'#a335ee', desc:'+15 이상의 방어구 획득',                  cond:{type:'armor_enchant_max',      target:15} },
+  { id:'title_weapon_20',      name:'강인함의 증표',     tier:'영웅',  color:'#ff3366', desc:'+20 이상의 무기 획득',                    cond:{type:'weapon_enchant_max',     target:20} },
+  { id:'title_armor_20',       name:'강인함의 상징',     tier:'영웅',  color:'#ff3366', desc:'+20 이상의 방어구 획득',                  cond:{type:'armor_enchant_max',      target:20} },
+  // 신급 장비 (2)
+  { id:'title_astraia',        name:'천신의 계승자',     tier:'전설',  color:'#ffd700', desc:'천신의 아스트레이아 획득',                cond:{type:'item_owned', itemId:'divine_elaha',  target:1} },
+  { id:'title_fluted',         name:'신화의 주인공',     tier:'전설',  color:'#ffd700', desc:'천신의 플루티드 아머 획득',               cond:{type:'item_owned', itemId:'divine_fluted', target:1} },
+  // 회복 누적 (3)
+  { id:'title_heal_1k',        name:'건강이 최고',       tier:'일반',  color:'#a8a8a8', desc:'회복의 샘물 누적 회복량 1,000',           cond:{type:'total_heal_from_fountain', target:1000} },
+  { id:'title_heal_10k',       name:'병원 단골',         tier:'희귀',  color:'#a335ee', desc:'회복의 샘물 누적 회복량 10,000',          cond:{type:'total_heal_from_fountain', target:10000} },
+  { id:'title_heal_1m',        name:'종합병원',          tier:'영웅',  color:'#ff3366', desc:'회복의 샘물 누적 회복량 1,000,000',       cond:{type:'total_heal_from_fountain', target:1000000} },
+  // 랭킹 (3)
+  { id:'title_rank_top5',      name:'영웅의 길',         tier:'영웅',  color:'#ff3366', desc:'랭킹 5위 이내 진입',                     cond:{type:'rank_reached_le',        target:5} },
+  { id:'title_rank_top1',      name:'정점을 밟은 자',    tier:'전설',  color:'#ffd700', desc:'랭킹 1위 달성',                          cond:{type:'rank_reached_le',        target:1} },
+  { id:'title_defense_50',     name:'디펜딩 챔피언',     tier:'희귀',  color:'#3366cc', desc:'랭킹 방어전 50회 승리',                  cond:{type:'rank_defense_wins',      target:50} },
   // 공격대 (5)
-  { id:'title_raid_join_10',   name:'초심자',            tier:'일반',  color:'#5aaa5a', desc:'공격대 참여 10회',                       cond:{type:'raid_participations',    target:10} },
-  { id:'title_boss_kill_10',   name:'보스슬레이어',      tier:'희귀',  color:'#3366cc', desc:'공격대 보스 최종 타격 10회',              cond:{type:'boss_kills',             target:10} },
-  { id:'title_boss_kill_50',   name:'처형자',            tier:'영웅',  color:'#a335ee', desc:'공격대 보스 최종 타격 50회',              cond:{type:'boss_kills',             target:50} },
-  { id:'title_abyss_first',    name:'심연의 정복자',     tier:'영웅',  color:'#4a148c', desc:'잊혀진 성좌 보스 처치',                  cond:{type:'abyss_boss_kills',       target:1} },
-  { id:'title_abyss_3',        name:'신살자',            tier:'전설',  color:'#c47eff', desc:'잊혀진 성좌 보스 3명 이상 처치',          cond:{type:'abyss_boss_kills',       target:3} },
+  { id:'title_raid_join_10',   name:'초심자',            tier:'일반',  color:'#a8a8a8', desc:'공격대 참여 10회',                       cond:{type:'raid_participations',    target:10} },
+  { id:'title_boss_kill_10',   name:'보스슬레이어',      tier:'일반',  color:'#a8a8a8', desc:'공격대 보스 최종 타격 10회',              cond:{type:'boss_kills',             target:10} },
+  { id:'title_boss_kill_50',   name:'처형자',            tier:'희귀',  color:'#3366cc', desc:'공격대 보스 최종 타격 50회',              cond:{type:'boss_kills',             target:50} },
+  { id:'title_abyss_first',    name:'심연의 정복자',     tier:'희귀',  color:'#3366cc', desc:'잊혀진 성좌 보스 처치',                  cond:{type:'abyss_boss_kills',       target:1} },
+  { id:'title_abyss_3',        name:'신의 암살자',       tier:'영웅',  color:'#ff3366', desc:'잊혀진 성좌 보스 3명 이상 처치',          cond:{type:'abyss_boss_kills',       target:3} },
   // 카드 (5)
-  { id:'title_card_unique_10', name:'카드 콜렉터',       tier:'희귀',  color:'#a335ee', desc:'유니크 카드 10종 소지',                  cond:{type:'unique_cards_owned',     target:10} },
-  { id:'title_card_hero_1',    name:'영웅 소환자',       tier:'영웅',  color:'#dc143c', desc:'영웅 카드 1장 이상 소지',                 cond:{type:'hero_cards_owned',       target:1} },
-  { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설',  color:'#ff3366', desc:'영웅 카드 5장 이상 소지',                 cond:{type:'hero_cards_owned',       target:5} },
-  { id:'title_card_all_grades',name:'도감 완성자',       tier:'영웅',  color:'#7E181E', desc:'모든 등급 카드 최소 1장씩 소지',          cond:{type:'all_grades_owned',       target:4} },
-  { id:'title_gacha_1000',     name:'뽑기 중독자',       tier:'희귀',  color:'#3366cc', desc:'총 뽑기 1,000회 시행',                    cond:{type:'total_gacha',            target:1000} },
-  // 골드·XP (3)
-  { id:'title_gold_100k',      name:'부자',              tier:'희귀',  color:'#b8860b', desc:'누적 골드 획득 100,000G',                cond:{type:'total_gold_earned',      target:100000} },
-  { id:'title_gold_1m',        name:'거상',              tier:'영웅',  color:'#ffd700', desc:'누적 골드 획득 1,000,000G',              cond:{type:'total_gold_earned',      target:1000000} },
-  { id:'title_xp_10m',         name:'경험의 화신',       tier:'전설',  color:'#ff6600', desc:'누적 XP 10,000,000',                    cond:{type:'total_xp_earned',        target:10000000} },
+  { id:'title_card_unique_10', name:'카드 콜렉터',       tier:'희귀',  color:'#3366cc', desc:'유니크 카드 10종 소지',                  cond:{type:'unique_cards_owned',     target:10} },
+  { id:'title_card_hero_1',    name:'영웅 소환자',       tier:'영웅',  color:'#ff3366', desc:'영웅 카드 1장 이상 소지',                 cond:{type:'hero_cards_owned',       target:1} },
+  { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설',  color:'#ffd700', desc:'영웅 카드 5장 이상 소지',                 cond:{type:'hero_cards_owned',       target:5} },
+  { id:'title_card_all_grades',name:'도감 완성자',       tier:'영웅',  color:'#ff3366', desc:'모든 등급 카드 최소 1장씩 소지',          cond:{type:'all_grades_owned',       target:4} },
+  { id:'title_gacha_1000',     name:'뽑기 중독자',       tier:'희귀',  color:'#3366cc', desc:'총 뽑기 1,000회',                        cond:{type:'total_gacha',            target:1000} },
+  // 골드 (2)
+  { id:'title_gold_100k',      name:'부자',              tier:'희귀',  color:'#3366cc', desc:'누적 골드 획득 1,000,000G',              cond:{type:'total_gold_earned',      target:1000000} },
+  { id:'title_gold_1m',        name:'거상',              tier:'영웅',  color:'#ff3366', desc:'누적 골드 획득 10,000,000G',             cond:{type:'total_gold_earned',      target:10000000} },
   // 축복 (2)
-  { id:'title_bless_100',      name:'축복받은자',        tier:'희귀',  color:'#a02050', desc:'여신의 축복 100개 누적 획득',            cond:{type:'total_blessing_earned',  target:100} },
-  { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'전설',  color:'#ffd700', desc:'여신의 축복 500개 누적 획득',            cond:{type:'total_blessing_earned',  target:500} },
+  { id:'title_bless_100',      name:'축복받은자',        tier:'희귀',  color:'#3366cc', desc:'여신의 축복 100개 누적 획득',            cond:{type:'total_blessing_earned',  target:100} },
+  { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'영웅',  color:'#ff3366', desc:'여신의 축복 500개 누적 획득',            cond:{type:'total_blessing_earned',  target:500} },
   // 특수 (1)
-  { id:'title_daily_100',      name:'근면성실',          tier:'영웅',  color:'#5aaa5a', desc:'일일퀘스트 100일 완주 (누적)',           cond:{type:'daily_full_days',        target:100} },
+  { id:'title_daily_100',      name:'근면성실',          tier:'영웅',  color:'#ff3366', desc:'일일퀘스트 연속 100일 완주',              cond:{type:'daily_full_days',        target:100} },
 ];
 function _ensureTitleState(p){
   if (!p) return;
@@ -5154,7 +5180,10 @@ function _ensureTitleState(p){
     raid_participations:0, boss_kills:0, abyss_boss_kills:0,
     total_gacha:0, total_gold_earned:0, total_xp_earned:0, total_blessing_earned:0,
     daily_full_days:0,
+    total_heal_from_fountain:0,
   };
+  // 신규 필드 마이그레이션 (기존 유저용)
+  if (typeof p.titleCounters.total_heal_from_fountain !== 'number') p.titleCounters.total_heal_from_fountain = 0;
 }
 // 조건 유형별 현재값 조회
 function _getTitleCurrentValue(p, cond){
@@ -5191,6 +5220,30 @@ function _getTitleCurrentValue(p, cond){
     case 'total_xp_earned': return p.titleCounters.total_xp_earned || 0;
     case 'total_blessing_earned': return p.titleCounters.total_blessing_earned || 0;
     case 'daily_full_days': return p.titleCounters.daily_full_days || 0;
+    case 'total_heal_from_fountain': return p.titleCounters.total_heal_from_fountain || 0;
+    case 'weapon_enchant_max': {
+      // 보관함 + 장착 중인 무기 중 최대 atkBonus
+      let mx = 0;
+      if (p.weapon && typeof p.weapon.atkBonus === 'number') mx = p.weapon.atkBonus;
+      (p.weapons || []).forEach(w => { if (typeof w.atkBonus === 'number' && w.atkBonus > mx) mx = w.atkBonus; });
+      return mx;
+    }
+    case 'armor_enchant_max': {
+      let mx = 0;
+      if (p.armor && typeof p.armor.defBonus === 'number') mx = p.armor.defBonus;
+      (p.armors || []).forEach(a => { if (typeof a.defBonus === 'number' && a.defBonus > mx) mx = a.defBonus; });
+      return mx;
+    }
+    case 'item_owned': {
+      // cond.itemId 를 보관함 또는 장착 중에서 검색 (무기·방어구 모두 확인)
+      const iid = cond.itemId;
+      if (!iid) return 0;
+      if (p.weapon && p.weapon.id === iid) return cond.target;
+      if (p.armor  && p.armor.id  === iid) return cond.target;
+      if ((p.weapons || []).some(w => w.id === iid)) return cond.target;
+      if ((p.armors  || []).some(a => a.id === iid)) return cond.target;
+      return 0;
+    }
     default: return 0;
   }
 }
@@ -5313,8 +5366,7 @@ const RAID_BOSSES = {
     { id:'beastmaster',  name:'비스트마스터', hpMax:10000, str:30, dex:30, int:20, con:35, atk:[55,100], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
     { id:'darkranger',   name:'다크 레인저',  hpMax:10000, str:25, dex:45, int:25, con:20, atk:[70,120], icon:'assets/wc3_icons/darkranger.gif' },
   ],
-  // 3차 공격대 「잊혀진 성좌」 — Lv 40+ (테스트 중, admin 비밀번호 gate)
-  // icon은 유저가 파일명 알려주면 채움
+  // 3차 공격대 「잊혀진 성좌」 — Lv 40+
   abyss: [
     // 강한 순: 하데스 > 오리온 > 아폴론 > 헤라클레스 > 아르테미스 > 페르세우스
     { id:'hades',    name:'하데스',     hpMax:110000, str:40, dex:25, int:45, con:40, atk:[90,160],  icon:'assets/The%20Forgotten%20Zodiac/hades.jpg' },
@@ -5780,12 +5832,12 @@ function renderRaidLobby(){
     btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/${cap})`;
     btn.disabled = false;
     if (isAbyss){
-      $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 40+ · 테스트 중)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리 처치 시 올림포스 보스 등장. XP 대폭 상향 (몹 XP ×7 +250). 6시간 세션.`;
+      $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 40+)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리를 모두 처치하면 올림포스 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.`;
     } else {
       $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
     }
   }
-  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화. abyss는 축복 리셋 미지원 (테스트 중)
+  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화. abyss는 축복 리셋 미지원
   const resetBtn = $('raid_reset_btn');
   if (resetBtn){
     const canReset = r.bossDefeated && !isAbyss;
@@ -6402,6 +6454,7 @@ async function raidEnd(result){
               }
             }
           }
+          try { checkTitleUnlocks(); } catch(e){}
         }
         const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +5 (보유 ${p.blessing})</p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 잊혀진 성좌 보스 ${bossName} 처치! 🏆🏆</p>
@@ -6496,6 +6549,12 @@ async function raidEnd(result){
         <p style="font-size:11px;color:#666;">다시 도전해서 최종 타격를 노려보세요.</p>`;
     }
   }
+  // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
+  try {
+    calcDerived(p);
+    if (p.hp > p.hpMax) p.hp = p.hpMax;
+    if (p.mp > p.mpMax) p.mp = p.mpMax;
+  } catch(e){ console.warn('[raidEnd stat reset]', e); }
   renderSheet();
   // 공격대 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
   try { saveGame(); } catch(e){ console.warn('[raidEnd saveGame]', e); }
@@ -7211,6 +7270,13 @@ async function rankEnd(result){
     saveGame();
     cloudSaveNow().catch(e => console.warn('[rankEnd cloudSave]', e));
   }
+  // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
+  // 다음 랭킹전에 이월돼 무한 스택되는 버그 방지
+  try {
+    calcDerived(p);
+    if (p.hp > p.hpMax) p.hp = p.hpMax;
+    if (p.mp > p.mpMax) p.mp = p.mpMax;
+  } catch(e){ console.warn('[rankEnd stat reset]', e); }
   renderSheet();
   $('rank_result_title').textContent = `랭킹전 결과 — ${c.mode==='attack'?'도전':'방어전'}`;
   $('rank_result_body').innerHTML = `
@@ -9551,6 +9617,12 @@ function huntEnd(result){
     // 데미지 누적
     _bumpDailyCounter('damage', c.statsMyDmg || 0, 'dq_dmg_3k');
   } catch(e){}
+  // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
+  try {
+    calcDerived(p);
+    if (p.hp > p.hpMax) p.hp = p.hpMax;
+    if (p.mp > p.mpMax) p.mp = p.mpMax;
+  } catch(e){ console.warn('[huntEnd stat reset]', e); }
   renderSheet();
   renderDeck();
   // 수행 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
@@ -13174,21 +13246,26 @@ function refreshAdminSystem(){
   if ($('adminSellRare'))   $('adminSellRare').value   = CARD_SELL_PRICE.rare;
   if ($('adminSellUnique')) $('adminSellUnique').value = CARD_SELL_PRICE.unique;
   if ($('adminSellHero'))   $('adminSellHero').value   = CARD_SELL_PRICE.hero;
-  // 공격대 정보
-  const dawn = GAME.raid.dawn;
-  const mist = GAME.raid.mist;
-  $('adminRaidDawnMon').textContent = dawn.monsterCount;
-  $('adminRaidDawnHp').textContent  = `${dawn.bossHp}/${dawn.bossHpMax}`;
-  $('adminRaidMistMon').textContent = mist.monsterCount;
-  $('adminRaidMistHp').textContent  = `${mist.bossHp}/${mist.bossHpMax}`;
+  // 공격대 정보 — dawn/mist/abyss 3종 모두
+  const dawn  = GAME.raid.dawn  || {};
+  const mist  = GAME.raid.mist  || {};
+  const abyss = GAME.raid.abyss || {};
+  const _fmt = (r) => r && r.sessionStart != null ? `${r.bossHp||0}/${r.bossHpMax||0}` : '-';
+  $('adminRaidDawnMon').textContent  = dawn.monsterCount  != null ? dawn.monsterCount  : '-';
+  $('adminRaidDawnHp').textContent   = _fmt(dawn);
+  $('adminRaidMistMon').textContent  = mist.monsterCount  != null ? mist.monsterCount  : '-';
+  $('adminRaidMistHp').textContent   = _fmt(mist);
+  if ($('adminRaidAbyssMon')) $('adminRaidAbyssMon').textContent = abyss.monsterCount != null ? abyss.monsterCount : '-';
+  if ($('adminRaidAbyssHp'))  $('adminRaidAbyssHp').textContent  = _fmt(abyss);
   // 보스 교체 셀렉트
   const fillBossSel = (selId, list, currentBossId) => {
     const sel = $(selId);
-    if (!sel) return;
+    if (!sel || !list) return;
     sel.innerHTML = list.map(b => `<option value="${b.id}" ${b.id===currentBossId?'selected':''}>${b.name} (HP ${b.hpMax})</option>`).join('');
   };
-  fillBossSel('adminRaidDawnBossSel', RAID_BOSSES.dawn, dawn.bossId);
-  fillBossSel('adminRaidMistBossSel', RAID_BOSSES.mist, mist.bossId);
+  fillBossSel('adminRaidDawnBossSel',  RAID_BOSSES.dawn,  dawn.bossId);
+  fillBossSel('adminRaidMistBossSel',  RAID_BOSSES.mist,  mist.bossId);
+  fillBossSel('adminRaidAbyssBossSel', RAID_BOSSES.abyss, abyss.bossId);
 }
 
 // ─── 4종 카드샵 (GACHA_SHOPS) 가격·확률 admin UI ───
@@ -13274,15 +13351,14 @@ function adminApplySellPrice(){
 }
 
 async function adminSetBoss(key){
-  const sel = $(key === 'dawn' ? 'adminRaidDawnBossSel' : 'adminRaidMistBossSel');
+  const selId = key === 'dawn' ? 'adminRaidDawnBossSel'
+              : key === 'mist' ? 'adminRaidMistBossSel'
+              :                  'adminRaidAbyssBossSel';
+  const sel = $(selId);
   if (!sel || !sel.value) return;
   const boss = RAID_BOSSES[key].find(b => b.id === sel.value);
   if (!boss) return;
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
-    alert(`현재 활성 세션은 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」입니다.\n비활성 쪽은 변경해도 인게임에 반영되지 않습니다. 「즉시 새 세션 시작」으로 키를 먼저 전환하세요.`);
-    return;
-  }
   try {
     const { error } = await sb.from('raid_state').update({
       boss_id: boss.id,
@@ -13290,11 +13366,11 @@ async function adminSetBoss(key){
       boss_hp_max: boss.hpMax,
       boss_defeated: false,
       last_killer: null,
-    }).eq('id', 1);
+    }).eq('raid_key', key);
     if (error){ alert('보스 교체 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     refreshAdminSystem();
-    alert(`✔ 보스를 ${boss.name}(으)로 교체`);
+    alert(`✔ ${_raidKr(key)} 보스를 ${boss.name}(으)로 교체`);
   } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
 }
 
@@ -13475,75 +13551,85 @@ async function adminBroadcast(){
   alert('✔ 채팅창에 송출');
 }
 
-// 운영자: 공격대 강제 갱신 (active_key 무작위 재선정 + 새 보스 + 몬스터 99)
+// 관리자 헬퍼 — 한글명
+function _raidKr(key){
+  return key === 'dawn' ? '새벽의 언덕' : (key === 'mist' ? '안개의 숲' : (key === 'abyss' ? '잊혀진 성좌' : key));
+}
+
+// 운영자: 3개 공격대 (dawn/mist/abyss) 즉시 리셋 — 각각 새 보스 + 몬스터 리필
 async function adminForceRaidReset(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (!confirm('현재 공격대를 즉시 갱신하시겠습니까?\n• active_key 무작위 재선정 (dawn/mist)\n• 새 보스 무작위 선정\n• 몬스터 99마리 리셋\n• 참여자 목록 초기화')) return;
+  if (!confirm('3개 공격대 모두 즉시 리셋하시겠습니까?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn/mist 99, abyss 199)\n• session_start 갱신')) return;
   try {
-    const { error } = await sb.rpc('raid_admin_force_reset');
-    if (error){ alert('강제 갱신 실패: ' + (error.message || error)); return; }
-    alert('✔ 공격대가 강제 갱신되었습니다.');
+    for (const key of ['dawn','mist','abyss']){
+      const bossList = RAID_BOSSES[key];
+      if (!bossList || !bossList.length) continue;
+      const boss = bossList[Math.floor(Math.random() * bossList.length)];
+      const mobCount = key === 'abyss' ? 199 : 99;
+      const { error } = await sb.from('raid_state').update({
+        session_start: getCurrentSessionStart(),
+        monster_count: mobCount,
+        boss_id: boss.id,
+        boss_hp: boss.hpMax,
+        boss_hp_max: boss.hpMax,
+        boss_defeated: false,
+        last_killer: null,
+      }).eq('raid_key', key);
+      if (error) console.warn('[adminForceRaidReset]', key, error);
+    }
+    await loadRaidFromCloud();
     refreshAdminSystem();
+    alert('✔ 3개 공격대 강제 갱신 완료');
   } catch(e){ alert('강제 갱신 실패: ' + (e.message||e)); }
 }
 
 async function adminResetRaid(key){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
-    alert(`현재 활성 세션은 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」입니다.\n비활성 쪽 리셋은 의미가 없습니다. 「즉시 새 세션 시작」을 사용하세요.`);
-    return;
-  }
-  if (!confirm(`${key === 'dawn' ? '새벽의 언덕' : '안개의 숲'} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 몬스터 99마리\n• session_start 갱신`)) return;
+  const mobCount = key === 'abyss' ? 199 : 99;
+  if (!confirm(`${_raidKr(key)} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 몬스터 ${mobCount}마리\n• session_start 갱신`)) return;
   const bossList = RAID_BOSSES[key];
+  if (!bossList || !bossList.length){ alert('보스 목록이 비어있습니다.'); return; }
   const boss = bossList[Math.floor(Math.random()*bossList.length)];
   try {
     const { error } = await sb.from('raid_state').update({
       session_start: getCurrentSessionStart(),
-      monster_count: 99,
+      monster_count: mobCount,
       boss_id: boss.id,
       boss_hp: boss.hpMax,
       boss_hp_max: boss.hpMax,
       boss_defeated: false,
       last_killer: null,
-    }).eq('id', 1);
+    }).eq('raid_key', key);
     if (error){ alert('세션 리셋 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     refreshAdminSystem();
-    alert('✔ 세션 리셋 완료');
+    alert(`✔ ${_raidKr(key)} 세션 리셋 완료`);
   } catch(e){ alert('세션 리셋 실패: ' + (e.message||e)); }
 }
 
 async function adminBossPhase(key){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
-    alert(`비활성 세션입니다. 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」 쪽만 조작 가능합니다.`);
-    return;
-  }
   try {
-    const { error } = await sb.from('raid_state').update({ monster_count: 0 }).eq('id', 1);
+    const { error } = await sb.from('raid_state').update({ monster_count: 0 }).eq('raid_key', key);
     if (error){ alert('보스 단계 진입 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     refreshAdminSystem();
-    alert('✔ 보스 단계 진입');
+    alert(`✔ ${_raidKr(key)} 보스 단계 진입`);
   } catch(e){ alert('보스 단계 진입 실패: ' + (e.message||e)); }
 }
 
 async function adminKillBoss(key){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (GAME.raid.activeKey && GAME.raid.activeKey !== key){
-    alert(`비활성 세션입니다. 「${GAME.raid.activeKey==='dawn'?'새벽의 언덕':'안개의 숲'}」 쪽만 조작 가능합니다.`);
-    return;
-  }
   try {
     const { error } = await sb.from('raid_state').update({
       boss_hp: 0,
       boss_defeated: true,
       last_killer: '관리자',
-    }).eq('id', 1);
+    }).eq('raid_key', key);
     if (error){ alert('보스 처치 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     refreshAdminSystem();
-    alert('✔ 보스 처치 완료');
+    alert(`✔ ${_raidKr(key)} 보스 처치 완료`);
   } catch(e){ alert('보스 처치 실패: ' + (e.message||e)); }
 }
 
