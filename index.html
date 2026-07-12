@@ -1393,42 +1393,43 @@
       </div>
 
       <div class="menubar">
+        <!-- 1줄: 회복·카드샵·무기상점·방어구상점 -->
         <table><tr>
           <td id="m-heal" onclick="openHeal()">회복의 샘물</td>
           <td id="m-cardshop" onclick="openCardShop()">카드샵</td>
           <td id="m-wshop" onclick="openWeaponShop()">무기상점</td>
           <td id="m-ashop" onclick="openArmorShop()">방어구상점</td>
         </tr></table>
+        <!-- 2줄: 랭킹전·수행·퀘스트 -->
         <table><tr>
           <td id="m-rank" class="row2" onclick="openRank()">랭킹전</td>
           <td id="m-hunt" class="menu-hunt row2" onclick="openHunt()" style="font-weight:bold;">⚔ 수행 ⚔</td>
-          <td id="m-raid-dawn" class="row2" onclick="openRaid('dawn')">⛅ 새벽의 언덕</td>
-          <td id="m-raid-mist" class="row2" onclick="openRaid('mist')">🌫 안개의 숲</td>
+          <td class="row2" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
         </tr></table>
-        <!-- 공격대 현황 요약 (2줄: 새벽의 언덕 / 안개의 숲) -->
-        <div id="raid-status-summary" style="font-size:11px;color:#333;text-align:center;padding:4px 8px;background:#fff8e0;border:1px solid #c9a26b;border-radius:4px;margin:4px 0;">
-          <div id="raid-status-dawn" style="line-height:1.6;">⛅ 새벽의 언덕 — 로딩 중…</div>
-          <div id="raid-status-mist" style="line-height:1.6;">🌫 안개의 숲 — 로딩 중…</div>
-        </div>
+        <!-- 3줄: 공격대 3종 (요구 레벨 표기) -->
+        <table><tr>
+          <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')">⛅ 새벽의 언덕<br><small style="font-size:10px;font-weight:normal;color:#7a5030;">Lv. 25</small></td>
+          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')">🌫 안개의 숲<br><small style="font-size:10px;font-weight:normal;color:#405060;">Lv. 25</small></td>
+          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="color:#4a148c;font-weight:bold;background:linear-gradient(180deg,#1a0033,#0a001a);color:#c47eff;">🌌 잊혀진 성좌<br><small style="font-size:10px;font-weight:normal;color:#c47eff;">Lv. 40</small></td>
+        </tr></table>
+        <!-- 4줄: 카드 도감·프로필·명예의 전당·축복의 상점·오픈채팅방 -->
         <table><tr>
           <td class="row3" onclick="openCardCodex()" style="color:#2e53b2;">📖 카드 도감</td>
-          <td id="m-profile" class="row3" onclick="openProfilePage()">프로필 관리</td>
+          <td id="m-profile" class="row3" onclick="openProfilePage()">👤 프로필 관리</td>
           <td class="row3" onclick="openHonor()" style="color:#a02050;">🏆 명예의 전당</td>
           <td class="row3" onclick="openBlessShop()" style="color:#b8860b;">✨ 축복의 상점</td>
-          <td class="row3" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
-        </tr></table>
-        <table><tr>
           <td class="row3" onclick="window.open('https://open.kakao.com/o/gZeYwJAi','_blank','noopener,noreferrer')" style="color:#5a1a6b;">💬 오픈채팅방</td>
-        </tr></table>
-        <table><tr>
-          <td id="m-abyss" class="row3" onclick="enterAbyssRaid()" style="color:#4a148c;font-weight:bold;background:linear-gradient(180deg,#1a0033,#0a001a);color:#c47eff;">🌌 잊혀진 성좌 (3차 · 테스트)</td>
         </tr></table>
       </div>
 
       <div class="infoline">
         랭킹전 순위 : <b id="myRank">미등록</b><br>
         전체 유저 랭킹 : <b id="myOverallRank">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
-        공격대 <b id="raid_active_label">-</b> 남은시간 <b id="raid_active_time">--:--:--</b> , 남은 몬스터 <b id="raid_active_mon">-</b>
+        <div id="raid-status-summary" style="font-size:11px;color:#333;margin-top:6px;padding:6px 8px;background:#fff8e0;border:1px solid #c9a26b;border-radius:4px;">
+          <div id="raid-status-dawn"  style="line-height:1.6;">⛅ 새벽의 언덕 — 로딩 중…</div>
+          <div id="raid-status-mist"  style="line-height:1.6;">🌫 안개의 숲 — 로딩 중…</div>
+          <div id="raid-status-abyss" style="line-height:1.6;">🌌 잊혀진 성좌 — 로딩 중…</div>
+        </div>
       </div>
     </div>
 
@@ -5557,29 +5558,11 @@ function simulateRaidProgress(raidKey){
 }
 const RAND_NPC_NAMES = ['Scandal','Idgun','더울이','로보스팟','반지요정','선의기운','아그네시카','세이비아','머할려구','카드소'];
 
-// 메인 화면 raid 정보 갱신 — 활성 공격대 한 줄만 표시
+// 메인 화면 공격대 현황 갱신 — dawn/mist/abyss 3줄
 function updateRaidUI(){
-  // 병렬 모드 — 메인 화면 하단에 dawn/mist 각각 표기
-  _updateRaidSummaryLine('dawn', '⛅ 새벽의 언덕', 'raid-status-dawn');
-  _updateRaidSummaryLine('mist', '🌫 안개의 숲',   'raid-status-mist');
-  // 기존 단일 표시 요소가 있으면 (레거시 UI) 첫 raid 정보로 채움
-  const labelEl = $('raid_active_label');
-  const timeEl  = $('raid_active_time');
-  const monEl   = $('raid_active_mon');
-  if (labelEl || timeEl || monEl){
-    const r = GAME.raid.dawn;
-    if (labelEl) labelEl.textContent = '(새벽의 언덕)';
-    if (r && r.sessionStart){
-      const remain = Math.max(0, Math.floor(((r.sessionStart + RAID_SESSION_HOURS*3600*1000) - Date.now()) / 1000));
-      const h = Math.floor(remain / 3600), m = Math.floor((remain % 3600) / 60), s = remain % 60;
-      if (timeEl) timeEl.textContent = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-      if (monEl){
-        if (r.bossDefeated) monEl.textContent = '0 (보스 처치 완료)';
-        else if (r.monsterCount === 0) monEl.textContent = `0 / 보스 ${r.bossHp}/${r.bossHpMax}`;
-        else monEl.textContent = r.monsterCount;
-      }
-    }
-  }
+  _updateRaidSummaryLine('dawn',  '⛅ 새벽의 언덕',   'raid-status-dawn');
+  _updateRaidSummaryLine('mist',  '🌫 안개의 숲',     'raid-status-mist');
+  _updateRaidSummaryLine('abyss', '🌌 잊혀진 성좌',   'raid-status-abyss');
 }
 function _updateRaidSummaryLine(raidKey, prefix, elId){
   const el = $(elId); if (!el) return;
@@ -5627,9 +5610,9 @@ async function openRaid(raidKey){
     openHeal();
     return;
   }
-  const minLv = raidKey === 'dawn' ? 15 : (raidKey === 'mist' ? 25 : ABYSS_MIN_LEVEL);
+  const minLv = raidKey === 'dawn' ? 25 : (raidKey === 'mist' ? 25 : ABYSS_MIN_LEVEL);
   if (p.level < minLv){
-    const nm = raidKey==='dawn'?'새벽의언덕':(raidKey==='mist'?'안개의숲':'잊혀진 성좌');
+    const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
     toast(`공격대(${nm})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
     return;
   }
@@ -5652,14 +5635,8 @@ async function openRaid(raidKey){
   $('raid-result').hidden = true;
   renderRaidLobby();
 }
-// 잊혀진 성좌 진입 — 테스트 중이므로 admin 비밀번호 게이트
+// 잊혀진 성좌 진입 — 정식 오픈 (구 admin 게이트 제거). openRaid('abyss')로 직접 진입.
 function enterAbyssRaid(){
-  const pw = prompt('🌌 잊혀진 성좌 (3차 공격대) 🌌\n\n아직 테스트 중입니다.\n관리자 비밀번호를 입력해 주세요:');
-  if (pw === null) return;
-  if (pw !== ABYSS_ADMIN_PW){
-    alert('접근이 거부되었습니다.');
-    return;
-  }
   openRaid('abyss');
 }
 
