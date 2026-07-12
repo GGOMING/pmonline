@@ -1094,9 +1094,10 @@
         <tr>
           <td class="lbl">아이디</td>
           <td>
-            <input id="regName" maxlength="6" placeholder="6자 이내">
+            <input id="regName" maxlength="6" placeholder="2~6자 한글/영문/숫자">
             <button type="button" onclick="checkDupId()" style="margin-left:4px;padding:2px 8px;">중복확인</button>
             <div id="regNameStatus" style="font-size:11px;margin-top:2px;min-height:14px;"></div>
+            <div style="font-size:10px;color:#888;margin-top:2px;">한글·영문·숫자만 · 공백/특수문자 불가 · 자음/모음 단독 불가</div>
           </td>
         </tr>
         <tr>
@@ -2226,7 +2227,8 @@
         <div class="profile-section">
           <h4>📝 닉네임 변경</h4>
           <div style="font-size:11px;color:#555;line-height:1.6;">
-            • 6자 이내 (한글·영문·숫자)<br>
+            • 2~6자 (한글·영문·숫자만 · 공백/특수문자 불가)<br>
+            • 자음(ㄱ~ㅎ) 또는 모음(ㅏ~ㅣ) 단독 사용 불가<br>
             • 변경 비용: <b style="color:#7E181E;">50,000 G</b><br>
             • 중복 닉네임은 설정할 수 없습니다.
           </div>
@@ -2646,7 +2648,7 @@ const CARDS = [
 
   // ───── 유니크 카드 6종 ─────
   { id:'u01', name:'드렁큰브라우어', grade:'unique', icon:'demon',  iconPath:'assets/wc3_reforged_used/BTNDrunkenDodge-Reforged.png', text:'[STR + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['str'],mult:3,weaponBonus:true} },
-  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', iconPath:'assets/wc3_reforged_used/sworm.jpg', text:'1 ~ 10 랜덤 데미지 *8 / 1 ~ 10 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:10,hits:8,healMin:1,healMax:10,ignoreDef:true} },
+  { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', iconPath:'assets/wc3_reforged_used/sworm.jpg', text:'1 ~ 15 랜덤 데미지 *8 / 1 ~ 15 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:15,hits:8,healMin:1,healMax:15,ignoreDef:true} },
   { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   iconPath:'assets/wc3_reforged_used/rainoffire.jpg', text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
   { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', iconPath:'assets/wc3_reforged_used/blackarrow.jpg', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
@@ -5834,13 +5836,17 @@ function renderRaidLobby(){
       $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
     }
   }
-  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화. abyss는 축복 리셋 미지원
+  // 공격대 초기화 버튼 — 보스 처치 후에만 활성화
+  // dawn/mist: 축복 2개, abyss: 축복 7개
   const resetBtn = $('raid_reset_btn');
   if (resetBtn){
-    const canReset = r.bossDefeated && !isAbyss;
+    const canReset = r.bossDefeated;
     resetBtn.disabled = !canReset;
     resetBtn.style.opacity = canReset ? '1' : '0.45';
     resetBtn.style.cursor  = canReset ? 'pointer' : 'not-allowed';
+    const cost = isAbyss ? 7 : 2;
+    resetBtn.title = `여신의 축복 ${cost}개를 소모해 공격대 전체를 초기화합니다. 보스 처치 후에만 사용 가능 (정해진 시간 리셋엔 영향 없음).`;
+    resetBtn.textContent = `✨ 축복 ${cost}개로 초기화`;
   }
 }
 
@@ -5857,11 +5863,14 @@ function raidChallenge(){
   }
 }
 
-// 여신의 축복 2개를 소모하여 현재 공격대를 전체 초기화 (실시간 공유)
-// 정해진 시간(매시 정각) 리셋에는 영향 없음 — session_start 유지
+// 여신의 축복을 소모하여 현재 공격대를 전체 초기화 (실시간 공유)
+// dawn/mist: 축복 2개, abyss(잊혀진 성좌): 축복 7개
+// 정해진 시간(6시간 세션) 리셋에는 영향 없음 — session_start 유지
 async function requestRaidManualReset(){
   const p = GAME.player;
   const raidKey = GAME.currentRaid;
+  const isAbyss = raidKey === 'abyss';
+  const cost = isAbyss ? 7 : 2;
   // 보스 처치 후에만 초기화 허용 (UI는 disabled지만 안전장치)
   const rNow = GAME.raid && GAME.raid[raidKey];
   if (!rNow || !rNow.bossDefeated){
@@ -5870,11 +5879,12 @@ async function requestRaidManualReset(){
   }
   const r = GAME.raid[raidKey];
   if (!r){ toast('공격대 상태를 불러올 수 없습니다.'); return; }
-  if ((p.blessing||0) < 2){
-    toast('✨ 여신의 축복이 부족합니다. (필요: 2)');
+  if ((p.blessing||0) < cost){
+    toast(`✨ 여신의 축복이 부족합니다. (필요: ${cost})`);
     return;
   }
-  if (!confirm(`✨ 여신의 축복 2개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 99마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 매시 정각 자동 리셋엔 영향 없음`)) return;
+  const mobCount = isAbyss ? ABYSS_MOB_TOTAL : 99;
+  if (!confirm(`✨ 여신의 축복 ${cost}개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 ${mobCount}마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 6시간 자동 리셋엔 영향 없음`)) return;
   // 새 보스 선정 (클라이언트에서 랜덤 — RPC에 전달)
   const bossList = RAID_BOSSES[raidKey];
   const boss = bossList[Math.floor(Math.random() * bossList.length)];
@@ -5894,12 +5904,12 @@ async function requestRaidManualReset(){
       toast('초기화 실패: ' + (error.message || '서버 오류'));
       return;
     }
-    p.blessing = Math.max(0, (p.blessing||0) - 2);
+    p.blessing = Math.max(0, (p.blessing||0) - cost);
     // 본인 pending 몬스터도 초기화 (다음 도전 시 새 몬스터부터)
     p.pendingRaidMob = null;
     saveGame();
     try { renderSheet(); } catch(e){}
-    try { chatSys(`✨ ${p.name}님이 여신의 축복 2개로 공격대를 초기화했습니다!`); } catch(e){}
+    try { chatSys(`✨ ${p.name}님이 여신의 축복 ${cost}개로 공격대를 초기화했습니다!`); } catch(e){}
     toast('공격대 초기화 완료');
     // realtime UPDATE 신호로 다른 클라이언트도 자동 갱신 (loadRaidFromCloud → renderRaidLobby)
     await loadRaidFromCloud();
@@ -6350,9 +6360,21 @@ async function raidEnd(result){
     if (!p.raidBossDmg) p.raidBossDmg = {};
     if (!p.raidBossDmg[c.raidKey]) p.raidBossDmg[c.raidKey] = { session: 0, dmg: 0 };
     const tracker = p.raidBossDmg[c.raidKey];
-    if (tracker.session !== r.sessionStart){ tracker.session = r.sessionStart; tracker.dmg = 0; }
+    // 세션 매칭 확인 — bigint 이 문자열로 오는 케이스 대비, Number 로 변환 후 비교
+    const curSession = Number(r.sessionStart) || 0;
+    const prevSession = Number(tracker.session) || 0;
+    const wasSameSession = prevSession > 0 && prevSession === curSession;
+    if (!wasSameSession){
+      tracker.session = curSession;
+      tracker.dmg = 0;
+    }
     tracker.dmg += dealtTotal;
     const cumDmg = tracker.dmg;
+    console.log('[boss dmg tracker]', c.raidKey,
+                'thisBattle=' + dealtTotal,
+                'session=' + curSession,
+                'wasSameSession=' + wasSameSession,
+                'cumDmg=' + cumDmg);
     // 일일 퀘스트: 보스에게 입힌 데미지 (raidEnd 호출 = 한 번의 도전이므로 delta로 취급)
     try { if (dealtTotal > 0) _bumpDailyCounter('damage', dealtTotal, 'dq_dmg_3k'); } catch(e){}
     try { if (dealtTotal > 0) advanceDailyQuest('dq_boss_hit', dealtTotal); } catch(e){}
@@ -6549,6 +6571,7 @@ async function raidEnd(result){
   }
   // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
   try {
+    p._hpMaxBonus = 0; p._mpMaxBonus = 0;
     calcDerived(p);
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
@@ -7785,9 +7808,9 @@ function generateMonster(playerLv, tier){
   if (tpl.race === 'undead')   { int += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
 
-  // 몬스터 기본 장비 (+5~+10) — 음수 디버프 노출 방지 / 본체 atk·HP는 그만큼 하향
-  const wBonus = 5 + Math.floor(Math.random() * 6); // 5~10
-  const aBonus = 5 + Math.floor(Math.random() * 6); // 5~10
+  // 몬스터 기본 장비 — 수행1(Lv≤25)은 +5 고정, 수행2는 랜덤 +5~10
+  const wBonus = tier === 1 ? 5 : (5 + Math.floor(Math.random() * 6));
+  const aBonus = tier === 1 ? 5 : (5 + Math.floor(Math.random() * 6));
   // 기본 장비 도입으로 atk·def 상향분이 생기므로, MUL을 추가 약화 (수행 난이도 유지)
   // earlyEasy 구간은 그대로, 그 외 구간의 HP만 하향 (스탯 하향과 병행)
   const HP_MUL  = earlyEasy ? 1.05 : 0.75;
@@ -8124,6 +8147,24 @@ function _ensureCombatExt(c){
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
+  // 등급별 버프 트래킹 — dispel/stealBuff 시 필터링용
+  // {normal:{str,dex,int,con,atk,def}, rare:{...}, unique:{...}, hero:{...}}
+  c.myBuffsByGrade  ||= {normal:{},rare:{},unique:{},hero:{}};
+  c.monBuffsByGrade ||= {normal:{},rare:{},unique:{},hero:{}};
+}
+// dispel/stealBuff 등급 필터 — 카드 등급별 영향 가능 범위 (직상위 등급까지 제거·강탈 가능)
+// normal → 레어까지 (normal+rare)
+// rare   → 유니크까지 (normal+rare+unique)
+// unique → 영웅까지 (all)
+// hero   → 영웅까지 (all)
+const _DISPEL_TARGET_GRADES = {
+  normal: new Set(['normal','rare']),
+  rare:   new Set(['normal','rare','unique']),
+  unique: new Set(['normal','rare','unique','hero']),
+  hero:   new Set(['normal','rare','unique','hero']),
+};
+function _dispelAllowedGrades(sourceGrade){
+  return _DISPEL_TARGET_GRADES[sourceGrade] || new Set(['normal','rare','unique','hero']);
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -8173,6 +8214,8 @@ function _buildCombatCtx(kind, caster){
     targLockedBuffs: isP ? c.monLockedBuffs : c.myLockedBuffs,
     castTurnBuffs: isP ? c.myTurnBuffs : c.monTurnBuffs,
     targTurnBuffs: isP ? c.monTurnBuffs : c.myTurnBuffs,
+    castBuffsByGrade: isP ? c.myBuffsByGrade : c.monBuffsByGrade,
+    targBuffsByGrade: isP ? c.monBuffsByGrade : c.myBuffsByGrade,
     castDots: isP ? c.monDots : c.myDots,      // dots ON the enemy
     targDots: isP ? c.myDots : c.monDots,      // dots ON me
     castHots: isP ? c.myHots : c.monHots,
@@ -8222,34 +8265,57 @@ function _buildCombatCtx(kind, caster){
 // stat buff → HP/MP 최대치 동기화
 // - 증가: 늘어난 양만큼 현재치도 함께 증가
 // - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 160/200 → 최대 -20 → 144/180)
-// HP 배수: CON = +5/포인트 (calcDerived와 동일 배수)  |  MP 배수: INT = +5/포인트
+// HP 배수: CON = +5/포인트 (calcDerived와 동일 배수)  |  MP 배수: INT = +7.5/포인트 (소수점 버림)
+// _syncPoolOnStatChange — CON/INT 변화 시 hpMax/mpMax 자동 동기화
+// - 증가: 늘어난 만큼 현재치도 증가
+// - 감소: 현재치 pro-rata 스케일. 단, 라이프업 등 flat maxHp/MpBuff 로 얻은 보너스는
+//   감소 하한으로 보호 (스탯 유래 부분만 감소, LU flat 은 유지)
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
-  const _apply = (maxKey, curKey, deltaMax) => {
+  const _apply = (maxKey, curKey, deltaMax, bonusKey) => {
     if (!deltaMax) return;
     const oldMax = obj[maxKey] || 0;
-    const newMax = Math.max(1, oldMax + deltaMax);
+    const bonus = (bonusKey && obj[bonusKey]) || 0;
+    const oldStatMax = Math.max(0, oldMax - bonus);   // 스탯 유래 부분 (LU 제외)
+    // 감소 시 LU flat 은 CON 감소의 영향을 받지 않음 → delta 를 stat 비율로 스케일
+    // 예) hpMax=130 (100 stat + 30 LU), CON -6 → raw delta -30 → scaled -30*(100/130) ≈ -23
+    //     → 새 hpMax = 107 (LU 가 준 30 중 일부 유지). LU 없었으면 정상 -30 감소.
+    let effectiveDelta = deltaMax;
+    if (deltaMax < 0 && bonus > 0 && oldMax > 0){
+      effectiveDelta = Math.round(deltaMax * (oldStatMax / oldMax));
+    }
+    let newMax = Math.max(1, oldMax + effectiveDelta);
+    // hpMax 하한: LU flat 만큼은 절대 아래로 안 내려감
+    if (bonus > 0) newMax = Math.max(newMax, bonus);
     const oldCur = obj[curKey] || 0;
     if (newMax >= oldMax){
       obj[maxKey] = newMax;
       obj[curKey] = Math.min(newMax, oldCur + (newMax - oldMax));
     } else {
-      const ratio = oldMax > 0 ? oldCur / oldMax : 1;
+      // 감소 — 스탯 유래 부분만 pro-rata, flat 부분은 그대로 유지
+      const newStatMax = Math.max(0, newMax - bonus);
+      const flatCur    = Math.min(bonus, oldCur);
+      const oldStatCur = Math.max(0, oldCur - flatCur);
+      const statRatio  = oldStatMax > 0 ? oldStatCur / oldStatMax : 1;
+      const newStatCur = Math.max(0, Math.min(newStatMax, Math.floor(newStatMax * statRatio)));
       obj[maxKey] = newMax;
-      obj[curKey] = Math.max(0, Math.min(newMax, Math.floor(newMax * ratio)));
+      obj[curKey] = Math.min(newMax, flatCur + newStatCur);
     }
   };
-  if (stat === 'con'){
-    _apply('hpMax', 'hp', delta * 5);
-  }
-  if (stat === 'int'){
-    _apply('mpMax', 'mp', delta * 5);
-  }
+  if (stat === 'con') _apply('hpMax', 'hp', delta * 5, '_hpMaxBonus');
+  if (stat === 'int') _apply('mpMax', 'mp', Math.floor(delta * 7.5), '_mpMaxBonus');
 }
-function _addTurnBuff(buffs, turnBuffs, stat, value, turns, obj){
+function _addTurnBuff(buffs, turnBuffs, stat, value, turns, obj, opts){
+  // opts: { grade, byGrade } — dispel/stealBuff 필터링용 소스 카드 등급 트래킹
   buffs[stat] = (buffs[stat]||0) + value;
-  if (turns) turnBuffs.push({stat, value, turns});
   if (obj) _syncPoolOnStatChange(obj, stat, value);
+  const grade = opts && opts.grade;
+  if (turns) turnBuffs.push({stat, value, turns, grade});
+  const byGrade = opts && opts.byGrade;
+  if (grade && byGrade){
+    if (!byGrade[grade]) byGrade[grade] = {};
+    byGrade[grade][stat] = (byGrade[grade][stat] || 0) + value;
+  }
 }
 // 스피드스크롤(doubleCastNext) 메커니즘 — 모든 전투 모드의 카드 발동 공통 wrapper
 // - doubleCastNext 카드 자체는 효과 없이 시전자에 ready 플래그만 set
@@ -8571,12 +8637,17 @@ function applyCardEffect(card, ctx){
       for (let i = myTbs.length - 1; i >= 0; i--){
         const item = myTbs[i];
         if ((item.value||0) < 0){
-          // 시전자 측에서 제거 (decay 패턴 — castBuffs[stat] -= value)
           cb[item.stat] = (cb[item.stat]||0) - item.value;
           _syncPoolOnStatChange(ctx.castObj, item.stat, -item.value);
+          // byGrade에서도 시전자 측 감쇠
+          if (ctx.castBuffsByGrade && item.grade && ctx.castBuffsByGrade[item.grade]){
+            ctx.castBuffsByGrade[item.grade][item.stat] = (ctx.castBuffsByGrade[item.grade][item.stat] || 0) - item.value;
+          }
           myTbs.splice(i, 1);
-          // 적에게 추가
-          _addTurnBuff(tbObj, ctx.targTurnBuffs, item.stat, item.value, item.turns, ctx.targObj);
+          // 반사된 디버프의 원래 등급 유지
+          _addTurnBuff(tbObj, ctx.targTurnBuffs, item.stat, item.value, item.turns, ctx.targObj, {
+            grade: item.grade, byGrade: ctx.targBuffsByGrade
+          });
           moved.push(`${item.stat.toUpperCase()} ${item.value}${item.turns?`(${item.turns}턴)`:''}`);
         }
       }
@@ -8766,14 +8837,26 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'maxHpBuff'){
       const add = fx.amount || Math.floor(ctx.castObj.hpMax * (fx.pct||0));
-      ctx.castObj.hpMax += add; ctx.castObj.hp += add;
+      ctx.castObj.hpMax += add;
+      // hp 는 hpMax 상한으로 clamp (max 초과 방지)
+      ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + add);
+      // flat 버프 트래킹 — CON 디버프에 의한 hpMax 감소 시 이 값은 계산에서 제외 (보호)
+      ctx.castObj._hpMaxBonus = (ctx.castObj._hpMaxBonus || 0) + add;
       ctx.log(`  + 최대 HP +${add}`, 'heal'); return;
     }
     if (t === 'maxMpBuff'){
       const add = fx.amount || Math.floor(ctx.castObj.mpMax * (fx.pct||0));
-      ctx.castObj.mpMax += add; ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + add);
+      ctx.castObj.mpMax += add;
+      ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + add);
+      ctx.castObj._mpMaxBonus = (ctx.castObj._mpMaxBonus || 0) + add;
       ctx.log(`  + 최대 MP +${add}`, 'heal'); return;
     }
+    // 카드 등급 기반 dispel/stealBuff 필터링을 위한 opts helper
+    const selfOpts   = { grade: card.grade, byGrade: ctx.castBuffsByGrade };
+    const _debuffOpts = (tgt) => ({
+      grade: card.grade,
+      byGrade: (tgt.buffs === ctx.castBuffs) ? ctx.castBuffsByGrade : ctx.targBuffsByGrade,
+    });
     if (t === 'randomBuff'){
       // 각 stat마다 min~max 사이 정수 랜덤 buff (독립 시행)
       const list = Array.isArray(fx.stats) ? fx.stats : [];
@@ -8782,7 +8865,7 @@ function applyCardEffect(card, ctx){
         const stat = it.stat;
         const mn = it.min|0, mx = it.max|0;
         const val = mn + Math.floor(Math.random() * (mx - mn + 1));
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, stat, val, fx.turns||0, ctx.castObj);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, stat, val, fx.turns||0, ctx.castObj, selfOpts);
         msgs.push(`${_korStatKey(stat)} +${val} <span style="color:#888;font-size:10px;">(${mn}~${mx} 랜덤)</span>`);
       }
       ctx.log(`  + ${ctx.castName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -8792,7 +8875,7 @@ function applyCardEffect(card, ctx){
       const msgs = [];
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance'||k==='locked') continue;
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, fx[k], fx.turns||0, ctx.castObj);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, fx[k], fx.turns||0, ctx.castObj, selfOpts);
         // locked:true — dispel/stealBuff/zeroStat 면역 (LockedBuffs에도 누적, 엔지업과 동일 정책)
         if (fx.locked && ctx.castLockedBuffs){
           ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + fx[k];
@@ -8804,10 +8887,11 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'debuff'){
       const tgt = _debuffTarget();
+      const opts = _debuffOpts(tgt);
       const msgs = [];
       for (const k of Object.keys(fx)){
         if (k==='type'||k==='turns'||k==='chance') continue;
-        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0, tgt.obj);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, fx[k], fx.turns||0, tgt.obj, opts);
         msgs.push(`${_korStatKey(k)} ${fx[k]>=0?'+':''}${fx[k]}`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
@@ -8826,7 +8910,7 @@ function applyCardEffect(card, ctx){
           base = (ctx.castObj[k]||0) + (ctx.castBuffs[k]||0);
         }
         const d = Math.floor(base * pct);
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0, ctx.castObj);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, d, fx.turns||0, ctx.castObj, selfOpts);
         // 장비 기반 buff는 별도 lock 객체에도 누적 → dispel/zeroStat/stealBuff 면역
         if (fx.equipBase && ctx.castLockedBuffs){
           ctx.castLockedBuffs[k] = (ctx.castLockedBuffs[k]||0) + d;
@@ -8838,29 +8922,33 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'pctDebuff'){
       const tgt = _debuffTarget();
+      const opts = _debuffOpts(tgt);
       const msgs = [];
       for (const [k, pct] of Object.entries(fx.stats)){
         const base = (tgt.obj[k]||0) + (tgt.buffs[k]||0);
         const d = Math.floor(base * pct);
-        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0, tgt.obj);
+        _addTurnBuff(tgt.buffs, tgt.turnBuffs, k, d, fx.turns||0, tgt.obj, opts);
         msgs.push(`${_korStatKey(k)} ${pct>=0?'+':''}${Math.floor(pct*100)}%`);
       }
       ctx.log(`  - ${tgt.name} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, tgt.logCls);
       return;
     }
     if (t === 'zeroStat'){
-      let obj, buffs, tBuffs, locked, name, logCls;
+      let obj, buffs, tBuffs, locked, name, logCls, byGrade;
       if (fx.target === 'self'){
         obj = ctx.castObj; buffs = ctx.castBuffs; tBuffs = ctx.castTurnBuffs; locked = ctx.castLockedBuffs; name = ctx.castName; logCls = 'opp';
+        byGrade = ctx.castBuffsByGrade;
       } else {
         const tgt = _debuffTarget();
         obj = tgt.obj; buffs = tgt.buffs; tBuffs = tgt.turnBuffs; locked = (tgt.obj===ctx.targObj ? ctx.targLockedBuffs : ctx.castLockedBuffs); name = tgt.name; logCls = tgt.logCls;
+        byGrade = (buffs === ctx.castBuffs) ? ctx.castBuffsByGrade : ctx.targBuffsByGrade;
       }
+      const zsOpts = { grade: card.grade, byGrade };
       for (const k of fx.stats){
         // 장비 기반 buff(엔지업 등)는 보존 — 0으로 만들지 않고 locked 값을 남김
         const lockedVal = (locked && locked[k]) || 0;
         const cur = (obj[k]||0) + (buffs[k]||0) - lockedVal;
-        _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj);
+        _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj, zsOpts);
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
       return;
@@ -8952,11 +9040,24 @@ function applyCardEffect(card, ctx){
         const tb = tbs[i];
         if ((tb.value||0) < 0){
           cb[tb.stat] = (cb[tb.stat]||0) - tb.value;
+          // byGrade 트래커도 정리
+          if (ctx.castBuffsByGrade && tb.grade && ctx.castBuffsByGrade[tb.grade]){
+            ctx.castBuffsByGrade[tb.grade][tb.stat] = (ctx.castBuffsByGrade[tb.grade][tb.stat] || 0) - tb.value;
+          }
           tbs.splice(i, 1);
         }
       }
       // 영구 디버프(turnBuffs 없이 직접 음수로 누적된 값)도 0으로 복귀
       for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0) cb[k] = 0; }
+      // byGrade 트래커에서도 음수 항목 제거 (레거시 디버프 정리)
+      if (ctx.castBuffsByGrade){
+        for (const g of Object.keys(ctx.castBuffsByGrade)){
+          const entries = ctx.castBuffsByGrade[g] || {};
+          for (const k of Object.keys(entries)){
+            if (entries[k] < 0) entries[k] = 0;
+          }
+        }
+      }
       // 시전자가 본인에게 건 자해 도트(언홀리프렌지·이몰레이션 등)도 제거
       if (sd) sd.length = 0;
       // HP/MP 회복
@@ -9002,56 +9103,118 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'dispel'){
       const tgt = fx.target || 'enemy';
-      const b = tgt==='enemy' ? ctx.targBuffs : ctx.castBuffs;
+      const b  = tgt==='enemy' ? ctx.targBuffs : ctx.castBuffs;
       const tb = tgt==='enemy' ? ctx.targTurnBuffs : ctx.castTurnBuffs;
       const lb = tgt==='enemy' ? ctx.targLockedBuffs : ctx.castLockedBuffs;
+      const bg = tgt==='enemy' ? ctx.targBuffsByGrade : ctx.castBuffsByGrade;
       // 벤전스 — 해제 대상에 벤전스 활성이면 제거 불가 메시지
       const targVg = tgt==='enemy' ? (ctx.targVengeance && ctx.targVengeance()) : (ctx.castVengeance && ctx.castVengeance());
       if (targVg && targVg.turns > 0){
         ctx.log(`  ✱ 벤전스 해제 실패 — 너무 강력한 효과이다. 해제할 수 없다.`, 'info');
       }
-      for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0; // 장비 기반 buff(엔지업 등)는 보존
-      tb.length = 0;
-      // 초상화 변신 스택도 함께 초기화 (해당 측 버프가 모두 사라짐)
-      _clearTransformsOnSide(ctx, tgt === 'enemy' ? 'targ' : 'cast');
-      ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거`, ctx.castLogCls);
+      // 등급 필터 — normal은 rare까지, rare는 unique까지, hero는 전부
+      const allowed = _dispelAllowedGrades(card.grade);
+      // 1) turnBuffs 필터 — 허용 등급 것만 제거
+      for (let i = tb.length - 1; i >= 0; i--){
+        const g = tb[i].grade || 'normal';
+        if (allowed.has(g)) tb.splice(i, 1);
+      }
+      // 2) byGrade에서 허용 등급 항목 빼기 (b 딕셔너리에서도 감쇠)
+      if (bg){
+        for (const g of Object.keys(bg)){
+          if (!allowed.has(g)) continue;
+          const entries = bg[g];
+          for (const k of Object.keys(entries)){
+            b[k] = (b[k]||0) - (entries[k]||0);
+          }
+          bg[g] = {};
+        }
+      }
+      // 3) 등급 미추적 잔여(레거시) — normal 등급 취급, allowed에 normal 있으면 locked까지 리셋
+      if (allowed.has('normal')){
+        for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0;
+      }
+      // 초상화 변신 스택 — 모든 등급 제거 가능한 경우(=hero)만 리셋
+      if (card.grade === 'hero' || !card.grade){
+        _clearTransformsOnSide(ctx, tgt === 'enemy' ? 'targ' : 'cast');
+      }
+      const rangeStr = card.grade === 'normal' ? '레어 등급까지'
+                     : card.grade === 'rare'   ? '유니크 등급까지'
+                     : card.grade === 'unique' ? '영웅 등급까지'
+                     : '전 등급';
+      ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거 (${rangeStr})`, ctx.castLogCls);
       return;
     }
     if (t === 'stealBuff'){
       const lb = ctx.targLockedBuffs || {};
+      const bg = ctx.targBuffsByGrade;
       // 벤전스 — 적이 벤전스 활성이면 강탈 불가 메시지
       const targVg = ctx.targVengeance && ctx.targVengeance();
       if (targVg && targVg.turns > 0){
         ctx.log(`  ✱ 벤전스 흡수 실패 — 너무 강력한 효과이다. 흡수할 수 없다.`, 'info');
       }
-      for (const k of Object.keys(ctx.targBuffs)){
-        // 장비 기반 buff(엔지업 등)는 탈취 대상에서 제외 — locked 수치는 적 측에 남김
-        const stealable = (ctx.targBuffs[k]||0) - (lb[k]||0);
-        if (stealable > 0){
-          const v = stealable;
-          if (fx.turns){
-            _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, v, fx.turns, ctx.castObj);
-          } else {
-            ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + v;
-            _syncPoolOnStatChange(ctx.castObj, k, v);
+      const allowed = _dispelAllowedGrades(card.grade);
+      const stealOpts = { grade: card.grade, byGrade: ctx.castBuffsByGrade };
+      // 등급별 stealable 계산 — 허용 등급 것만 강탈
+      const stealTotal = {};
+      if (bg){
+        for (const g of Object.keys(bg)){
+          if (!allowed.has(g)) continue;
+          const entries = bg[g];
+          for (const k of Object.keys(entries)){
+            stealTotal[k] = (stealTotal[k]||0) + (entries[k]||0);
           }
-          ctx.targBuffs[k] -= v;
-          _syncPoolOnStatChange(ctx.targObj, k, -v);
+          bg[g] = {};
         }
       }
-      // 대상의 버프가 모두 시전자로 이동 → 대상 측 초상화 변신 스택 초기화
-      _clearTransformsOnSide(ctx, 'targ');
-      ctx.log(`  + 적 버프 탈취${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
+      // 등급 미추적 잔여 — allowed에 normal 있으면 함께 강탈
+      if (allowed.has('normal')){
+        for (const k of Object.keys(ctx.targBuffs)){
+          const tracked = stealTotal[k] || 0;
+          const locked  = (lb[k]||0);
+          const untrackedRemainder = (ctx.targBuffs[k]||0) - locked - tracked;
+          if (untrackedRemainder > 0) stealTotal[k] = tracked + untrackedRemainder;
+        }
+      }
+      // 실제 강탈 적용
+      for (const k of Object.keys(stealTotal)){
+        const v = stealTotal[k];
+        if (v <= 0) continue;
+        if (fx.turns){
+          _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, v, fx.turns, ctx.castObj, stealOpts);
+        } else {
+          ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + v;
+          _syncPoolOnStatChange(ctx.castObj, k, v);
+          if (ctx.castBuffsByGrade){
+            const sg = card.grade || 'normal';
+            if (!ctx.castBuffsByGrade[sg]) ctx.castBuffsByGrade[sg] = {};
+            ctx.castBuffsByGrade[sg][k] = (ctx.castBuffsByGrade[sg][k] || 0) + v;
+          }
+        }
+        ctx.targBuffs[k] -= v;
+        _syncPoolOnStatChange(ctx.targObj, k, -v);
+      }
+      // 변신 스택 — 모든 등급 강탈 가능한 카드(hero)만 대상측 리셋
+      if (card.grade === 'hero' || !card.grade){
+        _clearTransformsOnSide(ctx, 'targ');
+      }
+      const rangeStr = card.grade === 'normal' ? '레어 등급까지'
+                     : card.grade === 'rare'   ? '유니크 등급까지'
+                     : card.grade === 'unique' ? '영웅 등급까지'
+                     : '전 등급';
+      ctx.log(`  + 적 버프 탈취 (${rangeStr})${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
     }
     if (t === 'statSteal'){
       // 적의 stat을 % 가져와서 시전자에게 추가
       const msgs = [];
+      const targOpts = { grade: card.grade, byGrade: ctx.targBuffsByGrade };
+      const selfStealOpts = { grade: card.grade, byGrade: ctx.castBuffsByGrade };
       for (const k of fx.stats){
         const base = (ctx.targObj[k]||0) + (ctx.targBuffs[k]||0);
         const drained = Math.floor(base * (fx.pct||0.5));
-        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, -drained, fx.turns||0, ctx.targObj);
-        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, drained, fx.turns||0, ctx.castObj);
+        _addTurnBuff(ctx.targBuffs, ctx.targTurnBuffs, k, -drained, fx.turns||0, ctx.targObj, targOpts);
+        _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, drained, fx.turns||0, ctx.castObj, selfStealOpts);
         msgs.push(`${k} ${drained}`);
       }
       ctx.log(`  + 적 ${msgs.join(', ')} 흡수${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
@@ -9206,17 +9369,21 @@ function processCombatTicks(kind){
   for (const h of c.monMpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
   c.monMpHots = c.monMpHots.filter(h=>h.turns>0);
   // 턴 버프 만료 (값 차감 후 제거)
-  function decayTurnBuffs(buffs, list, obj){
+  function decayTurnBuffs(buffs, list, obj, byGrade){
     for (const tb of list){ tb.turns--; }
     for (const tb of list.filter(x=>x.turns<=0)){
       buffs[tb.stat] = (buffs[tb.stat]||0) - tb.value;
       // CON/INT buff 만료 시 최대 HP/MP 동기화 (pro-rata)
       _syncPoolOnStatChange(obj, tb.stat, -tb.value);
+      // byGrade 트래커에서도 만료된 값 차감
+      if (byGrade && tb.grade && byGrade[tb.grade]){
+        byGrade[tb.grade][tb.stat] = (byGrade[tb.grade][tb.stat] || 0) - tb.value;
+      }
     }
     return list.filter(x=>x.turns>0);
   }
-  c.myTurnBuffs = decayTurnBuffs(c.myBuffs, c.myTurnBuffs, me);
-  c.monTurnBuffs = decayTurnBuffs(c.monBuffs, c.monTurnBuffs, opp);
+  c.myTurnBuffs = decayTurnBuffs(c.myBuffs, c.myTurnBuffs, me, c.myBuffsByGrade);
+  c.monTurnBuffs = decayTurnBuffs(c.monBuffs, c.monTurnBuffs, opp, c.monBuffsByGrade);
   // 행동불능 카운터는 isStunned()에서 소비 시 감소 (여기서는 감소하지 않음)
   // 반사막 감소 (턴 기반만; hits 기반은 doDmg에서 소비)
   if (c.myReflect && c.myReflect.turns != null){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
@@ -9673,6 +9840,7 @@ function huntEnd(result){
   } catch(e){}
   // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
   try {
+    p._hpMaxBonus = 0; p._mpMaxBonus = 0;
     calcDerived(p);
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
@@ -11287,11 +11455,11 @@ function checkLevelUp(){
 
 function calcDerived(p){
   // HP: STR/DEX/INT 1당 +2, CON 1당 +5, 레벨업 1당 +2 (Lv1·전스탯5 기준 26)
-  // MP: INT 1당 +5, 레벨업 1당 +1 (Lv1·INT5 기준 25)
+  // MP: INT 1당 +7.5 (소수점 버림), 레벨업 1당 +1 (Lv1·INT5 기준 25)
   p.hpMax = 26 + (p.level - 1) * 2
           + (p.str - 5) * 2 + (p.dex - 5) * 2 + (p.int - 5) * 2
           + (p.con - 5) * 5;
-  p.mpMax = 25 + (p.level - 1) * 1 + (p.int - 5) * 5;
+  p.mpMax = 25 + (p.level - 1) * 1 + Math.floor((p.int - 5) * 7.5);
   // 공격력 wBase: STR(1당 +1) + 무기.atkBonus + DEX*0.5 + INT*0.5. 표기는 반올림(round).
   // 최소값은 0.6배로 range 좁힘 — 평타가 너무 약하게 굴러나오지 않도록.
   const wBonus = (p.weapon && p.weapon.atkBonus) || 0;
@@ -11534,9 +11702,9 @@ async function profileCheckNick(){
   const newNick = ($('profileNewNick').value || '').trim();
   const st = $('profileNickStatus');
   _profileNickOk = false; _profileNickChecked = '';
-  if (!newNick){ st.style.color='#a00'; st.textContent='닉네임을 입력하세요.'; return; }
-  if (newNick.length < 2){ st.style.color='#a00'; st.textContent='2자 이상 입력하세요.'; return; }
-  if (newNick.length > 6){ st.style.color='#a00'; st.textContent='6자 이내로 입력하세요.'; return; }
+  // 형식 검증 (2~6자, 한글/영문/숫자, 자음·모음 단독 금지)
+  const formatErr = validateNicknameFormat(newNick);
+  if (formatErr){ st.style.color='#a00'; st.textContent=formatErr; return; }
   if (newNick === GAME.player.name){ st.style.color='#a00'; st.textContent='현재 닉네임과 같습니다.'; return; }
   if (sb){
     st.style.color='#666'; st.textContent='… 확인 중';
@@ -12069,6 +12237,26 @@ async function doLogout(){
   document.getElementById('logoutBtn').style.display = 'none';
 }
 
+// ─── 닉네임 형식 검증 ───
+// 규칙: 2~6자, 한글(완성형)·영문·숫자만 허용. 특수문자·공백·자음/모음 단독 사용 금지.
+// [가-힣] 범위는 완성형 한글만 매칭하므로 ㄱ·ㅏ 같은 자음/모음 단독은 자동 배제됨.
+const NICK_ALLOWED_RE = /^[a-zA-Z0-9가-힣]+$/;
+function validateNicknameFormat(name){
+  if (!name) return '닉네임을 입력하세요.';
+  if (name.length < 2) return '2자 이상 입력하세요.';
+  if (name.length > 6) return '6자 이내로 입력하세요.';
+  if (!NICK_ALLOWED_RE.test(name)){
+    // 어떤 문자가 문제인지 힌트 제공
+    if (/\s/.test(name)) return '공백은 사용할 수 없습니다.';
+    // 자음/모음 단독 (ㄱ~ㅎ, ㅏ~ㅣ) 검출
+    if (/[ㄱ-ㅎㅏ-ㅣ]/.test(name)){
+      return '자음이나 모음만 있는 글자는 사용할 수 없습니다. (예: ㄱ, ㅏ)';
+    }
+    return '한글·영문·숫자만 사용할 수 있습니다. (특수문자 불가)';
+  }
+  return null;   // 유효
+}
+
 // ─── 회원가입 페이지 ───
 let _regDupOk = false;
 // 이메일 OTP 상태
@@ -12094,8 +12282,9 @@ function cancelRegister(){
 async function checkDupId(){
   const name = ($('regName').value || '').trim();
   const el = $('regNameStatus');
-  if (!name){ el.style.color = '#a00'; el.textContent = '아이디를 입력하세요.'; _regDupOk = false; return; }
-  if (name.length < 2){ el.style.color = '#a00'; el.textContent = '2자 이상 입력하세요.'; _regDupOk = false; return; }
+  // 형식 검증 (2자 이상, 한글/영문/숫자만, 자음·모음 단독 금지)
+  const formatErr = validateNicknameFormat(name);
+  if (formatErr){ el.style.color = '#a00'; el.textContent = formatErr; _regDupOk = false; return; }
   // 1) 클라우드 중복 확인
   if (sb){
     el.style.color = '#666'; el.textContent = '… 확인 중';
@@ -12227,6 +12416,9 @@ async function doRegisterSubmit(){
   const pw   = ($('regPw').value || '').trim();
   const pw2  = ($('regPw2').value || '').trim();
   const say  = '';
+  // 형식 재검증 (중복확인 후 입력값 바뀌었을 경우 대비)
+  const formatErr = validateNicknameFormat(name);
+  if (formatErr){ alert('아이디 형식 오류: ' + formatErr); return; }
   if (!_regDupOk){ alert('아이디 중복확인을 해주세요.'); return; }
   if (!pw || pw.length < 6){ alert('비밀번호는 6자 이상 입력해 주세요.'); return; }
   if (pw !== pw2){ alert('비밀번호 확인이 일치하지 않습니다.'); return; }
@@ -12937,7 +13129,7 @@ async function adminSaveUser(){
   u.mp = parseInt($('ed_mp').value) || 0;
   // hpMax / mpMax 입력값에 맞춰 CON / INT 역산 (calcDerived가 매번 공식으로 덮어쓰므로)
   // 공식:  hpMax = 26 + (lv-1)*2 + (con-5)*2  →  con = 5 + (hpMax - 26 - (lv-1)*2)/2
-  //        mpMax = 25 + (lv-1)*1 + (int-5)*5  →  int = 5 + (mpMax - 25 - (lv-1))/5
+  //        mpMax = 25 + (lv-1)*1 + floor((int-5)*7.5)  →  int = 5 + (mpMax - 25 - (lv-1))/7.5
   const lvForCalc = u.level || 1;
   const editedHpMax = parseInt($('ed_hpMax').value);
   if (!isNaN(editedHpMax) && editedHpMax > 0){
@@ -12949,11 +13141,11 @@ async function adminSaveUser(){
   }
   const editedMpMax = parseInt($('ed_mpMax').value);
   if (!isNaN(editedMpMax) && editedMpMax > 0){
-    const expectedMp = 25 + (lvForCalc - 1) * 1 + (u.int - 5) * 5;
+    const expectedMp = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
     if (editedMpMax !== expectedMp){
-      u.int = Math.max(0, 5 + Math.round((editedMpMax - 25 - (lvForCalc - 1)) / 5));
+      u.int = Math.max(0, 5 + Math.round((editedMpMax - 25 - (lvForCalc - 1)) / 7.5));
     }
-    u.mpMax = 25 + (lvForCalc - 1) * 1 + (u.int - 5) * 5;
+    u.mpMax = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
   }
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
   // 자동 커서 이동 권한
