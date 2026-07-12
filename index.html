@@ -6026,6 +6026,7 @@ async function startRaidBossBattle(){
     armor:  { id:'lorica_segment', name:'로리카 세그멘타타', defBonus: A_BONUS },
     deck: makeBossDeck(),
     atkType: '특수',
+    icon: bossDef.icon,   // RAID_BOSSES 에 정의된 초상화 경로 전달
   };
   GAME.raidCombat = {
     raidKey,
