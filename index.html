@@ -6345,6 +6345,14 @@ async function raidEnd(result){
     const isAbyssBoss = c.raidKey === 'abyss';
     // 보스 모드 — 클라우드 RPC에 누적 데미지 위임 (abyss는 로컬)
     const dealtTotal = c.statsMyDmg;
+    // 세션별 개인 누적 데미지 추적 — 보스 처치 보상 계산용
+    // (마지막 전투만이 아니라 여러 도전 걸쳐 쌓은 총 데미지 기준)
+    if (!p.raidBossDmg) p.raidBossDmg = {};
+    if (!p.raidBossDmg[c.raidKey]) p.raidBossDmg[c.raidKey] = { session: 0, dmg: 0 };
+    const tracker = p.raidBossDmg[c.raidKey];
+    if (tracker.session !== r.sessionStart){ tracker.session = r.sessionStart; tracker.dmg = 0; }
+    tracker.dmg += dealtTotal;
+    const cumDmg = tracker.dmg;
     // 일일 퀘스트: 보스에게 입힌 데미지 (raidEnd 호출 = 한 번의 도전이므로 delta로 취급)
     try { if (dealtTotal > 0) _bumpDailyCounter('damage', dealtTotal, 'dq_dmg_3k'); } catch(e){}
     try { if (dealtTotal > 0) advanceDailyQuest('dq_boss_hit', dealtTotal); } catch(e){}
@@ -6374,8 +6382,9 @@ async function raidEnd(result){
       if (isAbyssBoss) cloudKilled = r.bossHp === 0;
     }
     const bossName = (RAID_BOSSES[c.raidKey].find(b => b.id === r.bossId) || {}).name || '보스';
-    const goldReward = isAbyssBoss ? 5000 + Math.floor(dealtTotal * 0.5) : Math.floor(dealtTotal * 0.5);
-    const xpReward   = isAbyssBoss ? 5000 + Math.floor(dealtTotal * 0.1) : Math.floor(dealtTotal * 0.1);
+    // 보상은 세션 누적 데미지 기준 (여러 판에 걸쳐 쌓은 총 기여도)
+    const goldReward = isAbyssBoss ? 5000 + Math.floor(cumDmg * 0.5) : Math.floor(cumDmg * 0.5);
+    const xpReward   = isAbyssBoss ? 5000 + Math.floor(cumDmg * 0.1) : Math.floor(cumDmg * 0.1);
 
     if (result === 'boss_kill' || cloudKilled){
       r.bossDefeated = true;
@@ -6449,7 +6458,8 @@ async function raidEnd(result){
           ${blessLine}
           ${cardBoxHtml}
           ${legendHtml}
-          <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
+          <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
+          <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
         chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +5, XP +${abyssXp.toLocaleString()})`);
       } else {
         // 기존 dawn/mist
@@ -6475,7 +6485,8 @@ async function raidEnd(result){
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
           ${blessLine}
           ${cardLine}
-          <p>입힌 누적 데미지: <b>${dealtTotal}</b> / ${r.bossHpMax}</p>`;
+          <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
+          <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
         chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
         // 본인 보상 즉시 수령 시도
         if (sb){ setTimeout(() => claimRaidRewards(), 500); }
@@ -7555,7 +7566,27 @@ function buildMonsterDeck(race, mLv, deckSize){
     }
   }
 
-  // ── 선행 카드 의존성 보장 ──
+  // ── 은신 의존 카드 (기습·맹독) 처리 ──
+  // r21(은신)이 이미 덱에 있으면 유지, 없으면 requireStealth 카드를 은신으로 대체
+  // (은신은 3턴 창 안에서만 발동 가능하지만, 최소한 성립 가능한 상태로 만듬)
+  const stealthCard = CARDS.find(c => c.id === 'r21');
+  const hasStealth = deck.some(c => c.id === 'r21');
+  const stealthDeps = deck.filter(c => c.requireStealth);
+  if (stealthDeps.length > 0){
+    if (!hasStealth && stealthCard){
+      // 은신 삽입: 기본공격 자리 or 첫 requireStealth 위치 앞에
+      const slotIdx = deck.findIndex(c => c.id === 'basic_atk');
+      if (slotIdx >= 0) deck[slotIdx] = stealthCard;
+      else deck[0] = stealthCard;
+    } else if (!stealthCard){
+      // r21 없으면 requireStealth 카드는 죽은 카드 → BASIC으로 교체
+      for (let i = 0; i < deck.length; i++){
+        if (deck[i].requireStealth) deck[i] = BASIC_ATTACK;
+      }
+    }
+  }
+
+  // ── 선행 카드 의존성 보장 (n41 소환의식) ──
   // 1) 의존 카드의 requires가 덱에 없으면 BASIC_ATTACK 한 자리를 requires 카드로 대체
   const needsSet = new Set();
   for (const c of deck) if (_cardRequires(c)) needsSet.add(_cardRequires(c));
@@ -7567,22 +7598,58 @@ function buildMonsterDeck(race, mLv, deckSize){
     if (slotIdx >= 0) deck[slotIdx] = reqCard;
     else deck[0] = reqCard;
   }
-  // 2) 의존 카드가 requires 카드보다 앞에 있으면 swap (requires가 먼저 발동되도록)
+
+  // ── 카드 배치 우선순위 정렬 (안정 정렬) ──
+  // 0: r21(은신)·n41(소환의식) — 선행 필수 카드는 최우선
+  // 1: 자기 버프 (str/dex/int/con/atk/def, pctBuff, maxHpBuff, maxMpBuff)
+  // 2: 상대 디버프
+  // 3: 데미지·공격·유틸
+  // 4: 기본공격 — 필러
+  const _cardOrderPriority = (card) => {
+    if (!card) return 5;
+    if (card.id === 'basic_atk') return 4;
+    if (card.id === 'r21' || card.id === 'n41') return 0;
+    const fx = card.fx || {};
+    const isSelfBuff = (f) => {
+      if (!f) return false;
+      if (f.type === 'buff' && ((f.str|0)||(f.dex|0)||(f.int|0)||(f.con|0)||(f.atk|0)||(f.def|0))) return true;
+      if (f.type === 'pctBuff') return true;
+      if (f.type === 'maxHpBuff' || f.type === 'maxMpBuff') return true;
+      return false;
+    };
+    const isDebuff = (f) => {
+      if (!f) return false;
+      if (f.type === 'debuff' || f.type === 'pctDebuff' || f.type === 'zeroStat') return true;
+      return false;
+    };
+    if (isSelfBuff(fx)) return 1;
+    if (fx.type === 'multi' && Array.isArray(fx.effects) && fx.effects.some(isSelfBuff)) return 1;
+    if (isDebuff(fx)) return 2;
+    if (fx.type === 'multi' && Array.isArray(fx.effects) && fx.effects.some(isDebuff)) return 2;
+    return 3;
+  };
+  // 안정 정렬 (원본 인덱스로 tie-breaking)
+  deck
+    .map((c, i) => ({ c, i, p: _cardOrderPriority(c) }))
+    .sort((a, b) => a.p !== b.p ? a.p - b.p : a.i - b.i)
+    .forEach((entry, idx) => { deck[idx] = entry.c; });
+
+  // ── 선행 카드 최종 순서 보정 ──
+  // 정렬 후에도 의존 카드가 requires 카드보다 앞에 있으면 swap
+  const _ensureBefore = (depIdx, reqId) => {
+    for (let j = 0; j < depIdx; j++) if (deck[j].id === reqId) return; // 이미 앞에 있음
+    for (let j = depIdx + 1; j < deck.length; j++){
+      if (deck[j].id === reqId){
+        const tmp = deck[depIdx]; deck[depIdx] = deck[j]; deck[j] = tmp;
+        return;
+      }
+    }
+  };
   for (let i = 0; i < deck.length; i++){
     const c = deck[i];
     const req = _cardRequires(c);
-    if (!req) continue;
-    // requires가 i 이전에 있는지
-    let foundBefore = false;
-    for (let j = 0; j < i; j++) if (deck[j].id === req){ foundBefore = true; break; }
-    if (foundBefore) continue;
-    // i 이후에서 requires 찾기
-    for (let j = i + 1; j < deck.length; j++){
-      if (deck[j].id === req){
-        const tmp = deck[i]; deck[i] = deck[j]; deck[j] = tmp;
-        break;
-      }
-    }
+    if (req) _ensureBefore(i, req);
+    if (c.requireStealth) _ensureBefore(i, 'r21');
   }
   return deck;
 }
