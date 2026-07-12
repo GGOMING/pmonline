@@ -5499,12 +5499,9 @@ let _raidChannel = null;
 async function loadRaidFromCloud(){
   if (!sb) return false;
   const sessionStart = getCurrentSessionStart();
-  // 새 스키마 (raid_key 컬럼) 리셋 시도. 실패하면 legacy raid_check_reset 시도.
+  // 병렬 스키마: raid_check_reset_all(p_session_start)
   try { await sb.rpc('raid_check_reset_all', { p_session_start: sessionStart }); }
-  catch(e){
-    try { await sb.rpc('raid_check_reset', { p_session_start: sessionStart }); }
-    catch(e2){ console.warn('[raid_check_reset]', e2); }
-  }
+  catch(e){ console.warn('[raid_check_reset_all]', e); }
   try {
     // 새 스키마: raid_key 필드로 조회. 기존 스키마: id=1 단일 row + active_key.
     // 우선 새 스키마 시도
@@ -5886,20 +5883,12 @@ async function requestRaidManualReset(){
     return;
   }
   try {
-    // 새 스키마: raid_manual_reset(p_raid_key, ...). Legacy는 p_active_key.
-    let res = await sb.rpc('raid_manual_reset', {
+    // 병렬 스키마: raid_manual_reset(p_raid_key, p_boss_id, p_boss_hp_max)
+    const { error } = await sb.rpc('raid_manual_reset', {
       p_raid_key: raidKey,
       p_boss_id: boss.id,
       p_boss_hp_max: boss.hpMax || boss.hp || 10000,
     });
-    if (res.error){
-      res = await sb.rpc('raid_manual_reset', {
-        p_active_key: raidKey,
-        p_boss_id: boss.id,
-        p_boss_hp_max: boss.hpMax || boss.hp || 10000,
-      });
-    }
-    const { error } = res;
     if (error){
       console.warn('[raid_manual_reset]', error);
       toast('초기화 실패: ' + (error.message || '서버 오류'));
@@ -6272,12 +6261,12 @@ async function raidEnd(result){
       let remain = r.monsterCount;
       if (sb){
         try {
-          // 병렬 스키마: raid_kill_mob(p_raid_key). 실패 시 dawn/mist는 legacy fallback.
-          let killRes = await sb.rpc('raid_kill_mob', { p_raid_key: c.raidKey });
-          if (killRes.error && !isAbyssMob){ killRes = await sb.rpc('raid_kill_mob'); }
-          if (!killRes.error && typeof killRes.data === 'number'){ remain = killRes.data; r.monsterCount = killRes.data; }
-          else if (killRes.error){
-            // SQL 미적용 등으로 실패 → 로컬 fallback
+          // 병렬 스키마: raid_kill_mob(p_raid_key)
+          const killRes = await sb.rpc('raid_kill_mob', { p_raid_key: c.raidKey });
+          if (!killRes.error && typeof killRes.data === 'number'){
+            remain = killRes.data; r.monsterCount = killRes.data;
+          } else if (killRes.error){
+            console.warn('[raid_kill_mob]', killRes.error);
             if (r.monsterCount > 0) r.monsterCount--;
             remain = r.monsterCount;
           }
@@ -6362,17 +6351,14 @@ async function raidEnd(result){
     let cloudOk = false;
     if (sb && dealtTotal > 0){
       try {
-        // 병렬 스키마: raid_deal_damage(p_raid_key, p_damage). 실패 시 legacy fallback.
-        let dmgRes = await sb.rpc('raid_deal_damage', { p_raid_key: c.raidKey, p_damage: dealtTotal });
-        if (dmgRes.error && !isAbyssBoss){
-          dmgRes = await sb.rpc('raid_deal_damage', { p_damage: dealtTotal });
-        }
+        // 병렬 스키마: raid_deal_damage(p_raid_key, p_damage)
+        const dmgRes = await sb.rpc('raid_deal_damage', { p_raid_key: c.raidKey, p_damage: dealtTotal });
         const { data: dmgRows, error } = dmgRes;
         console.log('[raid_deal_damage]', c.raidKey, 'sent=' + dealtTotal,
                     'error=', error ? JSON.stringify(error) : 'null',
                     'data=', dmgRows ? JSON.stringify(dmgRows) : 'null');
         if (error){
-          if (!isAbyssBoss) toast('보스 데미지 동기화 실패: ' + (error.message || error));
+          toast('보스 데미지 동기화 실패: ' + (error.message || error));
         } else if (Array.isArray(dmgRows) && dmgRows.length > 0){
           const row = dmgRows[0];
           r.bossHp = row.boss_hp;
