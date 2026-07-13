@@ -2711,7 +2711,7 @@ const CARDS = [
   { id:'r39', name:'프리징브레스',       grade:'rare', icon:'ice',      text:'상대방 1턴 동안 얼림 / INT로 2회 타격 / INT만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2},{type:'cc',turns:1,chance:1},{type:'mpCost',stat:'int'}]} },
   { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 무기 및 방어구 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
   { id:'r41', name:'사령의 로드',       grade:'rare', icon:'wand',     iconPath:'assets/wc3_reforged_used/BTNWandSkull-Reforged.png', text:'INT × (1.0~2.0배 랜덤)으로 2회 타격 (각 hit 독립 시행) / MP 50 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],multMin:1.0,multMax:2.0,hits:2},{type:'mpCost',amount:50}]} },
-  { id:'r42', name:'마나 실드',         grade:'rare', icon:'shield',   iconPath:'assets/wc3_reforged_used/BTNManaShield-Reforged.png', text:'다음 턴부터 3턴 동안 받는 데미지의 40%를 MP에서 차감 (MP 부족분은 HP로) / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'manaShield',turns:3,absorb:0.4} },
+  { id:'r42', name:'마나 쉴드',         grade:'rare', icon:'shield',   iconPath:'assets/wc3_reforged_used/BTNManaShield-Reforged.png', text:'다음 턴부터 3턴 동안 받는 데미지의 40%를 MP에서 차감 (MP 부족분은 HP로) / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'manaShield',turns:3,absorb:0.4} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -8302,7 +8302,7 @@ function _ensureCombatExt(c){
   c.myVengeance ||= null; c.monVengeance ||= null; // 벤전스 — {turns, reflectMul, dmgReduce, pending}
   c.myScrollGuardTurn ||= 0; c.monScrollGuardTurn ||= 0; // 스피드스크롤 — 시전 턴에만 받는 데미지 50% 감소
   c.myRebirth ||= null; c.monRebirth ||= null;   // 부활의 증표 — {turns}. HP 0 도달 시 발동 (1회)
-  c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 실드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
+  c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 쉴드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -8536,7 +8536,7 @@ function _isOffensiveCard(card){
 }
 // 방어력 무시 데미지 헬퍼 — dmg / dmgStat / sacrifice 등에서 ignoreDef:true 옵션으로 재사용
 // 무적·벤전스 반사·데미지 감소를 모두 처리
-// 마나 실드 흡수 헬퍼 — 최종 HP 차감 직전 호출.
+// 마나 쉴드 흡수 헬퍼 — 최종 HP 차감 직전 호출.
 // 활성 시 dmg 의 absorb% 를 MP 에서 우선 차감. MP 부족분은 HP 로 감소.
 // 반환: { hpDmg, mpAbsorbed } — hp 에서 뺄 값, mp 에서 흡수한 값
 function _applyManaShield(shield, obj, dmg){
@@ -8565,25 +8565,25 @@ function _dealIgnoreDef(ctx, raw){
   if (vg && vg.turns > 0 && !vg.pending){
     const reduced   = Math.max(1, Math.floor(dmg * (vg.dmgReduce  || 0.5)));
     const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
-    // 마나 실드 흡수
+    // 마나 쉴드 흡수
     const ms = ctx.targManaShield && ctx.targManaShield();
     const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, reduced);
     ctx.targObj.hp -= hpDmg;
     ctx.addDmg(hpDmg);
     ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
     const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
-    const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나실드 MP -${mpAbsorbed})</span>` : '';
+    const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
     ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>${_msNote}`, ctx.castLogCls);
     ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
     return;
   }
-  // 마나 실드 흡수
+  // 마나 쉴드 흡수
   const ms = ctx.targManaShield && ctx.targManaShield();
   const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, dmg);
   ctx.targObj.hp -= hpDmg;
   ctx.addDmg(hpDmg);
   const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
-  const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나실드 MP -${mpAbsorbed})</span>` : '';
+  const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
   ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시${_sgNote})</span>${_msNote}`, ctx.castLogCls);
 }
 // 카드 효과 로그에서 stat 키를 한글로 표기 — atk → 무기, def → 방어구
@@ -8684,7 +8684,7 @@ function applyCardEffect(card, ctx){
       if (vg && vg.turns > 0 && !vg.pending){
         const reduced  = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
         const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
-        // 마나 실드 흡수
+        // 마나 쉴드 흡수
         const ms = ctx.targManaShield && ctx.targManaShield();
         const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, reduced);
         ctx.targObj.hp -= hpDmg;
@@ -8692,17 +8692,17 @@ function applyCardEffect(card, ctx){
         // 반사 데미지 — 시전자에게 직접 차감 (방어력 무시·재반사 방지)
         ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
         const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
-        const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나실드 MP -${mpAbsorbed})</span>` : '';
+        const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
         ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>${_msNote}`, ctx.castLogCls);
         ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
       } else {
-        // 마나 실드 흡수
+        // 마나 쉴드 흡수
         const ms = ctx.targManaShield && ctx.targManaShield();
         const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, dmg);
         ctx.targObj.hp -= hpDmg;
         ctx.addDmg(hpDmg);
         const _sgNote = _sgActive ? ' <span style="color:#888;font-size:10px;">(스크롤실드 50% 감소)</span>' : '';
-        const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나실드 MP -${mpAbsorbed})</span>` : '';
+        const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
         ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span>${_sgNote}${_msNote}`, ctx.castLogCls);
       }
       // 흡혈성 회복 (뱀파이어릭 오라) — 시전자가 leech 상태면 가한 데미지의 일부를 시전자 HP로 흡수
@@ -8796,12 +8796,12 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'manaShield'){
-      // 마나 실드 (레어) — 시전 턴엔 발동 안 됨, 다음 턴부터 N턴 동안 받는 데미지의 absorb% 를 MP 에서 차감
+      // 마나 쉴드 (레어) — 시전 턴엔 발동 안 됨, 다음 턴부터 N턴 동안 받는 데미지의 absorb% 를 MP 에서 차감
       // MP 부족분은 그대로 HP 로 감소. 중복 시전 시 새 값으로 덮어쓰기 (연장)
       const turns = (fx.turns || 3) + 1;   // 시전 턴은 pending 이므로 +1
       const absorb = fx.absorb || 0.4;
       ctx.setCastManaShield && ctx.setCastManaShield({ turns, absorb, pending: true });
-      ctx.log(`  🔮 ${ctx.castName} 다음 턴부터 ${fx.turns||3}턴 <b>마나 실드</b> — 받는 데미지 ${Math.floor(absorb*100)}% MP 흡수`, 'heal');
+      ctx.log(`  🔮 ${ctx.castName} 다음 턴부터 ${fx.turns||3}턴 <b>마나 쉴드</b> — 받는 데미지 ${Math.floor(absorb*100)}% MP 흡수`, 'heal');
       return;
     }
     if (t === 'stealVengeance'){
@@ -9665,9 +9665,9 @@ function processCombatTicks(kind){
   // 부활의 증표 타이머 감소
   if (c.myRebirth && c.myRebirth.turns > 0){ c.myRebirth.turns--; if (c.myRebirth.turns <= 0){ c.myRebirth = null; log(`  · 부활의 증표 효과 만료`, 'info'); } }
   if (c.monRebirth && c.monRebirth.turns > 0){ c.monRebirth.turns--; if (c.monRebirth.turns <= 0){ c.monRebirth = null; log(`  · ${opp.name} 부활의 증표 효과 만료`, 'info'); } }
-  // 마나 실드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
-  if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 실드 효과 만료`, 'info'); } }
-  if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 실드 효과 만료`, 'info'); } }
+  // 마나 쉴드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
+  if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 쉴드 효과 만료`, 'info'); } }
+  if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
 }
 
 // 행동불능 체크 — true 반환 시 stun 카운터 1 소비
