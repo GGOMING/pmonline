@@ -1216,6 +1216,8 @@
           <button class="admin-btn small" onclick="adminKillBoss('dawn')">보스 즉시 처치</button>
           <select id="adminRaidDawnBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('dawn')">보스 교체</button>
+          <input type="number" id="adminRaidDawnMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+          <button class="admin-btn small" onclick="adminSetMonsterCount('dawn')">몹수 설정</button>
         </div>
         <div style="margin:4px 0;">
           🌫 안개의 숲: 몬스터 <b id="adminRaidMistMon">-</b>, 보스 HP <b id="adminRaidMistHp">-</b>
@@ -1224,6 +1226,8 @@
           <button class="admin-btn small" onclick="adminKillBoss('mist')">보스 즉시 처치</button>
           <select id="adminRaidMistBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('mist')">보스 교체</button>
+          <input type="number" id="adminRaidMistMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+          <button class="admin-btn small" onclick="adminSetMonsterCount('mist')">몹수 설정</button>
         </div>
         <div style="margin:4px 0;">
           🌌 잊혀진 성좌: 몬스터 <b id="adminRaidAbyssMon">-</b>, 보스 HP <b id="adminRaidAbyssHp">-</b>
@@ -1232,6 +1236,8 @@
           <button class="admin-btn small" onclick="adminKillBoss('abyss')">보스 즉시 처치</button>
           <select id="adminRaidAbyssBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('abyss')">보스 교체</button>
+          <input type="number" id="adminRaidAbyssMonInput" min="0" max="199" style="width:60px;font-size:11px;" placeholder="몹수">
+          <button class="admin-btn small" onclick="adminSetMonsterCount('abyss')">몹수 설정</button>
         </div>
       </div>
 
@@ -2869,6 +2875,7 @@ function applySavePayload(d){
   // HP/MP는 새 max를 초과하지 않도록 클램프 (초과 시 max로 맞춤)
   if (GAME.player.hp > GAME.player.hpMax) GAME.player.hp = GAME.player.hpMax;
   if (GAME.player.mp > GAME.player.mpMax) GAME.player.mp = GAME.player.mpMax;
+  try { updateOperatorFloatVisibility(); } catch(e){}
   return true;
 }
 
@@ -4413,7 +4420,9 @@ async function _loadHonorRankers(){
     try {
       const { data, error } = await sb.from('saves').select('user_id, nickname, data');
       if (!error && Array.isArray(data) && data.length > 0){
-        const list = data.map(row => {
+        const list = data
+          .filter(row => !((row.data && row.data.player) || {}).isOperator)   // 운영자 계정 제외
+          .map(row => {
           const d = row.data || {};
           const p = d.player || {};
           return {
@@ -4449,6 +4458,7 @@ async function _loadHonorRankers(){
       if (!raw) continue;
       const d = JSON.parse(raw);
       const p = d.player || {};
+      if (p.isOperator) continue;   // 운영자 계정 제외
       list.push({
         user_id: null,
         name, level: p.level||1, xp: p.xp||0, xpUp: p.xpUp||0,
@@ -12233,6 +12243,7 @@ async function doLogout(){
   GAME.myDeck = Array(15).fill(BASIC_ATTACK);
   GAME.inventory = [];
   setCombatMode(false);
+  try { updateOperatorFloatVisibility(); } catch(e){}
   showPage('login');
   document.getElementById('logoutBtn').style.display = 'none';
 }
@@ -13017,6 +13028,10 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">HP</span> <input type="number" id="ed_hp" value="${u.hp||0}"> / Max <input type="number" id="ed_hpMax" value="${u.hpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 CON 자동 역산)</span></div>
     <div class="edit-row"><span class="lbl">MP</span> <input type="number" id="ed_mp" value="${u.mp||0}"> / Max <input type="number" id="ed_mpMax" value="${u.mpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 INT 자동 역산)</span></div>
     <div class="edit-row"><span class="lbl">랭킹 순위</span> <input type="number" id="ed_rankPos" value="${u.rankPos||0}" min="0" max="10" style="width:80px;"> <span style="font-size:11px;color:#666;">0=미등록, 1~10=순위</span></div>
+    <div class="edit-row"><span class="lbl">🛡 운영자 계정</span>
+      <label style="font-size:11px;"><input type="checkbox" id="ed_isOperator" ${u.isOperator ? 'checked' : ''}> 운영자로 표시</label>
+      <span style="font-size:11px;color:#666;margin-left:6px;">체크 시 명예의 전당에서 제외</span>
+    </div>
 
     <div class="edit-row"><span class="lbl">장착 무기</span>
       <select id="ed_weapon" style="width:200px;">
@@ -13148,6 +13163,9 @@ async function adminSaveUser(){
     u.mpMax = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
   }
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
+  // 운영자 계정 플래그 (명예의 전당 노출 제외용)
+  const opEl = $('ed_isOperator');
+  if (opEl) u.isOperator = !!opEl.checked;
   // 자동 커서 이동 권한
   const afEl = $('ed_autoFocus');
   if (afEl) u.autoFocus = !!afEl.checked;
@@ -13864,6 +13882,29 @@ async function adminBossPhase(key){
   } catch(e){ alert('보스 단계 진입 실패: ' + (e.message||e)); }
 }
 
+// 잔여 몬스터 수 직접 설정
+async function adminSetMonsterCount(key){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  const inpId = key === 'dawn' ? 'adminRaidDawnMonInput'
+              : key === 'mist' ? 'adminRaidMistMonInput'
+              :                  'adminRaidAbyssMonInput';
+  const raw = ($(inpId) && $(inpId).value.trim());
+  if (raw === ''){ alert('몬스터 수를 입력하세요.'); return; }
+  const val = parseInt(raw, 10);
+  const cap = key === 'abyss' ? 199 : 99;
+  if (isNaN(val) || val < 0 || val > cap){
+    alert(`0~${cap} 사이 정수를 입력하세요.`);
+    return;
+  }
+  try {
+    const { error } = await sb.from('raid_state').update({ monster_count: val }).eq('raid_key', key);
+    if (error){ alert('몹수 설정 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    refreshAdminSystem();
+    alert(`✔ ${_raidKr(key)} 잔여 몬스터 ${val}마리로 설정`);
+  } catch(e){ alert('몹수 설정 실패: ' + (e.message||e)); }
+}
+
 async function adminKillBoss(key){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   try {
@@ -14091,6 +14132,172 @@ try {
 setInterval(()=>{
   if (GAME.player) saveGame();
 }, 5000);
+</script>
+
+<!-- ====================================================== -->
+<!-- 운영자 전용 플로팅 툴바 (p.isOperator 인 계정만 노출) -->
+<!-- ====================================================== -->
+<div id="opFloatBtn"
+     style="position:fixed;bottom:20px;right:20px;z-index:9999;display:none;"
+     title="운영자 도구">
+  <button onclick="toggleOperatorPanel()"
+          style="width:52px;height:52px;border-radius:50%;background:linear-gradient(180deg,#7E181E,#4a0d10);color:#ffd700;font-size:22px;border:2px solid #ffd700;cursor:pointer;box-shadow:0 3px 10px rgba(0,0,0,.5);">🛡</button>
+</div>
+
+<div id="opPanel"
+     style="position:fixed;bottom:82px;right:20px;z-index:9998;display:none;width:360px;background:#fff;border:2px solid #7E181E;border-radius:8px;padding:12px;box-shadow:0 4px 16px rgba(0,0,0,.35);font-size:12px;">
+  <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #c9a26b;padding-bottom:6px;margin-bottom:8px;">
+    <b style="color:#7E181E;">🛡 운영자 도구 — 공격대</b>
+    <button onclick="closeOperatorPanel()" style="background:#eee;border:1px solid #999;padding:2px 8px;font-size:11px;cursor:pointer;">✕</button>
+  </div>
+
+  <div style="background:#fff0e0;border:1px solid #faa;padding:5px;margin-bottom:6px;">
+    <button class="admin-btn small danger" onclick="opForceRaidReset()" style="width:100%;">⚡ 3개 공격대 전체 강제 리셋</button>
+  </div>
+
+  <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;margin-bottom:6px;">
+    <b>⛅ 새벽의 언덕</b> — 몹 <span id="opDawnMon">-</span>, 보스HP <span id="opDawnHp">-</span>
+    <div style="margin-top:4px;">
+      <button class="admin-btn small" onclick="opResetRaid('dawn')">세션 리셋</button>
+      <button class="admin-btn small" onclick="opBossPhase('dawn')">보스단계</button>
+      <button class="admin-btn small" onclick="opKillBoss('dawn')">보스처치</button>
+    </div>
+    <div style="margin-top:4px;">
+      <select id="opDawnBossSel" style="font-size:11px;"></select>
+      <button class="admin-btn small" onclick="opSetBoss('dawn')">보스교체</button>
+    </div>
+    <div style="margin-top:4px;">
+      <input type="number" id="opDawnMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+      <button class="admin-btn small" onclick="opSetMonsterCount('dawn')">몹수 설정</button>
+    </div>
+  </div>
+
+  <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;margin-bottom:6px;">
+    <b>🌫 안개의 숲</b> — 몹 <span id="opMistMon">-</span>, 보스HP <span id="opMistHp">-</span>
+    <div style="margin-top:4px;">
+      <button class="admin-btn small" onclick="opResetRaid('mist')">세션 리셋</button>
+      <button class="admin-btn small" onclick="opBossPhase('mist')">보스단계</button>
+      <button class="admin-btn small" onclick="opKillBoss('mist')">보스처치</button>
+    </div>
+    <div style="margin-top:4px;">
+      <select id="opMistBossSel" style="font-size:11px;"></select>
+      <button class="admin-btn small" onclick="opSetBoss('mist')">보스교체</button>
+    </div>
+    <div style="margin-top:4px;">
+      <input type="number" id="opMistMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+      <button class="admin-btn small" onclick="opSetMonsterCount('mist')">몹수 설정</button>
+    </div>
+  </div>
+
+  <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;">
+    <b>🌌 잊혀진 성좌</b> — 몹 <span id="opAbyssMon">-</span>, 보스HP <span id="opAbyssHp">-</span>
+    <div style="margin-top:4px;">
+      <button class="admin-btn small" onclick="opResetRaid('abyss')">세션 리셋</button>
+      <button class="admin-btn small" onclick="opBossPhase('abyss')">보스단계</button>
+      <button class="admin-btn small" onclick="opKillBoss('abyss')">보스처치</button>
+    </div>
+    <div style="margin-top:4px;">
+      <select id="opAbyssBossSel" style="font-size:11px;"></select>
+      <button class="admin-btn small" onclick="opSetBoss('abyss')">보스교체</button>
+    </div>
+    <div style="margin-top:4px;">
+      <input type="number" id="opAbyssMonInput" min="0" max="199" style="width:60px;font-size:11px;" placeholder="몹수">
+      <button class="admin-btn small" onclick="opSetMonsterCount('abyss')">몹수 설정</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─── 운영자 플로팅 툴바 로직 ───
+function updateOperatorFloatVisibility(){
+  const btn = document.getElementById('opFloatBtn');
+  if (!btn) return;
+  const p = GAME && GAME.player;
+  btn.style.display = (p && p.isOperator) ? 'block' : 'none';
+  // 운영자 아니면 열려있던 패널도 닫기
+  if (!(p && p.isOperator)){
+    const panel = document.getElementById('opPanel');
+    if (panel) panel.style.display = 'none';
+  }
+}
+
+function _opRefreshInfo(){
+  const cap = { dawn:'Dawn', mist:'Mist', abyss:'Abyss' };
+  ['dawn','mist','abyss'].forEach(k => {
+    const r = (GAME.raid && GAME.raid[k]) || {};
+    const monEl = document.getElementById(`op${cap[k]}Mon`);
+    const hpEl  = document.getElementById(`op${cap[k]}Hp`);
+    if (monEl) monEl.textContent = r.monsterCount != null ? r.monsterCount : '-';
+    if (hpEl)  hpEl.textContent  = r.sessionStart ? `${r.bossHp||0}/${r.bossHpMax||0}` : '-';
+    const sel = document.getElementById(`op${cap[k]}BossSel`);
+    if (sel && RAID_BOSSES[k]){
+      sel.innerHTML = RAID_BOSSES[k].map(b =>
+        `<option value="${b.id}" ${b.id===r.bossId?'selected':''}>${b.name} (HP ${b.hpMax})</option>`
+      ).join('');
+    }
+  });
+}
+
+async function toggleOperatorPanel(){
+  const panel = document.getElementById('opPanel');
+  if (!panel) return;
+  const isOpen = panel.style.display !== 'none';
+  if (isOpen){ panel.style.display = 'none'; return; }
+  // 열기 전 최신 raid 상태 로드
+  if (typeof sb !== 'undefined' && sb){
+    try { await loadRaidFromCloud(); } catch(e){ console.warn('[op panel load]', e); }
+  }
+  _opRefreshInfo();
+  panel.style.display = 'block';
+}
+function closeOperatorPanel(){
+  const panel = document.getElementById('opPanel');
+  if (panel) panel.style.display = 'none';
+}
+
+// 운영자 조작 함수 — admin과 동일 로직 재사용 후 op 패널 상태 갱신
+async function opForceRaidReset(){ try { await adminForceRaidReset(); } finally { _opRefreshInfo(); } }
+async function opResetRaid(k){       try { await adminResetRaid(k);     } finally { _opRefreshInfo(); } }
+async function opBossPhase(k){       try { await adminBossPhase(k);     } finally { _opRefreshInfo(); } }
+async function opKillBoss(k){        try { await adminKillBoss(k);      } finally { _opRefreshInfo(); } }
+async function opSetMonsterCount(k){
+  const capMap = { dawn:'Dawn', mist:'Mist', abyss:'Abyss' };
+  const inp = document.getElementById(`op${capMap[k]}MonInput`);
+  const raw = inp && inp.value.trim();
+  if (!raw){ alert('몬스터 수를 입력하세요.'); return; }
+  const val = parseInt(raw, 10);
+  const cap = k === 'abyss' ? 199 : 99;
+  if (isNaN(val) || val < 0 || val > cap){ alert(`0~${cap} 사이 정수를 입력하세요.`); return; }
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { error } = await sb.from('raid_state').update({ monster_count: val }).eq('raid_key', k);
+    if (error){ alert('몹수 설정 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    alert(`✔ ${_raidKr(k)} 잔여 몬스터 ${val}마리로 설정`);
+  } catch(e){ alert('몹수 설정 실패: ' + (e.message||e)); }
+  _opRefreshInfo();
+}
+async function opSetBoss(k){
+  const capMap = { dawn:'Dawn', mist:'Mist', abyss:'Abyss' };
+  const sel = document.getElementById(`op${capMap[k]}BossSel`);
+  if (!sel || !sel.value) return;
+  const boss = RAID_BOSSES[k].find(b => b.id === sel.value);
+  if (!boss) return;
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { error } = await sb.from('raid_state').update({
+      boss_id: boss.id,
+      boss_hp: boss.hpMax,
+      boss_hp_max: boss.hpMax,
+      boss_defeated: false,
+      last_killer: null,
+    }).eq('raid_key', k);
+    if (error){ alert('보스 교체 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    alert(`✔ ${_raidKr(k)} 보스를 ${boss.name}(으)로 교체`);
+  } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
+  _opRefreshInfo();
+}
 </script>
 </body>
 </html>
