@@ -4011,7 +4011,7 @@ function sellAllByGrade(grade){
   GAME.inventory = keepList;
   p.gold += total;
   toast(`${gradeKr(grade)} 카드 ${sellList.length}장 판매 +${total.toLocaleString()}G`);
-  chatSys(`★ ${p.name}님이 ${gradeKr(grade)} 카드 ${sellList.length}장을 판매하셨습니다. (+${total.toLocaleString()}G)`);
+  // 다중 판매는 채팅창에 안내하지 않음 (스팸 방지)
   renderSheet();
   renderDeck();
   refreshShopUI();
@@ -4218,7 +4218,7 @@ function sellSelectedCards(){
   p.gold += actualGold;
   _sellSelected = {};
   toast(`✔ ${actualSold}장 판매 +${actualGold.toLocaleString()}G`);
-  chatSys(`★ ${p.name}님이 카드 ${actualSold}장을 판매하셨습니다. (+${actualGold.toLocaleString()}G)`);
+  // 다중 판매는 채팅창에 안내하지 않음 (스팸 방지)
   try { advanceDailyQuest('dq_sell_3', actualSold); } catch(e){}
   renderSheet();
   renderDeck();
