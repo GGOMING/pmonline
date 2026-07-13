@@ -2673,7 +2673,7 @@ const CARDS = [
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
   { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
-  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전자 MP*0.2 자해 데미지 / 상대방 MP -20%', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2},{type:'dispel'}]} },
+  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전 시점 MP × 0.2 만큼 방어력 무시 고정 자해 데미지 / 시전자 최대 MP 20% 감소', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2,snap:true},{type:'maxMpBuff',pct:-0.2}]} },
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'pctDebuff',stats:{dex:-0.5},turns:3}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
   { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
@@ -6635,21 +6635,7 @@ async function raidEnd(result){
       let abyssPartHtml = '';
       if (isAbyssBoss && dealtTotal >= 100){
         p.xp += 5000;
-        const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
-        const grade = pickGachaGradeFor('hero');
-        const gPool = cardPool.filter(c => c.grade === grade);
-        const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
-        if (card && GAME.inventory.length < inventoryLimit()){
-          GAME.inventory.push(card);
-          let sellBtn = '';
-          if (card.grade === 'normal' || card.grade === 'rare'){
-            const price = CARD_SELL_PRICE[card.grade] || 1;
-            sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
-          }
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
-        } else {
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
-        }
+        abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
       }
       bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
         <p>이번 도전 입힌 데미지 <b>${dealtTotal}</b>는 보스 HP에 누적되었습니다.</p>
@@ -6659,21 +6645,7 @@ async function raidEnd(result){
       let abyssPartHtml = '';
       if (isAbyssBoss && dealtTotal >= 100 && result !== 'flee'){
         p.xp += 5000;
-        const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
-        const grade = pickGachaGradeFor('hero');
-        const gPool = cardPool.filter(c => c.grade === grade);
-        const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
-        if (card && GAME.inventory.length < inventoryLimit()){
-          GAME.inventory.push(card);
-          let sellBtn = '';
-          if (card.grade === 'normal' || card.grade === 'rare'){
-            const price = CARD_SELL_PRICE[card.grade] || 1;
-            sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
-          }
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
-        } else {
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
-        }
+        abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
       }
       bodyHtml = `<p>${result==='flee'?'기권':'턴 종료'}. 입힌 누적 데미지 <b>${dealtTotal}</b> 반영됨.</p>
         ${abyssPartHtml}
@@ -9086,10 +9058,18 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'maxMpBuff'){
       const add = fx.amount || Math.floor(ctx.castObj.mpMax * (fx.pct||0));
-      ctx.castObj.mpMax += add;
-      ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + add);
+      ctx.castObj.mpMax = Math.max(1, ctx.castObj.mpMax + add);
+      if (add >= 0){
+        // 증가: 늘어난 만큼 현재 MP도 증가 (max 상한 캡)
+        ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + add);
+      } else {
+        // 감소: 현재 MP 는 유지, 새 max 초과 시만 캡 (max 만 줄어들고 현재 MP 는 그대로)
+        if (ctx.castObj.mp > ctx.castObj.mpMax) ctx.castObj.mp = ctx.castObj.mpMax;
+      }
       ctx.castObj._mpMaxBonus = (ctx.castObj._mpMaxBonus || 0) + add;
-      ctx.log(`  + 최대 MP +${add}`, 'heal'); return;
+      const sign = add >= 0 ? '+' : '';
+      ctx.log(`  ${add >= 0 ? '+' : '-'} 최대 MP ${sign}${add}`, add >= 0 ? 'heal' : ctx.targLogCls);
+      return;
     }
     // 카드 등급 기반 dispel/stealBuff 필터링을 위한 opts helper
     const selfOpts   = { grade: card.grade, byGrade: ctx.castBuffsByGrade };
@@ -9225,12 +9205,21 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'dotSelf'){
+      // fx.snap:true → 시전 시점 값으로 데미지 고정. false/undefined → 매 턴 현재 값으로 재계산.
       const entry = {dmg:fx.dmg, turns:fx.turns};
-      if (fx.pct){ entry.pct = fx.pct; entry.dmg = Math.floor(ctx.castObj.hpMax * fx.pct); }
-      if (fx.mpPct){ entry.mpPct = fx.mpPct; entry.dmg = Math.floor((ctx.castObj.mp||0) * fx.mpPct); }
+      if (fx.pct){
+        entry.dmg = Math.floor(ctx.castObj.hpMax * fx.pct);
+        if (!fx.snap) entry.pct = fx.pct;
+      }
+      if (fx.mpPct){
+        entry.dmg = Math.floor((ctx.castObj.mp||0) * fx.mpPct);
+        if (!fx.snap) entry.mpPct = fx.mpPct;
+      }
       ctx.castSelfDots.push(entry);
-      const label = fx.pct ? `HP ${Math.floor(fx.pct*100)}%` : (fx.mpPct ? `MP ${Math.floor(fx.mpPct*100)}%` : entry.dmg);
-      ctx.log(`  - ${ctx.castName} 자해 도트 ${label}×${fx.turns}턴`, ctx.targLogCls);
+      const label = fx.snap
+        ? `${entry.dmg} 고정`
+        : (fx.pct ? `HP ${Math.floor(fx.pct*100)}%` : (fx.mpPct ? `MP ${Math.floor(fx.mpPct*100)}%` : entry.dmg));
+      ctx.log(`  - ${ctx.castName} 자해 도트 ${label} × ${fx.turns}턴`, ctx.targLogCls);
       return;
     }
     if (t === 'hot'){
@@ -13416,16 +13405,21 @@ async function adminSaveUser(){
   u.hp = parseInt($('ed_hp').value) || 0;
   u.mp = parseInt($('ed_mp').value) || 0;
   // hpMax / mpMax 입력값에 맞춰 CON / INT 역산 (calcDerived가 매번 공식으로 덮어쓰므로)
-  // 공식:  hpMax = 26 + (lv-1)*2 + (con-5)*2  →  con = 5 + (hpMax - 26 - (lv-1)*2)/2
-  //        mpMax = 25 + (lv-1)*1 + floor((int-5)*7.5)  →  int = 5 + (mpMax - 25 - (lv-1))/7.5
+  // 실제 calcDerived 공식과 정확히 일치해야 로그인 시 재계산해도 값이 튀지 않음
+  //   hpMax = 26 + (lv-1)*2 + (str-5)*2 + (dex-5)*2 + (int-5)*2 + (con-5)*5
+  //   → con = 5 + (hpMax - 26 - (lv-1)*2 - (str-5)*2 - (dex-5)*2 - (int-5)*2) / 5
+  //   mpMax = 25 + (lv-1)*1 + floor((int-5)*7.5)
+  //   → int = 5 + (mpMax - 25 - (lv-1)) / 7.5
   const lvForCalc = u.level || 1;
+  const _nonConHpBase = 26 + (lvForCalc - 1) * 2
+                       + (u.str - 5) * 2 + (u.dex - 5) * 2 + (u.int - 5) * 2;
   const editedHpMax = parseInt($('ed_hpMax').value);
   if (!isNaN(editedHpMax) && editedHpMax > 0){
-    const expectedHp = 26 + (lvForCalc - 1) * 2 + (u.con - 5) * 2;
+    const expectedHp = _nonConHpBase + (u.con - 5) * 5;
     if (editedHpMax !== expectedHp){
-      u.con = Math.max(0, 5 + Math.round((editedHpMax - 26 - (lvForCalc - 1) * 2) / 2));
+      u.con = Math.max(0, 5 + Math.round((editedHpMax - _nonConHpBase) / 5));
     }
-    u.hpMax = 26 + (lvForCalc - 1) * 2 + (u.con - 5) * 2;
+    u.hpMax = _nonConHpBase + (u.con - 5) * 5;
   }
   const editedMpMax = parseInt($('ed_mpMax').value);
   if (!isNaN(editedMpMax) && editedMpMax > 0){
@@ -13434,7 +13428,16 @@ async function adminSaveUser(){
       u.int = Math.max(0, 5 + Math.round((editedMpMax - 25 - (lvForCalc - 1)) / 7.5));
     }
     u.mpMax = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
+    // INT 가 바뀌면 HP 공식에도 영향 (INT 도 hpMax 에 +2/포인트 기여) → hpMax 재계산
+    if (!isNaN(editedHpMax) && editedHpMax > 0){
+      const recalcNonCon = 26 + (lvForCalc - 1) * 2
+                           + (u.str - 5) * 2 + (u.dex - 5) * 2 + (u.int - 5) * 2;
+      u.hpMax = recalcNonCon + (u.con - 5) * 5;
+    }
   }
+  // hp/mp 는 새 max 를 초과하지 않도록 캡
+  if (u.hp > u.hpMax) u.hp = u.hpMax;
+  if (u.mp > u.mpMax) u.mp = u.mpMax;
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
   // 운영자 계정 플래그 (명예의 전당 노출 제외용)
   const opEl = $('ed_isOperator');
