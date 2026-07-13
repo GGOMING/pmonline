@@ -789,6 +789,17 @@
   table.deck tr.icons td.grade-unique { border:2px solid #a335ee; background:#160028; box-shadow:inset 0 0 6px rgba(163,53,238,.35); }
   table.deck tr.icons td.grade-hero   { border:2px solid #dc143c; background:#2a0008; box-shadow:inset 0 0 8px rgba(220,20,60,.5); }
   table.deck tr.icons td.grade-normal { border:1px solid #555; }
+  /* 전설 — 은은한 황금빛 shimmer (일반 노란색보다 부드럽게) */
+  table.deck tr.icons td.grade-legend {
+    border:2px solid #ffd700;
+    background:#1a1200;
+    box-shadow:inset 0 0 10px rgba(255,215,0,.32), 0 0 4px rgba(255,215,0,.35);
+    animation:legendShimmer 2.6s ease-in-out infinite;
+  }
+  @keyframes legendShimmer {
+    0%,100% { box-shadow:inset 0 0  8px rgba(255,215,0,.24), 0 0 3px rgba(255,215,0,.28); }
+    50%     { box-shadow:inset 0 0 14px rgba(255,215,0,.48), 0 0 6px rgba(255,215,0,.55); }
+  }
   table.deck.mini tr.icons td .card-ico { width:66px; height:63px; }
 
   /* ===== 무기/방어구 상점 ===== */
@@ -1026,6 +1037,7 @@
   .card-grid .cg-item.rare   { border-color:#3399ff; }
   .card-grid .cg-item.unique { border-color:#a335ee; }
   .card-grid .cg-item.hero   { border-color:#dc143c; }
+  .card-grid .cg-item.legend { border-color:#ffd700; box-shadow:0 0 8px rgba(255,215,0,0.55); }
   .card-grid .cg-item .ico { width:88px; height:84px; flex:none; background:#111; }
   .card-grid .cg-item .ico svg { width:100%; height:100%; }
   .card-grid .cg-item .ico img { width:100%; height:100%; image-rendering:pixelated; display:block; object-fit:contain; }
@@ -2031,6 +2043,7 @@
           <button onclick="filterCodexGrade('rare')" id="cg_rare">레어</button>
           <button onclick="filterCodexGrade('unique')" id="cg_unique">유니크</button>
           <button onclick="filterCodexGrade('hero')" id="cg_hero">영웅</button>
+          <button onclick="filterCodexGrade('legend')" id="cg_legend">전설</button>
           <span id="codexCount" style="float:right;font-size:11px;color:#555;line-height:24px;padding-right:4px;">총 - 종</span>
         </div>
         <div class="card-grid" id="codexGrid" style="padding:8px;"></div>
@@ -2667,6 +2680,7 @@ const CARDS = [
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/wc3_reforged_used/BTNSpiritOfVengeance-Reforged.png', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
+  { id:'l01', name:'부활의 증표',    grade:'legend', icon:'star',   iconPath:'assets/wc3_reforged_used/BTNResurrection-Reforged.png', text:'10턴 내에 HP가 0이 될 경우 HP·MP를 모두 회복한 상태로 부활 / 부활 시 모든 버프·디버프 초기화 (전투 개시 상태)', fx:{type:'rebirth',turns:10} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
@@ -3642,9 +3656,15 @@ const GACHA_SHOPS = {
   },
   legend: {
     label: '전설 뽑기', icon: 'assets/wc3_reforged_used/cardshop_legend.jpg',
-    locked: true,
+    cost1: 100000, cost10: 900000,
     maxGradeKr: '전설',
-    table: [],
+    table: [
+      { grade:'normal', rate:0.30000 },
+      { grade:'rare',   rate:0.68400 },
+      { grade:'unique', rate:0.01500 },
+      { grade:'hero',   rate:0.00099 },
+      { grade:'legend', rate:0.00001 },
+    ],
   },
 };
 
@@ -3729,9 +3749,9 @@ function pickGachaGradeForTable(table){
   let r = Math.random();
   let grade = 'normal';
   for (const t of table){ r -= t.rate; if (r<=0){ grade = t.grade; break; } }
-  // Lv 5 이하: 유니크·영웅이 추첨되면 레어로 다운그레이드 (정책 유지)
+  // Lv 5 이하: 유니크·영웅·전설이 추첨되면 레어로 다운그레이드 (정책 유지)
   const lv = (GAME.player && GAME.player.level) || 1;
-  if (lv <= 5 && (grade === 'unique' || grade === 'hero')) grade = 'rare';
+  if (lv <= 5 && (grade === 'unique' || grade === 'hero' || grade === 'legend')) grade = 'rare';
   return grade;
 }
 function pickGachaGradeFor(shopId){
@@ -3867,7 +3887,32 @@ function doGachaShop(shopId, n){
 }
 
 // 카드 판매 가격 (관리자 패널에서 편집 가능)
-const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000 };
+const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000, legend:100000 };
+
+// 공격대 보스 처치 보상 카드 즉시 판매 (일반·레어 인라인 버튼용)
+function _sellRaidRewardCard(cardId, price){
+  const p = GAME.player;
+  if (!p) return;
+  // 인벤토리에서 해당 카드 마지막 1장 제거 (같은 카드 여러 장이면 방금 지급된 것 제거)
+  const idx = GAME.inventory.map(c => c.id).lastIndexOf(cardId);
+  if (idx < 0){
+    toast('⚠ 판매할 카드가 없습니다.');
+    return;
+  }
+  GAME.inventory.splice(idx, 1);
+  p.gold += price;
+  toast(`💰 카드 판매 +${price.toLocaleString()}G`);
+  try { renderSheet(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  // 버튼을 판매 완료 라벨로 교체
+  const btn = document.getElementById('raidCardSellBtn_' + cardId);
+  if (btn){
+    const span = document.createElement('span');
+    span.style.cssText = 'margin-left:8px;font-size:11px;color:#7eff7e;font-weight:bold;';
+    span.textContent = `✔ 판매 완료 (+${price.toLocaleString()}G)`;
+    btn.parentNode.replaceChild(span, btn);
+  }
+}
 
 // 가챠 직후 즉시 판매 — 결과 카드를 인벤토리에서 제거하고 골드 환급
 function _sellGachaResults(results){
@@ -4603,7 +4648,7 @@ function renderHonorDetail(idx){
   // 덱 (15개 슬롯)
   const deck = (r.myDeck || []).slice(0, 15);
   while (deck.length < 15) deck.push(BASIC_ATTACK);
-  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c' };
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
   const deckHtml = deck.map((c, i) => {
     const borderColor = gradeColor[c.grade] || '#bbb';
     return `<div style="width:64px;text-align:center;" title="${(c.name||'').replace(/"/g,'&quot;')} — ${(c.text||'').replace(/"/g,'&quot;')}">
@@ -5496,7 +5541,7 @@ function generateAbyssMob(playerLv){
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
     str:s.str, dex:s.dex, int:s.int, con:s.con,
-    hp, hpMax: hp, mp: 60, mpMax: 60,
+    hp, hpMax: hp, _hpMaxBase: hp, mp: 60, mpMax: 60, _mpMaxBase: 60,
     atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck, gold: baseGold, xp: baseXp,
     icon: tpl.icon || '',
@@ -5967,7 +6012,7 @@ function generateRaidMob(){
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
     str, dex, int: intl, con,
-    hp, hpMax: hp, mp: 50, mpMax: 50,
+    hp, hpMax: hp, _hpMaxBase: hp, mp: 50, mpMax: 50, _mpMaxBase: 50,
     atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck, gold, xp,
   };
@@ -5984,6 +6029,18 @@ function startRaidMobBattle(){
       && Number(pending.sessionStart) === Number(r.sessionStart)
       && pending.monster && pending.monster.hp > 0){
     monster = pending.monster;
+    // 이전 전투에서 걸린 maxHpBuff(라이프업 등) 스택 방지 —
+    // hpMax 를 base 값으로 원복하고 hp 를 새 max 로 캡. 버프 카드 반복 사용으로
+    // hpMax 를 무한히 부풀리는 익스플로잇 차단.
+    // 기존 저장(pre-fix)엔 _hpMaxBase 가 없으므로 현재값을 base 로 스냅샷 (다음 진입부터 정상 동작)
+    if (monster._hpMaxBase == null) monster._hpMaxBase = monster.hpMax;
+    if (monster._mpMaxBase == null) monster._mpMaxBase = monster.mpMax;
+    monster.hpMax = monster._hpMaxBase;
+    if (monster.hp > monster.hpMax) monster.hp = monster.hpMax;
+    monster.mpMax = monster._mpMaxBase;
+    if (monster.mp > monster.mpMax) monster.mp = monster.mpMax;
+    monster._hpMaxBonus = 0;
+    monster._mpMaxBonus = 0;
     raidLog && true;  // 이어서 도전 안내는 아래에서
   } else {
     monster = raidKey === 'abyss' ? generateAbyssMob(p.level) : generateRaidMob();
@@ -6195,15 +6252,21 @@ function raidNextTurn(){
 function checkRaidAlive(){
   const c = GAME.raidCombat;
   if (!c) return false;
-  if (GAME.player.hp <= 0){ raidEnd('lose'); return false; }
+  if (GAME.player.hp <= 0){
+    if (_tryRebirth(c, 'my', GAME.player, raidLog)) { /* 부활 처리됨, death 스킵 */ }
+    else { raidEnd('lose'); return false; }
+  }
   if (c.monster.hp <= 0){
-    // 보스 모드: 최종 타격 처리
-    if (c.mode === 'boss'){
-      raidEnd('boss_kill');
-    } else {
-      raidEnd('win');
+    if (_tryRebirth(c, 'mon', c.monster, raidLog)) { /* 부활 처리됨 */ }
+    else {
+      // 보스 모드: 최종 타격 처리
+      if (c.mode === 'boss'){
+        raidEnd('boss_kill');
+      } else {
+        raidEnd('win');
+      }
+      return false;
     }
-    return false;
   }
   return true;
 }
@@ -6452,7 +6515,13 @@ async function raidEnd(result){
         if (card){
           if (GAME.inventory.length < inventoryLimit()){
             GAME.inventory.push(card);
-            cardBoxHtml = `<p style="color:#a02050;font-weight:bold;">🎁 영웅 뽑기 획득 — [${gradeKr(card.grade)}] ${card.name}</p>`;
+            // 일반/레어 카드는 인라인 즉시 판매 버튼 노출
+            let sellBtn = '';
+            if (card.grade === 'normal' || card.grade === 'rare'){
+              const price = CARD_SELL_PRICE[card.grade] || 1;
+              sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
+            }
+            cardBoxHtml = `<p style="color:#a02050;font-weight:bold;" id="raidCardBoxLine">🎁 영웅 뽑기 획득 — [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
             try { chatSys(`★ ${p.name}님이 잊혀진 성좌 보스 처치로 [${gradeKr(card.grade)}] ${card.name} 획득!`); } catch(e){}
           } else {
             cardBoxHtml = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${card.name})</p>`;
@@ -6549,7 +6618,12 @@ async function raidEnd(result){
         const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
         if (card && GAME.inventory.length < inventoryLimit()){
           GAME.inventory.push(card);
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}</p>`;
+          let sellBtn = '';
+          if (card.grade === 'normal' || card.grade === 'rare'){
+            const price = CARD_SELL_PRICE[card.grade] || 1;
+            sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
+          }
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
         } else {
           abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
         }
@@ -6568,7 +6642,12 @@ async function raidEnd(result){
         const card = gPool.length ? gPool[Math.floor(Math.random() * gPool.length)] : null;
         if (card && GAME.inventory.length < inventoryLimit()){
           GAME.inventory.push(card);
-          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}</p>`;
+          let sellBtn = '';
+          if (card.grade === 'normal' || card.grade === 'rare'){
+            const price = CARD_SELL_PRICE[card.grade] || 1;
+            sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
+          }
+          abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP · [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
         } else {
           abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
         }
@@ -6912,6 +6991,10 @@ async function challengeRank(targetRank){
   // 짧은 쿨다운 후 자동 해제 (전투 진입 실패 시에도 다시 클릭 가능)
   setTimeout(() => { _rankChallengeBusy = false; }, 800);
 
+  if (GAME.player && GAME.player.isOperator){
+    toast('운영자 계정은 랭킹전에 참여할 수 없습니다.');
+    return;
+  }
   if (GAME.player && GAME.player.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
     openHeal();
@@ -7165,8 +7248,12 @@ function rankNextTurn(){
 function checkRankAlive(){
   const c = GAME.rankCombat;
   if (!c) return false;
-  if (GAME.player.hp <= 0){ rankEnd('lose'); return false; }
-  if (c.opponent.hp <= 0){ rankEnd('win'); return false; }
+  if (GAME.player.hp <= 0){
+    if (!_tryRebirth(c, 'my', GAME.player, rankLog)){ rankEnd('lose'); return false; }
+  }
+  if (c.opponent.hp <= 0){
+    if (!_tryRebirth(c, 'mon', c.opponent, rankLog)){ rankEnd('win'); return false; }
+  }
   return true;
 }
 
@@ -7522,6 +7609,7 @@ const RACE_SYNERGY = {
 // 일반 몬스터에 등장 금지 — "너무 강한 카드는 보스에서만"
 const MONSTER_BANNED = new Set([
   'h01','h02','h03','h04','h05',   // 영웅 전체
+  'l01',                             // 전설 부활의 증표 (추후 상위 공격대에서 개방)
   'u02','u05',                       // 로커스트스웜, 썬더리저드 (방어 무시 광역)
   'r34','r37','r40',                 // 스피드스크롤, 엔지니어링업그레이드, 팬오브나이프
 ]);
@@ -7994,7 +8082,7 @@ function renderHuntBattle(){
 function renderHuntDeck(tbl, deck, slotsTotal, currentTurn){
   const cols = 5;
   const rows = Math.ceil(slotsTotal / cols);
-  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c' };
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
   let html = '';
   for (let r = 0; r < rows; r++){
     // 아이콘 행
@@ -8108,8 +8196,12 @@ function checkAlive(){
   if (!c) return false;
   // 무적 몬스터(황금상자 등)는 hp 1 강제 유지 — 어떤 데미지 경로로도 죽지 않음
   if (c.monster && c.monster.invincible && c.monster.hp < 1) c.monster.hp = 1;
-  if (GAME.player.hp <= 0){ huntEnd('lose'); return false; }
-  if (c.monster.hp <= 0){ huntEnd('win'); return false; }
+  if (GAME.player.hp <= 0){
+    if (!_tryRebirth(c, 'my', GAME.player, huntLog)){ huntEnd('lose'); return false; }
+  }
+  if (c.monster.hp <= 0){
+    if (!_tryRebirth(c, 'mon', c.monster, huntLog)){ huntEnd('win'); return false; }
+  }
   return true;
 }
 
@@ -8138,6 +8230,62 @@ function huntCast(caster, card){
 // mpCost, cc, selfCc, reflect, dispel, stealBuff, statCopy,
 // transferStat, buffFromStat, lifestealStat, dmgStatHealSame,
 // hotStat, dotStat, dotSelf, hpDmgPct, dotPct(max), cleanseCc
+// 부활의 증표 발동 헬퍼 — HP 0 도달 시 완전 회복 + 상태 초기화
+// side: 'my' (플레이어 측) | 'mon' (몬스터·상대 측). obj: 실제 캐릭터 객체 (GAME.player 또는 c.monster/opponent)
+// 반환: true 면 부활 처리 완료 (호출자는 death 진행하지 말 것). false 면 부활 조건 미달.
+function _tryRebirth(c, side, obj, log){
+  if (!c || !obj) return false;
+  const rebirth = c[side + 'Rebirth'];
+  if (!rebirth || rebirth.turns <= 0) return false;
+  if (obj.hp > 0) return false;
+  // 완전 회복 + 완전 초기화 (전투 개시 상태)
+  // 1) 스탯 유래 hpMax/mpMax 원복 (라이프업 등 flat 버프 제거 후 재계산)
+  obj._hpMaxBonus = 0;
+  obj._mpMaxBonus = 0;
+  if (side === 'my'){
+    // 플레이어는 calcDerived 로 base 재계산
+    try { calcDerived(obj); } catch(e){}
+  } else if (obj._hpMaxBase != null){
+    // 몬스터는 생성 시 저장한 base 사용
+    obj.hpMax = obj._hpMaxBase;
+    if (obj._mpMaxBase != null) obj.mpMax = obj._mpMaxBase;
+  }
+  obj.hp = obj.hpMax;
+  obj.mp = obj.mpMax;
+  // 2) 모든 버프·디버프·상태 초기화
+  if (c[side + 'Buffs']){
+    for (const k of Object.keys(c[side + 'Buffs'])) c[side + 'Buffs'][k] = 0;
+  }
+  if (c[side + 'LockedBuffs']){
+    for (const k of Object.keys(c[side + 'LockedBuffs'])) c[side + 'LockedBuffs'][k] = 0;
+  }
+  if (Array.isArray(c[side + 'TurnBuffs'])) c[side + 'TurnBuffs'].length = 0;
+  if (c[side + 'BuffsByGrade']){
+    for (const g of Object.keys(c[side + 'BuffsByGrade'])) c[side + 'BuffsByGrade'][g] = {};
+  }
+  // dots/hots/self-dots (플레이어 = c.myDots 는 나에게 걸린 도트)
+  if (Array.isArray(c[side + 'Dots']))     c[side + 'Dots'].length = 0;
+  if (Array.isArray(c[side + 'Hots']))     c[side + 'Hots'].length = 0;
+  if (Array.isArray(c[side + 'MpHots']))   c[side + 'MpHots'].length = 0;
+  if (Array.isArray(c[side + 'SelfDots'])) c[side + 'SelfDots'].length = 0;
+  // 각종 상태 초기화
+  c[side + 'Stun']              = 0;
+  c[side + 'Reflect']           = null;
+  c[side + 'Evade']             = null;
+  c[side + 'Voodoo']            = null;
+  c[side + 'Stealth']           = 0;
+  c[side + 'Leech']             = null;
+  c[side + 'Vengeance']         = null;
+  c[side + 'Frog']              = 0;
+  c[side + 'DoubleCastReady']   = 0;
+  c[side + 'ScrollGuardTurn']   = 0;
+  if (Array.isArray(c[side + 'Transforms'])) c[side + 'Transforms'].length = 0;
+  // 부활 상태 소비 (1회성)
+  c[side + 'Rebirth'] = null;
+  if (log) log(`  ✨✨ <b>부활의 증표 발동!</b> 완전 회복 + 모든 버프·디버프 초기화 ✨✨`, 'heal');
+  return true;
+}
+
 function _ensureCombatExt(c){
   c.myTurnBuffs ||= []; c.monTurnBuffs ||= [];
   c.myMpHots ||= [];    c.monMpHots ||= [];
@@ -8154,27 +8302,26 @@ function _ensureCombatExt(c){
   c.myLeech ||= null; c.monLeech ||= null;       // 뱀파이어릭 오라 — {turns, pct} 받는 데미지의 pct만큼 회복
   c.myVengeance ||= null; c.monVengeance ||= null; // 벤전스 — {turns, reflectMul, dmgReduce, pending}
   c.myScrollGuardTurn ||= 0; c.monScrollGuardTurn ||= 0; // 스피드스크롤 — 시전 턴에만 받는 데미지 50% 감소
+  c.myRebirth ||= null; c.monRebirth ||= null;   // 부활의 증표 — {turns}. HP 0 도달 시 발동 (1회)
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   // 등급별 버프 트래킹 — dispel/stealBuff 시 필터링용
-  // {normal:{str,dex,int,con,atk,def}, rare:{...}, unique:{...}, hero:{...}}
-  c.myBuffsByGrade  ||= {normal:{},rare:{},unique:{},hero:{}};
-  c.monBuffsByGrade ||= {normal:{},rare:{},unique:{},hero:{}};
+  // {normal:{str,dex,int,con,atk,def}, rare:{...}, unique:{...}, hero:{...}, legend:{...}}
+  c.myBuffsByGrade  ||= {normal:{},rare:{},unique:{},hero:{},legend:{}};
+  c.monBuffsByGrade ||= {normal:{},rare:{},unique:{},hero:{},legend:{}};
 }
 // dispel/stealBuff 등급 필터 — 카드 등급별 영향 가능 범위 (직상위 등급까지 제거·강탈 가능)
-// normal → 레어까지 (normal+rare)
-// rare   → 유니크까지 (normal+rare+unique)
-// unique → 영웅까지 (all)
-// hero   → 영웅까지 (all)
+// normal → 레어까지, rare → 유니크까지, unique → 영웅까지, hero → 전설까지, legend → 전설까지
 const _DISPEL_TARGET_GRADES = {
   normal: new Set(['normal','rare']),
   rare:   new Set(['normal','rare','unique']),
   unique: new Set(['normal','rare','unique','hero']),
-  hero:   new Set(['normal','rare','unique','hero']),
+  hero:   new Set(['normal','rare','unique','hero','legend']),
+  legend: new Set(['normal','rare','unique','hero','legend']),
 };
 function _dispelAllowedGrades(sourceGrade){
-  return _DISPEL_TARGET_GRADES[sourceGrade] || new Set(['normal','rare','unique','hero']);
+  return _DISPEL_TARGET_GRADES[sourceGrade] || new Set(['normal','rare','unique','hero','legend']);
 }
 // 선행 카드 체크. 누락 시 누락된 prereq 카드명을 반환, OK면 null
 function checkRequires(kind, caster, card){
@@ -8270,6 +8417,9 @@ function _buildCombatCtx(kind, caster){
     setCastScrollGuard(turn){ if (isP) c.myScrollGuardTurn = turn; else c.monScrollGuardTurn = turn; },
     targScrollGuard(){ return isP ? c.monScrollGuardTurn : c.myScrollGuardTurn; }, // 대상(공격받는 쪽)의 스크롤 실드 활성 턴
     targLeech(){ return isP ? c.monLeech : c.myLeech; },
+    setCastRebirth(v){ if (isP) c.myRebirth = v; else c.monRebirth = v; },
+    castRebirth(){ return isP ? c.myRebirth : c.monRebirth; },
+    targRebirth(){ return isP ? c.monRebirth : c.myRebirth; },
   };
 }
 // stat buff → HP/MP 최대치 동기화
@@ -8602,6 +8752,18 @@ function applyCardEffect(card, ctx){
       ctx.log(`  ⚔ ${ctx.castName} 다음 턴부터 ${fx.turns}턴 벤전스 — 받는 데미지 ${Math.floor((fx.dmgReduce||0.5)*100)}% 감소 / ${fx.reflectMul||1.5}배 반사`, 'heal');
       return;
     }
+    if (t === 'rebirth'){
+      // 부활의 증표 (전설) — N턴 이내 HP 0 도달 시 완전 회복 + 초기화 상태로 부활 (1회)
+      // 중복 시전 방지: 이미 활성이면 재시전 불가
+      const cur = ctx.castRebirth && ctx.castRebirth();
+      if (cur && cur.turns > 0){
+        ctx.log(`  ✱ ${ctx.castName} 이미 부활의 증표가 활성 상태이다 — 중복 시전 불가`, 'info');
+        return;
+      }
+      ctx.setCastRebirth && ctx.setCastRebirth({ turns: (fx.turns || 10) });
+      ctx.log(`  ✨ ${ctx.castName} <b>부활의 증표</b> 활성 (${fx.turns||10}턴 이내 HP 0 도달 시 완전 회복 후 부활)`, 'heal');
+      return;
+    }
     if (t === 'stealVengeance'){
       // 영웅 등급 전용 — 적의 벤전스 상태를 통째로 빼앗아 시전자에게 부여
       const targVg = ctx.targVengeance && ctx.targVengeance();
@@ -8848,11 +9010,11 @@ function applyCardEffect(card, ctx){
     if (t === 'maxHpBuff'){
       const add = fx.amount || Math.floor(ctx.castObj.hpMax * (fx.pct||0));
       ctx.castObj.hpMax += add;
-      // hp 는 hpMax 상한으로 clamp (max 초과 방지)
-      ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + add);
+      // 현재 hp 는 변동 없음 (최대치만 증가). hp 가 새 hpMax 상한 초과하면 캡.
+      if (ctx.castObj.hp > ctx.castObj.hpMax) ctx.castObj.hp = ctx.castObj.hpMax;
       // flat 버프 트래킹 — CON 디버프에 의한 hpMax 감소 시 이 값은 계산에서 제외 (보호)
       ctx.castObj._hpMaxBonus = (ctx.castObj._hpMaxBonus || 0) + add;
-      ctx.log(`  + 최대 HP +${add}`, 'heal'); return;
+      ctx.log(`  + 최대 HP +${add} (현재 HP 유지)`, 'heal'); return;
     }
     if (t === 'maxMpBuff'){
       const add = fx.amount || Math.floor(ctx.castObj.mpMax * (fx.pct||0));
@@ -9144,8 +9306,16 @@ function applyCardEffect(card, ctx){
       if (allowed.has('normal')){
         for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0;
       }
-      // 초상화 변신 스택 — 모든 등급 제거 가능한 경우(=hero)만 리셋
-      if (card.grade === 'hero' || !card.grade){
+      // 부활의 증표 상태 — 영웅+ 등급만 제거 가능
+      if (card.grade === 'hero' || card.grade === 'legend'){
+        const rebirthKey = tgt === 'enemy' ? 'monRebirth' : 'myRebirth';
+        if (ctx.c[rebirthKey]){
+          ctx.c[rebirthKey] = null;
+          ctx.log(`  ✂ ${tgt==='enemy'?ctx.targName:ctx.castName} 부활의 증표 효과 제거`, ctx.castLogCls);
+        }
+      }
+      // 초상화 변신 스택 — 모든 등급 제거 가능한 경우(=hero+)만 리셋
+      if (card.grade === 'hero' || card.grade === 'legend' || !card.grade){
         _clearTransformsOnSide(ctx, tgt === 'enemy' ? 'targ' : 'cast');
       }
       const rangeStr = card.grade === 'normal' ? '레어 등급까지'
@@ -9204,8 +9374,21 @@ function applyCardEffect(card, ctx){
         ctx.targBuffs[k] -= v;
         _syncPoolOnStatChange(ctx.targObj, k, -v);
       }
-      // 변신 스택 — 모든 등급 강탈 가능한 카드(hero)만 대상측 리셋
-      if (card.grade === 'hero' || !card.grade){
+      // 부활의 증표 — 영웅+ 등급만 강탈 가능. 강탈 시 대상 제거 + 시전자에게 부여
+      if (card.grade === 'hero' || card.grade === 'legend'){
+        if (ctx.c.monRebirth){
+          const stolen = { ...ctx.c.monRebirth };
+          ctx.c.monRebirth = null;
+          if (ctx.castRebirth && !ctx.castRebirth()){
+            ctx.setCastRebirth && ctx.setCastRebirth(stolen);
+            ctx.log(`  🌀 ${ctx.targName}의 부활의 증표 강탈!`, ctx.castLogCls || 'heal');
+          } else {
+            ctx.log(`  🌀 ${ctx.targName}의 부활의 증표 제거 (시전자 이미 활성)`, ctx.castLogCls || 'heal');
+          }
+        }
+      }
+      // 변신 스택 — 모든 등급 강탈 가능한 카드(hero+)만 대상측 리셋
+      if (card.grade === 'hero' || card.grade === 'legend' || !card.grade){
         _clearTransformsOnSide(ctx, 'targ');
       }
       const rangeStr = card.grade === 'normal' ? '레어 등급까지'
@@ -9422,6 +9605,9 @@ function processCombatTicks(kind){
   // 개구리 변신 카운터 감소
   if (c.myFrog && c.myFrog > 0){ c.myFrog--; if (c.myFrog === 0) log(`  🐸 → 사람 모습으로 돌아왔습니다.`, 'sys'); }
   if (c.monFrog && c.monFrog > 0){ c.monFrog--; if (c.monFrog === 0) log(`  🐸 → ${opp.name}이(가) 사람 모습으로 돌아왔습니다.`, 'sys'); }
+  // 부활의 증표 타이머 감소
+  if (c.myRebirth && c.myRebirth.turns > 0){ c.myRebirth.turns--; if (c.myRebirth.turns <= 0){ c.myRebirth = null; log(`  · 부활의 증표 효과 만료`, 'info'); } }
+  if (c.monRebirth && c.monRebirth.turns > 0){ c.monRebirth.turns--; if (c.monRebirth.turns <= 0){ c.monRebirth = null; log(`  · ${opp.name} 부활의 증표 효과 만료`, 'info'); } }
 }
 
 // 행동불능 체크 — true 반환 시 stun 카운터 1 소비
@@ -10180,7 +10366,7 @@ function renderCardGrid(){
     </div>`;
   }).join('');
 }
-function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',hero:'영웅'}[g]; }
+function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',hero:'영웅',legend:'전설'}[g]; }
 // ─── 카드 선택 모달 드래그 ───
 (function setupCardPickDrag(){
   let dragging = false, sx = 0, sy = 0, baseX = 0, baseY = 0, curX = 0, curY = 0;
@@ -12100,7 +12286,7 @@ function renderDeck(){
     const td = document.querySelector(`[data-slot="${i}"]`);
     if (!td) continue;
     // 매번 grade-* 클래스 초기화
-    td.classList.remove('grade-normal','grade-rare','grade-unique','grade-hero');
+    td.classList.remove('grade-normal','grade-rare','grade-unique','grade-hero','grade-legend');
     const locked = i >= maxSlots;
     const lblRow = td.parentNode.nextElementSibling;
     if (locked){
@@ -12520,6 +12706,8 @@ function enterMain(){
   showPage('main');
   const lb = document.getElementById('logoutBtn');
   if (lb) lb.style.display = 'block';
+  // 운영자 계정이면 플로팅 툴바 표시
+  try { if (typeof updateOperatorFloatVisibility === 'function') updateOperatorFloatVisibility(); } catch(e){}
   // 비활성 자동 로그아웃 타이머 시작
   resetIdleTimer();
   checkRankingReset();  // 랭킹 일일 리셋 체크 (async, fire-and-forget)
@@ -12882,6 +13070,7 @@ async function loadAdminUsers(){
             pw: p.pw,
             avatar: p.avatar || null,
             autoFocus: !!p.autoFocus,
+            isOperator: !!p.isOperator,
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
             updated_at: row.updated_at,
@@ -13239,6 +13428,7 @@ async function adminSaveUser(){
       pw: u.pw,
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
+      isOperator: !!u.isOperator,
       atk:[2,5], def:0, atkType:'근접',
     };
     saved.inventory = (u.inventory || []).map(c => typeof c === 'string' ? c : c.id);
@@ -13297,7 +13487,8 @@ async function adminSaveUser(){
         rankPos: u.rankPos,
         pw: u.pw,
         avatar: u.avatar || null,
-      autoFocus: !!u.autoFocus,
+        autoFocus: !!u.autoFocus,
+        isOperator: !!u.isOperator,
         atk:[2,5], def:0, atkType:'근접',
       },
       myDeck:    u.myDeck.slice(),
@@ -13533,8 +13724,8 @@ function refreshAdminSystem(){
 }
 
 // ─── 4종 카드샵 (GACHA_SHOPS) 가격·확률 admin UI ───
-const _GACHA_SHOP_EDIT_ORDER = ['normal','rare','unique','hero'];
-const _GACHA_GRADE_ORDER = ['normal','rare','unique','hero'];
+const _GACHA_SHOP_EDIT_ORDER = ['normal','rare','unique','hero','legend'];
+const _GACHA_GRADE_ORDER = ['normal','rare','unique','hero','legend'];
 function renderAdminGachaShops(){
   const el = $('adminGachaShops');
   if (!el) return;
