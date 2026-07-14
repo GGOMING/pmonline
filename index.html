@@ -2673,7 +2673,7 @@ const CARDS = [
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 HP 20% 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60} },
   { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
-  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전 시점 MP × 0.2 만큼 방어력 무시 고정 자해 데미지 / 시전자 최대 MP 20% 감소', fx:{type:'multi',effects:[{type:'dotSelf',turns:2,mpPct:0.2,snap:true},{type:'maxMpBuff',pct:-0.2}]} },
+  { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전 시점 MP × 0.2 만큼 방어력 무시 고정 데미지 (상대방) / 시전자 MP 20% 소모', fx:{type:'multi',effects:[{type:'dot',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2}]} },
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'pctDebuff',stats:{dex:-0.5},turns:3}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
   { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
@@ -8565,16 +8565,20 @@ function _dealIgnoreDef(ctx, raw){
   if (vg && vg.turns > 0 && !vg.pending){
     const reduced   = Math.max(1, Math.floor(dmg * (vg.dmgReduce  || 0.5)));
     const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
-    // 마나 쉴드 흡수
+    // 마나 쉴드 흡수 (대상)
     const ms = ctx.targManaShield && ctx.targManaShield();
     const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, reduced);
     ctx.targObj.hp -= hpDmg;
     ctx.addDmg(hpDmg);
-    ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
+    // 마나 쉴드 흡수 (반사 받는 시전자)
+    const cms = ctx.castManaShield && ctx.castManaShield();
+    const { hpDmg: rHpDmg, mpAbsorbed: rMpAbsorbed } = _applyManaShield(cms, ctx.castObj, reflected);
+    ctx.castObj.hp = Math.max(0, ctx.castObj.hp - rHpDmg);
     const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
-    const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
+    const _msNote  = mpAbsorbed  > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>`  : '';
+    const _msNoteR = rMpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${rMpAbsorbed})</span>` : '';
     ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>${_msNote}`, ctx.castLogCls);
-    ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
+    ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${rHpDmg}${_msNoteR}`, ctx.targLogCls);
     return;
   }
   // 마나 쉴드 흡수
@@ -8684,17 +8688,20 @@ function applyCardEffect(card, ctx){
       if (vg && vg.turns > 0 && !vg.pending){
         const reduced  = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
         const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
-        // 마나 쉴드 흡수
+        // 마나 쉴드 흡수 (대상)
         const ms = ctx.targManaShield && ctx.targManaShield();
         const { hpDmg, mpAbsorbed } = _applyManaShield(ms, ctx.targObj, reduced);
         ctx.targObj.hp -= hpDmg;
         ctx.addDmg(hpDmg);
-        // 반사 데미지 — 시전자에게 직접 차감 (방어력 무시·재반사 방지)
-        ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
+        // 마나 쉴드 흡수 (반사 받는 시전자)
+        const cms = ctx.castManaShield && ctx.castManaShield();
+        const { hpDmg: rHpDmg, mpAbsorbed: rMpAbsorbed } = _applyManaShield(cms, ctx.castObj, reflected);
+        ctx.castObj.hp = Math.max(0, ctx.castObj.hp - rHpDmg);
         const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
-        const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
+        const _msNote  = mpAbsorbed  > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>`  : '';
+        const _msNoteR = rMpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${rMpAbsorbed})</span>` : '';
         ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>${_msNote}`, ctx.castLogCls);
-        ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
+        ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${rHpDmg}${_msNoteR}`, ctx.targLogCls);
       } else {
         // 마나 쉴드 흡수
         const ms = ctx.targManaShield && ctx.targManaShield();
@@ -9177,6 +9184,10 @@ function applyCardEffect(card, ctx){
       const entry = {dmg:fx.dmg, turns:fx.turns};
       if (fx.min != null && fx.max != null){ entry.min = fx.min; entry.max = fx.max; entry.dmg = rnd(fx.min, fx.max); }
       if (fx.growth) entry.growth = fx.growth;   // 매 턴 dmg 증가 (캐리언비틀즈 등)
+      // 시전 시점 MP 기반 고정 데미지 (이몰레이션 등) — snap 강제
+      if (fx.mpPct){
+        entry.dmg = Math.floor((ctx.castObj.mp||0) * fx.mpPct);
+      }
       if (fx.summon){
         entry.summon = true;
         // 소환수는 한 마리만 — 기존 소환 dot 제거 후 신규 소환수로 교체
@@ -9187,7 +9198,8 @@ function applyCardEffect(card, ctx){
         if (replaced > 0) ctx.log(`  · 기존 소환수 → 새 소환수로 교체`, ctx.castLogCls);
       }
       ctx.castDots.push(entry);
-      ctx.log(`  + ${ctx.targName} 도트 ${fx.min!=null?`${fx.min}-${fx.max}`:fx.dmg}×${fx.turns}턴${fx.growth?` (+${fx.growth}/턴)`:''}`, ctx.castLogCls);
+      const dmgLabel = fx.min!=null ? `${fx.min}-${fx.max}` : (fx.mpPct ? `${entry.dmg} 고정` : fx.dmg);
+      ctx.log(`  + ${ctx.targName} 도트 ${dmgLabel}×${fx.turns}턴${fx.growth?` (+${fx.growth}/턴)`:''}`, ctx.castLogCls);
       return;
     }
     if (t === 'dotStat'){
@@ -9359,9 +9371,11 @@ function applyCardEffect(card, ctx){
           bg[g] = {};
         }
       }
-      // 3) 등급 미추적 잔여(레거시) — normal 등급 취급, allowed에 normal 있으면 locked까지 리셋
-      if (allowed.has('normal')){
-        for (const k of Object.keys(b)) b[k] = (lb && lb[k]) || 0;
+      // 3) 잠긴 버프 보장 — locked 는 등급 무관 dispel 면역. Step 2 에서 함께 감쇠됐다면 baseline 복원.
+      if (lb){
+        for (const k of Object.keys(lb)){
+          if ((b[k]||0) < (lb[k]||0)) b[k] = lb[k];
+        }
       }
       // 부활의 증표 상태 — 영웅+ 등급만 제거 가능
       if (card.grade === 'hero' || card.grade === 'legend'){
@@ -9568,27 +9582,32 @@ function processCombatTicks(kind){
   const me = GAME.player;
   function rollDot(d){ if (d.min!=null && d.max!=null) return rnd(d.min, d.max); return d.dmg; }
   // 벤전스 헬퍼 — target에 vengeance 활성 시 데미지 절반 + reflector(시전자측)에 1.5배 반사
-  function _vgDot(target, reflector, dmg, vg, log, targName, srcName, srcCls){
+  // 대상/반사 양측 모두 마나쉴드로 흡수 가능 (도트·반사 데미지 방어력 무시)
+  function _vgDot(target, reflector, dmg, vg, tgtShield, refShield, log, targName, srcName, srcCls){
+    const _msNote = (a) => a > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${a})</span>` : '';
     if (vg && vg.turns > 0 && !vg.pending){
-      const reduced = Math.max(1, Math.floor(dmg * (vg.dmgReduce || 0.5)));
+      const reduced   = Math.max(1, Math.floor(dmg * (vg.dmgReduce  || 0.5)));
       const reflected = Math.max(1, Math.floor(dmg * (vg.reflectMul || 1.5)));
-      target.hp -= reduced;
-      reflector.hp = Math.max(0, reflector.hp - reflected);
-      log(`  ☠ 도트 → ${targName} -${reduced} <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>`, srcCls);
-      log(`  ↺ 벤전스 반사 → ${srcName} -${reflected}`, srcCls === 'hit' ? 'opp' : 'hit');
-      return reduced;
+      const t = _applyManaShield(tgtShield, target, reduced);
+      target.hp -= t.hpDmg;
+      const r = _applyManaShield(refShield, reflector, reflected);
+      reflector.hp = Math.max(0, reflector.hp - r.hpDmg);
+      log(`  ☠ 도트 → ${targName} -${t.hpDmg} <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>${_msNote(t.mpAbsorbed)}`, srcCls);
+      log(`  ↺ 벤전스 반사 → ${srcName} -${r.hpDmg}${_msNote(r.mpAbsorbed)}`, srcCls === 'hit' ? 'opp' : 'hit');
+      return t.hpDmg;
     }
-    target.hp -= dmg;
-    return dmg;
+    const noVg = _applyManaShield(tgtShield, target, dmg);
+    target.hp -= noVg.hpDmg;
+    log(`  ☠ 도트 → ${targName} -${noVg.hpDmg}${_msNote(noVg.mpAbsorbed)}`, srcCls);
+    return noVg.hpDmg;
   }
   // 도트 (적이 받는) — 적 vengeance 시 내가 반사 받음 (무적 몬스터는 skip)
   for (const d of c.monDots){
     const dmg = rollDot(d);
     if (opp.invincible){ d.turns--; continue; }
-    const applied = _vgDot(opp, me, dmg, c.monVengeance, log, opp.name, '나', 'hit');
+    const applied = _vgDot(opp, me, dmg, c.monVengeance, c.monManaShield, c.myManaShield, log, opp.name, '나', 'hit');
     c.statsMyDmg += applied;
     try { _bumpDailyCounter('dotDamage', applied, 'dq_dot_100'); } catch(e){}
-    if (!c.monVengeance || c.monVengeance.pending) log(`  ☠ 도트 → ${opp.name} -${dmg}`, 'hit');
     d.turns--;
     if (d.growth) d.dmg = (d.dmg || 0) + d.growth; // 매 턴 dmg 증가 (성장형)
   }
@@ -9596,9 +9615,8 @@ function processCombatTicks(kind){
   // 도트 (내가 받는) — 내 vengeance 시 적이 반사 받음
   for (const d of c.myDots){
     const dmg = rollDot(d);
-    const applied = _vgDot(me, opp, dmg, c.myVengeance, log, '나', opp.name, 'opp');
+    const applied = _vgDot(me, opp, dmg, c.myVengeance, c.myManaShield, c.monManaShield, log, '나', opp.name, 'opp');
     c.statsMonDmg += applied;
-    if (!c.myVengeance || c.myVengeance.pending) log(`  ☠ 도트 → 나 -${dmg}`, 'opp');
     d.turns--;
     if (d.growth) d.dmg = (d.dmg || 0) + d.growth;
   }
