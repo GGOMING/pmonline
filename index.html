@@ -2729,7 +2729,7 @@ const CARDS = [
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
   { id:'r33', name:'클러스터로켓',       grade:'rare', icon:'meteor',   text:'5 ~ 10 랜덤 데미지 *5회 (방어력 무시)', fx:{type:'dmgHits',min:5,max:10,hits:5,ignoreDef:true} },
   { id:'r34', name:'스피드스크롤',       grade:'unique', icon:'spark',    text:'이번 턴 행동 없음 / 시전 턴 받는 데미지 50% 감소 / 다음 턴 카드 2회 발동 (소환 카드 제외)', fx:{type:'doubleCastNext'} },
-  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어구 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', fx:{type:'buff',atk:10,def:6} },
+  { id:'r35', name:'파이어오브',         grade:'rare', icon:'fire',     text:'무기 +10 증가 / 방어구 +6 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'buff',atk:10,def:6} },
   { id:'r36', name:'타락의오브',         grade:'rare', icon:'dagger',   text:'시전자 무기 +5 증가 / 상대방 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5},{type:'debuff',def:-5}]} },
   { id:'r37', name:'엔지니어링업그레이드', grade:'rare', icon:'gear',    text:'(무기 + 누적 무기 버프) ×40% 만큼 무기 증가 / (방어구 + 누적 방어구 버프) ×40% 만큼 방어구 증가 / [시전자 STR이나 DEX가 10 이상일 경우에만 발동]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4,def:0.4}} },
   { id:'r38', name:'플레임스트라이크',   grade:'rare', icon:'fire',     text:'[INT + 무기] 데미지 / 2턴 동안 턴당 INT*0.5 데미지', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],weaponBonus:true},{type:'dotStat',stats:['int'],mult:0.5,turns:2}]} },
@@ -5408,7 +5408,7 @@ const TITLE_POOL = [
   { id:'title_hunt_100000',    name:'전장의 지배자',     tier:'영웅', color:'#ff3366', desc:'수행 100,000회 승리 (누적)',        cond:{type:'hunt_wins',                target:100000} },
   { id:'title_astraia',        name:'천신의 계승자',     tier:'영웅', color:'#ff3366', desc:'천신의 아스트레이아 획득',           cond:{type:'item_owned', itemId:'divine_elaha',  target:1} },
   { id:'title_fluted',         name:'천계의 수호자',     tier:'영웅', color:'#ff3366', desc:'천신의 플루티드 아머 획득',          cond:{type:'item_owned', itemId:'divine_fluted', target:1} },
-  { id:'title_rank_top1',      name:'정점을 밟은 자',    tier:'영웅', color:'#ff3366', desc:'랭킹 1위 달성',                     cond:{type:'rank_reached_le',          target:1} },
+  { id:'title_rank_top1',      name:'정점을 밟은 자',    tier:'영웅', color:'#ff3366', desc:'전체 랭킹 1위 (레벨·경험치 기준)',   cond:{type:'overall_rank_le',         target:1} },
   { id:'title_card_hero_1',    name:'영웅 소환자',       tier:'영웅', color:'#ff3366', desc:'영웅 카드 1장 이상 소지',            cond:{type:'hero_cards_owned',         target:1} },
   { id:'title_card_all_grades',name:'도감 마스터',       tier:'영웅', color:'#ff3366', desc:'일반/레어/유니크/영웅 카드 최소 1장씩 소지', cond:{type:'all_grades_owned', target:4} },
   { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'영웅', color:'#ff3366', desc:'여신의 축복 500개 누적 획득',        cond:{type:'total_blessing_earned',    target:500} },
@@ -5464,6 +5464,12 @@ function _getTitleCurrentValue(p, cond, useCurrent){
         r = p.titleCounters.rank_reached_min || 9999;
       }
       return r <= cond.target ? cond.target : 0;
+    }
+    case 'overall_rank_le': {
+      // 전체 유저 랭킹 (레벨·경험치 기준). GAME.ranking.myOverallRank 는 fetchOverallRank 로 갱신
+      const r = (GAME.ranking && GAME.ranking.myOverallRank) || 0;
+      const eff = r <= 0 ? 9999 : r;
+      return eff <= cond.target ? cond.target : 0;
     }
     case 'raid_participations': return p.titleCounters.raid_participations || 0;
     case 'boss_kills': return p.titleCounters.boss_kills || 0;
@@ -7011,6 +7017,11 @@ async function fetchOverallRank(){
     const tEl = document.getElementById('totalUsers');
     if (rEl) rEl.textContent = row.rank != null ? row.rank : '-';
     if (tEl) tEl.textContent = row.total != null ? row.total : '-';
+    // 칭호 조건 판정용 — GAME.ranking 에도 저장. Lv 26 게이트 반영을 위해 재검사 트리거
+    if (!GAME.ranking) GAME.ranking = {};
+    GAME.ranking.myOverallRank = (row.rank != null) ? Number(row.rank) : 0;
+    GAME.ranking.overallTotal  = (row.total != null) ? Number(row.total) : 0;
+    try { checkTitleUnlocks(); } catch(e){}
   } catch(e){ console.warn('[fetchOverallRank]', e); }
 }
 
@@ -10553,7 +10564,7 @@ function huntEnd(result){
   try { saveGame(); } catch(e){ console.warn('[huntEnd saveGame]', e); }
   cloudSaveNow().catch(e => console.warn('[huntEnd cloudSave]', e));
 
-  showHuntResult(outcome, {gold, xp, lvUp, lvBonus, lostGold, m, beforeHp:c.playerHpBefore, rankBonus});
+  showHuntResult(outcome, {gold, xp, lvUp, lvBonus, lostGold, m, beforeHp:c.playerHpBefore});
 }
 
 function showHuntResult(outcome, info){
@@ -10573,14 +10584,6 @@ function showHuntResult(outcome, info){
     <hr>`;
   if (outcome === 'win'){
     body += `<p style="color:#060;">✔ 보상: <b>+${info.gold} 골드</b>, <b>+${info.xp} 경험치</b></p>`;
-    if (info.rankBonus > 0){
-      const rk = GAME.ranking.myRank;
-      if (rk >= 1 && rk <= 10){
-        body += `<p style="color:#a02050;">🏆 랭킹 ${rk}위 보너스: <b>+${info.rankBonus} G</b></p>`;
-      } else {
-        body += `<p style="color:#a02050;">🎁 기본 보너스: <b>+${info.rankBonus} G</b></p>`;
-      }
-    }
     if (info.lvUp){ body += _lvUpBoxHtml(info.lvBonus); _scheduleLvUpAlert(); }
   } else if (outcome === 'lose'){
     const loss = (GAME._lastHuntLoss) || { lostGold: info.lostGold || 0, lostXp: 0, destroyed: null };
