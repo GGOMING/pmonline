@@ -3950,8 +3950,9 @@ function doGachaShop(shopId, n){
 const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000, legend:100000 };
 
 // 가챠 풀에서 카드 1장 픽 — 등급별 가중 규칙 반영
-// - 최초 유니크 획득: 레인오브파이어(u03) 1.5x 가중
+// - 최초 유니크 획득: 레인오브파이어(u03) 1.4x, 테르시아의 빛(u09) 1.4x 가중
 //   판정 기준: p.uniqueEverAcquired 플래그 OR 인벤토리에 유니크 카드 존재 여부 (마이그레이션 겸용)
+const _FIRST_UNIQUE_WEIGHTS = { u03: 1.4, u09: 1.4 };
 function _pickWeightedCard(gPool, grade){
   const p = GAME.player;
   if (grade === 'unique' && p){
@@ -3960,7 +3961,7 @@ function _pickWeightedCard(gPool, grade){
     if (!hasAnyUnique){
       let total = 0;
       const weights = gPool.map(c => {
-        const w = c.id === 'u03' ? 1.5 : 1;
+        const w = _FIRST_UNIQUE_WEIGHTS[c.id] || 1;
         total += w;
         return w;
       });
@@ -12306,7 +12307,10 @@ function renderProfileTitles(){
   const tierOrder = { '일반':1, '레어':2, '유니크':3, '영웅':4, '전설':5, '신화':6, '희귀':2 };
   // 정렬 오름차순 (일반 → 신화). 아래 sort 콜백에서 사용.
   const plv = p.level || 1;
-  const items = TITLE_POOL.map(t => {
+  const items = TITLE_POOL
+    // 신화 등급 칭호는 소지·수령대기 상태가 아니면 목록에서 숨김 (관리자 지급 전용, 이스터에그성)
+    .filter(t => t.tier !== '신화' || owned.has(t.id) || pending.has(t.id))
+    .map(t => {
     const has = owned.has(t.id);
     const isPending = pending.has(t.id);
     const isEq = p.equippedTitle === t.id;
