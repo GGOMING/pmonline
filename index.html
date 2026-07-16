@@ -2244,6 +2244,12 @@
               <button class="mini-btn" onclick="sellAllByGrade('hero')" style="background:#dc143c;color:#fff;">전부 판매</button>
             </td>
           </tr>
+          <tr>
+            <td class="lbl">전설 (100,000G/장)</td>
+            <td class="val" colspan="3"><span id="sell_legend_count">0</span>장
+              <button class="mini-btn" onclick="sellAllByGrade('legend')" style="background:linear-gradient(180deg,#ffd700,#c98d1a);color:#3a1a00;">전부 판매</button>
+            </td>
+          </tr>
         </table>
       </div>
     </div>
@@ -3683,6 +3689,7 @@ const GACHA_SHOPS = {
     label: '유니크 뽑기', icon: 'assets/wc3_reforged_used/cardshop_unique.png',
     cost1: 5000, cost10: 45000,
     maxGradeKr: '유니크',
+    minLv: 11,
     table: [
       { grade:'normal', rate:0.6545 },
       { grade:'rare',   rate:0.3450 },
@@ -3693,6 +3700,7 @@ const GACHA_SHOPS = {
     label: '영웅 뽑기', icon: 'assets/wc3_reforged_used/cardshop_hero.jpg',
     cost1: 10000, cost10: 90000,
     maxGradeKr: '영웅',
+    minLv: 11,
     table: [
       { grade:'normal', rate:0.5009 },
       { grade:'rare',   rate:0.4980 },
@@ -3704,6 +3712,7 @@ const GACHA_SHOPS = {
     label: '전설 뽑기', icon: 'assets/wc3_reforged_used/cardshop_legend.jpg',
     cost1: 100000, cost10: 900000,
     maxGradeKr: '전설',
+    minLv: 11,
     table: [
       { grade:'normal', rate:0.30000 },
       { grade:'rare',   rate:0.68400 },
@@ -3822,12 +3831,13 @@ function refreshShopUI(){
   // 4종 카드샵 그리드 렌더
   renderGachaShopGrid();
   // 등급별 보유 카드 수 (판매 섹션)
-  const counts = { normal:0, rare:0, unique:0, hero:0 };
+  const counts = { normal:0, rare:0, unique:0, hero:0, legend:0 };
   for (const c of GAME.inventory) if (counts[c.grade] != null) counts[c.grade]++;
   if ($('sell_normal_count')) $('sell_normal_count').textContent = counts.normal;
   if ($('sell_rare_count'))   $('sell_rare_count').textContent   = counts.rare;
   if ($('sell_unique_count')) $('sell_unique_count').textContent = counts.unique;
   if ($('sell_hero_count'))   $('sell_hero_count').textContent   = counts.hero;
+  if ($('sell_legend_count')) $('sell_legend_count').textContent = counts.legend;
 }
 
 const _GACHA_SHOP_ORDER = ['normal','rare','unique','hero','legend'];
@@ -3842,13 +3852,16 @@ function renderGachaShopGrid(){
     const s = GACHA_SHOPS[id];
     const border = _GRADE_COLORS[id] || '#888';
     const iconUrl = s.icon.replace(/ /g,'%20');
-    if (s.locked){
-      // 잠금 카드 — 추후 오픈 예정
+    const isLvLocked = s.minLv && (p.level || 1) < s.minLv;
+    if (s.locked || isLvLocked){
+      const lockNote = isLvLocked
+        ? `<b>Lv ${s.minLv}</b> 부터 이용 가능`
+        : '추후 오픈 예정';
       return `<div style="${cardStyle}background:#f0f0f0;border:2px dashed ${border};border-radius:8px;padding:10px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,0.1);opacity:0.85;">
         <img src="${iconUrl}" alt="" style="width:96px;height:96px;object-fit:contain;background:#000;border:1px solid #888;margin-bottom:6px;filter:grayscale(40%);">
         <div style="font-size:14px;font-weight:bold;color:${border};">${s.label} 🔒</div>
         <div style="font-size:11px;color:#555;margin:4px 0;line-height:1.5;">최대 <b style="color:${border};">${s.maxGradeKr}</b> 등급의<br>카드가 등장합니다.</div>
-        <div style="margin-top:8px;padding:6px;background:#ddd;color:#555;font-size:11px;font-weight:bold;border-radius:3px;">추후 오픈 예정</div>
+        <div style="margin-top:8px;padding:6px;background:#ddd;color:#555;font-size:11px;font-weight:bold;border-radius:3px;">${lockNote}</div>
       </div>`;
     }
     const can1  = p.gold >= s.cost1;
@@ -3870,6 +3883,10 @@ function doGachaShop(shopId, n){
   const s = GACHA_SHOPS[shopId];
   if (!s) return;
   const p = GAME.player;
+  if (s.minLv && (p.level || 1) < s.minLv){
+    setShopMsg(`⚠ ${s.label}는 Lv ${s.minLv}부터 이용 가능합니다.`, 'err');
+    return;
+  }
   const cost = (n === 10) ? s.cost10 : s.cost1 * n;
   if (p.gold < cost){
     setShopMsg(`⚠ 골드가 부족합니다. (필요: ${cost.toLocaleString()} G)`, 'err');
@@ -3933,10 +3950,14 @@ function doGachaShop(shopId, n){
     const rarePlus = results.filter(c => c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
     if (rarePlus > 0) advanceDailyQuest('dq_rare_1', rarePlus);
     // 주간 뽑기 카운트
+    //  · wq_gacha_normal — 획득한 '일반' 등급 카드 수 (기존 유지)
+    //  · wq_gacha_unique — '유니크·영웅·전설' shop 에서 뽑기 횟수 (결과 등급 무관)
+    //    이유: 등급별 실제 획득률이 낮아 카드 수 기반이면 사실상 달성 불가
     const normalCnt = results.filter(c => c.grade === 'normal').length;
-    const uniquePlus = results.filter(c => c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
     if (normalCnt > 0) advanceWeeklyQuest('wq_gacha_normal', normalCnt);
-    if (uniquePlus > 0) advanceWeeklyQuest('wq_gacha_unique', uniquePlus);
+    if (shopId === 'unique' || shopId === 'hero' || shopId === 'legend'){
+      advanceWeeklyQuest('wq_gacha_unique', n);
+    }
     // 칭호: 총 뽑기 횟수 + 유니크·영웅·전등급 조건 재검사 (인벤토리 변화로 언락 가능)
     bumpTitleCounter('total_gacha', n);
     checkTitleUnlocks();
@@ -4487,10 +4508,8 @@ function buyBlessItem(id){
       if (n === 11) advanceDailyQuest('dq_gacha10', 1);
       const rarePlus = results.filter(c => c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
       if (rarePlus > 0) advanceDailyQuest('dq_rare_1', rarePlus);
-      const normalCnt = results.filter(c => c.grade === 'normal').length;
-      const uniquePlus = results.filter(c => c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
-      if (normalCnt > 0) advanceWeeklyQuest('wq_gacha_normal', normalCnt);
-      if (uniquePlus > 0) advanceWeeklyQuest('wq_gacha_unique', uniquePlus);
+      // 축복 뽑기는 영웅 확률표 기반 — wq_gacha_unique 카운트
+      advanceWeeklyQuest('wq_gacha_unique', n);
       bumpTitleCounter('total_gacha', n);
       checkTitleUnlocks();
     } catch(e){}
@@ -4963,7 +4982,7 @@ const WEEKLY_QUEST_POOL = [
   { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1  },
   { id:'wq_gacha_normal',   name:'꽝손 토닥토닥',      diff:'주간', desc:'일반 뽑기 100장',                 target:100,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
   { id:'wq_death_destroy',  name:'죽으란 법은 없지',   diff:'주간', desc:'사망으로 장비·카드 파괴 2회 (축복 방어 제외)', target:2, gold:100000, xp:0, card:null, bless:5, minLevel:15 },
-  { id:'wq_gacha_unique',   name:'이번엔 진짜 나온다', diff:'주간', desc:'유니크 이상 카드 뽑기 50회',      target:50,     gold:30000, xp:0, card:null,     bless:0, minLevel:1  },
+  { id:'wq_gacha_unique',   name:'이번엔 진짜 나온다', diff:'주간', desc:'유니크·영웅·전설 뽑기(또는 축복 뽑기) 50회',  target:50,     gold:30000, xp:0, card:null,     bless:0, minLevel:1  },
 ];
 const WEEKLY_QUEST_ASSIGN_COUNT = 4;
 const WEEKLY_RESET_DOW = 1;   // 월요일 (0=일, 1=월 ...)
@@ -6581,7 +6600,19 @@ async function raidEnd(result){
       // 보상 — abyss는 x7 + 250 XP, +200G 추가 (엘리트는 2배)
       const eliteMul = (m.elite ? 2 : 1);
       const gold = isAbyssMob ? (m.gold + 200) * eliteMul : (m.gold + 50);
-      const xp   = isAbyssMob ? (m.xp * 7 + 250) * eliteMul : (m.xp + 15);
+      // dawn/mist XP: Lv 26~40 유저는 (수행 몬스터 XP × 1.2) 로 산정 · Lv 41+ 는 Lv 40 상한
+      // Lv 25 유저는 기존 몹 레벨 기반 XP (호환)
+      let dawnMistXp;
+      if (!isAbyssMob){
+        const pLv = p.level || 1;
+        if (pLv >= 26){
+          const effLv = Math.min(pLv, 40);
+          dawnMistXp = Math.floor(effLv * (4 + Math.random() * 3) * 1.2) + 15;
+        } else {
+          dawnMistXp = m.xp + 15;
+        }
+      }
+      const xp = isAbyssMob ? (m.xp * 7 + 250) * eliteMul : dawnMistXp;
       p.gold += gold; p.xp += xp;
       try {
         _bumpDailyCounter('goldGained', gold, 'dq_gold_5k');
@@ -7184,10 +7215,6 @@ async function challengeRank(targetRank){
   // 짧은 쿨다운 후 자동 해제 (전투 진입 실패 시에도 다시 클릭 가능)
   setTimeout(() => { _rankChallengeBusy = false; }, 800);
 
-  if (GAME.player && GAME.player.isOperator){
-    toast('운영자 계정은 랭킹전에 참여할 수 없습니다.');
-    return;
-  }
   if (GAME.player && GAME.player.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
     openHeal();
@@ -7591,6 +7618,7 @@ async function rankEnd(result){
   // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
   // 다음 랭킹전에 이월돼 무한 스택되는 버그 방지
   try {
+    p._hpMaxBonus = 0; p._mpMaxBonus = 0;   // huntEnd / raidEnd 와 동일 정책
     calcDerived(p);
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
