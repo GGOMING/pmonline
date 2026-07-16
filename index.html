@@ -2676,7 +2676,7 @@ const CARDS = [
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
   { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어구 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
   { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'매턴 10 ~ 25 랜덤 데미지 / 5턴 동안 매턴 HP 5 회복 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dot',turns:15,min:10,max:25,summon:true},{type:'hot',heal:5,turns:5}]}, requires:'n41' },
-  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 무기 +5, 방어구 +6 증가 / 상대방 무기 -5, 방어구 -5 감소', fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
+  { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 무기 +5, 방어구 +6 증가 / 상대방 무기 -5, 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
   { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'상대방 MP*0.2 데미지 (최대 60) / 상대방 MP -50% 감소 및 기본공격으로 타격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
   { id:'r06', name:'미스릴검',       grade:'rare', icon:'sword2',   text:'무기 +12 증가', fx:{type:'buff',atk:12} },
   { id:'r07', name:'미스릴방어구',   grade:'rare', icon:'armor',    text:'방어구 +12 증가', fx:{type:'buff',def:12} },
@@ -2684,7 +2684,7 @@ const CARDS = [
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
   { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'시전 다음 턴부터 2턴 동안 적에게 가한 데미지의 50%를 HP로 흡수 / [시전자 STR 10 이상일 때만 발동]', statReq:{str:10}, fx:{type:'lifeleech',turns:2,pct:0.5} },
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
-  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 무기 +10 증가', fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
+  { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 무기 +10 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
   { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
   { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 동안 10 고정 데미지', fx:{type:'dot',turns:4,dmg:10} },
@@ -4015,9 +4015,14 @@ function _sellRaidRewardCard(cardId, price){
     toast('⚠ 판매할 카드가 없습니다.');
     return;
   }
+  const soldCard = GAME.inventory[idx];
   GAME.inventory.splice(idx, 1);
   p.gold += price;
   toast(`💰 카드 판매 +${price.toLocaleString()}G`);
+  try { advanceDailyQuest('dq_sell_3', 1); } catch(e){}
+  if (soldCard && (soldCard.grade === 'rare' || soldCard.grade === 'unique' || soldCard.grade === 'hero' || soldCard.grade === 'legend')){
+    try { advanceDailyQuest('dq_sell_rare_1', 1); } catch(e){}
+  }
   try { renderSheet(); } catch(e){}
   try { saveGame(); } catch(e){}
   // 버튼을 판매 완료 라벨로 교체
@@ -4051,6 +4056,12 @@ function _sellGachaResults(results){
   }
   p.gold += total;
   toast(`💰 ${results.length}장 판매 +${total.toLocaleString()}G`);
+  // 일일 퀘스트 진행 — 가챠 즉시 판매도 판매 카운트
+  try { advanceDailyQuest('dq_sell_3', results.length); } catch(e){}
+  try {
+    const rareSold = results.filter(c => c && (c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend')).length;
+    if (rareSold > 0) advanceDailyQuest('dq_sell_rare_1', rareSold);
+  } catch(e){}
   try { renderSheet(); } catch(e){}
   try { renderDeck(); } catch(e){}
   try { refreshShopUI(); } catch(e){}
@@ -7033,18 +7044,55 @@ async function loadRankingFromCloud(){
   if (!sb) return false;
   // rank_check_reset 은 호출자(openRank/checkRankingReset)에서 한 번만 수행 — 중복 RPC 제거로 렉 완화
   try {
+    // 오프라인·10분 이상 비활성 유저 정리 (SECURITY DEFINER RPC)
+    try { await sb.rpc('rank_cleanup_stale'); } catch(e){ /* RPC 미배포 시 무시 */ }
     const { data, error } = await sb.from('ranking_global')
       .select('rank, slot, user_id').order('rank', { ascending: true });
     if (error || !Array.isArray(data) || data.length === 0){
       console.warn('[loadRanking]', error); return false;
     }
-    GAME.ranking.slots = data.map(r => _hydrateSlotDeck(r.slot));
+    // 클라이언트 방어적 중복 제거 — 동일 user_id 가 여러 슬롯에 있으면 상위 rank 만 유지
+    const seenUids = new Set();
+    const dedupData = [];
+    for (const r of data){
+      if (r.user_id){
+        if (seenUids.has(r.user_id)) continue;
+        seenUids.add(r.user_id);
+      }
+      dedupData.push(r);
+    }
+    GAME.ranking.slots = dedupData.map(r => _hydrateSlotDeck(r.slot));
     const myUid = await _getMyUserId();
-    const meRow = data.find(r => r.user_id === myUid);
+    const meRow = dedupData.find(r => r.user_id === myUid);
     GAME.ranking.myRank = meRow ? meRow.rank : 0;
     if (GAME.ranking.myRank > 0) { try { updateTitleRankReached(GAME.ranking.myRank); } catch(e){} }
     return true;
   } catch(e){ console.warn('[loadRanking]', e); return false; }
+}
+
+// 랭킹전 슬롯 하트비트 — 등록된 상태에서 2분마다 last_active_at 갱신. 10분 이상 미갱신 시 rank_cleanup_stale 이 정리.
+let _rankHeartbeatTimer = null;
+async function _rankHeartbeatTick(){
+  if (!sb || !GAME.player) return;
+  if (!GAME.ranking || GAME.ranking.myRank <= 0) return;   // 미등록 상태면 skip
+  try { await sb.rpc('rank_heartbeat'); } catch(e){ /* RPC 미배포 시 무시 */ }
+}
+function startRankHeartbeat(){
+  if (_rankHeartbeatTimer) return;
+  _rankHeartbeatTick();
+  _rankHeartbeatTimer = setInterval(_rankHeartbeatTick, 120000);   // 2분
+}
+function stopRankHeartbeat(){
+  if (_rankHeartbeatTimer){ clearInterval(_rankHeartbeatTimer); _rankHeartbeatTimer = null; }
+}
+// 로그아웃·페이지 종료 시 본인 랭킹 슬롯 즉시 삭제 (fire-and-forget)
+async function _rankExitCleanup(){
+  if (!sb) return;
+  try {
+    const myUid = await _getMyUserId();
+    if (!myUid) return;
+    await sb.from('ranking_global').delete().eq('user_id', myUid);
+  } catch(e){ /* 무시 */ }
 }
 
 async function subscribeRanking(){
@@ -7666,6 +7714,8 @@ async function promoteToRank(targetRank){
       if (GAME.ranking && GAME.ranking.myRank !== targetRank){
         console.warn('[rank_register] myRank not updated', GAME.ranking.myRank, 'expected', targetRank);
       }
+      // 등록 성공 → 하트비트 시작 (10분 비활성 시 랭킹에서 내려감)
+      try { startRankHeartbeat(); } catch(e){}
     } catch(e){
       console.warn('[promoteToRank]', e);
       alert('랭킹 등록 실패: ' + (e.message || e));
@@ -13472,13 +13522,26 @@ async function _teardownChat(){
 }
 window.addEventListener('beforeunload', () => {
   try { if (_chatChannel) _chatChannel.untrack(); } catch(e){}
+  try { stopRankHeartbeat(); } catch(e){}
+  try {
+    // 본인 랭킹 슬롯 즉시 삭제 — sendBeacon 스타일로 fetch keepalive
+    if (sb && GAME.player){
+      const uid = (sb.auth && sb.auth.getSession) ? null : null;
+      // Supabase JS 는 keepalive fetch 를 자동 처리하지 않음 → 그냥 delete 시도 (fire-and-forget)
+      _rankExitCleanup();
+    }
+  } catch(e){}
   _flushCloudSaveOnUnload();
 });
 // 모바일 Safari 등 beforeunload 미발동 대비 — 탭이 backgrounded/hidden 되는 순간에도 플러시
 document.addEventListener('visibilitychange', () => {
   if (document.visibilityState === 'hidden') _flushCloudSaveOnUnload();
 });
-window.addEventListener('pagehide', () => { _flushCloudSaveOnUnload(); });
+window.addEventListener('pagehide', () => {
+  try { stopRankHeartbeat(); } catch(e){}
+  try { _rankExitCleanup(); } catch(e){}
+  _flushCloudSaveOnUnload();
+});
 
 // chatMsgs 크기 변동 시 자동으로 맨 아래(최근 메시지)로 고정
 (function autoStickChatBottom(){
