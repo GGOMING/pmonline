@@ -2320,7 +2320,7 @@
           <div style="font-size:11px;color:#555;line-height:1.6;">
             • 현재 STR / DEX / INT / CON을 모두 <b>5</b>로 리셋합니다.<br>
             • 레벨업으로 받은 <b>스탯 P는 그대로 돌려받습니다.</b><br>
-            • 비용: <b style="color:#7E181E;">최초 1회 10,000 G</b> · <b style="color:#7E181E;">이후 매회 100,000 G</b> <span id="statResetCurCost" style="color:#7E181E;font-weight:bold;"></span>
+            • 비용: <b style="color:#7E181E;">최초 1회 50,000 G</b> · <b style="color:#7E181E;">이후 매회 200,000 G + ✨ 축복 10개</b> <span id="statResetCurCost" style="color:#7E181E;font-weight:bold;"></span>
           </div>
           <div style="margin-top:8px;">
             <button class="btn-go" onclick="resetStats()" style="background:#7E181E;" id="statResetBtn">스탯 초기화하기</button>
@@ -2706,14 +2706,18 @@ const CARDS = [
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   iconPath:'assets/wc3_reforged_used/holylight.jpg', text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
   { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +5 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:5,max:15},{stat:'def',min:5,max:15}]} },
+  { id:'u08', name:'롱기누스의 검',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.2 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.2,turns:2,dynamic:true}]} },
+  { id:'u09', name:'테르시아의 빛',  grade:'unique', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNLightningRevenant.png', text:'시전자 INT% 확률로 2턴 간 기절 / 2턴 간 INT × 1.3 고정 데미지 (방어력 무시, 매턴 현재 INT 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'int'},{type:'dotStat',stats:['int'],mult:1.3,turns:2,dynamic:true}]} },
+  { id:'u10', name:'크로노스의 혼',  grade:'unique', icon:'ice',    iconPath:'assets/wc3_reforged_used/BTNFrostRevenant.png', text:'시전자 DEX% 확률로 2턴 간 기절 / 2턴 간 DEX × 1.2 고정 데미지 (방어력 무시, 매턴 현재 DEX 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'dex'},{type:'dotStat',stats:['dex'],mult:1.2,turns:2,dynamic:true}]} },
 
   // ───── 영웅 카드 5종 ─────
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/demon.jpg', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/wc3_reforged_used/BTNSpiritOfVengeance-Reforged.png', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
-  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 시점에 적의 모든 버프(벤전스 포함) 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
+  { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 턴부터 3턴간 방어구 +20 증가, CON +20 증가 / 3턴 후 시전자 레벨 × 2.5 만큼 HP·MP 회복', fx:{type:'multi',effects:[{type:'buff',def:20,con:20,turns:3},{type:'delayedRestore',after:3,hpFromLevel:2.5,mpFromLevel:2.5}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
   { id:'l01', name:'부활의 증표',    grade:'legend', icon:'star',   iconPath:'assets/wc3_reforged_used/BTNResurrection-Reforged.png', text:'10턴 내에 HP가 0이 될 경우 HP·MP를 모두 회복한 상태로 부활 / 부활 시 모든 버프·디버프 초기화 (전투 개시 상태)', fx:{type:'rebirth',turns:10} },
+  { id:'l02', name:'데우스엑스마키나', grade:'legend', icon:'demon',  iconPath:'assets/wc3_reforged_used/BTNEssenceOfAszune.png', text:'시전 시점에 적의 모든 버프 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
   { id:'r31', name:'회복스크롤',         grade:'rare', icon:'cross',    text:'시전자 HP +40 회복', fx:{type:'heal',hp:40} },
   { id:'r32', name:'힐링웨이브',         grade:'rare', icon:'cross2',   text:'5 ~ 10 랜덤 회복 *5회', fx:{type:'dmgHits',min:0,max:0,hits:5,healMin:5,healMax:10} },
@@ -5314,7 +5318,7 @@ function renderQuests(){
 // 프로필 관리 페이지에서 획득 목록 확인 및 장착/해제 가능. 랭킹전·명예의 전당에서 노출.
 const TITLE_POOL = [
   // ── 일반 (연회색, 예외: 새싹은 초록) ──
-  { id:'title_lv5',            name:'새싹',              tier:'일반', color:'#6bc16b', desc:'Lv 5 도달',                        cond:{type:'level',                    target:5} },
+  { id:'title_lv5',            name:'새싹',              tier:'일반', color:'#8fdc4a', desc:'Lv 5 도달',                        cond:{type:'level',                    target:5} },
   { id:'title_lv10',           name:'입문',              tier:'일반', color:'#a8a8a8', desc:'Lv 10 도달',                       cond:{type:'level',                    target:10} },
   { id:'title_lv15',           name:'걸음마',            tier:'일반', color:'#a8a8a8', desc:'Lv 15 도달',                       cond:{type:'level',                    target:15} },
   { id:'title_lv20',           name:'성장기',            tier:'일반', color:'#a8a8a8', desc:'Lv 20 도달',                       cond:{type:'level',                    target:20} },
@@ -5395,7 +5399,7 @@ const TITLE_POOL = [
   { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설', color:'#ffd700', desc:'영웅 카드 5장 이상 소지',            cond:{type:'hero_cards_owned',         target:5} },
   { id:'title_legend_first',   name:'전설의 시작',       tier:'전설', color:'#ffd700', desc:'전설 카드 1장 이상 소지',            cond:{type:'legend_cards_owned',       target:1} },
   // ── 신화 (붉은색) — 관리자 지급 전용 ──
-  { id:'title_mythic_beta',    name:'신화의 창조자',     tier:'신화', color:'#e0203a', desc:'RE: 여신전쟁 베타 테스터 한정 (관리자 지급)', cond:{type:'admin_only', target:1} },
+  { id:'title_mythic_beta',    name:'신화의 창조자',     tier:'신화', color:'#a00010', desc:'RE: 여신전쟁 베타 테스터 한정 (관리자 지급)', cond:{type:'admin_only', target:1} },
 ];
 // Lv 26 게이트 — 유니크·영웅·전설·신화 tier 는 조건을 이전에 충족했더라도 Lv 26 도달 시점에 여전히 조건이 성립해야 지급됨
 // 랭킹처럼 유동적인 조건은 역대 최고치가 아니라 현재 상태로 판정 (_getTitleCurrentValue useCurrent)
@@ -7558,8 +7562,10 @@ async function rankEnd(result){
       rankLvBonus += _grantLvBonusGold(p, p.level);
       rankLvUp = true;
       chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
-      if (p.level === 26){
-        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다.`);
+      if (p.level === 26 && !p.lv26BonusClaimed){
+        p.lv26BonusClaimed = true;
+        p.gold += 20000;
+        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
       }
     }
     if (rankLvUp){
@@ -8474,6 +8480,7 @@ function _tryRebirth(c, side, obj, log){
   c[side + 'DoubleCastReady']   = 0;
   c[side + 'ScrollGuardTurn']   = 0;
   c[side + 'ManaShield']        = null;
+  if (Array.isArray(c[side + 'DelayedRestores'])) c[side + 'DelayedRestores'].length = 0;
   if (Array.isArray(c[side + 'Transforms'])) c[side + 'Transforms'].length = 0;
   // 부활 상태 소비 (1회성)
   c[side + 'Rebirth'] = null;
@@ -8498,6 +8505,7 @@ function _ensureCombatExt(c){
   c.myVengeance ||= null; c.monVengeance ||= null; // 벤전스 — {turns, reflectMul, dmgReduce, pending}
   c.myScrollGuardTurn ||= 0; c.monScrollGuardTurn ||= 0; // 스피드스크롤 — 시전 턴에만 받는 데미지 50% 감소
   c.myRebirth ||= null; c.monRebirth ||= null;   // 부활의 증표 — {turns}. HP 0 도달 시 발동 (1회)
+  c.myDelayedRestores ||= []; c.monDelayedRestores ||= [];   // 지연 회복 — [{turnsLeft, hp, mp}]. tick에서 카운트다운 → 0 시 발동
   c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 쉴드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -8855,8 +8863,14 @@ function applyCardEffect(card, ctx){
   }
   function dispatch(fx){
     if (!fx) return;
-    if (fx.chance != null && Math.random() >= fx.chance){
-      ctx.log(`  ✱ 발동 실패 (${Math.floor(fx.chance*100)}%)`, 'info');
+    // 확률 발동 — fx.chance (고정) 또는 fx.chanceStat ('str'|'dex'|'int'|'con') 시전자 스탯% 확률
+    let _dispatchChance = fx.chance;
+    if (fx.chanceStat){
+      const _cStat = (ctx.castObj[fx.chanceStat] || 0) + ((ctx.castBuffs && ctx.castBuffs[fx.chanceStat]) || 0);
+      _dispatchChance = Math.max(0, Math.min(1, _cStat / 100));
+    }
+    if (_dispatchChance != null && Math.random() >= _dispatchChance){
+      ctx.log(`  ✱ 발동 실패 (${Math.floor(_dispatchChance*100)}%)`, 'info');
       return;
     }
     const t = fx.type;
@@ -9425,6 +9439,22 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'dotStat'){
+      // dynamic:true — 매 턴 시전자의 현재 스탯(+ 버프)으로 재계산
+      // false/undefined — 시전 시점 스탯 스냅
+      if (fx.dynamic){
+        const entry = {
+          turns: fx.turns,
+          dmg: 0,
+          dynamicStat: fx.stats[0],
+          dynamicMult: fx.mult || 1,
+          dynamicBonus: fx.bonus || 0,
+          dynamicSide: ctx.caster === 'player' ? 'my' : 'mon',
+        };
+        ctx.castDots.push(entry);
+        const preview = Math.floor(statSum(fx.stats) * (fx.mult||1) + (fx.bonus||0));
+        ctx.log(`  + ${ctx.targName} 도트 ${fx.stats.map(s=>s.toUpperCase()).join('+')} × ${fx.mult||1} ≈ ${preview} × ${fx.turns}턴 (매턴 재계산)`, ctx.castLogCls);
+        return;
+      }
       const base = statSum(fx.stats);
       const dmg = Math.floor(base * (fx.mult||1) + (fx.bonus||0));
       ctx.castDots.push({dmg, turns:fx.turns});
@@ -9468,6 +9498,18 @@ function applyCardEffect(card, ctx){
     if (t === 'hot'){
       ctx.castHots.push({heal:fx.heal, turns:fx.turns});
       ctx.log(`  + ${ctx.castName} 지속 회복 ${fx.heal}×${fx.turns}턴`, 'heal');
+      return;
+    }
+    if (t === 'delayedRestore'){
+      // N턴 후 시전자에게 HP/MP 회복 발동 (예: 빅베드부두 3턴 후 회복)
+      const lv = ctx.castObj.level || 1;
+      const hpAmt = fx.hpFromLevel ? Math.floor(lv * fx.hpFromLevel) : (fx.hp || 0);
+      const mpAmt = fx.mpFromLevel ? Math.floor(lv * fx.mpFromLevel) : (fx.mp || 0);
+      const entry = { turnsLeft: fx.after || 3, hp: hpAmt, mp: mpAmt };
+      const side = ctx.caster === 'player' ? 'my' : 'mon';
+      if (!Array.isArray(ctx.c[side + 'DelayedRestores'])) ctx.c[side + 'DelayedRestores'] = [];
+      ctx.c[side + 'DelayedRestores'].push(entry);
+      ctx.log(`  ⏳ ${ctx.castName} ${fx.after || 3}턴 후 HP +${hpAmt} / MP +${mpAmt} 회복 예약`, 'heal');
       return;
     }
     if (t === 'hotStat'){
@@ -9823,6 +9865,14 @@ function processCombatTicks(kind){
       if (d.max != null) v = Math.min(d.max, v);
       return Math.max(1, v);
     }
+    // 시전자 스탯 기반 동적 도트 (롱기누스의 검·테르시아의 빛·크로노스의 혼 등)
+    if (d.dynamicStat){
+      const casterObj = d.dynamicSide === 'mon' ? opp : me;
+      const casterBuffs = d.dynamicSide === 'mon' ? c.monBuffs : c.myBuffs;
+      const stat = (casterObj[d.dynamicStat] || 0) + ((casterBuffs && casterBuffs[d.dynamicStat]) || 0);
+      const v = Math.floor(stat * (d.dynamicMult || 1) + (d.dynamicBonus || 0));
+      return Math.max(1, v);
+    }
     if (d.min != null && d.max != null) return rnd(d.min, d.max);
     return d.dmg;
   }
@@ -9948,6 +9998,29 @@ function processCombatTicks(kind){
   // 마나 쉴드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
+  // 지연 회복 발동 — turnsLeft 카운트다운, 0 도달 시 시전자 HP/MP 회복 (버프 만료 후에 실행되어 hpMax 안정 상태 기준)
+  function _tickDelayedRestores(list, tgt, tgtName){
+    if (!Array.isArray(list)) return list;
+    for (let i = list.length - 1; i >= 0; i--){
+      const e = list[i];
+      e.turnsLeft--;
+      if (e.turnsLeft <= 0){
+        if (e.hp > 0){
+          const before = tgt.hp;
+          tgt.hp = Math.min(tgt.hpMax, tgt.hp + e.hp);
+          log(`  💫 예약 회복 → ${tgtName} HP +${tgt.hp - before}`, 'heal');
+        }
+        if (e.mp > 0){
+          const before = tgt.mp;
+          tgt.mp = Math.min(tgt.mpMax, tgt.mp + e.mp);
+          log(`  💫 예약 회복 → ${tgtName} MP +${tgt.mp - before}`, 'heal');
+        }
+        list.splice(i, 1);
+      }
+    }
+  }
+  _tickDelayedRestores(c.myDelayedRestores, me, '나');
+  _tickDelayedRestores(c.monDelayedRestores, opp, opp.name);
 }
 
 // 행동불능 체크 — true 반환 시 stun 카운터 1 소비
@@ -9987,6 +10060,7 @@ function _ensureTrainExt(){
   // 부활의 증표 / 마나쉴드 / 등급별 버프 트래킹
   c.myRebirth ||= null; c.monRebirth ||= null;
   c.myManaShield ||= null; c.monManaShield ||= null;
+  c.myDelayedRestores ||= []; c.monDelayedRestores ||= [];
   c.myBuffsByGrade  ||= {normal:{},rare:{},unique:{},hero:{},legend:{}};
   c.monBuffsByGrade ||= {normal:{},rare:{},unique:{},hero:{},legend:{}};
   const o = c.opp;
@@ -10170,6 +10244,21 @@ function processTrainTicks(){
   // 마나 쉴드 타이머 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; trainLog(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; trainLog(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
+  // 지연 회복 발동
+  function _trainTickDelayed(list, tgt, tgtName){
+    if (!Array.isArray(list)) return;
+    for (let i = list.length - 1; i >= 0; i--){
+      const e = list[i];
+      e.turnsLeft--;
+      if (e.turnsLeft <= 0){
+        if (e.hp > 0){ const before = tgt.hp; tgt.hp = Math.min(tgt.hpMax, tgt.hp + e.hp); trainLog(`  💫 예약 회복 → ${tgtName} HP +${tgt.hp - before}`, 'heal'); }
+        if (e.mp > 0){ const before = tgt.mp; tgt.mp = Math.min(tgt.mpMax, tgt.mp + e.mp); trainLog(`  💫 예약 회복 → ${tgtName} MP +${tgt.mp - before}`, 'heal'); }
+        list.splice(i, 1);
+      }
+    }
+  }
+  _trainTickDelayed(c.myDelayedRestores, me, '나');
+  _trainTickDelayed(c.monDelayedRestores, opp, opp.name);
 }
 
 function huntFlee(){
@@ -10293,9 +10382,11 @@ function huntEnd(result){
       const bonusG = _grantLvBonusGold(p, p.level);
       lvBonus += bonusG;
       huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복` + (bonusG ? ` · 🎁 +${bonusG}G` : ''), 'sys');
-      // Lv 26 도달 시 슬롯 11~15 해금 안내
-      if (p.level === 26){
-        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다.`);
+      // Lv 26 도달 시 슬롯 11~15 해금 안내 + 축하금 20,000G (1회)
+      if (p.level === 26 && !p.lv26BonusClaimed){
+        p.lv26BonusClaimed = true;
+        p.gold += 20000;
+        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
       }
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; try { checkTitleUnlocks(); } catch(e){} }
@@ -11725,7 +11816,7 @@ const TUTORIAL_STEPS = [
          • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·파이어볼트처럼 <b>MP를 소모해 강력한 데미지</b>를 주는 <i>마법사형</i> 빌드.<br>
          • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력 ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
       <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.<br>
-        ♻ 스탯 분배가 마음에 들지 않으면 <b>「프로필 관리 → 스탯 초기화」</b>에서 STR/DEX/INT/CON을 리셋할 수 있어요. 최초 1회는 10,000G, 이후엔 100,000G가 청구됩니다. 스탯 P는 그대로 돌려받습니다.</div>`,
+        ♻ 스탯 분배가 마음에 들지 않으면 <b>「프로필 관리 → 스탯 초기화」</b>에서 STR/DEX/INT/CON을 리셋할 수 있어요. 최초 1회는 50,000G, 이후엔 200,000G + ✨ 축복 10개가 청구됩니다. 스탯 P는 그대로 돌려받습니다.</div>`,
     target:'#main-statbox', page:'main', position:'corner',
   },
   {
@@ -12024,8 +12115,10 @@ function checkLevelUp(){
     leveled = true;
     chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
     _grantLvBonusGold(p, p.level);
-    if (p.level === 26){
-      chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다.`);
+    if (p.level === 26 && !p.lv26BonusClaimed){
+      p.lv26BonusClaimed = true;
+      p.gold += 20000;
+      chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
     }
   }
   if (leveled){
@@ -12184,11 +12277,22 @@ function _renderProfilePage(){
   // 상태 메세지 현재값 채우기
   const sm = $('profileStatusMsg'); if (sm) sm.value = p.comment || '';
   const sms = $('profileStatusMsgState'); if (sms) sms.textContent = '';
-  // 스탯 초기화 버튼 — 다음 청구액 표시 (최초 10k / 이후 100k)
+  // 스탯 초기화 버튼 — 다음 청구액 표시 (최초 50k / 이후 200k + 축복 10)
   const _rst = p.statResetCount || 0;
-  const _rstNext = _rst === 0 ? 10000 : 100000;
-  const _rstBtn  = $('statResetBtn'); if (_rstBtn) _rstBtn.textContent = `스탯 초기화하기 (-${_rstNext.toLocaleString()} G)`;
-  const _rstNote = $('statResetCurCost'); if (_rstNote) _rstNote.textContent = ` — 다음 청구액: ${_rstNext.toLocaleString()} G (${_rst}회 사용)`;
+  const _rstNextG = _rst === 0 ? 50000 : 200000;
+  const _rstNextB = _rst === 0 ? 0 : 10;
+  const _rstBtn  = $('statResetBtn');
+  if (_rstBtn){
+    _rstBtn.textContent = _rstNextB > 0
+      ? `스탯 초기화하기 (-${_rstNextG.toLocaleString()} G · -✨ ${_rstNextB})`
+      : `스탯 초기화하기 (-${_rstNextG.toLocaleString()} G)`;
+  }
+  const _rstNote = $('statResetCurCost');
+  if (_rstNote){
+    _rstNote.textContent = _rstNextB > 0
+      ? ` — 다음 청구액: ${_rstNextG.toLocaleString()} G + ✨ ${_rstNextB} (${_rst}회 사용)`
+      : ` — 다음 청구액: ${_rstNextG.toLocaleString()} G (${_rst}회 사용)`;
+  }
   try { renderProfileTitles(); } catch(e){ console.warn('[titleRender]', e); }
 }
 function renderProfileTitles(){
@@ -12200,6 +12304,7 @@ function renderProfileTitles(){
   const owned = new Set(p.titles || []);
   const pending = new Set(p.pendingTitles || []);
   const tierOrder = { '일반':1, '레어':2, '유니크':3, '영웅':4, '전설':5, '신화':6, '희귀':2 };
+  // 정렬 오름차순 (일반 → 신화). 아래 sort 콜백에서 사용.
   const plv = p.level || 1;
   const items = TITLE_POOL.map(t => {
     const has = owned.has(t.id);
@@ -12210,11 +12315,11 @@ function renderProfileTitles(){
     const levelLocked = !!(t.minLevel && plv < t.minLevel);
     return { t, has, isPending, isEq, cur, pct, levelLocked };
   }).sort((a, b) => {
-    // 수령 대기 먼저 → 획득한 것 → 미획득 (각각 내부적으로 등급 순)
+    // 수령 대기 먼저 → 획득한 것 → 미획득 (각각 내부적으로 등급 오름차순 일반→신화)
     const stateA = a.isPending ? 0 : (a.has ? 1 : 2);
     const stateB = b.isPending ? 0 : (b.has ? 1 : 2);
     if (stateA !== stateB) return stateA - stateB;
-    return (tierOrder[b.t.tier] || 0) - (tierOrder[a.t.tier] || 0);
+    return (tierOrder[a.t.tier] || 0) - (tierOrder[b.t.tier] || 0);
   });
   // 상단 일괄 수령 버튼
   const pendingCount = p.pendingTitles.length;
@@ -12607,15 +12712,25 @@ function addStat(stat){
 function resetStats(){
   const p = GAME.player;
   if (!p) return;
-  // 최초 1회는 10,000G, 이후는 100,000G
+  // 최초 1회는 50,000G, 이후는 200,000G + 여신의 축복 10개
   const usedCount = p.statResetCount || 0;
-  const COST = usedCount === 0 ? 10000 : 100000;
-  const label = usedCount === 0 ? '최초 초기화' : `${usedCount + 1}회차`;
+  const isFirst = usedCount === 0;
+  const COST = isFirst ? 50000 : 200000;
+  const BLESS_COST = isFirst ? 0 : 10;
+  const label = isFirst ? '최초 초기화' : `${usedCount + 1}회차`;
   if (p.gold < COST){
     toast(`스탯 초기화 비용 ${COST.toLocaleString()}G가 부족합니다. (보유: ${p.gold.toLocaleString()}G)`);
     return;
   }
-  if (!confirm(`스탯 초기화 (${label})\n\n비용: ${COST.toLocaleString()}G\n현재 스탯이 모두 5/5/5/5로 리셋됩니다.\n레벨업으로 얻은 스탯 포인트는 그대로 돌려받습니다.${usedCount === 0 ? '\n\n※ 이후 초기화부터는 100,000G가 청구됩니다.' : ''}\n\n진행할까요?`)){
+  if (BLESS_COST > 0 && (p.blessing || 0) < BLESS_COST){
+    toast(`여신의 축복 ${BLESS_COST}개가 부족합니다. (보유: ${(p.blessing||0)}개)`);
+    return;
+  }
+  const costLine = BLESS_COST > 0
+    ? `비용: ${COST.toLocaleString()}G + ✨ 축복 ${BLESS_COST}개`
+    : `비용: ${COST.toLocaleString()}G`;
+  const noticeFirst = isFirst ? '\n\n※ 이후 초기화부터는 200,000G + ✨ 축복 10개가 청구됩니다.' : '';
+  if (!confirm(`스탯 초기화 (${label})\n\n${costLine}\n현재 스탯이 모두 5/5/5/5로 리셋됩니다.\n레벨업으로 얻은 스탯 포인트는 그대로 돌려받습니다.${noticeFirst}\n\n진행할까요?`)){
     return;
   }
   // 현재까지 사용한 스탯 = (str-5) + (dex-5) + (int-5) + (con-5) + 남은 xpUp
@@ -12623,6 +12738,10 @@ function resetStats(){
   p.gold -= COST;
   try { _bumpWeeklyCounter('goldSpent', COST, 'wq_gold_spent'); } catch(e){}
   try { bumpTitleCounter('total_gold_spent', COST); } catch(e){}
+  if (BLESS_COST > 0){
+    p.blessing = Math.max(0, (p.blessing || 0) - BLESS_COST);
+    try { bumpTitleCounter('total_blessing_spent', BLESS_COST); } catch(e){}
+  }
   p.str = 5; p.dex = 5; p.int = 5; p.con = 5;
   // 사용한 포인트만큼 돌려받음
   p.xpUp += Math.max(0, usedPoints);
@@ -12632,7 +12751,10 @@ function resetStats(){
   p.hp = p.hpMax;
   p.mp = p.mpMax;
   renderSheet();
-  toast(`✔ 스탯 초기화 완료. -${COST.toLocaleString()}G, 스탯 포인트 ${usedPoints} 환급`);
+  const costSummary = BLESS_COST > 0
+    ? `-${COST.toLocaleString()}G · -✨ ${BLESS_COST}`
+    : `-${COST.toLocaleString()}G`;
+  toast(`✔ 스탯 초기화 완료. ${costSummary}, 스탯 포인트 ${usedPoints} 환급`);
   chatSys(`★ ${p.name}님이 스탯을 초기화하였습니다.`);
   saveGame();
   // 중요 액션 — 클라우드 즉시 flush (탭 즉시 종료 시 유실 방지)
@@ -13391,10 +13513,10 @@ function doContinue(){
 // ============================================================
 //   관리자 에디터
 // ============================================================
-const ADMIN_ID = 'admin';
+const ADMIN_ID = '0304';
 // 운영자 PW는 솔트 결합 SHA-256으로만 저장 (평문 X). 변경 시 _AS+새PW+_AS를 sha256으로 재계산해 _AH에 반영.
 const _AS = 'yeoshin_jeonjaeng_v3_salt_2026';
-const _AH = 'c2bd3ded0cc6e0896c097e0a83df11933c10d5306e963d0095e39b121d96a4af';
+const _AH = 'fecc9970db4e9605341afda4d7f57465217c8e04c73b138ff7a41b2e3c6885ae';   // 'gimin' 해시
 async function _hashPw(pw){
   const buf = new TextEncoder().encode(_AS + pw + _AS);
   const d = await crypto.subtle.digest('SHA-256', buf);
