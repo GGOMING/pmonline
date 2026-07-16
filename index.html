@@ -5041,6 +5041,7 @@ function _bumpDailyCounter(field, delta, questId){
       if (slot.progress >= slot.target && oldProgress < slot.target){
         _notifyQuestReady(questId, 'daily');
       }
+      try { if (typeof renderQuests === 'function') renderQuests(); } catch(e){}
     }
   }
 }
@@ -5115,6 +5116,7 @@ function advanceWeeklyQuest(id, delta){
     _notifyQuestReady(id, 'weekly');
   }
   saveGame();
+  try { if (typeof renderQuests === 'function') renderQuests(); } catch(e){}
 }
 function _bumpWeeklyCounter(field, delta, questId){
   const p = GAME.player;
@@ -5128,6 +5130,7 @@ function _bumpWeeklyCounter(field, delta, questId){
       if (slot.progress >= slot.target && oldProgress < slot.target){
         _notifyQuestReady(questId, 'weekly');
       }
+      try { if (typeof renderQuests === 'function') renderQuests(); } catch(e){}
     }
   }
 }
@@ -5159,6 +5162,7 @@ function advanceDailyQuest(id, delta){
     _notifyQuestReady(id, 'daily');
   }
   saveGame();
+  try { if (typeof renderQuests === 'function') renderQuests(); } catch(e){}
 }
 // ─── 수령 버튼 핸들러 ──────────────────────────
 function claimDailyQuest(id){
