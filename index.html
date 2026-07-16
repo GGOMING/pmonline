@@ -13346,7 +13346,13 @@ function _renderChatRow(row){
     d.textContent = row.message;
   } else {
     const meCls = (GAME.player && row.nickname === GAME.player.name) ? 'me' : '';
-    d.innerHTML = `<span class="nick ${meCls}">${escapeHtml(row.nickname)}:</span> <span class="msg">${escapeHtml(row.message)}</span>`;
+    // 시전 시점 착용 칭호 뱃지 (row.title_id — 신규 필드. 미존재 시 뱃지 생략)
+    let titleBadge = '';
+    if (row.title_id){
+      try { titleBadge = titleBadgeHtml(row.title_id, { size:10, py:1, px:6 }); } catch(e){}
+      if (titleBadge) titleBadge = `<span style="margin-right:4px;">${titleBadge}</span>`;
+    }
+    d.innerHTML = `${titleBadge}<span class="nick ${meCls}">${escapeHtml(row.nickname)}:</span> <span class="msg">${escapeHtml(row.message)}</span>`;
   }
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -13383,7 +13389,9 @@ function sendChat(){
   if (!msg) return;
   input.value = '';
   if (sb && GAME.player){
-    sb.from('chat_messages').insert({ nickname:GAME.player.name, message:msg, kind:'user' })
+    const payload = { nickname:GAME.player.name, message:msg, kind:'user' };
+    if (GAME.player.equippedTitle) payload.title_id = GAME.player.equippedTitle;
+    sb.from('chat_messages').insert(payload)
       .then(({ error }) => {
         if (error){
           console.warn('[sendChat cloud]', error);
@@ -13410,7 +13418,7 @@ async function initChat(){
   try {
     const since = new Date(Date.now() - 1 * 3600 * 1000).toISOString();
     const { data, error } = await sb.from('chat_messages')
-      .select('id, nickname, message, kind, created_at')
+      .select('id, nickname, message, kind, created_at, title_id')
       .gte('created_at', since)
       .order('created_at', { ascending: false }).limit(50);
     if (!error && Array.isArray(data)){
