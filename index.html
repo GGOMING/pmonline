@@ -984,6 +984,17 @@
     padding:2px; cursor:pointer; position:relative;
   }
   table.deck.mini tr.icons td:hover { box-shadow:inset 0 0 0 2px #ff0; }
+  /* 전투 mini 덱에서도 유니크·영웅·전설 테두리 유지 — 위 default border override 를 다시 덮어씀 */
+  table.deck.mini tr.icons td.grade-unique { border:2px solid #a335ee; box-shadow:inset 0 0 6px rgba(163,53,238,.4); }
+  table.deck.mini tr.icons td.grade-hero   { border:2px solid #dc143c; box-shadow:inset 0 0 8px rgba(220,20,60,.55); }
+  table.deck.mini tr.icons td.grade-legend {
+    border:2px solid transparent;
+    box-shadow:
+      inset 0 0 0 2px #ffd700,
+      inset 0 0 8px rgba(255,215,0,.22),
+      0 0 4px rgba(255,215,0,.25);
+    animation:legendShimmer 3.6s ease-in-out infinite;
+  }
   table.deck.mini tr.icons td.empty-slot { background:#333; color:#888; line-height:80px; font-size:24px; }
   table.deck.mini tr.icons td.used { opacity:.3; }
   table.deck.mini tr.icons td.last-used { box-shadow:inset 0 0 0 3px #ff6699; animation:pulse 1s; }
@@ -5725,14 +5736,36 @@ const ABYSS_MIN_LEVEL = 40;    // 입장 최소 레벨
 const ABYSS_SESSION_HOURS = 6; // 세션 리셋 주기 (시간)
 const ABYSS_ADMIN_PW = 'ekfru2';
 
-// 세션 시작 시각 (6시간 단위 — 0시/6시/12시/18시 정각). dawn/mist/abyss 공통
+// 세션 시작 시각 (6시간 단위)
+// dawn/abyss: 0시 / 6시 / 12시 / 18시 정각
+// mist: 3시 / 9시 / 15시 / 21시 정각 (3시간 offset)
 const RAID_SESSION_HOURS = 6;
+const MIST_SESSION_OFFSET_HOURS = 3;
 function getCurrentSessionStart(){
+  return getSessionStartFor('dawn');
+}
+function getSessionStartFor(raidKey){
   const now = new Date();
-  const sessionStart = new Date(now);
-  sessionStart.setMinutes(0, 0, 0);
-  sessionStart.setHours(Math.floor(sessionStart.getHours() / RAID_SESSION_HOURS) * RAID_SESSION_HOURS);
-  return sessionStart.getTime();
+  const s = new Date(now);
+  s.setMinutes(0, 0, 0);
+  if (raidKey === 'mist'){
+    // mist 는 3시간 offset: (h - 3) 를 6으로 나눈 몫 × 6 + 3
+    const h = s.getHours();
+    // 현재 시각이 아직 이번 mist 세션의 시작 앵커에 도달 안 했으면 이전 앵커 사용
+    const adj = ((h - MIST_SESSION_OFFSET_HOURS) % 24 + 24) % 24;
+    const bucketStart = Math.floor(adj / RAID_SESSION_HOURS) * RAID_SESSION_HOURS + MIST_SESSION_OFFSET_HOURS;
+    // bucketStart 가 h 보다 크면 어제 앵커 (day - 1)
+    if (bucketStart > h){
+      s.setDate(s.getDate() - 1);
+      s.setHours(bucketStart);
+    } else {
+      s.setHours(bucketStart);
+    }
+    return s.getTime();
+  }
+  // dawn / abyss : 0/6/12/18
+  s.setHours(Math.floor(s.getHours() / RAID_SESSION_HOURS) * RAID_SESSION_HOURS);
+  return s.getTime();
 }
 // abyss 세션 시작 시각 (6시간 단위 — 0/6/12/18시 정각)
 function getAbyssSessionStart(){
@@ -5813,10 +5846,24 @@ let _raidChannel = null;
 
 async function loadRaidFromCloud(){
   if (!sb) return false;
-  const sessionStart = getCurrentSessionStart();
-  // 병렬 스키마: raid_check_reset_all(p_session_start)
-  try { await sb.rpc('raid_check_reset_all', { p_session_start: sessionStart }); }
-  catch(e){ console.warn('[raid_check_reset_all]', e); }
+  // dawn / mist / abyss 각자 앵커로 세션 리셋 시도 (신규 raid_check_reset_key RPC 있으면 그것 우선)
+  // 폴백: 구 raid_check_reset_all 은 모든 raid 를 동일 앵커로 리셋 (dawn 앵커 사용)
+  try {
+    const dawnStart  = getSessionStartFor('dawn');
+    const mistStart  = getSessionStartFor('mist');
+    const abyssStart = getSessionStartFor('abyss');
+    let usedNewRpc = false;
+    try {
+      const r1 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'dawn',  p_session_start: dawnStart });
+      const r2 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'mist',  p_session_start: mistStart });
+      const r3 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'abyss', p_session_start: abyssStart });
+      usedNewRpc = !(r1.error || r2.error || r3.error);
+    } catch(e){ usedNewRpc = false; }
+    if (!usedNewRpc){
+      // 구 RPC 폴백 — dawn 앵커로 통일 (mist offset 은 SQL 배포 후 정상 반영됨)
+      await sb.rpc('raid_check_reset_all', { p_session_start: dawnStart });
+    }
+  } catch(e){ console.warn('[raid_check_reset]', e); }
   try {
     // 새 스키마: raid_key 필드로 조회. 기존 스키마: id=1 단일 row + active_key.
     // 우선 새 스키마 시도
@@ -5948,7 +5995,7 @@ async function checkRaidReset(raidKey){
   }
   // 오프라인 fallback (로컬)
   const r = GAME.raid[raidKey];
-  const currentSession = getCurrentSessionStart();
+  const currentSession = getSessionStartFor(raidKey);
   if (r.sessionStart !== currentSession){
     const bossList = RAID_BOSSES[raidKey];
     const boss = bossList[Math.floor(Math.random() * bossList.length)];
@@ -5984,7 +6031,7 @@ async function checkAllRaidsReset(){
 function _forceLocalRaidReset(raidKey){
   const r = GAME.raid && GAME.raid[raidKey];
   if (!r) return;
-  const currentSession = getCurrentSessionStart();
+  const currentSession = getSessionStartFor(raidKey);
   if (r.sessionStart === currentSession) return;
   const bossList = RAID_BOSSES[raidKey];
   if (!bossList || !bossList.length) return;
@@ -6014,16 +6061,19 @@ function updateRaidUI(){
   _updateRaidSummaryLine('mist',  '🌫 안개의 숲',     'raid-status-mist');
   _updateRaidSummaryLine('abyss', '🌌 잊혀진 성좌',   'raid-status-abyss');
 }
-// 세션 리셋까지 남은 시간 (dawn/mist/abyss 공통 — 6h 사이클 앵커 기준으로 계산)
+// 세션 리셋까지 남은 시간 — dawn/abyss (0/6/12/18) 와 mist (3/9/15/21) 중 가장 가까운 리셋 시각까지
 function _updateRaidTimeLine(){
   const el = $('raid-status-time'); if (!el) return;
   const now = Date.now();
-  const cur = getCurrentSessionStart();
-  const nextReset = cur + RAID_SESSION_HOURS * 3600 * 1000;
+  const nextDawn  = getSessionStartFor('dawn')  + RAID_SESSION_HOURS * 3600 * 1000;
+  const nextMist  = getSessionStartFor('mist')  + RAID_SESSION_HOURS * 3600 * 1000;
+  const nextAbyss = getSessionStartFor('abyss') + RAID_SESSION_HOURS * 3600 * 1000;
+  const nextReset = Math.min(nextDawn, nextMist, nextAbyss);
   const remain = Math.max(0, Math.floor((nextReset - now) / 1000));
   const h = Math.floor(remain / 3600), m = Math.floor((remain % 3600) / 60), s = remain % 60;
   const timeStr = `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  el.textContent = `공격대 남은 시간 ${timeStr}`;
+  const label = nextReset === nextMist ? '안개의 숲' : (nextReset === nextAbyss ? '잊혀진 성좌' : '새벽의 언덕');
+  el.textContent = `다음 리셋 (${label}) 까지 ${timeStr}`;
 }
 function _updateRaidSummaryLine(raidKey, prefix, elId){
   const el = $(elId); if (!el) return;
@@ -7132,21 +7182,37 @@ async function loadRankingFromCloud(){
       }
       dedupData.push(r);
     }
-    // 항상 10슬롯 유지 — 중복 제거로 빈 자리 생기면 NPC 로 채움
+    // 항상 10슬롯 유지 — 중복 제거로 빈 자리 생기거나, 클라우드 row 는 있어도 slot=null 인 경우 NPC 로 채움
     const finalSlots = [];
     const usedNames = new Set();
+    // 이미 사용된 NPC 이름 수집 (충돌 방지)
     for (const r of dedupData){
-      const slot = _hydrateSlotDeck(r.slot);
-      finalSlots.push(slot);
-      if (slot && slot.name) usedNames.add(slot.name);
+      const s = r.slot;
+      if (s && s.name) usedNames.add(s.name);
     }
-    while (finalSlots.length < 10){
-      const npcNames = (typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES : [];
+    const npcNames = (typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES : [];
+    function _makeNpc(){
       const availName = npcNames.find(n => !usedNames.has(n)) || `NPC-${finalSlots.length+1}`;
       usedNames.add(availName);
-      finalSlots.push(makeRankNPC ? makeRankNPC(availName) : {
-        name: availName, level: 1, isNPC: true, deck: [BASIC_ATTACK]
-      });
+      return (typeof makeRankNPC === 'function') ? makeRankNPC(availName) : {
+        isNPC:true, name:availName, level:1, str:5, dex:5, int:5, con:5,
+        hp:26, hpMax:26, mp:25, mpMax:25, atk:[2,5], def:2,
+        weapon:{atkBonus:0}, armor:{defBonus:0},
+        deck: Array(10).fill(BASIC_ATTACK),
+        atkType:'근접',
+      };
+    }
+    for (const r of dedupData){
+      const slot = _hydrateSlotDeck(r.slot);
+      // slot 이 null / undefined 이거나 name 없는 파편이면 NPC 로 대체
+      if (!slot || !slot.name){
+        finalSlots.push(_makeNpc());
+      } else {
+        finalSlots.push(slot);
+      }
+    }
+    while (finalSlots.length < 10){
+      finalSlots.push(_makeNpc());
     }
     GAME.ranking.slots = finalSlots;
     const myUid = await _getMyUserId();
@@ -15056,7 +15122,7 @@ async function adminForceRaidReset(){
       const boss = bossList[Math.floor(Math.random() * bossList.length)];
       const mobCount = key === 'abyss' ? 199 : 99;
       const { error } = await sb.from('raid_state').update({
-        session_start: getCurrentSessionStart(),
+        session_start: getSessionStartFor(key),
         monster_count: mobCount,
         boss_id: boss.id,
         boss_hp: boss.hpMax,
@@ -15081,7 +15147,7 @@ async function adminResetRaid(key){
   const boss = bossList[Math.floor(Math.random()*bossList.length)];
   try {
     const { error } = await sb.from('raid_state').update({
-      session_start: getCurrentSessionStart(),
+      session_start: getSessionStartFor(key),
       monster_count: mobCount,
       boss_id: boss.id,
       boss_hp: boss.hpMax,
