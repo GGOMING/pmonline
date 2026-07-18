@@ -7161,6 +7161,36 @@ async function fetchOverallRank(){
   } catch(e){ console.warn('[fetchOverallRank]', e); }
 }
 
+// 랭킹 슬롯 10칸 강제 유지 헬퍼 — 부족·null·이름없는 슬롯을 NPC 로 채움
+function _fillRankSlotsWithNpcs(){
+  if (!GAME.ranking) GAME.ranking = { slots: [], myRank: 0, lastResetDate: null };
+  if (!Array.isArray(GAME.ranking.slots)) GAME.ranking.slots = [];
+  const npcNames = (typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES : [];
+  const usedNames = new Set();
+  const myName = GAME.player && GAME.player.name;
+  if (myName) usedNames.add(myName);
+  for (const s of GAME.ranking.slots){
+    if (s && s.name) usedNames.add(s.name);
+  }
+  const filled = [];
+  for (let i = 0; i < 10; i++){
+    const cur = GAME.ranking.slots[i];
+    if (cur && cur.name){
+      filled.push(cur);
+    } else {
+      const availName = npcNames.find(n => !usedNames.has(n)) || `NPC-${i+1}`;
+      usedNames.add(availName);
+      filled.push((typeof makeRankNPC === 'function') ? makeRankNPC(availName) : {
+        isNPC:true, name:availName, level:1, str:5, dex:5, int:5, con:5,
+        hp:26, hpMax:26, mp:25, mpMax:25, atk:[2,5], def:2,
+        weapon:{atkBonus:0}, armor:{defBonus:0},
+        deck: Array(10).fill(BASIC_ATTACK), atkType:'근접',
+      });
+    }
+  }
+  GAME.ranking.slots = filled;
+}
+
 async function loadRankingFromCloud(){
   if (!sb) return false;
   // rank_check_reset 은 호출자(openRank/checkRankingReset)에서 한 번만 수행 — 중복 RPC 제거로 렉 완화
@@ -7169,8 +7199,16 @@ async function loadRankingFromCloud(){
     try { await sb.rpc('rank_cleanup_stale'); } catch(e){ /* RPC 미배포 시 무시 */ }
     const { data, error } = await sb.from('ranking_global')
       .select('rank, slot, user_id').order('rank', { ascending: true });
-    if (error || !Array.isArray(data) || data.length === 0){
-      console.warn('[loadRanking]', error); return false;
+    if (error){
+      console.warn('[loadRanking]', error);
+      // 에러여도 빈 슬롯이면 NPC 로 채움 (도전 버튼 사용 가능하게)
+      _fillRankSlotsWithNpcs();
+      return false;
+    }
+    if (!Array.isArray(data) || data.length === 0){
+      // 데이터 없음 — 전 슬롯 NPC 채움
+      _fillRankSlotsWithNpcs();
+      return true;
     }
     // 클라이언트 방어적 중복 제거 — 동일 user_id 가 여러 슬롯에 있으면 상위 rank 만 유지
     const seenUids = new Set();
@@ -7354,11 +7392,9 @@ async function openRank(){
   $('rank-list').hidden = false;
   $('rank-battle').hidden = true;
   $('rank-result').hidden = true;
-  if (GAME.ranking && Array.isArray(GAME.ranking.slots) && GAME.ranking.slots.length){
-    renderRankList();
-  } else if ($('rank_table')) {
-    $('rank_table').innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#aaa;">랭킹 로딩 중…</td></tr>';
-  }
+  // 항상 10슬롯 보장 (부족·null 은 NPC 로 채움) — 초기 렌더 전 상태 정리
+  _fillRankSlotsWithNpcs();
+  renderRankList();
   // 2) 클라우드 동기화는 백그라운드 (await로 메인 스레드 막지 않음)
   (async () => {
     try {
@@ -7377,6 +7413,8 @@ async function openRank(){
 }
 
 function renderRankList(){
+  // 안전장치 — 렌더 직전에도 10슬롯 강제 유지 (부족·null → NPC)
+  _fillRankSlotsWithNpcs();
   const myRank = GAME.ranking.myRank;
   // 클라우드 모드: 본인 슬롯 정보를 비동기로 갱신 (다음 update 이벤트에서 반영)
   if (sb && myRank >= 1 && myRank <= 10 && GAME.player){
