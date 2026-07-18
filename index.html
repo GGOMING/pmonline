@@ -6260,7 +6260,7 @@ function renderRaidLobby(){
     resetBtn.disabled = !canReset;
     resetBtn.style.opacity = canReset ? '1' : '0.45';
     resetBtn.style.cursor  = canReset ? 'pointer' : 'not-allowed';
-    const cost = isAbyss ? 7 : 2;
+    const cost = isAbyss ? 10 : 5;
     resetBtn.title = `여신의 축복 ${cost}개를 소모해 공격대 전체를 초기화합니다. 보스 처치 후에만 사용 가능 (정해진 시간 리셋엔 영향 없음).`;
     resetBtn.textContent = `✨ 축복 ${cost}개로 초기화`;
   }
@@ -6280,13 +6280,13 @@ function raidChallenge(){
 }
 
 // 여신의 축복을 소모하여 현재 공격대를 전체 초기화 (실시간 공유)
-// dawn/mist: 축복 2개, abyss(잊혀진 성좌): 축복 7개
+// dawn/mist: 축복 5개, abyss(잊혀진 성좌): 축복 10개
 // 정해진 시간(6시간 세션) 리셋에는 영향 없음 — session_start 유지
 async function requestRaidManualReset(){
   const p = GAME.player;
   const raidKey = GAME.currentRaid;
   const isAbyss = raidKey === 'abyss';
-  const cost = isAbyss ? 7 : 2;
+  const cost = isAbyss ? 10 : 5;
   // 보스 처치 후에만 초기화 허용 (UI는 disabled지만 안전장치)
   const rNow = GAME.raid && GAME.raid[raidKey];
   if (!rNow || !rNow.bossDefeated){
