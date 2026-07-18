@@ -13344,7 +13344,13 @@ function renderDeck(){
     if (locked){
       td.innerHTML = `<div class="slot-locked">🔒<br><small>Lv 26<br>해금</small></div>`;
       td.classList.add('locked');
-      if (lblRow) lblRow.children[i%5].textContent = '잠김';
+      if (lblRow){
+        const lblCell = lblRow.children[i%5];
+        lblCell.textContent = '잠김';
+        lblCell.style.color = '#888';
+        lblCell.style.fontWeight = 'bold';
+        lblCell.style.textShadow = 'none';
+      }
       td.onclick = ()=>toast('Lv 26부터 해금되는 슬롯입니다.');
     } else {
       const c = GAME.myDeck[i] || BASIC_ATTACK;
@@ -13352,7 +13358,21 @@ function renderDeck(){
       td.classList.add('grade-' + (c.grade || 'normal'));
       td.innerHTML = `<div class="card-ico">${cardIcon(c)}</div>
         <div class="ctip"><b>${c.name}</b> [${gradeKr(c.grade)}]<br>${c.text}</div>`;
-      if (lblRow) lblRow.children[i%5].textContent = c.name;
+      if (lblRow){
+        const lblCell = lblRow.children[i%5];
+        lblCell.textContent = c.name;
+        // 등급별 이름 색상
+        const nameColorByGrade = {
+          normal: '#000000',              // 일반: 검정
+          rare:   '#1a3a7a',              // 레어: 진한 남색
+          unique: '#6b1fa8',              // 유니크: 진한 보라
+          hero:   '#a00020',              // 영웅: 진한 크림슨
+          legend: '#b8860b',              // 전설: 다크 골드
+        };
+        lblCell.style.color = nameColorByGrade[c.grade] || '#000';
+        lblCell.style.fontWeight = (c.grade === 'normal') ? 'bold' : '900';
+        lblCell.style.textShadow = (c.grade === 'legend') ? '0 0 1px #daa520' : 'none';
+      }
       td.onclick = ()=>openMyCardPick(i);
     }
   }
