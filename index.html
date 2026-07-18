@@ -8416,7 +8416,7 @@ function makeGoldChestMonster(playerLv){
     hp:1, hpMax:1, mp:1, mpMax:1,
     atk:[0,0], def:0,
     weapon:{atkBonus:0}, armor:{defBonus:0},
-    deck: Array(10).fill(goldThrow || BASIC_ATTACK),
+    deck: Array(15).fill(goldThrow || BASIC_ATTACK),
     gold: 1000,
     xp,
     invincible: true,
@@ -10679,11 +10679,12 @@ function huntFlee(){
 // 회피 (기권/도주): +1,000G 지급
 // 일반 전투와 달리 퀘스트·칭호·파괴·레벨업 등 부수 효과 전부 스킵
 function _macroGuardPenalty(p){
-  const lostXp    = p.xp || 0;
-  const lostGold  = Math.floor((p.gold || 0) * 0.9);
-  const lostBless = Math.floor((p.blessing || 0) * 0.5);
-  p.xp       = 0;
+  // 보유 골드 -50%, 현재 경험치 -50%, 축복 -90%
+  const lostGold  = Math.floor((p.gold || 0) * 0.5);
+  const lostXp    = Math.floor((p.xp || 0) * 0.5);
+  const lostBless = Math.floor((p.blessing || 0) * 0.9);
   p.gold     = Math.max(0, (p.gold || 0) - lostGold);
+  p.xp       = Math.max(0, (p.xp || 0) - lostXp);
   p.blessing = Math.max(0, (p.blessing || 0) - lostBless);
   p.hp = 0; p.mp = 0;
   return { lostXp, lostGold, lostBless };
@@ -10702,9 +10703,9 @@ function _renderMacroGuardResultBody(isFlee, penalty, m, c){
   } else {
     body += `<p style="color:#a02050;font-weight:bold;">💀 매크로 방지에 걸렸습니다 — 페널티 부과</p>
       <ul style="text-align:left;font-size:12px;line-height:1.7;">
-        <li>경험치 <b>-${penalty.lostXp.toLocaleString()}</b> XP (0으로 초기화)</li>
-        <li>골드 <b>-${penalty.lostGold.toLocaleString()}</b> G (-90%)</li>
-        <li>여신의 축복 <b>-${penalty.lostBless}</b>개 (-50%)</li>
+        <li>골드 <b>-${penalty.lostGold.toLocaleString()}</b> G (-50%)</li>
+        <li>경험치 <b>-${penalty.lostXp.toLocaleString()}</b> XP (-50%)</li>
+        <li>여신의 축복 <b>-${penalty.lostBless}</b>개 (-90%)</li>
       </ul>
       <p style="font-size:11px;color:#888;">※ 정상 유저는 매크로 방지 몹 조우 시 <b>[기권/도주]</b> 를 선택하면 +1,000G 를 받고 안전하게 나올 수 있습니다.</p>`;
   }
@@ -10723,7 +10724,7 @@ function _handleMacroGuardHunt(result){
     chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
   } else {
     penalty = _macroGuardPenalty(p);
-    huntLog(`💀 매크로 방지 발동! XP 0 · 골드 -90% · 축복 -50%`, 'opp');
+    huntLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
     chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
   }
   try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
@@ -10749,7 +10750,7 @@ async function _handleMacroGuardRaid(result){
     chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
   } else {
     penalty = _macroGuardPenalty(p);
-    raidLog(`💀 매크로 방지 발동! XP 0 · 골드 -90% · 축복 -50%`, 'opp');
+    raidLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
     chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
   }
   // 매크로 방지는 raid 몹 카운트 · pendingRaidMob 에 영향 없음 (정상 몹이 아님)
