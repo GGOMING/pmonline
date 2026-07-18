@@ -6503,9 +6503,10 @@ async function startRaidBossBattle(){
 
 function makeBossDeck(){
   // 보스 덱: 영웅 1, 유니크 2, 레어 7, 노멀 5 = 15장
-  const heroPool   = CARDS.filter(c => c.grade === 'hero');
-  const uniquePool = CARDS.filter(c => c.grade === 'unique');
-  const rarePool   = CARDS.filter(c => c.grade === 'rare');
+  // 모든 등급 풀에서 monsterOnly (검거·돈뿌리기 등) 카드는 제외
+  const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
+  const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
+  const rarePool   = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
   const normalPool = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk' && !c.monsterOnly);
   const pick = (pool, n) => {
     const out = [];
@@ -7535,7 +7536,7 @@ function makeDefenseChallenger(name, lv){
   // 카드 덱: 레벨에 따라 일반/레어 비율 (Lv1=레어 0%, Lv30=레어 45%)
   const rareWeight = Math.min(0.45, lv * 0.015);
   const normalPool = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk' && !c.monsterOnly);
-  const rarePool   = CARDS.filter(c => c.grade === 'rare');
+  const rarePool   = CARDS.filter(c => c.grade === 'rare' && !c.monsterOnly);
   const deck = [];
   for (let i = 0; i < 10; i++){
     const pool = (Math.random() < rareWeight && rarePool.length > 0) ? rarePool : normalPool;
@@ -13361,17 +13362,20 @@ function renderDeck(){
       if (lblRow){
         const lblCell = lblRow.children[i%5];
         lblCell.textContent = c.name;
-        // 등급별 이름 색상
+        // 등급별 이름 색상 — 테두리 색과 동일
         const nameColorByGrade = {
-          normal: '#000000',              // 일반: 검정
-          rare:   '#1a3a7a',              // 레어: 진한 남색
-          unique: '#6b1fa8',              // 유니크: 진한 보라
-          hero:   '#a00020',              // 영웅: 진한 크림슨
-          legend: '#b8860b',              // 전설: 다크 골드
+          normal: '#000000',   // 일반: 검정
+          rare:   '#3399ff',   // 레어: 파랑 (테두리 동일)
+          unique: '#a335ee',   // 유니크: 보라 (테두리 동일)
+          hero:   '#dc143c',   // 영웅: 크림슨 (테두리 동일)
+          legend: '#ffd700',   // 전설: 골드 (테두리 동일)
         };
         lblCell.style.color = nameColorByGrade[c.grade] || '#000';
         lblCell.style.fontWeight = (c.grade === 'normal') ? 'bold' : '900';
-        lblCell.style.textShadow = (c.grade === 'legend') ? '0 0 1px #daa520' : 'none';
+        // 밝은 배경(#CCFFCC) 위 가독성 보정 — 밝은 색상엔 옅은 검정 외곽선
+        lblCell.style.textShadow = (c.grade === 'legend' || c.grade === 'rare')
+          ? '0 0 1px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.35)'
+          : 'none';
       }
       td.onclick = ()=>openMyCardPick(i);
     }
