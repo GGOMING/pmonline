@@ -13372,10 +13372,7 @@ function renderDeck(){
         };
         lblCell.style.color = nameColorByGrade[c.grade] || '#000';
         lblCell.style.fontWeight = (c.grade === 'normal') ? 'bold' : '900';
-        // 밝은 배경(#CCFFCC) 위 가독성 보정 — 밝은 색상엔 옅은 검정 외곽선
-        lblCell.style.textShadow = (c.grade === 'legend' || c.grade === 'rare')
-          ? '0 0 1px rgba(0,0,0,0.6), 0 0 2px rgba(0,0,0,0.35)'
-          : 'none';
+        lblCell.style.textShadow = 'none';
       }
       td.onclick = ()=>openMyCardPick(i);
     }
