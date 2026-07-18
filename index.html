@@ -2589,6 +2589,7 @@ const CARDS = [
   { id:'basic_atk', name:'기본공격', grade:'normal', icon:'sword', text:'공격력으로 1회 공격', fx:{type:'basicAtk'} },
   // 황금상자 전용 — 카드샵·유저 덱 모두 불가. 효과 없음(이벤트성 더미 카드)
   { id:'gold_throw', name:'돈 뿌리기', grade:'normal', icon:'gold', iconPath:'assets/wc3_reforged_used/BTNChestOfGold-Reforged.png', text:'상대에게 골드와 경험치를 준다.', monsterOnly:true, fx:{type:'noop'} },
+  { id:'arrest',     name:'검거',       grade:'hero',   icon:'block', iconPath:'assets/wc3_reforged_used/BTNCancel-Reforged.png',       text:'상대에게 10,000 고정 데미지 (방어력 무시)', monsterOnly:true, fx:{type:'dmg',min:10000,max:10000,ignoreDef:true} },
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
   { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'무기 +8 증가', fx:{type:'buff',atk:8} },
@@ -2623,7 +2624,7 @@ const CARDS = [
   { id:'n30', name:'방어구',         grade:'normal', icon:'armor',  text:'방어구 +4 증가', fx:{type:'buff',def:4} },
   { id:'n31', name:'버닝오일',       grade:'normal', icon:'fire',   text:'5턴 동안 5 고정 데미지', fx:{type:'dot',turns:5,dmg:5} },
   { id:'n32', name:'버서커',         grade:'normal', icon:'rage',   text:'시전자 STR +8, DEX +8, 방어력 0, INT 0', fx:{type:'multi',effects:[{type:'buff',str:8,dex:8},{type:'zeroStat',target:'self',stats:['def','int']}]} },
-  { id:'n33', name:'버서커스트렝스', grade:'normal', icon:'lance',  text:'STR +5 증가 / HP +15, MP +15 증가 및 회복', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'heal',hp:15,mp:15}]} },
+  { id:'n33', name:'버서커스트렝스', grade:'normal', icon:'lance',  text:'STR +5 증가 / 최대 HP·MP +15 증가 및 +15씩 회복', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'maxHpBuff',amount:15},{type:'maxMpBuff',amount:15},{type:'heal',hp:15}]} },
   { id:'n34', name:'벌버라이즈',     grade:'normal', icon:'sword',  text:'[STR + DEX + 무기]만큼 타격, 상대방 DEX -2 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str','dex'],weaponBonus:true},{type:'debuff',dex:-2}]} },
   { id:'n35', name:'베어폼',         grade:'normal', icon:'paw',    text:'시전자 INT를 전부 STR로 변환하여 증가', fx:{type:'transferStat',from:'int',to:'str'} },
   { id:'n36', name:'분쇄',           grade:'normal', icon:'crack',  text:'상대방 방어구 -5 감소 및 2턴 동안 10 고정 데미지', fx:{type:'multi',effects:[{type:'debuff',def:-5},{type:'dot',turns:2,dmg:10}]} },
@@ -2683,7 +2684,7 @@ const CARDS = [
   { id:'r08', name:'미스릴방패',     grade:'rare', icon:'shield',   text:'방어구 +11 증가', fx:{type:'buff',def:11} },
   { id:'r09', name:'배쉬',           grade:'rare', icon:'sword',    text:'[STR + 35] 데미지', fx:{type:'dmgStat',stats:['str'],bonus:35} },
   { id:'r10', name:'뱀파이어릭오라', grade:'rare', icon:'cross',    text:'시전 다음 턴부터 2턴 동안 적에게 가한 데미지의 50%를 HP로 흡수 / [시전자 STR 10 이상일 때만 발동]', statReq:{str:10}, fx:{type:'lifeleech',turns:2,pct:0.5} },
-  { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'selfCc',turns:1}]} },
+  { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 1턴 동안 모든 공격 회피 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'evadeBuff',turns:1,pct:1.0},{type:'selfCc',turns:1}]} },
   { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 무기 +10 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
   { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
@@ -5774,6 +5775,10 @@ function _pickAbyssTemplate(playerLv){
 }
 // abyss 몹 생성 (기존 generateMonster의 abyss 특화 버전)
 function generateAbyssMob(playerLv){
+  // 매크로 방지 몬스터 (플레이어별 override 가능)
+  if (Math.random() < getMacroGuardEncounterRate()){
+    return makeMacroGuardMonster();
+  }
   const tpl = _pickAbyssTemplate(playerLv);
   // 몹 레벨 = 템플릿 lvRange 안, 유저 레벨 근처로 클램프
   let mLv = Math.max(tpl.lvRange[0], Math.min(tpl.lvRange[1], playerLv));
@@ -6047,6 +6052,41 @@ function _startRaidSummaryTicker(){
 }
 
 // 메인 메뉴의 공격대 버튼 — 활성 raid로 자동 진입
+// 공격대별 보스 처치 후 재입장 쿨다운 (5분) — raidKey 별 독립
+const RAID_BOSS_COOLDOWN_MS = 5 * 60 * 1000;
+function _ensureRaidBossCooldowns(p){
+  if (!p) return null;
+  if (!p.raidBossCooldowns || typeof p.raidBossCooldowns !== 'object') p.raidBossCooldowns = {};
+  return p.raidBossCooldowns;
+}
+function startRaidBossCooldown(raidKey){
+  const p = GAME.player;
+  const cds = _ensureRaidBossCooldowns(p);
+  if (!cds) return;
+  cds[raidKey] = Date.now() + RAID_BOSS_COOLDOWN_MS;
+}
+function getRaidBossCooldownRemain(raidKey){
+  const p = GAME.player;
+  if (!p || !p.raidBossCooldowns) return 0;
+  const end = p.raidBossCooldowns[raidKey] || 0;
+  return Math.max(0, end - Date.now());
+}
+// 로비 화면 열려있을 때 쿨다운 타이머 라이브 표시용
+let _raidLobbyCooldownTicker = null;
+function _startRaidLobbyCooldownTicker(){
+  if (_raidLobbyCooldownTicker) return;
+  _raidLobbyCooldownTicker = setInterval(() => {
+    const contentEl = document.getElementById('content-raid');
+    const lobbyEl = document.getElementById('raid-lobby');
+    if (!contentEl || contentEl.hidden || !lobbyEl || lobbyEl.hidden){
+      clearInterval(_raidLobbyCooldownTicker); _raidLobbyCooldownTicker = null; return;
+    }
+    if (getRaidBossCooldownRemain(GAME.currentRaid) > 0){
+      try { renderRaidLobby(); } catch(e){}
+    }
+  }, 1000);
+}
+
 async function openRaid(raidKey){
   // 매크로 방지 — 3% 확률 덧셈 캡차 통과 후 진입
   if (!openRaid._captchaPassed && Math.random() < CAPTCHA_RATE){
@@ -6060,6 +6100,15 @@ async function openRaid(raidKey){
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
+    return;
+  }
+  // 보스 처치 쿨다운 — 마지막 보상 획득 후 5분간 동일 공격대 진입 차단 (raidKey 별 독립)
+  const remainMs = getRaidBossCooldownRemain(raidKey);
+  if (remainMs > 0){
+    const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
+    const mm = Math.floor(remainMs / 60000);
+    const ss = Math.floor((remainMs % 60000) / 1000);
+    toast(`${nm} 보스 처치 후 재입장 쿨다운 — ${mm}분 ${ss}초 남음`);
     return;
   }
   const minLv = raidKey === 'dawn' ? 25 : (raidKey === 'mist' ? 25 : ABYSS_MIN_LEVEL);
@@ -6086,6 +6135,7 @@ async function openRaid(raidKey){
   $('raid-battle').hidden = true;
   $('raid-result').hidden = true;
   renderRaidLobby();
+  _startRaidLobbyCooldownTicker();
 }
 // 잊혀진 성좌 진입 — 정식 오픈 (구 admin 게이트 제거). openRaid('abyss')로 직접 진입.
 function enterAbyssRaid(){
@@ -6127,7 +6177,14 @@ function renderRaidLobby(){
 
   // 도전 버튼 상태
   const btn = $('raid_challenge_btn');
-  if (r.bossDefeated){
+  const cdRemain = getRaidBossCooldownRemain(GAME.currentRaid);
+  if (cdRemain > 0){
+    const mm = Math.floor(cdRemain / 60000);
+    const ss = Math.floor((cdRemain % 60000) / 1000).toString().padStart(2, '0');
+    btn.textContent = `⏳ 재입장 쿨다운 ${mm}:${ss}`;
+    btn.disabled = true;
+    $('raid_tip').textContent = `직전에 보스 처치 보상을 받아 5분간 재입장이 제한됩니다. (다른 공격대는 정상 진입 가능)`;
+  } else if (r.bossDefeated){
     btn.textContent = `🏆 보스 처치됨 (${r.lastKiller})`;
     btn.disabled = true;
     $('raid_tip').textContent = `이 세션은 종료되었습니다. 다음 세션을 기다려주세요.`;
@@ -6233,6 +6290,10 @@ async function requestRaidManualReset(){
 
 // 공격대 몬스터 생성 — Lv 25~40 분포 (25~30 40%, 30~35 50%, 35~40 10%)
 function generateRaidMob(){
+  // 매크로 방지 몬스터 (플레이어별 override 가능)
+  if (Math.random() < getMacroGuardEncounterRate()){
+    return makeMacroGuardMonster();
+  }
   const roll = Math.random();
   let lvMin, lvMax;
   if (roll < 0.40){ lvMin = 25; lvMax = 30; }
@@ -6328,6 +6389,9 @@ function startRaidMobBattle(){
     raidLog(`⚔ ${monster.name} (Lv ${monster.level}) — 잔여 HP <b>${monster.hp}/${monster.hpMax}</b> 부터 이어서 도전`, 'sys');
   } else {
     raidLog(`⚔ ${monster.name} (Lv ${monster.level}) 등장! HP ${monster.hp}`, 'sys');
+  }
+  if (monster.id === 'macro_guard'){
+    raidLog(`<div style="background:#fff0f0;border:3px solid #c00;color:#c00;font-size:16px;font-weight:900;text-align:center;padding:10px 8px;margin:6px 0;letter-spacing:-0.5px;line-height:1.4;">⚠️ 매크로 방지를 위한 함정 몬스터입니다.<br>「메인으로 돌아가기」를 눌러 도망치세요!</div>`, 'sys');
   }
 }
 
@@ -6581,6 +6645,11 @@ async function raidEnd(result){
   const m = c.monster;
   const r = GAME.raid[c.raidKey];
 
+  // 매크로 방지 몬스터 — 승·패 페널티 / 회피 보상 특수 처리 후 조기 반환
+  if (m && m.id === 'macro_guard' && c.mode === 'mob'){
+    return _handleMacroGuardRaid(result);
+  }
+
   let outcome = result;
   let bodyHtml = '';
 
@@ -6752,6 +6821,8 @@ async function raidEnd(result){
     if (result === 'boss_kill' || cloudKilled){
       r.bossDefeated = true;
       r.lastKiller = p.name;
+      // 보상 지급 시점부터 이 raidKey 5분 재입장 쿨다운 시작 (dawn/mist/abyss 각각 독립)
+      try { startRaidBossCooldown(c.raidKey); } catch(e){}
       if (isAbyssBoss){
         // 3차 공격대 막타 특별 보상: 축복 +5, XP +30k, 골드 +5k, 영웅 뽑기 1뽑, 5% 전설 장비 드롭
         const abyssGold = 5000 + goldReward;
@@ -7061,7 +7132,23 @@ async function loadRankingFromCloud(){
       }
       dedupData.push(r);
     }
-    GAME.ranking.slots = dedupData.map(r => _hydrateSlotDeck(r.slot));
+    // 항상 10슬롯 유지 — 중복 제거로 빈 자리 생기면 NPC 로 채움
+    const finalSlots = [];
+    const usedNames = new Set();
+    for (const r of dedupData){
+      const slot = _hydrateSlotDeck(r.slot);
+      finalSlots.push(slot);
+      if (slot && slot.name) usedNames.add(slot.name);
+    }
+    while (finalSlots.length < 10){
+      const npcNames = (typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES : [];
+      const availName = npcNames.find(n => !usedNames.has(n)) || `NPC-${finalSlots.length+1}`;
+      usedNames.add(availName);
+      finalSlots.push(makeRankNPC ? makeRankNPC(availName) : {
+        name: availName, level: 1, isNPC: true, deck: [BASIC_ATTACK]
+      });
+    }
+    GAME.ranking.slots = finalSlots;
     const myUid = await _getMyUserId();
     const meRow = dedupData.find(r => r.user_id === myUid);
     GAME.ranking.myRank = meRow ? meRow.rank : 0;
@@ -7256,14 +7343,20 @@ function renderRankList(){
     // 자기 자리 또는 자기 위에서 너무 멀면 도전 불가
 
     const numCls = rank === 1 ? 'r1' : rank === 2 ? 'r2' : rank === 3 ? 'r3' : '';
-    const deckSummary = (slot.deck || []).slice(0,3).map(c=>c.name).join(' · ') + (slot.deck.length > 3 ? ' …' : '');
+    // 슬롯이 비어있으면(중복 제거 결과 등) 로딩 텍스트로 방어
+    if (!slot){
+      html += `<tr class="${rowClass}"><td class="rk-num ${numCls}">${rank}위</td><td class="rk-name" colspan="4" style="color:#aaa;">(빈 자리)</td></tr>`;
+      continue;
+    }
+    const deckArr = Array.isArray(slot.deck) ? slot.deck : [];
+    const deckSummary = deckArr.slice(0,3).map(c=>c && c.name ? c.name : '').filter(Boolean).join(' · ') + (deckArr.length > 3 ? ' …' : '');
     const actionBtn = isMe ? '<span style="color:#a02050;">★ 나</span>'
                     : (canChallenge ? `<button onclick="challengeRank(${rank})">도전</button>`
                                     : '<span style="color:#aaa; font-size:10px;">-</span>');
     html += `<tr class="${rowClass}">
       <td class="rk-num ${numCls}">${rank}위</td>
-      <td class="rk-name">${slot.name}${isMe?' ★':''}</td>
-      <td style="text-align:center;">Lv ${slot.level}</td>
+      <td class="rk-name">${slot.name || '-'}${isMe?' ★':''}</td>
+      <td style="text-align:center;">Lv ${slot.level || 1}</td>
       <td class="rk-deck">${deckSummary}</td>
       <td class="rk-action">${actionBtn}</td>
     </tr>`;
@@ -8094,6 +8187,50 @@ function _goldChestEncounterRate(lv){
   if (lv >= 11) return 0.05;
   return GOLD_CHEST_RATES[lv] || 0;
 }
+// 플레이어별 최종 조우 확률 (admin override 지원)
+// p.encounterRates = { goldChest: <0~1>, macroGuard: <0~1> } 있으면 그 값 사용, 없으면 기본치.
+// 기본치: 황금상자 = 레벨 곡선 (Lv26+ 자동 0), 매크로 방지 = MACRO_GUARD_DEFAULT_RATE
+function getGoldChestEncounterRate(){
+  const p = GAME.player;
+  const overr = p && p.encounterRates && p.encounterRates.goldChest;
+  if (typeof overr === 'number' && isFinite(overr)) return Math.max(0, Math.min(1, overr));
+  return _goldChestEncounterRate((p && p.level) || 1);
+}
+function getMacroGuardEncounterRate(){
+  const p = GAME.player;
+  const overr = p && p.encounterRates && p.encounterRates.macroGuard;
+  if (typeof overr === 'number' && isFinite(overr)) return Math.max(0, Math.min(1, overr));
+  // Lv 25 이하는 미조우 (튜토리얼 구간 보호). Lv 26+ 부터 등장.
+  if ((p && p.level || 1) < 26) return 0;
+  return MACRO_GUARD_DEFAULT_RATE;
+}
+// 매크로 방지 몬스터 — Lv 1 / 모든 스탯 1 / HP 100,000 / 무기 +0 · 방어구 +1,000
+// 1턴·2턴 기본 공격 (약함) → 3턴~15턴 '검거' (10,000 고정 데미지 · 방어력 무시) 로 매크로 봇 즉사시킴
+// 진짜 유저는 매크로 방지 뜬 걸 보고 기권/도주 (평생 등장)
+function makeMacroGuardMonster(){
+  const arrestCard = CARDS.find(c => c.id === 'arrest') || BASIC_ATTACK;
+  const deck = [
+    BASIC_ATTACK, BASIC_ATTACK,
+    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
+    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
+    arrestCard, arrestCard, arrestCard,
+  ];
+  return {
+    id: 'macro_guard',
+    name: '매크로 방지',
+    race: 'human',
+    level: 1,
+    str:1, dex:1, int:1, con:1,
+    hp:100000, hpMax:100000, _hpMaxBase:100000, mp:1, mpMax:1, _mpMaxBase:1,
+    atk:[0,0], def:1000,
+    weapon:{atkBonus:0}, armor:{defBonus:1000},
+    deck,
+    gold: 0, xp: 0,
+    icon: 'assets/wc3_reforged_used/BTNAltarOfStorms-Reforged.png',
+  };
+}
+// 매크로 방지 기본 조우 확률 (플레이어당 override 가능)
+const MACRO_GUARD_DEFAULT_RATE = 0.005;   // 0.5%
 // 황금상자 몬스터 — HP 1, 무적, 10턴 무공격, 1000G + 동레벨 ×2.5 XP
 function makeGoldChestMonster(playerLv){
   const lv = Math.max(1, Math.min(25, playerLv|0));
@@ -8140,8 +8277,12 @@ function _goldDropFor(playerLv){
 
 // ─── 몬스터 생성 ───
 function generateMonster(playerLv, tier){
-  // 황금상자 조우 — tier 1 (Lv 1~25 구간)만 등장
-  if (tier === 1 && Math.random() < _goldChestEncounterRate(playerLv)){
+  // 매크로 방지 몬스터 — 평생 등장 (봇 자동 사냥 억제). 플레이어별 override 가능.
+  if (Math.random() < getMacroGuardEncounterRate()){
+    return makeMacroGuardMonster();
+  }
+  // 황금상자 조우 — 기본 Lv 1~25 구간만 (Lv26+ 자동 0). admin override 로 Lv26+ 도 가능.
+  if (Math.random() < getGoldChestEncounterRate()){
     return makeGoldChestMonster(playerLv);
   }
   // 사용자 레벨 기반 몬스터 최대 레벨 캡
@@ -8319,6 +8460,9 @@ function openHunt(tier){
   huntLog(`⚔ <b>${monster.name}</b> (Lv ${monster.level}, ${raceKr(monster.race)}) 등장!`, 'sys');
   huntLog(`HP ${monster.hp} · 공격 ${monster.atk[0]}-${monster.atk[1]} · DEX ${monster.dex} · 총 ${GAME.huntCombat.maxTurns}턴`, 'info');
   huntLog(`★ 「다음 턴」 버튼으로 자동 전투 진행. DEX 높은 쪽 선공.`, 'info');
+  if (monster.id === 'macro_guard'){
+    huntLog(`<div style="background:#fff0f0;border:3px solid #c00;color:#c00;font-size:16px;font-weight:900;text-align:center;padding:10px 8px;margin:6px 0;letter-spacing:-0.5px;line-height:1.4;">⚠️ 매크로 방지를 위한 함정 몬스터입니다.<br>「메인으로 돌아가기」를 눌러 도망치세요!</div>`, 'sys');
+  }
 }
 function raceKr(r){ return {orc:'오크',human:'휴먼',undead:'언데드',nightelf:'나엘',beast:'야수'}[r] || r; }
 
@@ -10360,6 +10504,96 @@ function huntFlee(){
   huntEnd('flee');
 }
 
+// ─── 매크로 방지 몬스터 결과 처리 ───
+// 승·패 (죽거나 처치): XP 0 · 골드 -90% · 축복 -50%
+// 회피 (기권/도주): +1,000G 지급
+// 일반 전투와 달리 퀘스트·칭호·파괴·레벨업 등 부수 효과 전부 스킵
+function _macroGuardPenalty(p){
+  const lostXp    = p.xp || 0;
+  const lostGold  = Math.floor((p.gold || 0) * 0.9);
+  const lostBless = Math.floor((p.blessing || 0) * 0.5);
+  p.xp       = 0;
+  p.gold     = Math.max(0, (p.gold || 0) - lostGold);
+  p.blessing = Math.max(0, (p.blessing || 0) - lostBless);
+  p.hp = 0; p.mp = 0;
+  return { lostXp, lostGold, lostBless };
+}
+function _macroGuardReward(p){
+  p.gold = (p.gold || 0) + 1000;
+  return { gainGold: 1000 };
+}
+function _renderMacroGuardResultBody(isFlee, penalty, m, c){
+  let body = `<p><b>${m.name}</b> (Lv ${m.level})</p>
+    <p>총 진행 턴: <b>${(c && c.turn) || 0}</b> / ${(c && c.maxTurns) || 15}</p>
+    <hr>`;
+  if (isFlee){
+    body += `<p style="color:#060;">✔ 지혜롭게 회피 성공! <b>+1,000 G</b></p>
+      <p style="font-size:11px;color:#888;">매크로 방지 몬스터는 자동 사냥(봇) 억제용 트랩입니다.</p>`;
+  } else {
+    body += `<p style="color:#a02050;font-weight:bold;">💀 매크로 방지에 걸렸습니다 — 페널티 부과</p>
+      <ul style="text-align:left;font-size:12px;line-height:1.7;">
+        <li>경험치 <b>-${penalty.lostXp.toLocaleString()}</b> XP (0으로 초기화)</li>
+        <li>골드 <b>-${penalty.lostGold.toLocaleString()}</b> G (-90%)</li>
+        <li>여신의 축복 <b>-${penalty.lostBless}</b>개 (-50%)</li>
+      </ul>
+      <p style="font-size:11px;color:#888;">※ 정상 유저는 매크로 방지 몹 조우 시 <b>[기권/도주]</b> 를 선택하면 +1,000G 를 받고 안전하게 나올 수 있습니다.</p>`;
+  }
+  return body;
+}
+function _handleMacroGuardHunt(result){
+  const c = GAME.huntCombat;
+  const p = GAME.player;
+  const m = c.monster;
+  const isFlee = (result === 'flee');
+  // time / lose / win 모두 페널티 대상 (실제로는 lose 가 대부분)
+  let penalty = null, reward = null;
+  if (isFlee){
+    reward = _macroGuardReward(p);
+    huntLog(`🏃 회피 성공 +1,000G`, 'sys');
+    chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
+  } else {
+    penalty = _macroGuardPenalty(p);
+    huntLog(`💀 매크로 방지 발동! XP 0 · 골드 -90% · 축복 -50%`, 'opp');
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
+  }
+  try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
+  try { renderSheet(); renderDeck(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  cloudSaveNow().catch(e => console.warn('[macroGuardHunt cloudSave]', e));
+  // 결과창 렌더링
+  $('hunt_result_title').textContent = `수행 결과 — 매크로 방지`;
+  $('hunt_result_body').innerHTML = _renderMacroGuardResultBody(isFlee, penalty, m, c);
+  $('hunt-battle').hidden = true;
+  $('hunt-result').hidden = false;
+  _autoFocusBtn('huntAgainBtn');
+}
+async function _handleMacroGuardRaid(result){
+  const c = GAME.raidCombat;
+  const p = GAME.player;
+  const m = c.monster;
+  const isFlee = (result === 'flee');
+  let penalty = null, reward = null;
+  if (isFlee){
+    reward = _macroGuardReward(p);
+    raidLog(`🏃 회피 성공 +1,000G`, 'sys');
+    chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
+  } else {
+    penalty = _macroGuardPenalty(p);
+    raidLog(`💀 매크로 방지 발동! XP 0 · 골드 -90% · 축복 -50%`, 'opp');
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
+  }
+  // 매크로 방지는 raid 몹 카운트 · pendingRaidMob 에 영향 없음 (정상 몹이 아님)
+  p.pendingRaidMob = null;
+  try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
+  try { renderSheet(); renderDeck(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  cloudSaveNow().catch(e => console.warn('[macroGuardRaid cloudSave]', e));
+  $('raid_result_title').textContent = `공격대 — 매크로 방지`;
+  $('raid_result_body').innerHTML = _renderMacroGuardResultBody(isFlee, penalty, m, c);
+  $('raid-battle').hidden = true;
+  $('raid-result').hidden = false;
+}
+
 // ─── 여신의 축복으로 파괴 방지 ───
 // 비용:
 //   · 유니크 카드 / 장비(+15 이하) : 여신의 축복 1개
@@ -10438,6 +10672,11 @@ function huntEnd(result){
   c.finished = true;
   const p = GAME.player;
   const m = c.monster;
+
+  // 매크로 방지 몬스터 — 승·패 페널티 / 회피 보상 특수 처리 후 조기 반환
+  if (m && m.id === 'macro_guard'){
+    return _handleMacroGuardHunt(result);
+  }
 
   // result: win / lose / time / flee
   let outcome = result;
@@ -12168,14 +12407,14 @@ function _autoFocusBtn(id){
 const _ATTEMPTS_TO_LEVEL_UP = [
   5,6,7,9,10,12,15,18,21,26,                                          // Lv 1-10
   31,37,45,53,64,77,92,111,133,160,                                   // Lv 11-20
-  192,230,276,331,397,477,572,687,824,989,                            // Lv 21-30
-  1187,1424,1709,2051,2461,2953,3544,4253,5103,6124,                  // Lv 31-40
-  7349,8819,10582,12699,15239,18286,21944,26332,31599,37918,          // Lv 41-50
-  41710,45881,50470,55516,61068,67175,73892,81282,89410,98351,        // Lv 51-60
-  108186,119004,130905,143995,158395,174234,191658,210824,231906,255097, // Lv 61-70
-  280606,308667,339534,373487,410836,451919,497111,546822,601505,661655, // Lv 71-80
-  727821,800603,880663,968729,1065602,1172162,1289378,1418316,1560148,1716163, // Lv 81-90
-  1887779,2076557,2284213,2512634,2763897,3040287,3344316,3678747,4046622,4451284, // Lv 91-100
+  192,230,276,331,397,916,1116,1362,1659,2022,                         // Lv 21-30 (Lv26+ 강화)
+  2465,3002,3658,4456,5427,6609,8049,9800,11930,14524,                // Lv 31-40
+  16726,20028,23474,28128,33705,40392,48406,53180,58428,64198,        // Lv 41-50
+  70538,77509,85173,93597,102859,113040,124233,136538,150066,164940,  // Lv 51-60
+  181292,199271,219037,240770,264665,290937,319823,351583,386505,424903, // Lv 61-70
+  467122,513545,564589,620717,682434,750298,824921,906977,997207,1096425, // Lv 71-80
+  1205529,1325505,1457435,1602513,1762049,1937486,2130409,2342562,2575864,2832424, // Lv 81-90
+  3114562,3424829,3766033,4141259,4553902,5007695,5506743,5450552,4855946,5341541, // Lv 91-100
 ];
 function _attemptsToLevelUp(lv){
   const L = Math.max(1, Math.min(100, lv|0));
@@ -13723,6 +13962,7 @@ async function loadAdminUsers(){
             avatar: p.avatar || null,
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
+            encounterRates: (p.encounterRates && typeof p.encounterRates === 'object') ? {...p.encounterRates} : undefined,
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
             pendingTitles: Array.isArray(p.pendingTitles) ? p.pendingTitles.slice() : [],
             equippedTitle: p.equippedTitle || null,
@@ -13875,6 +14115,23 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">🛡 운영자 계정</span>
       <label style="font-size:11px;"><input type="checkbox" id="ed_isOperator" ${u.isOperator ? 'checked' : ''}> 운영자로 표시</label>
       <span style="font-size:11px;color:#666;margin-left:6px;">체크 시 명예의 전당에서 제외</span>
+    </div>
+    <div class="edit-row" style="display:block;background:#fff8f0;border:1px solid #fda;padding:6px 8px;margin:4px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#7E181E;font-size:12px;margin-bottom:4px;">🎲 조우 확률 override (%)</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px;">비워두면 기본치 사용. 황금상자 기본: Lv1~10 10~20% · Lv11~25 5% · Lv26+ 0%. 매크로 방지 기본: 0.5% (전 레벨).</div>
+      <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
+        <label style="font-size:11px;">황금상자 %
+          <input type="number" id="ed_encGoldChest" step="0.01" min="0" max="100" style="width:80px;"
+            value="${(u.encounterRates && typeof u.encounterRates.goldChest === 'number') ? (u.encounterRates.goldChest * 100) : ''}"
+            placeholder="기본">
+        </label>
+        <label style="font-size:11px;">매크로 방지 %
+          <input type="number" id="ed_encMacroGuard" step="0.01" min="0" max="100" style="width:80px;"
+            value="${(u.encounterRates && typeof u.encounterRates.macroGuard === 'number') ? (u.encounterRates.macroGuard * 100) : ''}"
+            placeholder="기본">
+        </label>
+        <button class="admin-btn small" onclick="adminClearEncounterRates()" style="padding:2px 8px;">기본치로 리셋</button>
+      </div>
     </div>
 
     <div class="edit-row"><span class="lbl">장착 무기</span>
@@ -14093,6 +14350,30 @@ async function adminSaveUser(){
   // 자동 커서 이동 권한
   const afEl = $('ed_autoFocus');
   if (afEl) u.autoFocus = !!afEl.checked;
+  // 조우 확률 override (0~100 % 입력 → 0~1 소수 저장). 빈값이면 필드 제거하여 기본치 사용
+  const _encGC = $('ed_encGoldChest');
+  const _encMG = $('ed_encMacroGuard');
+  if (_encGC || _encMG){
+    if (!u.encounterRates) u.encounterRates = {};
+    if (_encGC){
+      const raw = _encGC.value.trim();
+      if (raw === '') delete u.encounterRates.goldChest;
+      else {
+        const v = parseFloat(raw);
+        if (isFinite(v)) u.encounterRates.goldChest = Math.max(0, Math.min(1, v / 100));
+      }
+    }
+    if (_encMG){
+      const raw = _encMG.value.trim();
+      if (raw === '') delete u.encounterRates.macroGuard;
+      else {
+        const v = parseFloat(raw);
+        if (isFinite(v)) u.encounterRates.macroGuard = Math.max(0, Math.min(1, v / 100));
+      }
+    }
+    // 둘 다 비어 있으면 필드 자체 삭제 (완전 기본치)
+    if (Object.keys(u.encounterRates).length === 0) delete u.encounterRates;
+  }
   // 비밀번호: 비워두면 기존 유지 (로컬 또는 클라우드 source 둘 다 player.pw로 보관)
   if (u.source === 'local' || u.source === 'cloud'){
     const pwInput = $('ed_pw');
@@ -14164,6 +14445,7 @@ async function adminSaveUser(){
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
       isOperator: !!u.isOperator,
+      encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : ((saved.player && saved.player.encounterRates) || undefined),
       titles: Array.isArray(u.titles) ? u.titles.slice() : (saved.player && saved.player.titles) || [],
       pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (saved.player && saved.player.pendingTitles) || [],
       equippedTitle: (u.equippedTitle !== undefined) ? u.equippedTitle : ((saved.player && saved.player.equippedTitle) || null),
@@ -14227,6 +14509,7 @@ async function adminSaveUser(){
         avatar: u.avatar || null,
         autoFocus: !!u.autoFocus,
         isOperator: !!u.isOperator,
+        encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : (prevPlayer.encounterRates || undefined),
         titles: Array.isArray(u.titles) ? u.titles.slice() : (prevPlayer.titles || []),
         pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (prevPlayer.pendingTitles || []),
         equippedTitle: (u.equippedTitle !== undefined) ? u.equippedTitle : (prevPlayer.equippedTitle || null),
@@ -14279,6 +14562,16 @@ async function adminDeleteUser(){
   removeAccountEntry(u.name);
   alert('계정 삭제 완료. 페이지를 새로고침합니다.');
   location.reload();
+}
+
+// 조우 확률 override 초기화 — 기본치 사용 상태로 복원
+function adminClearEncounterRates(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  delete u.encounterRates;
+  const gc = $('ed_encGoldChest'); if (gc) gc.value = '';
+  const mg = $('ed_encMacroGuard'); if (mg) mg.value = '';
+  toast('조우 확률을 기본치(레벨 곡선 · 0.5%)로 리셋했습니다. 저장 눌러야 반영됩니다.');
 }
 
 function adminAddCard(cardId){
