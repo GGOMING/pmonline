@@ -6678,13 +6678,25 @@ function raidFlee(){
 function raidFleeToMain(){
   // 결과 화면 없이 즉시 메인으로 복귀 (단, 보스 데미지는 반영)
   const c = GAME.raidCombat;
-  if (c && c.mode === 'boss'){
+  // 매크로 방지 몹 회피 → +1,000G 보상
+  if (c && !c.finished && c.monster && c.monster.id === 'macro_guard'){
+    try {
+      const p = GAME.player;
+      if (p) p.gold = (p.gold || 0) + 1000;
+      toast('🏃 매크로 방지 몬스터를 회피했습니다. +1,000 G');
+      try { chatSys(`🏃 ${p && p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`); } catch(e){}
+      c.finished = true;
+      try { saveGame(); } catch(e){}
+      cloudSaveNow().catch(e => console.warn('[raidFleeToMain macroGuard cloudSave]', e));
+    } catch(e){ console.warn('[raidFleeToMain macroGuard]', e); }
+  } else if (c && c.mode === 'boss'){
     const r = GAME.raid[c.raidKey];
     r.bossHp = Math.max(0, r.bossHp - c.statsMyDmg);
   }
   GAME.raidCombat = null;
   GAME.currentRaid = null;
   showContent('main');
+  try { renderSheet(); } catch(e){}
 }
 
 async function raidEnd(result){
@@ -7220,17 +7232,24 @@ async function loadRankingFromCloud(){
       }
       dedupData.push(r);
     }
-    // 항상 10슬롯 유지 — 중복 제거로 빈 자리 생기거나, 클라우드 row 는 있어도 slot=null 인 경우 NPC 로 채움
-    const finalSlots = [];
+    // rank 필드 기반으로 슬롯 배치 — 클라우드가 rank=1, 10 만 리턴해도 index 0, 9 에 정확히 배치
+    // 빈 슬롯 (rank 없는 자리) 은 NPC 로 채움
+    const finalSlots = new Array(10).fill(null);
     const usedNames = new Set();
-    // 이미 사용된 NPC 이름 수집 (충돌 방지)
+    if (GAME.player && GAME.player.name) usedNames.add(GAME.player.name);
+    // 유효 slot 우선 배치 — rank 필드가 유효 (1~10) 인 것만
     for (const r of dedupData){
-      const s = r.slot;
-      if (s && s.name) usedNames.add(s.name);
+      const rk = Number(r.rank);
+      if (!rk || rk < 1 || rk > 10) continue;
+      const slot = _hydrateSlotDeck(r.slot);
+      if (slot && slot.name){
+        finalSlots[rk - 1] = slot;
+        usedNames.add(slot.name);
+      }
     }
     const npcNames = (typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES : [];
     function _makeNpc(){
-      const availName = npcNames.find(n => !usedNames.has(n)) || `NPC-${finalSlots.length+1}`;
+      const availName = npcNames.find(n => !usedNames.has(n)) || `NPC-${Math.random().toString(36).slice(2,6)}`;
       usedNames.add(availName);
       return (typeof makeRankNPC === 'function') ? makeRankNPC(availName) : {
         isNPC:true, name:availName, level:1, str:5, dex:5, int:5, con:5,
@@ -7240,17 +7259,8 @@ async function loadRankingFromCloud(){
         atkType:'근접',
       };
     }
-    for (const r of dedupData){
-      const slot = _hydrateSlotDeck(r.slot);
-      // slot 이 null / undefined 이거나 name 없는 파편이면 NPC 로 대체
-      if (!slot || !slot.name){
-        finalSlots.push(_makeNpc());
-      } else {
-        finalSlots.push(slot);
-      }
-    }
-    while (finalSlots.length < 10){
-      finalSlots.push(_makeNpc());
+    for (let i = 0; i < 10; i++){
+      if (!finalSlots[i]) finalSlots[i] = _makeNpc();
     }
     GAME.ranking.slots = finalSlots;
     const myUid = await _getMyUserId();
@@ -11045,6 +11055,19 @@ function exitHuntToHeal(){
 function exitHunt(){
   if (window._huntReturnTimer) clearInterval(window._huntReturnTimer);
   if (window._huntReturnTimeout) clearTimeout(window._huntReturnTimeout);
+  // 전투 중 매크로 방지 몹에서 벗어나는 경우 = 회피 성공 → +1,000G 보상 지급
+  const c = GAME.huntCombat;
+  if (c && !c.finished && c.monster && c.monster.id === 'macro_guard'){
+    try {
+      const p = GAME.player;
+      if (p) p.gold = (p.gold || 0) + 1000;
+      toast('🏃 매크로 방지 몬스터를 회피했습니다. +1,000 G');
+      try { chatSys(`🏃 ${p && p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`); } catch(e){}
+      c.finished = true;
+      try { saveGame(); } catch(e){}
+      cloudSaveNow().catch(e => console.warn('[exitHunt macroGuard cloudSave]', e));
+    } catch(e){ console.warn('[exitHunt macroGuard]', e); }
+  }
   GAME.huntCombat = null;
   setCombatMode(false);
   if ($('hunt-list'))   $('hunt-list').hidden   = false;
