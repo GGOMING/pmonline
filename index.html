@@ -2600,7 +2600,7 @@ const CARDS = [
   { id:'basic_atk', name:'기본공격', grade:'normal', icon:'sword', text:'공격력으로 1회 공격', fx:{type:'basicAtk'} },
   // 황금상자 전용 — 카드샵·유저 덱 모두 불가. 효과 없음(이벤트성 더미 카드)
   { id:'gold_throw', name:'돈 뿌리기', grade:'normal', icon:'gold', iconPath:'assets/wc3_reforged_used/BTNChestOfGold-Reforged.png', text:'상대에게 골드와 경험치를 준다.', monsterOnly:true, fx:{type:'noop'} },
-  { id:'arrest',     name:'검거',       grade:'hero',   icon:'block', iconPath:'assets/wc3_reforged_used/BTNCancel-Reforged.png',       text:'상대에게 10,000 고정 데미지 (방어력 무시)', monsterOnly:true, fx:{type:'dmg',min:10000,max:10000,ignoreDef:true} },
+  { id:'arrest',     name:'검거',       grade:'hero',   icon:'block', iconPath:'assets/wc3_reforged_used/BTNCancel-Reforged.png',       text:'상대에게 10,000 고정 데미지 (회피·반사·부활 모두 무시)', monsterOnly:true, fx:{type:'dmg',min:10000,max:10000,ignoreDef:true,unstoppable:true} },
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
   { id:'n01', name:'강철검',         grade:'normal', icon:'sword',  text:'무기 +8 증가', fx:{type:'buff',atk:8} },
@@ -5817,21 +5817,26 @@ function generateAbyssMob(playerLv){
   let mLv = Math.max(tpl.lvRange[0], Math.min(tpl.lvRange[1], playerLv));
   mLv = Math.max(ABYSS_MIN_LEVEL, mLv);
   const s = tpl.stats;
-  // HP: baseHp × (1 + (mLv-1)*0.25) × 2.5 (기존 raid보다 3배 강력)
-  // HP 배수 0.5 — 기존 1.25에서 40% (0.5) 수준으로 대폭 하향
-  const hp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.5));
+  // 일반(비-엘리트) 몹은 스탯·HP 1.1배 상향 (엘리트는 이미 무기·방어구 보너스 크게 받아 그대로 유지)
+  const buffMul = tpl.elite ? 1.0 : 1.1;
+  const bStr = Math.floor(s.str * buffMul);
+  const bDex = Math.floor(s.dex * buffMul);
+  const bInt = Math.floor(s.int * buffMul);
+  const bCon = Math.floor(s.con * buffMul);
+  // HP: baseHp × (1 + (mLv-1)*0.25) × 0.5 × (일반=1.1배 · 엘리트=1.0)
+  const hp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.5 * buffMul));
   // 무기·방어구 보너스 (엘리트는 더 크게)
   const wBonus = tpl.elite ? 15 + Math.floor(Math.random() * 6) : 10 + Math.floor(Math.random() * 6);
   const aBonus = tpl.elite ? 12 + Math.floor(Math.random() * 6) : 8  + Math.floor(Math.random() * 6);
   const atk = [ tpl.baseAtk[0] + wBonus, tpl.baseAtk[1] + wBonus ];
-  const def = Math.max(0, Math.round(s.con * 0.5)) + aBonus;
+  const def = Math.max(0, Math.round(bCon * 0.5)) + aBonus;
   const deck = buildMonsterDeck(tpl.race, mLv, 15);
   // 몹 XP·골드 (기본값 — abyss 보상 계산 시 x7+250 / +200 규칙 적용)
   const baseXp = Math.floor(mLv * (5 + Math.random() * 3));
   const baseGold = Math.floor(mLv * 3 + Math.random() * mLv);
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
-    str:s.str, dex:s.dex, int:s.int, con:s.con,
+    str:bStr, dex:bDex, int:bInt, con:bCon,
     hp, hpMax: hp, _hpMaxBase: hp, mp: 60, mpMax: 60, _mpMaxBase: 60,
     atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck, gold: baseGold, xp: baseXp,
@@ -6442,6 +6447,25 @@ function startRaidMobBattle(){
   }
   if (monster.id === 'macro_guard'){
     raidLog(`<div style="background:#fff0f0;border:3px solid #c00;color:#c00;font-size:16px;font-weight:900;text-align:center;padding:10px 8px;margin:6px 0;letter-spacing:-0.5px;line-height:1.4;">⚠️ 매크로 방지를 위한 함정 몬스터입니다.<br>「메인으로 돌아가기」를 눌러 도망치세요!</div>`, 'sys');
+    // 「다음 턴」 버튼 3초간 잠금
+    const btn = document.getElementById('raidNextBtn');
+    if (btn){
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+      btn.style.cursor  = 'not-allowed';
+      const origText = btn.textContent;
+      let sec = 3;
+      btn.textContent = `⏳ ${sec}초 후 활성화`;
+      const tick = setInterval(() => {
+        sec--;
+        if (sec > 0){ btn.textContent = `⏳ ${sec}초 후 활성화`; return; }
+        clearInterval(tick);
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor  = 'pointer';
+        btn.textContent = origText || '▶ 다음 턴';
+      }, 1000);
+    }
   }
 }
 
@@ -8375,15 +8399,14 @@ function getMacroGuardEncounterRate(){
   return MACRO_GUARD_DEFAULT_RATE;
 }
 // 매크로 방지 몬스터 — Lv 1 / 모든 스탯 1 / HP 100,000 / 무기 +0 · 방어구 +1,000
-// 1턴·2턴 기본 공격 (약함) → 3턴~15턴 '검거' (10,000 고정 데미지 · 방어력 무시) 로 매크로 봇 즉사시킴
+// 1턴만 기본 공격 (경고 확인용) → 2턴~15턴 '검거' (10,000 고정 데미지 · 방어력 무시) 로 매크로 봇 즉사시킴
 // 진짜 유저는 매크로 방지 뜬 걸 보고 기권/도주 (평생 등장)
 function makeMacroGuardMonster(){
   const arrestCard = CARDS.find(c => c.id === 'arrest') || BASIC_ATTACK;
   const deck = [
-    BASIC_ATTACK, BASIC_ATTACK,
-    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
-    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
-    arrestCard, arrestCard, arrestCard,
+    BASIC_ATTACK,
+    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
+    arrestCard, arrestCard, arrestCard, arrestCard, arrestCard, arrestCard, arrestCard,
   ];
   return {
     id: 'macro_guard',
@@ -8632,6 +8655,25 @@ function openHunt(tier){
   huntLog(`★ 「다음 턴」 버튼으로 자동 전투 진행. DEX 높은 쪽 선공.`, 'info');
   if (monster.id === 'macro_guard'){
     huntLog(`<div style="background:#fff0f0;border:3px solid #c00;color:#c00;font-size:16px;font-weight:900;text-align:center;padding:10px 8px;margin:6px 0;letter-spacing:-0.5px;line-height:1.4;">⚠️ 매크로 방지를 위한 함정 몬스터입니다.<br>「메인으로 돌아가기」를 눌러 도망치세요!</div>`, 'sys');
+    // 「다음 턴」 버튼 3초간 잠금 — 매크로 봇의 즉시 자동 클릭 억제, 유저에게 경고 확인 시간 확보
+    const btn = document.getElementById('huntNextBtn');
+    if (btn){
+      btn.disabled = true;
+      btn.style.opacity = '0.45';
+      btn.style.cursor  = 'not-allowed';
+      const origText = btn.textContent;
+      let sec = 3;
+      btn.textContent = `⏳ ${sec}초 후 활성화`;
+      const tick = setInterval(() => {
+        sec--;
+        if (sec > 0){ btn.textContent = `⏳ ${sec}초 후 활성화`; return; }
+        clearInterval(tick);
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor  = 'pointer';
+        btn.textContent = origText || '▶ 다음 턴';
+      }, 1000);
+    }
   }
 }
 function raceKr(r){ return {orc:'오크',human:'휴먼',undead:'언데드',nightelf:'나엘',beast:'야수'}[r] || r; }
@@ -8846,6 +8888,12 @@ function _tryRebirth(c, side, obj, log){
   const rebirth = c[side + 'Rebirth'];
   if (!rebirth || rebirth.turns <= 0) return false;
   if (obj.hp > 0) return false;
+  // 검거(arrest) 등 절대 회피 불가 공격으로 사망한 경우 부활 불가
+  if (obj._unstoppableKill){
+    obj._unstoppableKill = false;
+    if (log) log(`  ✱ ${obj.name || ''} 검거 판결 확정 — 부활의 증표 무효화`, 'info');
+    return false;
+  }
   // 완전 회복 + 완전 초기화 (전투 개시 상태)
   // 1) 스탯 유래 hpMax/mpMax 원복 (라이프업 등 flat 버프 제거 후 재계산)
   obj._hpMaxBonus = 0;
@@ -9174,6 +9222,17 @@ function _applyManaShield(shield, obj, dmg){
   const mpAbsorbed = Math.min(target, available);
   obj.mp = Math.max(0, (obj.mp || 0) - mpAbsorbed);
   return { hpDmg: dmg - mpAbsorbed, mpAbsorbed };
+}
+
+// 절대 회피/방어 불가 데미지 — 검거(arrest) 전용
+// 무적·회피(은신·버로우)·부두·벤전스·스크롤실드·마나쉴드 모두 무시.
+// 사망 시 부활의 증표도 발동하지 않도록 대상에 _unstoppableKill 플래그 마킹.
+function _dealUnstoppable(ctx, raw){
+  const dmg = Math.max(1, Math.floor(raw));
+  ctx.targObj.hp -= dmg;
+  if (ctx.targObj.hp <= 0) ctx.targObj._unstoppableKill = true;
+  ctx.addDmg(dmg);
+  ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(회피·반사·부활 모두 무시)</span>`, ctx.castLogCls);
 }
 
 function _dealIgnoreDef(ctx, raw){
@@ -9546,7 +9605,9 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'dmg'){
       const raw = rnd(fx.min, fx.max);
-      if (fx.ignoreDef){ _dealIgnoreDef(ctx, raw); } else { doDmg(raw); }
+      if (fx.unstoppable){ _dealUnstoppable(ctx, raw); }
+      else if (fx.ignoreDef){ _dealIgnoreDef(ctx, raw); }
+      else { doDmg(raw); }
       return;
     }
     if (t === 'dmgSelf'){
@@ -12590,15 +12651,15 @@ function _autoFocusBtn(id){
 // 사용자 표 — 다음 레벨까지 필요한 수행 횟수 (Lv 1~50: 1.2배, Lv 51~100: 1.1배 둔화)
 const _ATTEMPTS_TO_LEVEL_UP = [
   5,6,7,9,10,12,15,18,21,26,                                          // Lv 1-10
-  31,37,45,53,64,77,92,111,133,160,                                   // Lv 11-20
-  192,230,276,331,397,916,1116,1362,1659,2022,                         // Lv 21-30 (Lv26+ 강화)
-  2465,3002,3658,4456,5427,6609,8049,9800,11930,14524,                // Lv 31-40
-  16726,20028,23474,28128,33705,40392,48406,53180,58428,64198,        // Lv 41-50
-  70538,77509,85173,93597,102859,113040,124233,136538,150066,164940,  // Lv 51-60
-  181292,199271,219037,240770,264665,290937,319823,351583,386505,424903, // Lv 61-70
-  467122,513545,564589,620717,682434,750298,824921,906977,997207,1096425, // Lv 71-80
-  1205529,1325505,1457435,1602513,1762049,1937486,2130409,2342562,2575864,2832424, // Lv 81-90
-  3114562,3424829,3766033,4141259,4553902,5007695,5506743,5450552,4855946,5341541, // Lv 91-100
+  53,69,90,108,130,155,188,225,270,324,                               // Lv 11-20
+  389,466,559,671,1548,1886,2263,2629,3204,3903,                       // Lv 21-30 (Lv26+ 강화)
+  4755,5793,7055,8592,10464,12740,15509,18881,21744,26036,            // Lv 31-40
+  28128,33705,40392,48406,53180,58428,64198,70538,77509,85173,        // Lv 41-50
+  93597,102859,113040,124233,136538,150066,164940,181292,199271,219037, // Lv 51-60
+  240770,264665,290937,319823,351583,386505,424903,467122,513545,564589, // Lv 61-70
+  620717,682434,750298,824921,906977,997207,1096425,1205529,1325505,1457435, // Lv 71-80
+  1602513,1762049,1937486,2130409,2342562,2575864,2832424,3114562,3424829,3766033, // Lv 81-90
+  4141259,4553902,5007695,5506743,5450552,4855946,5341541,5450552,4855946,5341541, // Lv 91-100
 ];
 function _attemptsToLevelUp(lv){
   const L = Math.max(1, Math.min(100, lv|0));
