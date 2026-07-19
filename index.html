@@ -13998,7 +13998,35 @@ async function doRegisterSubmit(){
   saveGame();
   enterMain();
 }
+// 최초 1회 한정 강제 하드 리로드 (Ctrl+Shift+R 등가) — 로그인 직후 실행.
+// Cache API·Service Worker 정리 + 쿼리스트링 캐시버스터로 브라우저 캐시 우회 후 location.replace.
+// 유저 계정마다 딱 1번만 발동 → 다음 로그인부터는 무시.
+function _tryHardReloadOnFirstLogin(){
+  try {
+    const FLAG = 'yeoshin_hardReload_done_v1';
+    if (localStorage.getItem(FLAG)) return false;
+    localStorage.setItem(FLAG, String(Date.now()));
+    // Cache API 전체 비우기 (비동기이지만 리로드 예약이 즉시 걸리므로 대기 불필요)
+    try {
+      if ('caches' in window){
+        caches.keys().then(names => names.forEach(n => { try { caches.delete(n); } catch(e){} })).catch(()=>{});
+      }
+      if ('serviceWorker' in navigator){
+        navigator.serviceWorker.getRegistrations().then(regs =>
+          regs.forEach(r => { try { r.unregister(); } catch(e){} })
+        ).catch(()=>{});
+      }
+    } catch(e){}
+    // 쿼리스트링 캐시버스터로 강제 리로드
+    const url = location.pathname + '?_hr=' + Date.now() + (location.hash || '');
+    location.replace(url);
+    return true;
+  } catch(e){ return false; }
+}
+
 function enterMain(){
+  // 최초 1회 한정 강제 하드 리로드 — 최신 index.html·에셋 강제 반영
+  if (_tryHardReloadOnFirstLogin()) return;
   showPage('main');
   const lb = document.getElementById('logoutBtn');
   if (lb) lb.style.display = 'block';
