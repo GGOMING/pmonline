@@ -4588,7 +4588,7 @@ function buyBlessItem(id){
         if (!p.weapons) p.weapons = [];
         p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
         resultMsg = `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ <b>${w.name}</b>을(를) 획득하셨습니다!`);
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ ${w.name}을(를) 획득하셨습니다!`);
       }
     } else if (chosen.kind === 'armor'){
       const a = ARMORS.find(x => x.id === chosen.itemId);
@@ -4596,7 +4596,7 @@ function buyBlessItem(id){
         if (!p.armors) p.armors = [];
         p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
         resultMsg = `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 <b>${a.name}</b>을(를) 획득하셨습니다!`);
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 ${a.name}을(를) 획득하셨습니다!`);
       }
     }
     setBlessMsg(resultMsg, 'ok');
