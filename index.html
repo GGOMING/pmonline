@@ -557,6 +557,10 @@
   /* 수행 버튼 — 파스텔 살구 톤 */
   .menubar td.menu-hunt { background:#FFCC99; color:#000; }
   .menubar td.menu-hunt:hover { background:#FFE0B8; }
+  /* 시간당 활동 한도 도달 시 시각적 비활성화 (수행·공격대·랭킹전 버튼) */
+  .menubar td.hourly-limited { opacity:0.35 !important; filter:grayscale(0.8); background:#ccc !important; color:#666 !important; cursor:not-allowed !important; }
+  .menubar td.hourly-limited:hover { background:#ccc !important; }
+  #hourlyLimitBadge { font-size:11px; padding:2px 6px; border-radius:3px; background:#fff; border:1px solid #ccc; margin-left:6px; }
 
   /* 하단 정보 */
   .infoline {
@@ -1494,7 +1498,7 @@
       </div>
 
       <div class="infoline">
-        랭킹전 순위 : <b id="myRank">미등록</b><br>
+        랭킹전 순위 : <b id="myRank">미등록</b> <span id="hourlyLimitBadge" title="한 시간 이내 수행+공격대+랭킹전 참여 횟수. 정각마다 리셋">⏱ 이번 시간 0/500</span><br>
         전체 유저 랭킹 : <b id="myOverallRank">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
         <div id="raid-status-summary" style="font-size:11px;color:#333;margin-top:6px;padding:6px 8px;background:#fff8e0;border:1px solid #c9a26b;border-radius:4px;">
           <div id="raid-status-time"  style="line-height:1.6;text-align:center;font-weight:bold;color:#7E181E;border-bottom:1px dashed #c9a26b;padding-bottom:3px;margin-bottom:3px;">공격대 남은 시간 --:--:--</div>
@@ -6152,6 +6156,8 @@ async function openRaid(raidKey){
     return;
   }
   const p = GAME.player;
+  if (_isBanned(p)){ _blockedByBanToast(p); return; }
+  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
@@ -6393,6 +6399,9 @@ function startRaidMobBattle(){
   const raidKey = GAME.currentRaid;
   const r = GAME.raid[raidKey];
   const p = GAME.player;
+  if (_isBanned(p)){ _blockedByBanToast(p); return; }
+  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  _incHourlyActivity(p);
   let monster;
   const pending = p.pendingRaidMob;
   // 같은 raid 키 + 같은 세션 + HP 남아있는 몬스터이 있으면 복원
@@ -6471,6 +6480,10 @@ function startRaidMobBattle(){
 
 async function startRaidBossBattle(){
   const raidKey = GAME.currentRaid;
+  const _p0 = GAME.player;
+  if (_isBanned(_p0)){ _blockedByBanToast(_p0); return; }
+  if (!_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  _incHourlyActivity(_p0);
   // 진입 직전에 클라우드 최신 boss_hp를 한 번 더 fetch (다른 사용자 누적 데미지 반영)
   // 병렬 클라우드 모드에선 abyss도 포함
   if (sb){
@@ -7422,6 +7435,9 @@ function getRankBonus(){
 }
 
 async function openRank(){
+  const _p0 = GAME.player;
+  if (_p0 && _isBanned(_p0)){ _blockedByBanToast(_p0); return; }
+  if (_p0 && !_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   // 1) UI 즉시 노출 — 캐시된 slots로 바로 그려서 메뉴 클릭 지연 제거
   showContent('rank');
   $('rank-list').hidden = false;
@@ -7510,6 +7526,10 @@ async function challengeRank(targetRank){
   // 짧은 쿨다운 후 자동 해제 (전투 진입 실패 시에도 다시 클릭 가능)
   setTimeout(() => { _rankChallengeBusy = false; }, 800);
 
+  if (GAME.player && _isBanned(GAME.player)){ _blockedByBanToast(GAME.player); return; }
+  if (GAME.player && !_canDoHourlyActivity(GAME.player)){
+    _hourlyBlockToast(); refreshHourlyLimitUI(); return;
+  }
   if (GAME.player && GAME.player.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
     openHeal();
@@ -8424,6 +8444,130 @@ function makeMacroGuardMonster(){
 }
 // 매크로 방지 기본 조우 확률 (플레이어당 override 가능)
 const MACRO_GUARD_DEFAULT_RATE = 0.005;   // 0.5%
+
+// ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
+// 봇/매크로 억제 — 한 시간 내 500회 초과 시 모든 전투 진입 차단.
+const HOURLY_ACTIVITY_LIMIT = 500;
+function _currentHourKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}`;
+}
+function _getHourlyActivity(p){
+  if (!p) return { hourKey: _currentHourKey(), count: 0 };
+  const cur = _currentHourKey();
+  if (!p.hourlyActivity || p.hourlyActivity.hourKey !== cur){
+    p.hourlyActivity = { hourKey: cur, count: 0 };
+  }
+  return p.hourlyActivity;
+}
+function _hourlyActivityCount(p){ return _getHourlyActivity(p).count || 0; }
+function _hourlyRemaining(p){ return Math.max(0, HOURLY_ACTIVITY_LIMIT - _hourlyActivityCount(p)); }
+function _canDoHourlyActivity(p){ return _hourlyRemaining(p) > 0; }
+function _incHourlyActivity(p){
+  const a = _getHourlyActivity(p);
+  a.count = (a.count || 0) + 1;
+  try { refreshHourlyLimitUI(); } catch(e){}
+  try { saveGame(); } catch(e){}
+}
+function _hourlyResetRemainMs(){
+  const d = new Date();
+  return (60 - d.getMinutes()) * 60000 - d.getSeconds() * 1000;
+}
+function _hourlyBlockToast(){
+  const remainMs = _hourlyResetRemainMs();
+  const min = Math.floor(remainMs / 60000);
+  const sec = Math.floor((remainMs % 60000) / 1000);
+  try { toast(`⛔ 시간당 활동 한도(${HOURLY_ACTIVITY_LIMIT}회) 소진 — 다음 정각까지 ${min}분 ${sec}초 남음`); } catch(e){}
+}
+// 메인 메뉴 버튼 (수행·공격대·랭킹전) 시각적 비활성화 토글 + 차단 상태 반영
+function refreshHourlyLimitUI(){
+  const p = GAME && GAME.player;
+  if (!p) return;
+  const banned = _isBanned(p);
+  const limited = banned || !_canDoHourlyActivity(p);
+  const ids = ['m-hunt','m-rank','m-raid-dawn','m-raid-mist','m-raid-abyss'];
+  for (const id of ids){
+    const el = document.getElementById(id);
+    if (!el) continue;
+    el.classList.toggle('hourly-limited', limited);
+  }
+  const badge = document.getElementById('hourlyLimitBadge');
+  if (badge){
+    const cnt = _hourlyActivityCount(p);
+    if (banned){
+      badge.textContent = `🚫 진입 차단 (남은 ${_banRemainStr(p)})`;
+      badge.style.color = '#c00';
+      badge.style.fontWeight = '900';
+    } else {
+      badge.textContent = `⏱ 이번 시간 ${cnt}/${HOURLY_ACTIVITY_LIMIT}`;
+      badge.style.color = limited ? '#c00' : '#666';
+      badge.style.fontWeight = limited ? '900' : '400';
+    }
+  }
+}
+// 자정 넘김·정각 리셋을 위해 30초마다 UI 재평가
+setInterval(() => { try { refreshHourlyLimitUI(); } catch(e){} }, 30000);
+
+// ─── 유저 진입 차단 (관리자·운영자 부과) ───
+// p.bannedUntil: 유닉스 밀리초. 지나면 자동 해제.
+function _isBanned(p){
+  if (!p || !p.bannedUntil) return false;
+  return Date.now() < Number(p.bannedUntil);
+}
+function _banRemainMs(p){
+  if (!_isBanned(p)) return 0;
+  return Math.max(0, Number(p.bannedUntil) - Date.now());
+}
+function _banRemainStr(p){
+  const ms = _banRemainMs(p);
+  if (!ms) return '';
+  const totalSec = Math.ceil(ms / 1000);
+  const min = Math.floor(totalSec / 60);
+  const sec = totalSec % 60;
+  if (min >= 60){
+    const h = Math.floor(min / 60);
+    const rm = min % 60;
+    return `${h}시간 ${rm}분 ${sec}초`;
+  }
+  return `${min}분 ${sec}초`;
+}
+function _blockedByBanToast(p){
+  try { toast(`🚫 진입 차단 상태 — 남은 시간 ${_banRemainStr(p)}`); } catch(e){}
+}
+// 운영자 브로드캐스트로 실시간 차단 도착 시 로컬에 반영
+function _applyIncomingBan(nickname, untilTs){
+  const p = GAME && GAME.player;
+  if (!p) return;
+  if (p.name !== nickname) return;
+  p.bannedUntil = Math.max(Number(p.bannedUntil||0), Number(untilTs||0));
+  try { saveGame(); } catch(e){}
+  try { refreshHourlyLimitUI(); } catch(e){}
+  try { renderSheet(); } catch(e){}
+  try { toast(`🚫 운영자에 의해 진입이 제한되었습니다 — 남은 시간 ${_banRemainStr(p)}`); } catch(e){}
+  // 전투 중이면 즉시 종료 (수행·공격대·랭킹전)
+  try {
+    if (GAME.huntCombat && !GAME.huntCombat.finished){ huntEnd('time'); }
+  } catch(e){}
+  try {
+    if (GAME.raidCombat && !GAME.raidCombat.finished && typeof raidEnd === 'function'){
+      raidEnd('time');
+    }
+  } catch(e){}
+  try {
+    if (GAME.rankCombat && !GAME.rankCombat.finished && typeof rankEnd === 'function'){
+      rankEnd('time');
+    }
+  } catch(e){}
+}
+function _applyIncomingUnban(nickname){
+  const p = GAME && GAME.player;
+  if (!p || p.name !== nickname) return;
+  p.bannedUntil = 0;
+  try { saveGame(); } catch(e){}
+  try { refreshHourlyLimitUI(); } catch(e){}
+  try { toast('✅ 진입 제한이 해제되었습니다.'); } catch(e){}
+}
+
 // 황금상자 몬스터 — HP 1, 무적, 10턴 무공격, 1000G + 동레벨 ×2.5 XP
 function makeGoldChestMonster(playerLv){
   const lv = Math.max(1, Math.min(25, playerLv|0));
@@ -8619,11 +8763,14 @@ function openHunt(tier){
     return;
   }
   const p = GAME.player;
+  if (_isBanned(p)){ _blockedByBanToast(p); return; }
+  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
     return;
   }
+  _incHourlyActivity(p);
   // tier 자동 결정 (Lv 1~25 → tier 1, Lv 26+ → tier 2)
   if (tier == null) tier = p.level >= 26 ? 2 : 1;
   setCombatMode(true);
@@ -8791,6 +8938,19 @@ function _dedupCardForTurn(deck, slot){
 function huntNextTurn(){
   const c = GAME.huntCombat;
   if (!c || c.finished) return;
+  // 진입 차단 (관리자·운영자 부과) 상태에서 카드 발동 즉시 중단
+  if (_isBanned(GAME.player)){
+    huntLog(`🚫 진입 차단 상태 — 남은 시간 ${_banRemainStr(GAME.player)}. 카드 발동 차단.`, 'sys');
+    _blockedByBanToast(GAME.player);
+    return huntEnd('time');
+  }
+  // 시간당 활동 한도 초과 상태에서 카드 발동 차단 (safety net — 진입은 이미 openHunt에서 막힘)
+  if (!_canDoHourlyActivity(GAME.player)){
+    huntLog(`⛔ 시간당 활동 한도(${HOURLY_ACTIVITY_LIMIT}회) 도달 — 카드 발동 차단. 정각까지 대기 후 재도전하세요.`, 'sys');
+    _hourlyBlockToast();
+    refreshHourlyLimitUI();
+    return huntEnd('time');
+  }
   c.turn++;
 
   if (c.turn > c.maxTurns){
@@ -11479,8 +11639,8 @@ function selectCardForSlot(cardId){
       return;
     }
     if (_cardPickMode === 'my'){
-      // 몬스터 전용 카드 (황금상자 '돈 뿌리기' 등) 장착 차단
-      if (card.monsterOnly){
+      // 몬스터 전용 카드 (황금상자 '돈 뿌리기' 등) 장착 차단 — 단, 운영자 계정은 허용
+      if (card.monsterOnly && !(GAME.player && GAME.player.isOperator)){
         toast(`「${card.name}」 카드는 장착할 수 없습니다.`);
         return;
       }
@@ -13208,6 +13368,7 @@ function renderSheet(){
     const r = (GAME.ranking && GAME.ranking.myRank) || 0;
     $('myRank').textContent = r === 0 ? '미등록' : (r + '위');
   }
+  try { refreshHourlyLimitUI(); } catch(e){}
   // HP/MP 바
   const hpPct = Math.max(0, Math.min(100, p.hp/p.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, p.mp/p.mpMax*100));
@@ -13843,6 +14004,8 @@ function enterMain(){
   if (lb) lb.style.display = 'block';
   // 운영자 계정이면 플로팅 툴바 표시
   try { if (typeof updateOperatorFloatVisibility === 'function') updateOperatorFloatVisibility(); } catch(e){}
+  // 운영자 실시간 차단 브로드캐스트 채널 구독 (모든 유저)
+  try { if (typeof _setupOpBanChannel === 'function') _setupOpBanChannel(); } catch(e){}
   // 비활성 자동 로그아웃 타이머 시작
   resetIdleTimer();
   checkRankingReset();  // 랭킹 일일 리셋 체크 (async, fire-and-forget)
@@ -14227,6 +14390,7 @@ async function loadAdminUsers(){
             avatar: p.avatar || null,
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
+            bannedUntil: Number(p.bannedUntil) || 0,
             encounterRates: (p.encounterRates && typeof p.encounterRates === 'object') ? {...p.encounterRates} : undefined,
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
             pendingTitles: Array.isArray(p.pendingTitles) ? p.pendingTitles.slice() : [],
@@ -14320,10 +14484,12 @@ function renderAdminEdit(){
   while (deckIds.length < 15) deckIds.push('basic_atk');
 
   // 보유 인벤토리에 기반한 카드 옵션 (덱 슬롯 채울 후보)
+  // 운영자 계정은 monsterOnly (검거·돈 뿌리기 등) 카드도 덱에 편성 가능
   const ownedCardIds = Object.keys(inventoryCounts);
+  const _allowMonsterOnly = !!u.isOperator;
   const deckOptionCards = [
     {id:'basic_atk', name:'기본공격', grade:'normal'},
-    ...CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly && ownedCardIds.indexOf(c.id) >= 0),
+    ...CARDS.filter(c => c.id !== 'basic_atk' && (_allowMonsterOnly || !c.monsterOnly) && ownedCardIds.indexOf(c.id) >= 0),
   ];
 
   // 프로필 사진 미리보기
@@ -14380,6 +14546,23 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">🛡 운영자 계정</span>
       <label style="font-size:11px;"><input type="checkbox" id="ed_isOperator" ${u.isOperator ? 'checked' : ''}> 운영자로 표시</label>
       <span style="font-size:11px;color:#666;margin-left:6px;">체크 시 명예의 전당에서 제외</span>
+    </div>
+    <div class="edit-row" style="display:block;background:#fff0f0;border:1px solid #f99;padding:6px 8px;margin:4px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#c00;font-size:12px;margin-bottom:4px;">🚫 진입 차단 (수행·공격대·랭킹전·회복·상점 전면 차단)</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px;">
+        현재 상태:
+        ${(u.bannedUntil && Number(u.bannedUntil) > Date.now())
+          ? `<b style="color:#c00;">차단 중</b> · 해제까지 <b>${(function(){ const ms=Number(u.bannedUntil)-Date.now(); const s=Math.ceil(ms/1000); const m=Math.floor(s/60); const r=s%60; return m+'분 '+r+'초'; })()}</b> (해제 시각 ${new Date(Number(u.bannedUntil)).toLocaleString()})`
+          : '<b style="color:#0a7;">허용</b>'}
+      </div>
+      <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+        <label style="font-size:11px;">차단 시간(분)
+          <input type="number" id="ed_banMinutes" style="width:70px;" min="1" max="10080" placeholder="예: 30" value="30">
+        </label>
+        <button class="admin-btn small danger" onclick="adminApplyBan()" style="padding:2px 10px;">🚫 차단 적용</button>
+        <button class="admin-btn small" onclick="adminClearBan()" style="padding:2px 10px;background:#0a7;">✓ 차단 해제</button>
+        <span style="font-size:10px;color:#666;">최대 10080분 (7일)</span>
+      </div>
     </div>
     <div class="edit-row" style="display:block;background:#fff8f0;border:1px solid #fda;padding:6px 8px;margin:4px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#7E181E;font-size:12px;margin-bottom:4px;">🎲 조우 확률 override (%)</div>
@@ -14454,9 +14637,10 @@ function renderAdminEdit(){
       <div style="margin:6px 0;">
         <select id="ed_addCardSel" style="width:200px;">
           <option value="">+ 카드 추가 선택...</option>
-          ${CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly).map(c => `<option value="${c.id}">${c.name} [${gradeKr(c.grade)}]</option>`).join('')}
+          ${CARDS.filter(c => c.id !== 'basic_atk' && (u.isOperator || !c.monsterOnly)).map(c => `<option value="${c.id}">${c.name} [${gradeKr(c.grade)}]${c.monsterOnly ? ' ⚙운영자전용' : ''}</option>`).join('')}
         </select>
         <button class="admin-btn small" onclick="adminAddCardFromSelect()">추가</button>
+        ${u.isOperator ? '<span style="font-size:10px;color:#c98d1a;margin-left:6px;">⚙ 운영자 계정 — 검거·돈 뿌리기 지급 가능</span>' : ''}
       </div>
       <div style="margin:6px 0;font-size:11px;background:#fff8f0;border:1px solid #fda;padding:6px;">
         <b>등급별 일괄</b> &nbsp;
@@ -14710,6 +14894,7 @@ async function adminSaveUser(){
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
       isOperator: !!u.isOperator,
+      bannedUntil: Number(u.bannedUntil) || 0,
       encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : ((saved.player && saved.player.encounterRates) || undefined),
       titles: Array.isArray(u.titles) ? u.titles.slice() : (saved.player && saved.player.titles) || [],
       pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (saved.player && saved.player.pendingTitles) || [],
@@ -14774,6 +14959,7 @@ async function adminSaveUser(){
         avatar: u.avatar || null,
         autoFocus: !!u.autoFocus,
         isOperator: !!u.isOperator,
+        bannedUntil: Number(u.bannedUntil) || 0,
         encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : (prevPlayer.encounterRates || undefined),
         titles: Array.isArray(u.titles) ? u.titles.slice() : (prevPlayer.titles || []),
         pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (prevPlayer.pendingTitles || []),
@@ -14844,6 +15030,30 @@ function adminAddCard(cardId){
   if (!u) return;
   if (!u.inventory) u.inventory = [];
   u.inventory.push(cardId);
+  renderAdminEdit();
+}
+// ─── 관리자: 진입 차단 적용/해제 ───
+function adminApplyBan(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  const raw = ($('ed_banMinutes') && $('ed_banMinutes').value || '').trim();
+  const min = parseInt(raw, 10);
+  if (isNaN(min) || min < 1 || min > 10080){
+    alert('1~10080 분 사이 정수를 입력하세요.');
+    return;
+  }
+  u.bannedUntil = Date.now() + min * 60000;
+  // 브로드캐스트로 온라인 대상에게 즉시 반영
+  try { opBroadcastBan(u.name, u.bannedUntil); } catch(e){}
+  alert(`✔ ${u.name} 님을 ${min}분간 차단 예약.\n💾 저장 버튼을 눌러 클라우드에 반영하세요.`);
+  renderAdminEdit();
+}
+function adminClearBan(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  u.bannedUntil = 0;
+  try { opBroadcastUnban(u.name); } catch(e){}
+  alert(`✔ ${u.name} 님 차단 해제 예약.\n💾 저장 버튼을 눌러 클라우드에 반영하세요.`);
   renderAdminEdit();
 }
 function adminRemoveCard(cardId){
@@ -15695,6 +15905,18 @@ setInterval(()=>{
       <button class="admin-btn small" onclick="opSetMonsterCount('abyss')">몹수 설정</button>
     </div>
   </div>
+
+  <div style="border:2px solid #c00;border-radius:4px;padding:6px;margin-top:8px;background:#fff0f0;">
+    <b style="color:#c00;">🚫 유저 실시간 차단</b>
+    <div style="font-size:10px;color:#666;margin:3px 0;">닉네임+분 입력 → 브로드캐스트로 대상에게 즉시 반영. 대상이 온라인이면 실시간 차단, 오프라인은 다음 로그인 후 클라우드 사인크 필요.</div>
+    <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
+      <input type="text" id="opBanNick" style="width:120px;font-size:11px;" placeholder="닉네임">
+      <input type="number" id="opBanMin" style="width:60px;font-size:11px;" placeholder="분" min="1" max="10080" value="30">
+      <button class="admin-btn small danger" onclick="opBanUser()">🚫 차단</button>
+      <button class="admin-btn small" onclick="opUnbanUser()" style="background:#0a7;">✓ 해제</button>
+    </div>
+    <div id="opBanStatus" style="font-size:10px;color:#666;margin-top:4px;"></div>
+  </div>
 </div>
 
 <script>
@@ -15745,9 +15967,145 @@ function closeOperatorPanel(){
   if (panel) panel.style.display = 'none';
 }
 
+// ─── 운영자: 유저 실시간 차단 (Supabase Realtime broadcast + 클라우드 saves 업데이트 시도) ───
+let _opBanChannel = null;
+function _setupOpBanChannel(){
+  if (!sb || _opBanChannel) return;
+  try {
+    _opBanChannel = sb.channel('operator-ban', { config: { broadcast: { self: false } } })
+      .on('broadcast', { event: 'ban' }, ({ payload }) => {
+        if (!payload) return;
+        try { _applyIncomingBan(payload.nickname, payload.untilTs); } catch(e){}
+      })
+      .on('broadcast', { event: 'unban' }, ({ payload }) => {
+        if (!payload) return;
+        try { _applyIncomingUnban(payload.nickname); } catch(e){}
+      })
+      .subscribe();
+  } catch(e){ console.warn('[opBanChannel]', e); }
+}
+async function opBroadcastBan(nickname, untilTs){
+  if (!sb) return;
+  _setupOpBanChannel();
+  try {
+    await _opBanChannel.send({
+      type: 'broadcast', event: 'ban',
+      payload: { nickname, untilTs: Number(untilTs) || 0 },
+    });
+  } catch(e){ console.warn('[opBroadcastBan]', e); }
+}
+async function opBroadcastUnban(nickname){
+  if (!sb) return;
+  _setupOpBanChannel();
+  try {
+    await _opBanChannel.send({
+      type: 'broadcast', event: 'unban',
+      payload: { nickname },
+    });
+  } catch(e){ console.warn('[opBroadcastUnban]', e); }
+}
+async function opBanUser(){
+  const nick = ($('opBanNick') && $('opBanNick').value || '').trim();
+  const min  = parseInt(($('opBanMin') && $('opBanMin').value || ''), 10);
+  const st   = $('opBanStatus');
+  if (!nick){ if (st) st.textContent = '⚠ 닉네임을 입력하세요.'; return; }
+  if (isNaN(min) || min < 1 || min > 10080){
+    if (st) st.textContent = '⚠ 1~10080 분 사이 정수를 입력하세요.'; return;
+  }
+  const untilTs = Date.now() + min * 60000;
+  // 1) 실시간 브로드캐스트 (온라인 대상 즉시 반영)
+  await opBroadcastBan(nick, untilTs);
+  // 2) 클라우드 saves 직접 업데이트 시도 (관리자 세션 있으면 성공, 없으면 RLS로 실패)
+  let cloudOk = false;
+  if (sb){
+    try {
+      const { data: row } = await sb.from('saves')
+        .select('user_id, data').eq('nickname', nick).maybeSingle();
+      if (row && row.data){
+        const newData = { ...row.data };
+        newData.player = { ...(newData.player||{}), bannedUntil: untilTs };
+        const { error } = await sb.from('saves').update({ data: newData })
+          .eq('user_id', row.user_id);
+        if (!error) cloudOk = true;
+        else console.warn('[opBanUser cloud update]', error);
+      }
+    } catch(e){ console.warn('[opBanUser]', e); }
+  }
+  if (st){
+    st.innerHTML = `📡 브로드캐스트 전송 → <b>${nick}</b> ${min}분 차단 (해제 ${new Date(untilTs).toLocaleTimeString()})`
+      + (cloudOk ? ' <span style="color:#0a7;">· 클라우드 반영 ✓</span>'
+                 : ' <span style="color:#c98d1a;">· 클라우드 미반영 (관리자 세션 필요 — 재접속 시 해제될 수 있음)</span>');
+  }
+}
+async function opUnbanUser(){
+  const nick = ($('opBanNick') && $('opBanNick').value || '').trim();
+  const st   = $('opBanStatus');
+  if (!nick){ if (st) st.textContent = '⚠ 닉네임을 입력하세요.'; return; }
+  await opBroadcastUnban(nick);
+  let cloudOk = false;
+  if (sb){
+    try {
+      const { data: row } = await sb.from('saves')
+        .select('user_id, data').eq('nickname', nick).maybeSingle();
+      if (row && row.data){
+        const newData = { ...row.data };
+        newData.player = { ...(newData.player||{}), bannedUntil: 0 };
+        const { error } = await sb.from('saves').update({ data: newData })
+          .eq('user_id', row.user_id);
+        if (!error) cloudOk = true;
+      }
+    } catch(e){ console.warn('[opUnbanUser]', e); }
+  }
+  if (st){
+    st.innerHTML = `📡 <b>${nick}</b> 차단 해제 브로드캐스트`
+      + (cloudOk ? ' <span style="color:#0a7;">· 클라우드 반영 ✓</span>'
+                 : ' <span style="color:#c98d1a;">· 클라우드 미반영 (관리자 세션 필요)</span>');
+  }
+}
+
+
 // 운영자 조작 함수 — admin과 동일 로직 재사용 후 op 패널 상태 갱신
-async function opForceRaidReset(){ try { await adminForceRaidReset(); } finally { _opRefreshInfo(); } }
-async function opResetRaid(k){       try { await adminResetRaid(k);     } finally { _opRefreshInfo(); } }
+// 운영자 계정은 admin@pmonline.system 세션이 없어도 raid_manual_reset RPC (SECURITY DEFINER)로 리셋
+// admin*() 함수는 raid_state 테이블 직접 update → 일반 세션 RLS에 막힘. RPC 우회로 in-game 리셋 가능.
+async function opForceRaidReset(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (!confirm('3개 공격대 전체를 즉시 리셋할까요?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn/mist 99, abyss 199)')) return;
+  let failed = [];
+  try {
+    for (const key of ['dawn','mist','abyss']){
+      const bossList = RAID_BOSSES[key];
+      if (!bossList || !bossList.length) continue;
+      const boss = bossList[Math.floor(Math.random() * bossList.length)];
+      const { error } = await sb.rpc('raid_manual_reset', {
+        p_raid_key: key,
+        p_boss_id: boss.id,
+        p_boss_hp_max: boss.hpMax || 10000,
+      });
+      if (error){ console.warn('[opForceRaidReset]', key, error); failed.push(key); }
+    }
+    await loadRaidFromCloud();
+    if (failed.length) alert('⚠ 일부 실패: ' + failed.join(', ') + '\n(콘솔 확인)');
+    else alert('✔ 3개 공격대 전체 리셋 완료');
+  } catch(e){ alert('강제 리셋 실패: ' + (e.message||e)); }
+  finally { _opRefreshInfo(); }
+}
+async function opResetRaid(k){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  const bossList = RAID_BOSSES[k];
+  if (!bossList || !bossList.length){ alert('보스 목록이 비어있습니다.'); return; }
+  const boss = bossList[Math.floor(Math.random() * bossList.length)];
+  try {
+    const { error } = await sb.rpc('raid_manual_reset', {
+      p_raid_key: k,
+      p_boss_id: boss.id,
+      p_boss_hp_max: boss.hpMax || 10000,
+    });
+    if (error){ alert('세션 리셋 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    alert(`✔ ${_raidKr(k)} 세션 리셋 완료 (보스: ${boss.name})`);
+  } catch(e){ alert('세션 리셋 실패: ' + (e.message||e)); }
+  finally { _opRefreshInfo(); }
+}
 async function opBossPhase(k){       try { await adminBossPhase(k);     } finally { _opRefreshInfo(); } }
 async function opKillBoss(k){        try { await adminKillBoss(k);      } finally { _opRefreshInfo(); } }
 async function opSetMonsterCount(k){
