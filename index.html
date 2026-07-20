@@ -276,7 +276,18 @@
     gap:16px;
     margin-top:4px;
   }
-  body.layout-vertical .combat-grid { display:block; }
+  /* 모바일 전투 화면 순서 재배치:
+     [내 정보/HP-MP/내 덱] → [버튼] → [상대 정보/HP-MP/상대 덱] → [전투 로그]
+     - col-center 를 display:contents 로 사라지게 해서 그 안의 버튼·로그를 combat-grid 의 직접 자식처럼 취급
+     - flex order 로 로그만 맨 뒤로 밀기
+     - "내 덱 / 상대 덱" 라벨 (.col-title) 는 모바일에서 숨김 */
+  body.layout-vertical .combat-grid { display:flex; flex-direction:column; }
+  body.layout-vertical .combat-grid .col-left    { order:1; }
+  body.layout-vertical .combat-grid .col-center  { display:contents; }
+  body.layout-vertical .combat-grid .col-center .hunt-actions { order:2; }
+  body.layout-vertical .combat-grid .col-right   { order:3; }
+  body.layout-vertical .combat-grid .col-center .train-log    { order:4; height:auto; min-height:180px; max-height:none; }
+  body.layout-vertical .combat-grid .col-title { display:none; }
   .combat-grid .col-left,
   .combat-grid .col-right,
   .combat-grid .col-center { display:flex; flex-direction:column; gap:6px; min-width:0; }
