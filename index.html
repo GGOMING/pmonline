@@ -267,8 +267,9 @@
   body.combat-active:not(.layout-vertical) #chatMsgs { flex:1 1 auto; max-height:200px; min-height:120px; overflow-y:auto; }
   /* 모바일 전투 중에는 채팅창 숨김 (좁아서 표시 어려움) */
   body.combat-active.layout-vertical #chat { display:none; }
-  body.combat-active:not(.layout-vertical) > #pg-main.active .topbox { display:none; }
-  body.combat-active:not(.layout-vertical) > #pg-main.active > #game > .main-bars { display:none; }
+  /* 전투 중에는 상단 스탯 박스 + HP/MP 바 숨김 — 전투 화면에 별도 스탯 패널이 나오므로 중복 방지 (PC·모바일 공통) */
+  body.combat-active > #pg-main.active .topbox { display:none; }
+  body.combat-active > #pg-main.active > #game > .main-bars { display:none; }
   .combat-grid {
     display:grid;
     grid-template-columns:460px minmax(400px, 1fr) 460px;
