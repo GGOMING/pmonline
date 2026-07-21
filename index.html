@@ -4028,8 +4028,56 @@ const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000, legend:1000
 // - 최초 유니크 획득: 레인오브파이어(u03) 1.4x, 테르시아의 빛(u09) 1.4x 가중
 //   판정 기준: p.uniqueEverAcquired 플래그 OR 인벤토리에 유니크 카드 존재 여부 (마이그레이션 겸용)
 const _FIRST_UNIQUE_WEIGHTS = { u03: 1.4, u09: 1.4 };
+
+// 카드별 주스탯 매핑 (cards_list.xlsx '주스탯' 컬럼 기반)
+// 유저 캐릭터 유형 (힘캐/덱캐/인캐/콘캐) 에 따라 가챠 가중치를 조정.
+//   규칙: 유저 주스탯과 매칭되는 카드 = 1.0 (덱 완성 난이도 상승 목적으로 상대적으로 덜 나옴)
+//        유저 주스탯과 다른 스탯 카드 = 1.2 (더 자주 나옴 → 원치 않는 카드가 자주 뽑힘)
+//        공용 카드 = 0.8 (범용은 축소)
+const CARD_PRIMARY_STAT = {
+  basic_atk:'공용', gold_throw:'공용',
+  n01:'CON', n02:'CON', n03:'CON', n04:'CON', n05:'DEX', n06:'CON', n07:'DEX', n08:'DEX', n09:'공용', n10:'STR',
+  n11:'STR', n12:'공용', n13:'CON', n14:'INT', n15:'CON', n16:'CON', n17:'공용', n18:'CON', n19:'STR', n20:'공용',
+  n21:'DEX', n22:'공용', n23:'INT', n24:'CON', n25:'DEX', n26:'공용', n27:'DEX', n28:'DEX', n29:'INT', n30:'CON',
+  n31:'CON', n32:'STR', n33:'STR', n34:'DEX', n35:'INT', n36:'CON', n37:'STR', n38:'CON', n39:'CON', n40:'INT',
+  n41:'CON', n42:'CON', n43:'CON', n44:'STR', n45:'CON', n46:'CON', n47:'DEX', n48:'DEX', n49:'INT', n50:'공용',
+  n51:'INT', n52:'STR', n53:'CON', n54:'INT', n55:'DEX', n56:'CON', n57:'INT', n58:'CON', n59:'STR', n60:'INT',
+  n61:'CON', n62:'CON', n63:'CON', n64:'DEX', n65:'INT', n66:'INT', n67:'INT', n68:'CON', n69:'CON', n70:'INT',
+  n71:'INT', n72:'CON', n73:'CON', n74:'공용', n75:'공용', n76:'공용', n77:'DEX', n78:'INT', n79:'INT', n80:'공용',
+  r01:'CON', r02:'CON', r03:'CON', r04:'CON', r05:'공용', r06:'CON', r07:'CON', r08:'CON', r09:'STR', r10:'STR',
+  r11:'공용', r12:'CON', r13:'INT', r14:'INT', r15:'CON', r16:'STR', r17:'CON', r18:'DEX', r19:'공용', r20:'CON',
+  r21:'DEX', r22:'INT', r23:'DEX', r24:'DEX', r25:'INT', r26:'INT', r27:'CON', r28:'INT', r29:'INT', r30:'INT',
+  r31:'공용', r32:'공용', r33:'CON', r34:'공용', r35:'CON', r36:'CON', r37:'CON', r38:'INT', r39:'INT', r40:'DEX',
+  r41:'INT', r42:'INT',
+  u01:'STR', u02:'공용', u03:'INT', u04:'DEX', u05:'CON', u06:'공용', u07:'CON', u08:'STR', u09:'INT', u10:'DEX',
+  h01:'공용', h02:'공용', h03:'공용', h04:'CON', h05:'CON',
+  l01:'공용', l02:'공용',
+};
+// 유저 주스탯 판정 — str/dex/int/con 중 최대. 동률이면 str > dex > int > con 순.
+function _playerPrimaryStat(p){
+  if (!p) return null;
+  const s = p.str|0, d = p.dex|0, i = p.int|0, c = p.con|0;
+  const max = Math.max(s, d, i, c);
+  if (max <= 0) return null;
+  if (s === max) return 'STR';
+  if (d === max) return 'DEX';
+  if (i === max) return 'INT';
+  return 'CON';
+}
+// 카드-플레이어 조합 가중치 (덱 완성 난이도 조절)
+function _cardGachaWeight(card, playerStat){
+  if (!card || !playerStat) return 1.0;
+  const cs = CARD_PRIMARY_STAT[card.id];
+  if (!cs) return 1.0;
+  if (cs === '공용') return 0.8;
+  if (cs === playerStat) return 1.0;   // 주스탯 매칭 = 기본
+  if (cs === 'STR' || cs === 'DEX' || cs === 'INT' || cs === 'CON') return 1.2;  // 다른 실제 스탯 카드 = 부스트
+  return 1.0;
+}
 function _pickWeightedCard(gPool, grade){
   const p = GAME.player;
+  if (!gPool || !gPool.length) return null;
+  // 최초 유니크 획득 부스트 (기존 유지) — 인캐 매칭 등급 조정보다 우선
   if (grade === 'unique' && p){
     const hasAnyUnique = !!p.uniqueEverAcquired
       || (Array.isArray(GAME.inventory) && GAME.inventory.some(c => c && c.grade === 'unique'));
@@ -4048,7 +4096,22 @@ function _pickWeightedCard(gPool, grade){
       return gPool[gPool.length - 1];
     }
   }
-  return gPool[Math.floor(Math.random() * gPool.length)];
+  // 유저 캐릭터 유형 기반 가중치 — 매칭 1.0 · 비매칭 1.2 · 공용 0.8
+  const playerStat = _playerPrimaryStat(p);
+  if (!playerStat) return gPool[Math.floor(Math.random() * gPool.length)];
+  let total = 0;
+  const weights = gPool.map(c => {
+    const w = _cardGachaWeight(c, playerStat);
+    total += w;
+    return w;
+  });
+  if (total <= 0) return gPool[Math.floor(Math.random() * gPool.length)];
+  let r = Math.random() * total;
+  for (let i = 0; i < gPool.length; i++){
+    r -= weights[i];
+    if (r <= 0) return gPool[i];
+  }
+  return gPool[gPool.length - 1];
 }
 // 뽑기 결과 반영 후 등급별 최초 획득 플래그 갱신
 function _markGradeAcquired(results){
