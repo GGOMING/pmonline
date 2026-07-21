@@ -2617,7 +2617,7 @@ const CARDS = [
   // 기본공격 (게임 시작 시 모든 슬롯 기본값)
   { id:'basic_atk', name:'기본공격', grade:'normal', icon:'sword', text:'공격력으로 1회 공격', fx:{type:'basicAtk'} },
   // 황금상자 전용 — 카드샵·유저 덱 모두 불가. 효과 없음(이벤트성 더미 카드)
-  { id:'gold_throw', name:'돈 뿌리기', grade:'normal', icon:'gold', iconPath:'assets/wc3_reforged_used/BTNChestOfGold-Reforged.png', text:'상대에게 골드와 경험치를 준다.', monsterOnly:true, fx:{type:'noop'} },
+  { id:'gold_throw', name:'돈 뿌리기', grade:'legend', icon:'gold', iconPath:'assets/wc3_reforged_used/BTNChestOfGold-Reforged.png', text:'상대에게 골드와 경험치를 준다.', monsterOnly:true, fx:{type:'noop'} },
   { id:'arrest',     name:'검거',       grade:'hero',   icon:'block', iconPath:'assets/wc3_reforged_used/BTNCancel-Reforged.png',       text:'상대에게 10,000 고정 데미지 (회피·반사·부활 모두 무시)', monsterOnly:true, fx:{type:'dmg',min:10000,max:10000,ignoreDef:true,unstoppable:true} },
 
   // ───── 일반 카드 80종 (pmlist2 Ver.12/04/13, 가나다 순) ─────
@@ -8596,6 +8596,51 @@ function makeMacroGuardMonster(){
 // 매크로 방지 기본 조우 확률 (플레이어당 override 가능)
 const MACRO_GUARD_DEFAULT_RATE = 0.005;   // 0.5%
 
+// ─── 이벤트 몬스터: 꼬밍 (0.1% · 전 레벨 조우 가능 · 수행 전용) ───
+const GGOMING_ENCOUNTER_RATE = 0.001;
+function getGgomingEncounterRate(){
+  const p = GAME.player;
+  const overr = p && p.encounterRates && p.encounterRates.ggoming;
+  if (typeof overr === 'number' && isFinite(overr)) return Math.max(0, Math.min(1, overr));
+  return GGOMING_ENCOUNTER_RATE;
+}
+function makeGgomingMonster(playerLv){
+  // 15턴 풀 덱: 부활증표 → 데우스 → 검거 → 벤전스 → 데몬변신 → 아바타 → 빅베드부두
+  //   → 개구리만들기 → 어둠의 오브 → 홀리라이트 → 로커스트스웜 → 롱기누스의 검 → 테르시아의 빛
+  //   → 크로노스의 혼 → 돈 뿌리기
+  const ids = ['l01','l02','arrest','h03','h02','h05','h04','h01','u07','u06','u02','u08','u09','u10','gold_throw'];
+  const fullDeck = ids.map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK);
+  // Lv 26 미만은 10턴 덱까지만 (앞 10장). 나머지는 BASIC_ATTACK 필러.
+  const deck = ((playerLv|0) < 26)
+    ? fullDeck.slice(0, 10).concat(Array(5).fill(BASIC_ATTACK))
+    : fullDeck;
+  return {
+    id: 'ggoming',
+    name: '꼬밍',
+    race: 'beast',
+    level: 99,
+    str: 500, dex: 500, int: 500, con: 500,
+    hp: 5000, hpMax: 5000, _hpMaxBase: 5000,
+    mp: 5000, mpMax: 5000, _mpMaxBase: 5000,
+    atk: [285, 535],
+    def: 285,
+    weapon: { id:'divine_elaha',  name:'천신의 아스트레이아',  atkBonus:35 },
+    armor:  { id:'divine_fluted', name:'천신의 플루티드 아머', defBonus:35 },
+    deck,
+    gold: 0, xp: 0,
+    icon: 'assets/wc3_reforged_used/ggoming.png',
+  };
+}
+// 패배 시 유저에게 지급할 합의금 (확률 분포: 1000G 30% / 2000G 25% / 3000G 20% / 4000G 15% / 5000G 10%)
+function _ggomingLoseReward(){
+  const r = Math.random();
+  if (r < 0.30) return 1000;
+  if (r < 0.55) return 2000;
+  if (r < 0.75) return 3000;
+  if (r < 0.90) return 4000;
+  return 5000;
+}
+
 // ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
 // 봇/매크로 억제 — 한 시간 내 1000회 초과 시 모든 전투 진입 차단.
 const HOURLY_ACTIVITY_LIMIT = 1000;
@@ -8774,6 +8819,10 @@ function _goldDropFor(playerLv){
 
 // ─── 몬스터 생성 ───
 function generateMonster(playerLv, tier){
+  // 이벤트 몬스터 '꼬밍' — 0.1% · 전 레벨. 최우선 조우 판정.
+  if (Math.random() < getGgomingEncounterRate()){
+    return makeGgomingMonster(playerLv);
+  }
   // 매크로 방지 몬스터 — 평생 등장 (봇 자동 사냥 억제). 플레이어별 override 가능.
   if (Math.random() < getMacroGuardEncounterRate()){
     return makeMacroGuardMonster();
@@ -11123,6 +11172,55 @@ function _handleMacroGuardHunt(result){
   $('hunt-result').hidden = false;
   _autoFocusBtn('huntAgainBtn');
 }
+// ─── 이벤트 몬스터 '꼬밍' 결과 처리 ───
+// win     → 승리 시 여신의 축복 +10, 채팅 축하 문구
+// time    → 15턴 소진 시 무조건 승리로 처리 (사용자 요청)
+// lose    → 합의금 (1~5,000G) 지급, 채팅 패배 문구, 페널티 없음
+// (flee 는 exitHunt 에서 처리 — 여기 도달 X)
+function _handleGgomingHunt(result){
+  const c = GAME.huntCombat;
+  const p = GAME.player;
+  const m = c.monster;
+  const isWin = (result === 'win' || result === 'time');
+  let reward = 0, gainedBlessing = 0;
+  if (isWin){
+    gainedBlessing = 10;
+    p.blessing = (p.blessing || 0) + gainedBlessing;
+    try { bumpTitleCounter && bumpTitleCounter('total_blessing_earned', gainedBlessing); } catch(e){}
+    huntLog(`🏆 승리! ✨ 여신의 축복 +${gainedBlessing}`, 'sys');
+    chatSys(`꼬밍이 ${p.name}님에게 뚜드려 맞고 여신의 축복 ${gainedBlessing}개를 빼앗겼습니다.`);
+  } else {
+    // lose — 페널티 없음, 합의금만 지급
+    reward = _ggomingLoseReward();
+    p.gold = (p.gold || 0) + reward;
+    try { bumpTitleCounter && bumpTitleCounter('total_gold_earned', reward); } catch(e){}
+    huntLog(`💸 합의금 +${reward.toLocaleString()}G 지급 (페널티 없음)`, 'sys');
+    chatSys(`꼬밍이 ${p.name}님을 두드려 패고 합의금 ${reward.toLocaleString()}G을 지불했습니다.`);
+    // 승패 무관 원래 huntEnd 의 패배 페널티(HP·MP 0, 카드 파괴 등) 는 이 분기에서 건너뜀
+  }
+  try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
+  try { renderSheet(); renderDeck(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  cloudSaveNow().catch(e => console.warn('[ggomingHunt cloudSave]', e));
+  // 결과창 렌더링
+  $('hunt_result_title').textContent = `수행 결과 — 이벤트 몬스터 꼬밍`;
+  $('hunt_result_body').innerHTML = _renderGgomingResultBody(isWin, reward, gainedBlessing, m, c);
+  $('hunt-battle').hidden = true;
+  $('hunt-result').hidden = false;
+  _autoFocusBtn('huntAgainBtn');
+}
+function _renderGgomingResultBody(isWin, gold, bless, m, c){
+  const title = isWin ? '🏆 <b style="color:#7E181E;">꼬밍 격퇴 성공!</b>' : '💸 <b style="color:#c98d1a;">합의금 지급</b>';
+  const rewardHtml = isWin
+    ? `<p style="color:#ffd700;font-weight:bold;font-size:15px;">✨ 여신의 축복 +${bless}</p>
+       <p style="font-size:11px;color:#666;">꼬밍이 축복 ${bless}개를 놓고 도망갔습니다!</p>`
+    : `<p style="color:#c98d1a;font-weight:bold;font-size:15px;">💰 합의금 +${gold.toLocaleString()}G</p>
+       <p style="font-size:11px;color:#666;">패배했지만 페널티 없음 · 오히려 골드를 챙겼습니다</p>`;
+  return `<p style="font-size:16px;">${title}</p>
+    ${rewardHtml}
+    <p style="font-size:11px;color:#888;">이벤트 몬스터 <b>꼬밍</b> Lv 99 (조우 확률 0.1%)</p>`;
+}
+
 async function _handleMacroGuardRaid(result){
   const c = GAME.raidCombat;
   const p = GAME.player;
@@ -11232,6 +11330,10 @@ function huntEnd(result){
   // 매크로 방지 몬스터 — 승·패 페널티 / 회피 보상 특수 처리 후 조기 반환
   if (m && m.id === 'macro_guard'){
     return _handleMacroGuardHunt(result);
+  }
+  // 이벤트 몬스터 '꼬밍' — 특수 보상 (승리: 축복 10 / 패배·시간초과: 합의금)
+  if (m && m.id === 'ggoming'){
+    return _handleGgomingHunt(result);
   }
 
   // result: win / lose / time / flee
@@ -11509,6 +11611,12 @@ function exitHunt(){
       try { saveGame(); } catch(e){}
       cloudSaveNow().catch(e => console.warn('[exitHunt macroGuard cloudSave]', e));
     } catch(e){ console.warn('[exitHunt macroGuard]', e); }
+  }
+  // 꼬밍 이벤트 몬스터 도주 — 보상 없음, 페널티 없음, 그냥 종료
+  if (c && !c.finished && c.monster && c.monster.id === 'ggoming'){
+    c.finished = true;
+    toast('꼬밍에게서 도망쳤습니다.');
+    try { saveGame(); } catch(e){}
   }
   GAME.huntCombat = null;
   setCombatMode(false);
@@ -14579,6 +14687,7 @@ async function loadAdminUsers(){
             gp: p.gp || 0,
             rankPos: p.rankPos || 0,
             pw: p.pw,
+            email: p.email || '',
             avatar: p.avatar || null,
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
@@ -14704,6 +14813,7 @@ function renderAdminEdit(){
       </div>
     </div>` : ''}
     <div class="edit-row"><span class="lbl">닉네임</span> <input id="ed_name" value="${u.name}"></div>
+    ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row"><span class="lbl">📧 가입 이메일</span> <input id="ed_email" value="${(u.email||'').replace(/"/g,'&quot;')}" placeholder="(회원가입 시 입력한 연락용 이메일)"> <span style="font-size:10px;color:#666;margin-left:6px;">회원가입 시 인증한 연락용 이메일</span></div>` : ''}
     ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row"><span class="lbl">비밀번호</span> <input id="ed_pw" value="${u.pw||''}" placeholder="(비워두면 변경 없음)"></div>` : ''}
     ${(u.source === 'local' || u.source === 'cloud') ? `<div class="edit-row" style="display:block;background:#fffbe6;border:1px solid #fda;padding:6px 8px;margin:6px 0;">
       <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;">
@@ -14758,7 +14868,7 @@ function renderAdminEdit(){
     </div>
     <div class="edit-row" style="display:block;background:#fff8f0;border:1px solid #fda;padding:6px 8px;margin:4px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#7E181E;font-size:12px;margin-bottom:4px;">🎲 조우 확률 override (%)</div>
-      <div style="font-size:11px;color:#666;margin-bottom:6px;">비워두면 기본치 사용. 황금상자 기본: Lv1~10 10~20% · Lv11~25 5% · Lv26+ 0%. 매크로 방지 기본: 0.5% (전 레벨).</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px;">비워두면 기본치 사용. 황금상자 기본: Lv1~10 10~20% · Lv11~25 5% · Lv26+ 0%. 매크로 방지 기본: 0.5% (Lv26+). 꼬밍 기본: 0.1% (전 레벨).</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <label style="font-size:11px;">황금상자 %
           <input type="number" id="ed_encGoldChest" step="0.01" min="0" max="100" style="width:80px;"
@@ -14768,6 +14878,11 @@ function renderAdminEdit(){
         <label style="font-size:11px;">매크로 방지 %
           <input type="number" id="ed_encMacroGuard" step="0.01" min="0" max="100" style="width:80px;"
             value="${(u.encounterRates && typeof u.encounterRates.macroGuard === 'number') ? (u.encounterRates.macroGuard * 100) : ''}"
+            placeholder="기본">
+        </label>
+        <label style="font-size:11px;">🐤 꼬밍 %
+          <input type="number" id="ed_encGgoming" step="0.01" min="0" max="100" style="width:80px;"
+            value="${(u.encounterRates && typeof u.encounterRates.ggoming === 'number') ? (u.encounterRates.ggoming * 100) : ''}"
             placeholder="기본">
         </label>
         <button class="admin-btn small" onclick="adminClearEncounterRates()" style="padding:2px 8px;">기본치로 리셋</button>
@@ -14994,7 +15109,8 @@ async function adminSaveUser(){
   // 조우 확률 override (0~100 % 입력 → 0~1 소수 저장). 빈값이면 필드 제거하여 기본치 사용
   const _encGC = $('ed_encGoldChest');
   const _encMG = $('ed_encMacroGuard');
-  if (_encGC || _encMG){
+  const _encGG = $('ed_encGgoming');
+  if (_encGC || _encMG || _encGG){
     if (!u.encounterRates) u.encounterRates = {};
     if (_encGC){
       const raw = _encGC.value.trim();
@@ -15012,13 +15128,27 @@ async function adminSaveUser(){
         if (isFinite(v)) u.encounterRates.macroGuard = Math.max(0, Math.min(1, v / 100));
       }
     }
-    // 둘 다 비어 있으면 필드 자체 삭제 (완전 기본치)
+    if (_encGG){
+      const raw = _encGG.value.trim();
+      if (raw === '') delete u.encounterRates.ggoming;
+      else {
+        const v = parseFloat(raw);
+        if (isFinite(v)) u.encounterRates.ggoming = Math.max(0, Math.min(1, v / 100));
+      }
+    }
+    // 전부 비어 있으면 필드 자체 삭제 (완전 기본치)
     if (Object.keys(u.encounterRates).length === 0) delete u.encounterRates;
   }
   // 비밀번호: 비워두면 기존 유지 (로컬 또는 클라우드 source 둘 다 player.pw로 보관)
   if (u.source === 'local' || u.source === 'cloud'){
     const pwInput = $('ed_pw');
     if (pwInput && pwInput.value.trim()) u.pw = pwInput.value.trim();
+    // 가입 이메일 — 수동 편집 허용 (연락용). 빈칸이면 기존 값 유지.
+    const emEl = $('ed_email');
+    if (emEl){
+      const v = emEl.value.trim();
+      if (v) u.email = v; else if (v === '' && u.email == null) u.email = '';
+    }
   }
 
   const wId = $('ed_weapon').value;
@@ -15083,6 +15213,7 @@ async function adminSaveUser(){
       gp: saved.player ? saved.player.gp : 0,
       rankPos: u.rankPos,
       pw: u.pw,
+      email: u.email || (saved.player && saved.player.email) || '',
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
       isOperator: !!u.isOperator,
@@ -15148,6 +15279,7 @@ async function adminSaveUser(){
         gp: u.gp || 0,
         rankPos: u.rankPos,
         pw: u.pw,
+        email: u.email || prevPlayer.email || '',
         avatar: u.avatar || null,
         autoFocus: !!u.autoFocus,
         isOperator: !!u.isOperator,
@@ -15214,7 +15346,8 @@ function adminClearEncounterRates(){
   delete u.encounterRates;
   const gc = $('ed_encGoldChest'); if (gc) gc.value = '';
   const mg = $('ed_encMacroGuard'); if (mg) mg.value = '';
-  toast('조우 확률을 기본치(레벨 곡선 · 0.5%)로 리셋했습니다. 저장 눌러야 반영됩니다.');
+  const gg = $('ed_encGgoming');    if (gg) gg.value = '';
+  toast('조우 확률을 기본치(황금상자 레벨 곡선 · 매크로 방지 0.5% · 꼬밍 0.1%)로 리셋했습니다. 저장 눌러야 반영됩니다.');
 }
 
 function adminAddCard(cardId){
