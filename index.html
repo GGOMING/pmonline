@@ -1833,8 +1833,7 @@
         <div class="rank-tip">
           • 미등록 시: <b>10위</b>에게만 도전 가능<br>
           • 등록 시: 바로 위 순위에 도전 가능<br>
-          • 랭킹전 입장 시 일정 확률로 <b>방어전</b> 발생<br>
-          • 방어전 패배 시 랭킹에서 강등 (미등록 상태)
+          • 랭킹전은 오직 유저 간 도전으로만 진행됩니다 (랜덤 방어전 없음)
         </div>
         <div class="rank-actions">
           <button class="btn-back" onclick="exitRank()">돌아가기</button>
@@ -2478,6 +2477,7 @@
       <button onclick="filterGrade('rare')" id="gf_rare">레어</button>
       <button onclick="filterGrade('unique')" id="gf_unique">유니크</button>
       <button onclick="filterGrade('hero')" id="gf_hero">영웅</button>
+      <button onclick="filterGrade('legend')" id="gf_legend">전설</button>
       <button onclick="clearSlot()" class="clear" style="float:right;margin:0;background:#aaa;">슬롯 비우기</button>
     </div>
     <div class="card-grid" id="cardGrid"></div>
@@ -3373,22 +3373,11 @@ function doHeal(){
     _bumpWeeklyCounter('goldGained', rankBonus, 'wq_gold_50k');
     bumpTitleCounter('total_gold_earned', rankBonus);
   } catch(e){}
-  // 방어전 트리거 굴림 — 랭킹 5위 이상(1~5위)에게만 5% 확률
-  const myRank = (GAME.ranking && GAME.ranking.myRank) || 0;
-  if (myRank >= 1 && myRank <= 5 && Math.random() < 0.05){
-    _pendingDefenseFromHeal = true;
-  }
+  // 랜덤 방어전 트리거 제거됨 — 순수 유저 간 도전 경쟁으로 운영
 }
 
 function exitHealToMain(){
   showContent('main');
-  if (_pendingDefenseFromHeal){
-    _pendingDefenseFromHeal = false;
-    setTimeout(() => {
-      openRank();   // 랭킹전 페이지로 이동
-      setTimeout(() => triggerDefenseBattle(), 600);
-    }, 400);
-  }
 }
 
 // ============================================================
@@ -7492,8 +7481,14 @@ async function resetRanking(){
   const shuffled = RANK_NPC_NAMES.slice().sort(()=>Math.random()-0.5);
   GAME.ranking.slots = shuffled.slice(0, 10).map(n => makeRankNPC(n));
   GAME.ranking.myRank = 0;
-  GAME.ranking.lastResetDate = new Date().toDateString();
+  GAME.ranking.lastResetHour = _currentRankResetHourKey();
   GAME.ranking.rewardsLeft = RANK_DAILY_REWARDS;
+}
+
+// 정각 리셋 감지용 시간 키 — 'YYYY-M-D-H' 형식
+function _currentRankResetHourKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}`;
 }
 
 // 일일 보상 한도 (도전 자체는 무제한 — 보상만 하루 N회까지)
@@ -7512,18 +7507,46 @@ function getRankRewardsLeft(){
 }
 
 async function checkRankingReset(){
-  // 클라우드 우선: 서버가 자정 리셋을 판단·실행
-  if (sb){
-    try { await sb.rpc('rank_check_reset'); } catch(e){ console.warn('[checkRankingReset]', e); }
+  // 매 정각 리셋 — 클라이언트가 시간 경계 감지 후 rank_full_reset 트리거.
+  // (pg_cron 없이 접속 클라이언트가 대신 실행. Realtime subscription 으로 다른 온라인 유저에게도 자동 전파)
+  // 여러 클라이언트가 동시에 감지해도 rank_claim_reset RPC 가 원자적으로 대표 클라이언트 1명만 선정 →
+  // 실제 리셋·채팅 알림은 대표만 수행, 나머지는 loadRankingFromCloud 로 새 상태만 반영.
+  const curHour = _currentRankResetHourKey();
+  const prevHour = GAME.ranking.lastResetHour;
+  // 최초 세션이면 flag 만 세팅하고 리셋은 미실행 (게임 시작 = 리셋 아님)
+  if (!prevHour){
+    GAME.ranking.lastResetHour = curHour;
     return;
   }
-  // 오프라인 fallback (로컬)
-  const today = new Date().toDateString();
-  if (GAME.ranking.lastResetDate !== today){
-    const wasReset = !!GAME.ranking.lastResetDate;
-    resetRanking();
-    if (wasReset) chatSys('★ 일일 랭킹전이 초기화되었습니다.');
+  if (prevHour === curHour) return;
+  // 정각 경계 감지 — 대표 클라이언트 선정
+  GAME.ranking.lastResetHour = curHour;
+  let isLeader = true;   // 오프라인 기본값 = 나 자신이 리더
+  if (sb){
+    try {
+      const { data, error } = await sb.rpc('rank_claim_reset', { p_hour_key: curHour });
+      if (error){
+        console.warn('[rank_claim_reset]', error);
+        // RPC 미배포·에러 시 방어적으로 리더 아님 처리 (누군가는 리셋했을 것)
+        isLeader = false;
+      } else {
+        isLeader = !!data;
+      }
+    } catch(e){
+      console.warn('[rank_claim_reset catch]', e);
+      isLeader = false;
+    }
   }
+  if (isLeader){
+    try { await resetRanking(); } catch(e){ console.warn('[checkRankingReset resetRanking]', e); }
+    try { chatSys('★ 랭킹전 순위가 초기화되었습니다.'); } catch(e){}
+  } else {
+    // 리더가 이미 리셋했음 → cloud 재로드로 새 상태만 반영
+    try { await loadRankingFromCloud(); } catch(e){ console.warn('[checkRankingReset loadCloud]', e); }
+  }
+  try { renderSheet(); } catch(e){}
+  try { if ($('content-rank') && !$('content-rank').hidden) renderRankList(); } catch(e){}
+  try { saveGame(); } catch(e){}
 }
 
 function getRankBonus(){
@@ -8149,14 +8172,44 @@ async function promoteToRank(targetRank){
 }
 
 async function demoteFromRank(){
+  const prevRank = (GAME.ranking && GAME.ranking.myRank) || 0;
   if (sb){
+    // 1) 서버 상 본인 슬롯 삭제 시도 — RPC 우선, 실패 시 직접 delete fallback
     try {
-      const { error } = await sb.rpc('rank_demote');
-      if (error) console.warn('[rank_demote]', error);
-      await loadRankingFromCloud();
-    } catch(e){ console.warn('[demoteFromRank]', e); }
+      const { error: rpcErr } = await sb.rpc('rank_demote');
+      if (rpcErr) console.warn('[rank_demote RPC]', rpcErr);
+    } catch(e){ console.warn('[rank_demote RPC catch]', e); }
+    // 2) fallback — RPC 배포 안 됐거나 삭제 실패한 경우 직접 delete (본인 행만 RLS 통과)
+    try {
+      const myUid = await _getMyUserId();
+      if (myUid){
+        const { error: delErr } = await sb.from('ranking_global').delete().eq('user_id', myUid);
+        if (delErr) console.warn('[rank_demote direct delete]', delErr);
+      }
+    } catch(e){ console.warn('[rank_demote direct catch]', e); }
+    // 3) 로컬 상태 선반영 — cloud reload 대기 없이 즉시 UI 반영
+    if (prevRank >= 1 && prevRank <= 10 && Array.isArray(GAME.ranking.slots)){
+      try {
+        const usedNames = new Set(GAME.ranking.slots.filter(s => s && s.name).map(s => s.name));
+        const availableNames = (typeof RANK_NPC_NAMES !== 'undefined')
+          ? RANK_NPC_NAMES.filter(n => !usedNames.has(n))
+          : [];
+        const newName = availableNames.length ? availableNames[0]
+          : ((typeof RANK_NPC_NAMES !== 'undefined') ? RANK_NPC_NAMES[Math.floor(Math.random()*RANK_NPC_NAMES.length)] : 'NPC');
+        GAME.ranking.slots[prevRank - 1] = makeRankNPC(newName);
+      } catch(e){}
+    }
+    GAME.ranking.myRank = 0;
+    // 4) cloud 재로드 — 최신 슬롯 반영
+    try { await loadRankingFromCloud(); } catch(e){ console.warn('[demoteFromRank cloudLoad]', e); }
+    // cloudLoad 후에도 안전을 위해 myRank 재확인 — 여전히 서버에 남아있으면 로컬에서 강제 미등록 처리
+    if (GAME.ranking.myRank === prevRank && prevRank > 0){
+      console.warn('[demote] 서버 슬롯 삭제 실패 — 로컬 강제 미등록 처리');
+      GAME.ranking.myRank = 0;
+    }
     return;
   }
+  // ─ 오프라인 모드 ─
   const myRank = GAME.ranking.myRank;
   if (myRank < 1) return;
   const usedNames = new Set(GAME.ranking.slots.map(s => s.name));
@@ -15993,7 +16046,8 @@ async function adminChangeAdminPassword(){
 
 function adminResetRanking(){
   if (!confirm('랭킹전을 강제로 초기화할까요?')) return;
-  GAME.ranking.lastResetDate = null;
+  // 시간 키를 이전 시각으로 세팅 → checkRankingReset 이 경계 감지 → 리셋 트리거
+  GAME.ranking.lastResetHour = '__force__';
   checkRankingReset();
   alert('✔ 랭킹 초기화 완료');
 }
@@ -16086,20 +16140,15 @@ function doDeleteSave(){
 }
 
 // ─── 부팅 ───
-// 0) 매 1분마다 랭킹 일일 리셋 체크 — 사용자가 자정을 페이지에 머문 채 넘겨도 자동 리셋
+// 0) 매 30초마다 랭킹 정각 리셋 체크 — 사용자가 정각을 페이지에 머문 채 넘겨도 자동 리셋
 setInterval(() => {
   try {
     if (GAME.player && GAME.ranking){
-      const before = GAME.ranking.lastResetDate;
+      // checkRankingReset 안에서 리셋 시 chatSys/render/save 처리까지 완료됨
       checkRankingReset();
-      if (before !== GAME.ranking.lastResetDate){
-        try { renderSheet(); } catch(e){}
-        try { if (!$('content-rank').hidden) renderRankList(); } catch(e){}
-        try { saveGame(); } catch(e){}
-      }
     }
-  } catch(e){ console.warn('[daily reset tick]', e); }
-}, 60 * 1000);
+  } catch(e){ console.warn('[hourly reset tick]', e); }
+}, 30 * 1000);
 // 1) 구버전 단일 슬롯 → 신버전 계정별 슬롯 마이그레이션
 migrateLegacySave();
 // 1-b) rr 계정 카드 일회성 초기화 (요청에 의함 — 한 번만 실행)
@@ -16178,6 +16227,10 @@ setInterval(()=>{
 
   <div style="background:#fff0e0;border:1px solid #faa;padding:5px;margin-bottom:6px;">
     <button class="admin-btn small danger" onclick="opForceRaidReset()" style="width:100%;">⚡ 3개 공격대 전체 강제 리셋</button>
+  </div>
+
+  <div style="background:#f0e0ff;border:1px solid #a8f;padding:5px;margin-bottom:6px;">
+    <button class="admin-btn small danger" onclick="opForceRankReset()" style="width:100%;background:#5a1a6b;">🏆 랭킹전 강제 초기화</button>
   </div>
 
   <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;margin-bottom:6px;">
@@ -16388,6 +16441,33 @@ async function opUnbanUser(){
   }
 }
 
+
+// 운영자: 랭킹전 강제 초기화 — 정각 대기 없이 즉시 리셋 실행
+// rank_full_reset RPC (SECURITY DEFINER) + rank_reset_state 의 last_hour_key 도 함께 갱신해서
+// 곧이어 정각이 지나도 중복 리셋 안 걸리도록 처리.
+async function opForceRankReset(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (!confirm('랭킹전 전체 슬롯을 지금 즉시 초기화할까요?\n(모든 유저 슬롯 삭제 → NPC 재편성)')) return;
+  try {
+    // 1) 서버 상태 리셋
+    const { error: rErr } = await sb.rpc('rank_full_reset');
+    if (rErr){ alert('랭킹 리셋 실패: ' + (rErr.message || rErr)); return; }
+    // 2) 대표 클라이언트 락도 현재 시각으로 갱신 → 이번 시각 자동 리셋 중복 방지
+    try {
+      const curHour = _currentRankResetHourKey();
+      await sb.rpc('rank_claim_reset', { p_hour_key: curHour });
+      GAME.ranking.lastResetHour = curHour;
+    } catch(e){ console.warn('[opForceRankReset claim]', e); }
+    // 3) 새 상태 로드 + 채팅 알림
+    try { await loadRankingFromCloud(); } catch(e){ console.warn('[opForceRankReset loadCloud]', e); }
+    try { chatSys('★ 운영자에 의해 랭킹전 순위가 초기화되었습니다.'); } catch(e){}
+    try { renderSheet(); } catch(e){}
+    try { if ($('content-rank') && !$('content-rank').hidden) renderRankList(); } catch(e){}
+    alert('✔ 랭킹전 강제 초기화 완료');
+  } catch(e){
+    alert('강제 초기화 실패: ' + (e.message || e));
+  }
+}
 
 // 운영자 조작 함수 — admin과 동일 로직 재사용 후 op 패널 상태 갱신
 // 운영자 계정은 admin@pmonline.system 세션이 없어도 raid_manual_reset RPC (SECURITY DEFINER)로 리셋
