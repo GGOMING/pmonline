@@ -3780,21 +3780,41 @@ function gachaCost10For(level){
   return gachaCost1For(level) * 9;
 }
 
-// Lv 2~10 도달 시 골드 축하 보너스 (Lv2=600 ~ Lv9=2,700G, Lv10=20,000G 졸업 보너스)
+// Lv 2~10 도달 시 골드 축하 보너스 (Lv2=600 ~ Lv9=2,700G, Lv10=30,000G 졸업 보너스)
 function _grantLvBonusGold(p, newLevel){
   if (!p) return 0;
+  // Lv 10 도달 시 랜덤 방어구 지급 (+4 40% / +7 40% / +10 20%)
+  if (newLevel === 10){
+    try { _grantLv10ArmorReward(p); } catch(e){ console.warn('[lv10 armor reward]', e); }
+  }
   // Lv 25 도달 시 랜덤 장비 1개 (등급·종류 모두 비공개 — 유저에겐 "랜덤"으로만 안내)
   if (newLevel === 25){
     try { _grantLv25Reward(p); } catch(e){ console.warn('[lv25 reward]', e); }
   }
   if (newLevel < 2 || newLevel > 10) return 0;
   const isGrad = newLevel === 10;
-  const bonus = isGrad ? 20000 : gachaCost1For(newLevel) * 3;
+  const bonus = isGrad ? 30000 : gachaCost1For(newLevel) * 3;
   p.gold += bonus;
   const tag = isGrad ? '🎓 Lv 10 졸업 축하 보너스' : `Lv ${newLevel} 달성 축하 보너스`;
   try { chatSys(`★ ${p.name}님 ${tag}! +${bonus.toLocaleString()}G`); } catch(e){}
   try { toast(`🎁 ${tag} +${bonus.toLocaleString()}G`); } catch(e){}
   return bonus;
+}
+
+// Lv 10 도달 축하 — 랜덤 방어구 지급 (+4 40% · +7 40% · +10 20%)
+function _grantLv10ArmorReward(p){
+  if (!p) return;
+  const r = Math.random();
+  let armorId;
+  if (r < 0.40)      armorId = 'bronze_scale';    // +4
+  else if (r < 0.80) armorId = 'iron_lamellar';   // +7
+  else               armorId = 'steel_hauberk';   // +10
+  const a = ARMORS.find(x => x.id === armorId);
+  if (!a) return;
+  if (!p.armors) p.armors = [];
+  p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+  try { chatSys(`★ ${p.name}님 🎓 Lv 10 졸업 축하로 🛡 ${a.name} (+${a.defBonus}) 획득!`); } catch(e){}
+  try { toast(`🎁 Lv 10 졸업 축하 방어구! 🛡 ${a.name} (+${a.defBonus})`); } catch(e){}
 }
 
 // Lv 25 도달 보상 — 4~9등급 무기 또는 방어구 랜덤. 박스/팝업에 표시할 정보를 전역에 기록.
@@ -8031,8 +8051,8 @@ async function rankEnd(result){
       chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
       if (p.level === 26 && !p.lv26BonusClaimed){
         p.lv26BonusClaimed = true;
-        p.gold += 20000;
-        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
+        p.gold += 30000;
+        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
       }
     }
     if (rankLvUp){
@@ -11426,11 +11446,11 @@ function huntEnd(result){
       const bonusG = _grantLvBonusGold(p, p.level);
       lvBonus += bonusG;
       huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복` + (bonusG ? ` · 🎁 +${bonusG}G` : ''), 'sys');
-      // Lv 26 도달 시 슬롯 11~15 해금 안내 + 축하금 20,000G (1회)
+      // Lv 26 도달 시 슬롯 11~15 해금 안내 + 축하금 30,000G (1회)
       if (p.level === 26 && !p.lv26BonusClaimed){
         p.lv26BonusClaimed = true;
-        p.gold += 20000;
-        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
+        p.gold += 30000;
+        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
       }
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; try { checkTitleUnlocks(); } catch(e){} }
@@ -13172,8 +13192,8 @@ function checkLevelUp(){
     _grantLvBonusGold(p, p.level);
     if (p.level === 26 && !p.lv26BonusClaimed){
       p.lv26BonusClaimed = true;
-      p.gold += 20000;
-      chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +20,000G`);
+      p.gold += 30000;
+      chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
     }
   }
   if (leveled){
