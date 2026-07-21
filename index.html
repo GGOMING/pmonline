@@ -5872,7 +5872,7 @@ function generateAbyssMob(playerLv){
   const aBonus = tpl.elite ? 12 + Math.floor(Math.random() * 6) : 8  + Math.floor(Math.random() * 6);
   const atk = [ tpl.baseAtk[0] + wBonus, tpl.baseAtk[1] + wBonus ];
   const def = Math.max(0, Math.round(bCon * 0.5)) + aBonus;
-  const deck = buildMonsterDeck(tpl.race, mLv, 15);
+  const deck = buildMonsterDeck(tpl.race, mLv, 15, { str:bStr, dex:bDex, int:bInt, con:bCon });
   // 몹 XP·골드 (기본값 — abyss 보상 계산 시 x7+250 / +200 규칙 적용)
   const baseXp = Math.floor(mLv * (5 + Math.random() * 3));
   const baseGold = Math.floor(mLv * 3 + Math.random() * mLv);
@@ -6421,7 +6421,7 @@ function generateRaidMob(){
   ];
   const atk = [baseAtk[0] + wBonus, baseAtk[1] + wBonus];
   const def = Math.max(0, Math.round(con * 0.5 * DIFF)) + aBonus;
-  const deck = buildMonsterDeck(tpl.race, mLv, 15);
+  const deck = buildMonsterDeck(tpl.race, mLv, 15, { str, dex, int: intl, con });
   const gold = Math.floor(mLv * (5 + Math.random() * 10));
   const xp   = Math.floor(mLv * (4 + Math.random() * 3));
   return {
@@ -8263,9 +8263,36 @@ function _pickWeighted(pool, raceSet){
   return w[Math.floor(Math.random() * w.length)];
 }
 
-function buildMonsterDeck(race, mLv, deckSize){
+// 몬스터 주스탯 판정 — str/dex/int 중 최고. con 은 방어 스탯이라 제외.
+function _monsterPrimaryStat(stats){
+  if (!stats) return null;
+  const s = stats.str|0, d = stats.dex|0, i = stats.int|0;
+  const max = Math.max(s, d, i);
+  if (max <= 0) return null;
+  if (max === i) return 'int';
+  if (max === d) return 'dex';
+  return 'str';
+}
+// 카드가 특정 스탯 기반 공격/도트 카드인지 판정
+function _cardUsesStat(card, stat){
+  const check = fx => {
+    if (!fx) return false;
+    if (Array.isArray(fx.stats) && fx.stats.includes(stat)){
+      if (fx.type === 'dmgStat' || fx.type === 'dotStat' || fx.type === 'lifestealStat'
+          || fx.type === 'healStat' || fx.type === 'hotStat') return true;
+    }
+    if (fx.type === 'multi' && Array.isArray(fx.effects)) return fx.effects.some(check);
+    return false;
+  };
+  return check(card && card.fx);
+}
+function buildMonsterDeck(race, mLv, deckSize, monStats){
   const isEasy = mLv <= 10;
   const synergy = RACE_SYNERGY[race] || new Set();
+  const primaryStat = _monsterPrimaryStat(monStats);
+  // 레벨에 따른 "덱 지능" 배수 — 주스탯 매칭 카드에 더 높은 가중치
+  //   Lv≤10 = 1x (튜토리얼), Lv11~24 = 2x, Lv25~44 = 3x, Lv45+ = 4x
+  const smartMul = isEasy ? 1 : (mLv >= 45 ? 4 : mLv >= 25 ? 3 : 2);
   // 회복 류 카드 식별
   const isHealCard = c => {
     const fx = c.fx || {};
@@ -8282,7 +8309,23 @@ function buildMonsterDeck(race, mLv, deckSize){
   // 등급 비중 — easy 구간(Lv≤10)은 일반 카드만, 기본공격 비중↑
   const rareWeight   = isEasy ? 0 : Math.min(0.55, mLv * 0.012);                   // Lv11=13%, Lv42≈50%
   const uniqueWeight = isEasy ? 0 : (mLv >= 30 ? Math.min(0.05, (mLv - 29) * 0.002) : 0);
-  const basicChance  = isEasy ? 0.55 : Math.max(0.10, 0.30 - mLv * 0.004);         // Easy=55%, 그 외 Lv11=26%
+  // 기본공격 비중 — 레벨이 오를수록 감소 (더 똑똑해짐). Lv45+ 최소 5%.
+  const basicChance  = isEasy ? 0.55 : Math.max(0.05, 0.30 - mLv * 0.005);
+
+  // 중복 방지 — 같은 카드 id 는 덱에 1번만
+  const picked = new Set();
+  const _pickUnique = (pool) => {
+    const filtered = pool.filter(c => !picked.has(c.id));
+    if (!filtered.length) return null;
+    const w = [];
+    for (const c of filtered){
+      let count = 1;
+      if (synergy.has(c.id)) count *= 2;                              // 종족 시너지
+      if (primaryStat && _cardUsesStat(c, primaryStat)) count *= smartMul;  // 주스탯 매칭
+      for (let k = 0; k < count; k++) w.push(c);
+    }
+    return w[Math.floor(Math.random() * w.length)];
+  };
 
   const deck = [];
   for (let i = 0; i < deckSize; i++){
@@ -8292,8 +8335,11 @@ function buildMonsterDeck(race, mLv, deckSize){
     if (roll < uniqueWeight) pool = uniquePool;
     else if (roll < uniqueWeight + rareWeight) pool = rarePool;
     else pool = normalPool;
-    const card = _pickWeighted(pool, synergy) || _pickWeighted(normalPool, synergy);
-    deck.push(card || BASIC_ATTACK);
+    let card = _pickUnique(pool);
+    if (!card) card = _pickUnique(normalPool);
+    if (!card) card = BASIC_ATTACK;
+    if (card !== BASIC_ATTACK) picked.add(card.id);
+    deck.push(card);
   }
 
   // easy 구간: 방어 강화 카드 1장 보장 (기본공격 한 슬롯과 교체) — 회복은 풀에서 제외돼 안 나옴
@@ -8302,14 +8348,15 @@ function buildMonsterDeck(race, mLv, deckSize){
       const fx = c.fx || {};
       return fx.type === 'buff' && (((fx.def|0) > 0) || ((fx.con|0) > 0));
     });
-    if (friendlyPool.length){
+    if (friendlyPool.length && !deck.some(c => friendlyPool.includes(c))){
       const card = friendlyPool[Math.floor(Math.random() * friendlyPool.length)];
       const idx = deck.findIndex(c => c.id === 'basic_atk');
-      if (idx >= 0) deck[idx] = card;
+      if (idx >= 0){ deck[idx] = card; picked.add(card.id); }
     }
   }
 
-  // ── 소환 카드는 덱에 1장만 (한 마리만 소환) — 중복 시 뒷쪽부터 BASIC으로 교체 ──
+  // ── 소환 카드는 덱 전체에 최대 1장 (원본 디자인: 한 몬스터 = 한 소환) ──
+  // 서로 다른 소환 카드가 여러 장 뽑히면 뒤쪽부터 BASIC 으로 교체
   const _isSummonCard = c => {
     const fx = c && c.fx;
     if (!fx) return false;
@@ -8335,8 +8382,8 @@ function buildMonsterDeck(race, mLv, deckSize){
     if (!hasStealth && stealthCard){
       // 은신 삽입: 기본공격 자리 or 첫 requireStealth 위치 앞에
       const slotIdx = deck.findIndex(c => c.id === 'basic_atk');
-      if (slotIdx >= 0) deck[slotIdx] = stealthCard;
-      else deck[0] = stealthCard;
+      if (slotIdx >= 0){ deck[slotIdx] = stealthCard; picked.add('r21'); }
+      else { deck[0] = stealthCard; picked.add('r21'); }
     } else if (!stealthCard){
       // r21 없으면 requireStealth 카드는 죽은 카드 → BASIC으로 교체
       for (let i = 0; i < deck.length; i++){
@@ -8345,18 +8392,21 @@ function buildMonsterDeck(race, mLv, deckSize){
     }
   }
 
-  // ── 선행 카드 의존성 보장 (n41 소환의식) ──
-  // 1) 의존 카드의 requires가 덱에 없으면 BASIC_ATTACK 한 자리를 requires 카드로 대체
-  const needsSet = new Set();
-  for (const c of deck) if (_cardRequires(c)) needsSet.add(_cardRequires(c));
-  for (const reqId of needsSet){
-    if (deck.some(c => c.id === reqId)) continue;
-    const reqCard = CARDS.find(c => c.id === reqId);
-    if (!reqCard) continue;
-    const slotIdx = deck.findIndex(c => c.id === 'basic_atk');
-    if (slotIdx >= 0) deck[slotIdx] = reqCard;
-    else deck[0] = reqCard;
-  }
+  // ── 선행 카드 의존성 보장 (transitive) — n42→n15→n41 같은 체인 처리 ──
+  const _addMissingReqs = () => {
+    let changed = false;
+    const needsSet = new Set();
+    for (const c of deck) if (_cardRequires(c)) needsSet.add(_cardRequires(c));
+    for (const reqId of needsSet){
+      if (deck.some(c => c.id === reqId)) continue;
+      const reqCard = CARDS.find(c => c.id === reqId);
+      if (!reqCard) continue;
+      const slotIdx = deck.findIndex(c => c.id === 'basic_atk');
+      if (slotIdx >= 0){ deck[slotIdx] = reqCard; picked.add(reqCard.id); changed = true; }
+    }
+    return changed;
+  };
+  for (let iter = 0; iter < 4 && _addMissingReqs(); iter++);
 
   // ── 카드 배치 우선순위 정렬 (안정 정렬) ──
   // 0: r21(은신)·n41(소환의식) — 선행 필수 카드는 최우선
@@ -8484,8 +8534,8 @@ function makeMacroGuardMonster(){
 const MACRO_GUARD_DEFAULT_RATE = 0.005;   // 0.5%
 
 // ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
-// 봇/매크로 억제 — 한 시간 내 500회 초과 시 모든 전투 진입 차단.
-const HOURLY_ACTIVITY_LIMIT = 500;
+// 봇/매크로 억제 — 한 시간 내 1000회 초과 시 모든 전투 진입 차단.
+const HOURLY_ACTIVITY_LIMIT = 1000;
 function _currentHourKey(){
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}`;
@@ -8513,9 +8563,10 @@ function _hourlyResetRemainMs(){
 }
 function _hourlyBlockToast(){
   const remainMs = _hourlyResetRemainMs();
-  const min = Math.floor(remainMs / 60000);
-  const sec = Math.floor((remainMs % 60000) / 1000);
-  try { toast(`⛔ 시간당 활동 한도(${HOURLY_ACTIVITY_LIMIT}회) 소진 — 다음 정각까지 ${min}분 ${sec}초 남음`); } catch(e){}
+  const totalSec = Math.max(0, Math.ceil(remainMs / 1000));
+  const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+  const ss = String(totalSec % 60).padStart(2, '0');
+  try { toast(`⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}`); } catch(e){}
 }
 // 메인 메뉴 버튼 (수행·공격대·랭킹전) 시각적 비활성화 토글 + 차단 상태 반영
 function refreshHourlyLimitUI(){
@@ -8536,10 +8587,18 @@ function refreshHourlyLimitUI(){
       badge.textContent = `🚫 진입 차단 (남은 ${_banRemainStr(p)})`;
       badge.style.color = '#c00';
       badge.style.fontWeight = '900';
+    } else if (!_canDoHourlyActivity(p)){
+      const remainMs = _hourlyResetRemainMs();
+      const totalSec = Math.max(0, Math.ceil(remainMs / 1000));
+      const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
+      const ss = String(totalSec % 60).padStart(2, '0');
+      badge.textContent = `⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}`;
+      badge.style.color = '#c00';
+      badge.style.fontWeight = '900';
     } else {
       badge.textContent = `⏱ 이번 시간 ${cnt}/${HOURLY_ACTIVITY_LIMIT}`;
-      badge.style.color = limited ? '#c00' : '#666';
-      badge.style.fontWeight = limited ? '900' : '400';
+      badge.style.color = '#666';
+      badge.style.fontWeight = '400';
     }
   }
 }
@@ -8732,9 +8791,9 @@ function generateMonster(playerLv, tier){
   const atk = [baseAtk[0] + wBonus, baseAtk[1] + wBonus];
   const def = Math.max(0, Math.round(con * 0.5 * DEF_MUL)) + aBonus;
 
-  // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용
+  // 덱 구성 — 종족별 시너지 + 선행 카드 의존성 보장 + 너무 강한 카드 보스 전용 + 주스탯 기반 공격 카드 우선
   const deckSize = tier === 1 ? 10 : 15;
-  const deck = buildMonsterDeck(tpl.race, mLv, deckSize);
+  const deck = buildMonsterDeck(tpl.race, mLv, deckSize, { str, dex, int, con });
 
   // 보상 — gold는 사용자 표 lookup ±10% 변동, xp는 평균 mLv × 5.5 (옛 공식)
   const gold = _goldDropFor(playerLv);
@@ -8984,7 +9043,11 @@ function huntNextTurn(){
   }
   // 시간당 활동 한도 초과 상태에서 카드 발동 차단 (safety net — 진입은 이미 openHunt에서 막힘)
   if (!_canDoHourlyActivity(GAME.player)){
-    huntLog(`⛔ 시간당 활동 한도(${HOURLY_ACTIVITY_LIMIT}회) 도달 — 카드 발동 차단. 정각까지 대기 후 재도전하세요.`, 'sys');
+    const _rm = _hourlyResetRemainMs();
+    const _s  = Math.max(0, Math.ceil(_rm / 1000));
+    const _mm = String(Math.floor(_s / 60)).padStart(2, '0');
+    const _ss = String(_s % 60).padStart(2, '0');
+    huntLog(`⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${_mm}:${_ss}`, 'sys');
     _hourlyBlockToast();
     refreshHourlyLimitUI();
     return huntEnd('time');
