@@ -7,6 +7,8 @@
 <style>
   /* 모바일 더블탭 확대 방지 (핀치 확대는 허용) — touch-action:manipulation 이 double-tap zoom 만 차단 */
   html, body { touch-action: manipulation; }
+  /* 모바일 롱프레스 컨텍스트 메뉴 (이미지 저장/링크 복사 등) 억제 — 운영자 계정은 JS 에서 오버라이드 해제 */
+  body.devtools-block, body.devtools-block * { -webkit-touch-callout: none; }
   * { box-sizing:border-box; }
   body { background:#2a1f14 linear-gradient(180deg,#3a2a1a 0%,#1a1208 100%); background-attachment:fixed; min-height:100vh; color:#000; font-family:"굴림",Gulim,sans-serif; font-size:12px; margin:0; padding:14px; }
 
@@ -16318,6 +16320,55 @@ setInterval(()=>{
 </div>
 
 <script>
+// ─── 개발자 도구 접근 억제 (F12·우클릭·소스보기·모바일 롱프레스) ───
+// ⚠ 완전한 차단은 불가 (브라우저 메뉴에서 여전히 개발자도구 열 수 있음). 마찰용 억제.
+// 운영자 계정 (p.isOperator) 은 예외 — 정상 동작 유지.
+function _isDevBlockActive(){
+  const p = (typeof GAME !== 'undefined') && GAME && GAME.player;
+  return !(p && p.isOperator);
+}
+// body 클래스 동기화 — CSS 로 모바일 롱프레스 콜아웃 억제
+function _refreshDevBlockClass(){
+  try { document.body.classList.toggle('devtools-block', _isDevBlockActive()); } catch(e){}
+}
+// 우클릭 (컨텍스트 메뉴) 차단
+document.addEventListener('contextmenu', (e) => {
+  if (_isDevBlockActive()){
+    e.preventDefault();
+    return false;
+  }
+}, true);
+// 개발자 도구 단축키 차단 — F12, Ctrl+Shift+I/J/C, Ctrl+U, Mac Cmd+Opt+I/J/C/U, Ctrl+S (페이지 저장)
+document.addEventListener('keydown', (e) => {
+  if (!_isDevBlockActive()) return;
+  const k = (e.key || '').toUpperCase();
+  // F12
+  if (k === 'F12' || e.code === 'F12'){ e.preventDefault(); return false; }
+  // Ctrl/Cmd + Shift + I/J/C
+  if ((e.ctrlKey || e.metaKey) && e.shiftKey && (k === 'I' || k === 'J' || k === 'C')){
+    e.preventDefault(); return false;
+  }
+  // Ctrl/Cmd + U (소스 보기)
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && k === 'U'){
+    e.preventDefault(); return false;
+  }
+  // Mac Safari: Cmd + Opt + I/J/C/U
+  if (e.metaKey && e.altKey && (k === 'I' || k === 'J' || k === 'C' || k === 'U')){
+    e.preventDefault(); return false;
+  }
+  // Ctrl/Cmd + S (페이지 저장)
+  if ((e.ctrlKey || e.metaKey) && !e.shiftKey && !e.altKey && k === 'S'){
+    e.preventDefault(); return false;
+  }
+}, true);
+// 로그인/로그아웃·운영자 플래그 변경 시마다 body 클래스 재계산
+(function _installDevBlockClassSync(){
+  // 초기 세팅
+  _refreshDevBlockClass();
+  // 주기적으로 재검사 (p.isOperator 가 admin 저장 등으로 변경될 수 있음)
+  setInterval(_refreshDevBlockClass, 3000);
+})();
+
 // ─── 운영자 플로팅 툴바 로직 ───
 function updateOperatorFloatVisibility(){
   const btn = document.getElementById('opFloatBtn');
@@ -16329,6 +16380,8 @@ function updateOperatorFloatVisibility(){
     const panel = document.getElementById('opPanel');
     if (panel) panel.style.display = 'none';
   }
+  // 운영자 상태 변경 시 개발자 도구 차단 상태도 즉시 재평가
+  try { _refreshDevBlockClass(); } catch(e){}
 }
 
 function _opRefreshInfo(){
