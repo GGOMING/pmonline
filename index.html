@@ -6771,13 +6771,16 @@ function raidNextTurn(){
 function checkRaidAlive(){
   const c = GAME.raidCombat;
   if (!c) return false;
-  if (GAME.player.hp <= 0){
+  // 부활의 증표 활성 시 hp<=1 도 트리거
+  const myThresh  = (c.myRebirth  && c.myRebirth.turns  > 0) ? 1 : 0;
+  const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
+  if (GAME.player.hp <= myThresh){
     if (_tryRebirth(c, 'my', GAME.player, raidLog)) { /* 부활 처리됨, death 스킵 */ }
-    else { raidEnd('lose'); return false; }
+    else if (GAME.player.hp <= 0){ raidEnd('lose'); return false; }
   }
-  if (c.monster.hp <= 0){
+  if (c.monster.hp <= monThresh){
     if (_tryRebirth(c, 'mon', c.monster, raidLog)) { /* 부활 처리됨 */ }
-    else {
+    else if (c.monster.hp <= 0){
       // 보스 모드: 최종 타격 처리
       if (c.mode === 'boss'){
         raidEnd('boss_kill');
@@ -7929,11 +7932,18 @@ function rankNextTurn(){
 function checkRankAlive(){
   const c = GAME.rankCombat;
   if (!c) return false;
-  if (GAME.player.hp <= 0){
-    if (!_tryRebirth(c, 'my', GAME.player, rankLog)){ rankEnd('lose'); return false; }
+  // 부활의 증표 활성 시 hp<=1 도 트리거 (사망 전 완전 회복)
+  const myThresh  = (c.myRebirth  && c.myRebirth.turns  > 0) ? 1 : 0;
+  const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
+  if (GAME.player.hp <= myThresh){
+    if (!_tryRebirth(c, 'my', GAME.player, rankLog)){
+      if (GAME.player.hp <= 0){ rankEnd('lose'); return false; }
+    }
   }
-  if (c.opponent.hp <= 0){
-    if (!_tryRebirth(c, 'mon', c.opponent, rankLog)){ rankEnd('win'); return false; }
+  if (c.opponent.hp <= monThresh){
+    if (!_tryRebirth(c, 'mon', c.opponent, rankLog)){
+      if (c.opponent.hp <= 0){ rankEnd('win'); return false; }
+    }
   }
   return true;
 }
@@ -9294,11 +9304,18 @@ function checkAlive(){
   if (!c) return false;
   // 무적 몬스터(황금상자 등)는 hp 1 강제 유지 — 어떤 데미지 경로로도 죽지 않음
   if (c.monster && c.monster.invincible && c.monster.hp < 1) c.monster.hp = 1;
-  if (GAME.player.hp <= 0){
-    if (!_tryRebirth(c, 'my', GAME.player, huntLog)){ huntEnd('lose'); return false; }
+  // 부활의 증표 활성 시 hp가 1 이하로 떨어지면 즉시 발동 (사망 전 완전 회복)
+  const myThresh  = (c.myRebirth  && c.myRebirth.turns  > 0) ? 1 : 0;
+  const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
+  if (GAME.player.hp <= myThresh){
+    if (!_tryRebirth(c, 'my', GAME.player, huntLog)){
+      if (GAME.player.hp <= 0){ huntEnd('lose'); return false; }
+    }
   }
-  if (c.monster.hp <= 0){
-    if (!_tryRebirth(c, 'mon', c.monster, huntLog)){ huntEnd('win'); return false; }
+  if (c.monster.hp <= monThresh){
+    if (!_tryRebirth(c, 'mon', c.monster, huntLog)){
+      if (c.monster.hp <= 0){ huntEnd('win'); return false; }
+    }
   }
   return true;
 }
@@ -9335,13 +9352,16 @@ function _tryRebirth(c, side, obj, log){
   if (!c || !obj) return false;
   const rebirth = c[side + 'Rebirth'];
   if (!rebirth || rebirth.turns <= 0) return false;
-  if (obj.hp > 0) return false;
+  // hp가 1보다 크면 아직 부활 조건 미달 (hp가 1 이하로 떨어졌을 때만 발동)
+  if (obj.hp > 1) return false;
   // 검거(arrest) 등 절대 회피 불가 공격으로 사망한 경우 부활 불가
   if (obj._unstoppableKill){
     obj._unstoppableKill = false;
     if (log) log(`  ✱ ${obj.name || ''} 검거 판결 확정 — 부활의 증표 무효화`, 'info');
     return false;
   }
+  // hp가 음수여도 최소 1 로 클램프 (사망 판정 우회 · 곧이어 hpMax 로 복원되어 시각적 안전장치)
+  if (obj.hp < 1) obj.hp = 1;
   // 완전 회복 + 완전 초기화 (전투 개시 상태)
   // 1) 스탯 유래 hpMax/mpMax 원복 (라이프업 등 flat 버프 제거 후 재계산)
   obj._hpMaxBonus = 0;
@@ -12157,11 +12177,18 @@ function trainNextTurn(){
 function checkTrainAlive(){
   const c = GAME.trainCombat;
   if (!c) return false;
-  if (GAME.player.hp <= 0){
-    if (!_tryRebirth(c, 'my', GAME.player, trainLog)){ onTrainEnd('lose'); return false; }
+  // 부활의 증표 활성 시 hp<=1 도 트리거 (사망 전 완전 회복)
+  const myThresh  = (c.myRebirth  && c.myRebirth.turns  > 0) ? 1 : 0;
+  const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
+  if (GAME.player.hp <= myThresh){
+    if (!_tryRebirth(c, 'my', GAME.player, trainLog)){
+      if (GAME.player.hp <= 0){ onTrainEnd('lose'); return false; }
+    }
   }
-  if (c.opp.hp <= 0){
-    if (!_tryRebirth(c, 'mon', c.opp, trainLog)){ onTrainEnd('win'); return false; }
+  if (c.opp.hp <= monThresh){
+    if (!_tryRebirth(c, 'mon', c.opp, trainLog)){
+      if (c.opp.hp <= 0){ onTrainEnd('win'); return false; }
+    }
   }
   return true;
 }
