@@ -9652,6 +9652,8 @@ function _hasDirectDamage(card){
   function check(fx){
     if (!fx) return false;
     if (fx.type === 'multi' && Array.isArray(fx.effects)) return fx.effects.some(check);
+    // dmgHits / dmg 가 min·max 모두 0 이면 실제 데미지 없음 (힐링웨이브 등 순수 회복형) → 평타 자동 추가 허용
+    if ((fx.type === 'dmgHits' || fx.type === 'dmg') && (fx.min|0) === 0 && (fx.max|0) === 0) return false;
     if (_DIRECT_DAMAGE_FX_TYPES.has(fx.type)) return true;
     if (fx.type === 'sacrifice' && fx.dmgToEnemy) return true;
     return false;
