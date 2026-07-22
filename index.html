@@ -9213,8 +9213,8 @@ function _btlRecordTurn(c, opponent, playerCard, monsterCard){
   const curMonDmg = c.statsMonDmg || 0;
   bl.turns.push({
     turn: c.turn,
-    myCard: (playerCard && playerCard.id) || '',
-    monCard: (monsterCard && monsterCard.id) || '',
+    myCard: (playerCard && playerCard.name) || '',
+    monCard: (monsterCard && monsterCard.name) || '',
     myDmgTurn: curMyDmg - bl._prevMyDmg,
     monDmgTurn: curMonDmg - bl._prevMonDmg,
     myHpAfter: p ? p.hp : 0, myMpAfter: p ? p.mp : 0,
