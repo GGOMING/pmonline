@@ -1,0 +1,7 @@
+client ID 878232692718-2knhvfbnl3fpspq3cvqa4smii3jh7sk1.apps.googleusercontent.com
+PW
+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
+
+refresh_token: 1//04myoeUhn0WvYCgYIARAAGAQSNwF-L9IrvcPRUaSkbRFWlLC8GPKdC12BiNFAavberLWgXBKafY9nji8M5XNOgJifTgaXU5XnTrw
+
+1FSXbZ_z8miZGxrUs-JKeFf8zvm13XQt7
