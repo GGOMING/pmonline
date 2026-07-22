@@ -2265,30 +2265,30 @@
         <div style="text-align:center; padding:10px 0 12px;">
           <button onclick="openSellModal()" style="background:#2e53b2;color:#fff;border:0;padding:10px 28px;font-size:14px;font-weight:bold;cursor:pointer;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">🃏 개별 판매 (보유 카드에서 선택)</button>
         </div>
-        <table class="shop-rates" style="width:96%;">
+        <table class="shop-rates" style="width:96%;text-align:center;">
           <tr>
-            <td class="lbl">일반 (1G/장)</td>
-            <td class="val"><span id="sell_normal_count">0</span>장
+            <td class="lbl" style="text-align:center;line-height:1.35;">일반<br><span style="font-size:10px;color:#666;">(10G/장)</span></td>
+            <td class="val" style="text-align:center;line-height:1.35;"><span id="sell_normal_count">0</span>장<br>
               <button class="mini-btn" onclick="sellAllByGrade('normal')" style="background:#666;">전부 판매</button>
             </td>
-            <td class="lbl">레어 (10G/장)</td>
-            <td class="val"><span id="sell_rare_count">0</span>장
+            <td class="lbl" style="text-align:center;line-height:1.35;">레어<br><span style="font-size:10px;color:#666;">(100G/장)</span></td>
+            <td class="val" style="text-align:center;line-height:1.35;"><span id="sell_rare_count">0</span>장<br>
               <button class="mini-btn" onclick="sellAllByGrade('rare')" style="background:#3399ff;">전부 판매</button>
             </td>
           </tr>
           <tr>
-            <td class="lbl">유니크 (100G/장)</td>
-            <td class="val"><span id="sell_unique_count">0</span>장
+            <td class="lbl" style="text-align:center;line-height:1.35;">유니크<br><span style="font-size:10px;color:#666;">(1,000G/장)</span></td>
+            <td class="val" style="text-align:center;line-height:1.35;"><span id="sell_unique_count">0</span>장<br>
               <button class="mini-btn" onclick="sellAllByGrade('unique')" style="background:#a335ee;">전부 판매</button>
             </td>
-            <td class="lbl">영웅 (10,000G/장)</td>
-            <td class="val"><span id="sell_hero_count">0</span>장
+            <td class="lbl" style="text-align:center;line-height:1.35;">영웅<br><span style="font-size:10px;color:#666;">(10,000G/장)</span></td>
+            <td class="val" style="text-align:center;line-height:1.35;"><span id="sell_hero_count">0</span>장<br>
               <button class="mini-btn" onclick="sellAllByGrade('hero')" style="background:#dc143c;color:#fff;">전부 판매</button>
             </td>
           </tr>
           <tr>
-            <td class="lbl">전설 (100,000G/장)</td>
-            <td class="val" colspan="3"><span id="sell_legend_count">0</span>장
+            <td class="lbl" style="text-align:center;line-height:1.35;">전설<br><span style="font-size:10px;color:#666;">(100,000G/장)</span></td>
+            <td class="val" colspan="3" style="text-align:center;line-height:1.35;"><span id="sell_legend_count">0</span>장<br>
               <button class="mini-btn" onclick="sellAllByGrade('legend')" style="background:linear-gradient(180deg,#ffd700,#c98d1a);color:#3a1a00;">전부 판매</button>
             </td>
           </tr>
@@ -4427,7 +4427,7 @@ function doGachaShop(shopId, n){
 }
 
 // 카드 판매 가격 (관리자 패널에서 편집 가능)
-const CARD_SELL_PRICE = { normal:1, rare:10, unique:100, hero:10000, legend:100000 };
+const CARD_SELL_PRICE = { normal:10, rare:100, unique:1000, hero:10000, legend:100000 };
 
 // 가챠 풀에서 카드 1장 픽 — 등급별 가중 규칙 반영
 // - 최초 유니크 획득: 레인오브파이어(u03) 1.4x, 테르시아의 빛(u09) 1.4x 가중
@@ -6949,6 +6949,7 @@ function startRaidMobBattle(){
     playerHpBefore: GAME.player.hp,
     finished: false,
   };
+  try { _btlSnapshotStart(GAME.raidCombat, 'raid_mob_' + raidKey, monster); } catch(e){}
   calcDerived(GAME.player);
   $('raid-lobby').hidden = true;
   $('raid-battle').hidden = false;
@@ -7034,6 +7035,7 @@ async function startRaidBossBattle(){
     playerHpBefore: GAME.player.hp,
     finished: false,
   };
+  try { _btlSnapshotStart(GAME.raidCombat, 'raid_boss_' + raidKey, boss); } catch(e){}
   calcDerived(GAME.player);
   $('raid-lobby').hidden = true;
   $('raid-battle').hidden = false;
@@ -7146,6 +7148,7 @@ function raidNextTurn(){
   const playerFirst = pDex >= mDex;
   raidLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'보스 선공'}) ━━━`, 'sys');
 
+  c._currentTurnCards = { playerCard, monsterCard: monCard };
   if (playerFirst){
     raidCast('player', playerCard);
     if (!checkRaidAlive()) return;
@@ -7158,6 +7161,7 @@ function raidNextTurn(){
   if (!checkRaidAlive()) return;
   raidProcessTicks();
   if (!checkRaidAlive()) return;
+  try { _btlRecordTurn(c, c.monster, playerCard, monCard); } catch(e){}
   renderSheet();
   renderRaidBattle();
   _autoFocusBtn('raidNextBtn');
@@ -7598,6 +7602,12 @@ async function raidEnd(result){
   $('raid-battle').hidden = true;
   $('raid-result').hidden = false;
   _autoFocusBtn('raidAgainBtn');
+  // 전투 로그 CSV 업로드 (fire-and-forget)
+  try {
+    const tc = c._currentTurnCards || {};
+    _btlRecordTurn(c, m, tc.playerCard, tc.monsterCard);
+    _btlUpload(c, outcome, {});
+  } catch(e){ console.warn('[btl upload raid]', e); }
 }
 
 function goBackToRaidLobby(){
@@ -8184,6 +8194,7 @@ function startRankBattle(opponent, targetRank, mode){
     playerMpBefore: GAME.player.mp,
     finished: false,
   };
+  try { _btlSnapshotStart(GAME.rankCombat, 'rank_' + mode, GAME.rankCombat.opponent); } catch(e){}
   calcDerived(GAME.player);
 
   $('rank-list').hidden = true;
@@ -8306,6 +8317,7 @@ function rankNextTurn(){
   const playerFirst = pDex >= mDex;
   rankLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
 
+  c._currentTurnCards = { playerCard, monsterCard: monCard };
   if (playerFirst){
     rankCast('player', playerCard);
     if (!checkRankAlive()) return;
@@ -8318,6 +8330,7 @@ function rankNextTurn(){
   if (!checkRankAlive()) return;
   rankProcessTicks();
   if (!checkRankAlive()) return;
+  try { _btlRecordTurn(c, c.opponent, playerCard, monCard); } catch(e){}
   renderSheet();
   renderRankBattle();
   if (c.turn >= c.maxTurns){
@@ -8500,6 +8513,12 @@ async function rankEnd(result){
     <p>상대가 입힌 데미지: <b>${c.statsMonDmg}</b></p>`;
   $('rank-battle').hidden = true;
   $('rank-result').hidden = false;
+  // 전투 로그 CSV 업로드 (fire-and-forget)
+  try {
+    const tc = c._currentTurnCards || {};
+    _btlRecordTurn(c, c.opponent, tc.playerCard, tc.monsterCard);
+    _btlUpload(c, outcome, {});
+  } catch(e){ console.warn('[btl upload rank]', e); }
 }
 
 // 클라이언트 직접 랭킹 등록 폴백 — RPC 실패 or 미배포 상황 대응
@@ -9122,6 +9141,161 @@ function _ggomingLoseReward(){
   return 5000;
 }
 
+// ─── 전투 로그 CSV 캡처 & Google Drive 업로드 ───
+// 전투 시작 시 스냅샷 · 매 턴 후 기록 · 종료 시 CSV 조립 후 /api/battle-log 로 fire-and-forget POST
+// (렉 방지: await 없음, 실패해도 게임 흐름 방해 안 함)
+const BATTLE_LOG_ENABLED = true;
+const BATTLE_LOG_ENDPOINT = '/api/battle-log';
+function _btlIsoNow(){
+  const d = new Date();
+  const tzo = -d.getTimezoneOffset();
+  const sign = tzo >= 0 ? '+' : '-';
+  const pad = (n) => String(Math.floor(Math.abs(n))).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}${sign}${pad(tzo/60)}:${pad(tzo%60)}`;
+}
+function _btlDayKey(){
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+}
+function _btlNewBattleId(userName){
+  const d = new Date();
+  const pad = (n) => String(n).padStart(2, '0');
+  const ts = `${String(d.getFullYear()).slice(2)}${pad(d.getMonth()+1)}${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+  const rand = Math.random().toString(36).slice(2, 6);
+  const u = String(userName || 'anon').replace(/[\/\\?%*:|"<>]/g, '_').slice(0, 16);
+  return `b_${ts}_${u}_${rand}`;
+}
+function _btlDeckIds(deck){
+  if (!Array.isArray(deck)) return '';
+  return deck.map(c => (c && c.id) || 'basic_atk').join(';');
+}
+function _btlSnapshotStart(c, type, opponent){
+  if (!BATTLE_LOG_ENABLED || !c || !opponent) return;
+  const p = GAME.player;
+  if (!p) return;
+  c._battleLog = {
+    battleId: _btlNewBattleId(p.name),
+    userName: p.name || 'anon',
+    dayKey: _btlDayKey(),
+    type,
+    startedAt: _btlIsoNow(),
+    my: {
+      lv: p.level, str: p.str, dex: p.dex, int: p.int, con: p.con,
+      hpStart: p.hp, hpMax: p.hpMax, mpStart: p.mp, mpMax: p.mpMax,
+      atkLow: (p.atk && p.atk[0]) || 0, atkHigh: (p.atk && p.atk[1]) || 0, def: p.def || 0,
+      weapon: p.weapon ? p.weapon.name : '', atkBonus: p.weapon ? (p.weapon.atkBonus||0) : 0,
+      armor: p.armor ? p.armor.name : '', defBonus: p.armor ? (p.armor.defBonus||0) : 0,
+      deck: _btlDeckIds(GAME.myDeck),
+    },
+    mon: {
+      id: opponent.id || '', name: opponent.name || '', lv: opponent.level || 0, race: opponent.race || '',
+      str: opponent.str||0, dex: opponent.dex||0, int: opponent.int||0, con: opponent.con||0,
+      hpStart: opponent.hp||0, hpMax: opponent.hpMax||0, mpStart: opponent.mp||0, mpMax: opponent.mpMax||0,
+      atkLow: (opponent.atk && opponent.atk[0]) || 0, atkHigh: (opponent.atk && opponent.atk[1]) || 0, def: opponent.def || 0,
+      weapon: opponent.weapon ? (opponent.weapon.name||'') : '', atkBonus: opponent.weapon ? (opponent.weapon.atkBonus||0) : 0,
+      armor: opponent.armor ? (opponent.armor.name||'') : '', defBonus: opponent.armor ? (opponent.armor.defBonus||0) : 0,
+      deck: _btlDeckIds(opponent.deck),
+    },
+    turns: [],
+    _prevMyDmg: 0,
+    _prevMonDmg: 0,
+  };
+}
+function _btlRecordTurn(c, opponent, playerCard, monsterCard){
+  if (!BATTLE_LOG_ENABLED || !c || !c._battleLog) return;
+  const bl = c._battleLog;
+  // 중복 방지 — 같은 턴 번호가 이미 있으면 skip
+  if (bl.turns.length && bl.turns[bl.turns.length-1].turn === c.turn) return;
+  const p = GAME.player;
+  const opp = opponent || {};
+  const curMyDmg = c.statsMyDmg || 0;
+  const curMonDmg = c.statsMonDmg || 0;
+  bl.turns.push({
+    turn: c.turn,
+    myCard: (playerCard && playerCard.id) || '',
+    monCard: (monsterCard && monsterCard.id) || '',
+    myDmgTurn: curMyDmg - bl._prevMyDmg,
+    monDmgTurn: curMonDmg - bl._prevMonDmg,
+    myHpAfter: p ? p.hp : 0, myMpAfter: p ? p.mp : 0,
+    monHpAfter: opp.hp || 0, monMpAfter: opp.mp || 0,
+  });
+  bl._prevMyDmg = curMyDmg;
+  bl._prevMonDmg = curMonDmg;
+}
+function _btlCsvEscape(v){
+  if (v === null || v === undefined) return '';
+  const s = String(v);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')){
+    return '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+function _btlBuildCsv(c, result, extras){
+  const bl = c && c._battleLog;
+  if (!bl) return null;
+  const p = GAME.player;
+  const opp = c.monster || c.opponent || c.opp || {};
+  bl.endedAt = _btlIsoNow();
+  bl.result = result || '';
+  const durSec = Math.max(0, Math.round((new Date(bl.endedAt) - new Date(bl.startedAt)) / 1000));
+  const summaryHeader = 'battle_id,user_id,type,started_at,ended_at,duration_sec,turns_played,result,my_lv,my_str,my_dex,my_int,my_con,my_hp_start,my_hp_end,my_hp_max,my_mp_start,my_mp_end,my_mp_max,my_atk_low,my_atk_high,my_def,my_weapon,my_atk_bonus,my_armor,my_def_bonus,my_deck,mon_id,mon_name,mon_lv,mon_race,mon_str,mon_dex,mon_int,mon_con,mon_hp_start,mon_hp_end,mon_hp_max,mon_atk_low,mon_atk_high,mon_def,mon_weapon,mon_atk_bonus,mon_armor,mon_def_bonus,mon_deck,my_dmg_dealt,mon_dmg_dealt,gold_gained,xp_gained,leveled_up,card_dropped_id,item_destroyed_id';
+  const summaryRow = [
+    bl.battleId, bl.userName, bl.type, bl.startedAt, bl.endedAt, durSec, bl.turns.length, bl.result,
+    bl.my.lv, bl.my.str, bl.my.dex, bl.my.int, bl.my.con,
+    bl.my.hpStart, p ? p.hp : 0, bl.my.hpMax, bl.my.mpStart, p ? p.mp : 0, bl.my.mpMax,
+    bl.my.atkLow, bl.my.atkHigh, bl.my.def,
+    bl.my.weapon, bl.my.atkBonus, bl.my.armor, bl.my.defBonus,
+    bl.my.deck,
+    bl.mon.id, bl.mon.name, bl.mon.lv, bl.mon.race,
+    bl.mon.str, bl.mon.dex, bl.mon.int, bl.mon.con,
+    bl.mon.hpStart, opp.hp || 0, bl.mon.hpMax,
+    bl.mon.atkLow, bl.mon.atkHigh, bl.mon.def,
+    bl.mon.weapon, bl.mon.atkBonus, bl.mon.armor, bl.mon.defBonus,
+    bl.mon.deck,
+    c.statsMyDmg || 0, c.statsMonDmg || 0,
+    (extras && extras.gold) || 0, (extras && extras.xp) || 0,
+    (extras && extras.leveled) ? 'true' : 'false',
+    (extras && extras.cardDroppedId) || '',
+    (extras && extras.itemDestroyedId) || '',
+  ].map(_btlCsvEscape).join(',');
+  const turnHeader = 'turn,my_card,mon_card,my_dmg,mon_dmg,my_hp_after,my_mp_after,mon_hp_after,mon_mp_after';
+  const turnRows = bl.turns.map(t => [
+    t.turn, t.myCard, t.monCard, t.myDmgTurn, t.monDmgTurn,
+    t.myHpAfter, t.myMpAfter, t.monHpAfter, t.monMpAfter,
+  ].map(_btlCsvEscape).join(',')).join('\n');
+  return `# BATTLE SUMMARY\n${summaryHeader}\n${summaryRow}\n\n# TURN DETAIL\n${turnHeader}\n${turnRows}\n`;
+}
+function _btlUpload(c, result, extras){
+  if (!BATTLE_LOG_ENABLED) return;
+  const bl = c && c._battleLog;
+  if (!bl) return;
+  try {
+    const csv = _btlBuildCsv(c, result, extras);
+    if (!csv) return;
+    const payload = {
+      userName: bl.userName,
+      dayKey: bl.dayKey,
+      battleId: bl.battleId,
+      csvContent: csv,
+    };
+    const body = JSON.stringify(payload);
+    // sendBeacon 우선 (탭 닫힘 시에도 전송 보장). 실패 시 fetch fallback.
+    if (navigator.sendBeacon){
+      try {
+        const blob = new Blob([body], { type: 'application/json' });
+        if (navigator.sendBeacon(BATTLE_LOG_ENDPOINT, blob)) return;
+      } catch(e){}
+    }
+    fetch(BATTLE_LOG_ENDPOINT, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body,
+      keepalive: true,
+    }).catch(e => console.warn('[battle-log fetch]', e));
+  } catch(e){ console.warn('[battle-log build]', e); }
+}
+
 // ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
 // 봇/매크로 억제 — 한 시간 내 1000회 초과 시 모든 전투 진입 차단.
 const HOURLY_ACTIVITY_LIMIT = 1000;
@@ -9481,6 +9655,8 @@ function openHunt(tier){
     finished: false,
   };
   calcDerived(p);
+  // 전투 로그 스냅샷 시작
+  try { _btlSnapshotStart(GAME.huntCombat, 'hunt', monster); } catch(e){ console.warn('[btl start]', e); }
   showContent('hunt');
   $('hunt-battle').hidden = false;
   _autoFocusBtn('huntNextBtn');
@@ -9669,6 +9845,8 @@ function huntNextTurn(){
 
   huntLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
 
+  // 이번 턴 카드 저장 — 조기 사망 시에도 로그에 사용
+  c._currentTurnCards = { playerCard, monsterCard };
   // 첫 행동
   if (playerFirst){
     huntCast('player', playerCard);
@@ -9684,6 +9862,9 @@ function huntNextTurn(){
   // 턴 종료 시 도트/회복 처리
   huntProcessTicks();
   if (!checkAlive()) return;
+
+  // 전투 로그 — 정상 턴 종료 시 기록
+  try { _btlRecordTurn(c, c.monster, playerCard, monsterCard); } catch(e){}
 
   renderSheet();
   renderHuntBattle();
@@ -12009,6 +12190,14 @@ function huntEnd(result){
   cloudSaveNow().catch(e => console.warn('[huntEnd cloudSave]', e));
 
   showHuntResult(outcome, {gold, xp, lvUp, lvBonus, lostGold, m, beforeHp:c.playerHpBefore});
+  // 전투 로그 CSV 업로드 (fire-and-forget) — outcome/보상 확정 후
+  try {
+    // 조기 사망으로 마지막 턴이 기록 안 됐으면 강제 기록 (playerCard/monsterCard 는 _currentTurnCards 에 저장돼 있음)
+    const tc = c._currentTurnCards || {};
+    _btlRecordTurn(c, m, tc.playerCard, tc.monsterCard);
+    const destroyedId = (typeof destroyed !== 'undefined' && destroyed) ? (destroyed.card ? destroyed.card.id : (destroyed.item ? destroyed.item.id : '')) : '';
+    _btlUpload(c, outcome, { gold, xp, leveled: lvUp, cardDroppedId:'', itemDestroyedId: destroyedId });
+  } catch(e){ console.warn('[btl upload hunt]', e); }
 }
 
 function showHuntResult(outcome, info){
