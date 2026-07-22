@@ -2248,6 +2248,18 @@
           <div id="gachaResultActions" style="margin-top:10px;text-align:center;"></div>
         </div>
 
+        <!-- 카드 합성 (미장착 재료 30장 + 1,000G → 뽑기 1회, 상위 등급일수록 유니크 확률↑) -->
+        <div class="shop-section-title" style="margin-top:20px;">━ 🔨 카드 합성 ━</div>
+        <div style="text-align:center; padding:8px 12px 12px; font-size:11px; color:#555; line-height:1.6;">
+          미장착 <b>재료 30장</b> + <b style="color:#7E181E;">1,000G</b> → 뽑기 1회<br>
+          <b>Lv 11+</b> · 하루 <b>10회 제한</b> · 상위 등급 재료를 섞을수록 <b style="color:#a335ee;">유니크 확률 UP</b>
+        </div>
+        <div style="text-align:center; padding:0 0 14px;">
+          <button onclick="openSynthesisModal()" style="background:linear-gradient(180deg,#a335ee,#5a1a6b);color:#fff;border:0;padding:10px 28px;font-size:14px;font-weight:bold;cursor:pointer;border-radius:4px;box-shadow:0 2px 6px rgba(0,0,0,0.3);">
+            🔨 카드 합성 열기 <span id="synthesisRemainBadge" style="margin-left:6px;font-size:11px;opacity:0.85;">(오늘 -/10)</span>
+          </button>
+        </div>
+
         <!-- 카드 판매 -->
         <div class="shop-section-title" style="margin-top:20px;">━ 카드 판매 ━</div>
         <div style="text-align:center; padding:10px 0 12px;">
@@ -2483,6 +2495,37 @@
       <button onclick="clearSlot()" class="clear" style="float:right;margin:0;background:#aaa;">슬롯 비우기</button>
     </div>
     <div class="card-grid" id="cardGrid"></div>
+  </div>
+</div>
+
+<!-- 카드 합성 모달 -->
+<div class="modal-bg" id="synthesisBg" onclick="if(event.target.id==='synthesisBg')closeSynthesisModal()">
+  <div class="modal" id="synthesisModal">
+    <div class="modal-head">
+      🔨 카드 합성 — 재료 30장 + 1,000G → 뽑기 1회
+      <span class="modal-close" onclick="closeSynthesisModal()">[ 닫기 ]</span>
+    </div>
+    <div style="padding:8px 12px;background:#f8f0e0;border-bottom:1px solid #c9a26b;font-size:11px;color:#333;line-height:1.55;">
+      <div>
+        조건 검사 — 레벨 <b id="synth_lvOk">-</b> · 오늘 남은 합성 <b id="synth_remain">-</b>/10 · 골드 <b id="synth_gold">-</b>G
+      </div>
+      <div style="margin-top:3px;color:#666;">
+        자동 선택 = 일반→레어→유니크 순으로 30장 채움. 영웅/전설은 직접 체크로 편성.
+      </div>
+    </div>
+    <div style="padding:6px 10px;background:#fff;border-bottom:1px solid #ccc;display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+      <button class="mini-btn" style="background:#5a1a6b;color:#fff;" onclick="autoPickSynthesisCards()">🎯 자동 선택 (30장)</button>
+      <button class="mini-btn" style="background:#888;color:#fff;" onclick="clearSynthesisPicks()">✂ 전체 해제</button>
+      <span id="synth_uniqueRate" style="margin-left:8px;font-size:11px;"></span>
+      <span style="margin-left:auto;font-size:12px;font-weight:bold;">선택: <b id="synth_pickCount" style="color:#7E181E;">0</b> / 30</span>
+    </div>
+    <div id="synthesisGrid" style="padding:8px;max-height:52vh;overflow-y:auto;background:#f4f0e6;"></div>
+    <div style="padding:10px 12px;background:#fff;border-top:1px solid #ccc;text-align:center;">
+      <button id="synth_confirmBtn" onclick="executeSynthesis()" style="background:linear-gradient(180deg,#a335ee,#5a1a6b);color:#fff;border:0;padding:10px 32px;font-size:14px;font-weight:bold;cursor:pointer;border-radius:4px;">
+        🔨 합성 실행 (30장 + 1,000G)
+      </button>
+      <div id="synth_status" style="margin-top:6px;font-size:11px;color:#a00;min-height:14px;"></div>
+    </div>
   </div>
 </div>
 
@@ -3903,6 +3946,357 @@ function refreshShopUI(){
   if ($('sell_unique_count')) $('sell_unique_count').textContent = counts.unique;
   if ($('sell_hero_count'))   $('sell_hero_count').textContent   = counts.hero;
   if ($('sell_legend_count')) $('sell_legend_count').textContent = counts.legend;
+  // 카드 합성 잔여 횟수 뱃지
+  try {
+    const rem = SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p);
+    const badge = $('synthesisRemainBadge');
+    if (badge) badge.textContent = `(오늘 ${rem}/${SYNTHESIS_DAILY_LIMIT})`;
+  } catch(e){}
+}
+
+// ─── 카드 합성 (일반/레어/유니크/영웅/전설 30장 + 1,000G → 유니크 뽑기 1회) ───
+const SYNTHESIS_COST_GOLD  = 1000;
+const SYNTHESIS_COST_CARDS = 30;
+const SYNTHESIS_MIN_LEVEL  = 11;
+const SYNTHESIS_DAILY_LIMIT = 10;
+// 카드 1장당 유니크 등급 확률 부스트 (%p → 소수). 일반 = 기준, 상위 등급일수록 부스트↑
+//   레어  +0.00167%p (30장 = +0.05%p, 유니크 = 기본 0.05% + 0.05% = 0.10%)
+//   유니크 +0.0033%p  (30장 = +0.10%p → 0.15%)
+//   영웅  +0.0066%p  (30장 = +0.20%p → 0.25%)
+//   전설  +0.01%p    (30장 = +0.30%p → 0.35%)
+const SYNTHESIS_UNIQUE_BOOST_PER_CARD = {
+  normal: 0,
+  rare:   0.0000167,
+  unique: 0.0000333,
+  hero:   0.0000667,
+  legend: 0.0001,
+};
+// 유저 선택 인덱스 (GAME.inventory 인덱스 기준) — 모달 세션 동안 유지
+let _synthesisPicks = new Set();
+
+function _currentDayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+}
+function _getSynthesisState(p){
+  const cur = _currentDayKey();
+  if (!p.synthesis || p.synthesis.dayKey !== cur){
+    p.synthesis = { dayKey: cur, count: 0 };
+  }
+  return p.synthesis;
+}
+function _getSynthesisCount(p){ return _getSynthesisState(p).count || 0; }
+function _incSynthesisCount(p){
+  const s = _getSynthesisState(p);
+  s.count = (s.count || 0) + 1;
+}
+
+// 인벤토리에서 미장착 카드 index 목록 반환 (합성 후보용)
+// - gradeSet 지정 시 해당 등급만, 미지정 시 monsterOnly 제외 전 등급
+// - 인벤토리 내 카드 id 별 총 개수 - 덱에 장착된 개수 = 소모 가능 수량
+function _getUnequippedSynthIndices(gradeSet){
+  const invByIdIndices = {};
+  GAME.inventory.forEach((c, idx) => {
+    if (!c) return;
+    if (c.monsterOnly) return;
+    if (gradeSet && !gradeSet.has(c.grade)) return;
+    if (!invByIdIndices[c.id]) invByIdIndices[c.id] = [];
+    invByIdIndices[c.id].push(idx);
+  });
+  const equippedCount = {};
+  GAME.myDeck.forEach(c => {
+    if (!c || c.id === 'basic_atk') return;
+    equippedCount[c.id] = (equippedCount[c.id] || 0) + 1;
+  });
+  const usable = [];
+  for (const id of Object.keys(invByIdIndices)){
+    const indices = invByIdIndices[id];
+    const eq = equippedCount[id] || 0;
+    const canUse = Math.max(0, indices.length - eq);
+    for (let i = indices.length - 1, taken = 0; i >= 0 && taken < canUse; i--, taken++){
+      usable.push(indices[i]);
+    }
+  }
+  return usable.sort((a, b) => a - b);
+}
+
+// 선택된 카드 조합에 따른 동적 등급 확률 테이블 계산
+// 유니크 등급 확률 증가분만큼 일반 확률에서 차감 (레어 확률은 고정)
+function _computeSynthesisGradeTable(picks){
+  const base = { normal: 0.6545, rare: 0.3450, unique: 0.0005 };
+  let boost = 0;
+  for (const idx of picks){
+    const c = GAME.inventory[idx];
+    if (!c) continue;
+    boost += (SYNTHESIS_UNIQUE_BOOST_PER_CARD[c.grade] || 0);
+  }
+  const uniqueRate = Math.min(1, base.unique + boost);
+  const normalRate = Math.max(0, base.normal - boost);
+  return [
+    { grade: 'normal', rate: normalRate },
+    { grade: 'rare',   rate: base.rare },
+    { grade: 'unique', rate: uniqueRate },
+  ];
+}
+// 상위 등급 카드 카운트 (경고 팝업용)
+function _synthesisHighGradeCount(picks){
+  const cnt = { unique: 0, hero: 0, legend: 0 };
+  for (const idx of picks){
+    const c = GAME.inventory[idx];
+    if (!c) continue;
+    if (cnt[c.grade] !== undefined) cnt[c.grade]++;
+  }
+  return cnt;
+}
+
+function openSynthesisModal(){
+  _synthesisPicks = new Set();
+  renderSynthesisModal();
+  $('synthesisBg').classList.add('on');
+}
+function closeSynthesisModal(){
+  $('synthesisBg').classList.remove('on');
+  _synthesisPicks = new Set();
+}
+function renderSynthesisModal(){
+  const p = GAME.player;
+  const lvOk = p.level >= SYNTHESIS_MIN_LEVEL;
+  const remain = SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p);
+  $('synth_lvOk').innerHTML = lvOk ? `<span style="color:#0a7;">${p.level} ✓</span>` : `<span style="color:#c00;">${p.level} (Lv ${SYNTHESIS_MIN_LEVEL}+ 필요)</span>`;
+  $('synth_remain').innerHTML = remain > 0 ? `<span style="color:#0a7;">${remain}</span>` : `<span style="color:#c00;">${remain}</span>`;
+  $('synth_gold').innerHTML   = (p.gold >= SYNTHESIS_COST_GOLD) ? `<span style="color:#0a7;">${(p.gold||0).toLocaleString()}</span>` : `<span style="color:#c00;">${(p.gold||0).toLocaleString()}</span>`;
+  renderSynthesisGrid();
+}
+function renderSynthesisGrid(){
+  // 미장착 카드 전체 (monsterOnly 제외 · 등급 제한 없음)
+  const usableIdx = _getUnequippedSynthIndices();
+  const grid = $('synthesisGrid');
+  if (!usableIdx.length){
+    grid.innerHTML = `<div style="padding:20px;text-align:center;color:#888;">미장착 카드가 없습니다.</div>`;
+    _updateSynthesisFooter();
+    return;
+  }
+  // 등급 순으로 정렬 (일반 → 레어 → 유니크 → 영웅 → 전설)
+  const GRADE_ORDER = { normal:0, rare:1, unique:2, hero:3, legend:4 };
+  const GRADE_KR = { normal:'일반', rare:'레어', unique:'유니크', hero:'영웅', legend:'전설' };
+  const GRADE_COLOR = { normal:'#666', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+  const sortedIdx = usableIdx.slice().sort((a, b) => {
+    const ga = GRADE_ORDER[GAME.inventory[a].grade] ?? 9;
+    const gb = GRADE_ORDER[GAME.inventory[b].grade] ?? 9;
+    if (ga !== gb) return ga - gb;
+    if (GAME.inventory[a].id !== GAME.inventory[b].id) return GAME.inventory[a].id < GAME.inventory[b].id ? -1 : 1;
+    return a - b;
+  });
+  const cells = sortedIdx.map(idx => {
+    const c = GAME.inventory[idx];
+    if (!c) return '';
+    const picked = _synthesisPicks.has(idx);
+    const gColor = GRADE_COLOR[c.grade] || '#666';
+    const gLabel = GRADE_KR[c.grade] || c.grade;
+    const icon = c.iconPath
+      ? `<img src="${c.iconPath}" alt="${c.name}" style="width:38px;height:38px;object-fit:contain;background:#000;border:1px solid #666;display:block;">`
+      : `<div style="width:38px;height:38px;background:#333;color:${gColor};font-size:20px;display:flex;align-items:center;justify-content:center;">🎴</div>`;
+    return `
+      <div class="synth-card" onclick="toggleSynthesisPick(${idx})"
+           style="width:120px;padding:6px;background:${picked ? '#e0d5f5' : '#fff'};border:2px solid ${picked ? '#5a1a6b' : gColor};border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
+        <input type="checkbox" ${picked?'checked':''} onclick="event.stopPropagation();toggleSynthesisPick(${idx})" style="cursor:pointer;">
+        ${icon}
+        <div style="flex:1;font-size:10px;line-height:1.2;overflow:hidden;">
+          <div style="font-weight:bold;color:${c.grade==='normal'?'#000':gColor};">${c.name}</div>
+          <div style="color:${gColor};font-size:9px;font-weight:bold;">${gLabel}</div>
+        </div>
+      </div>`;
+  }).join('');
+  grid.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:6px;">${cells}</div>`;
+  _updateSynthesisFooter();
+}
+function _updateSynthesisFooter(){
+  const p = GAME.player;
+  const count = _synthesisPicks.size;
+  $('synth_pickCount').textContent = count;
+  // "유니크 확률 UP" 뱃지 — 재료에 포함된 최고 등급에 따라 시각적 강조 단계 구분
+  //   0 = 없음, 1 = 레어, 2 = 유니크, 3 = 영웅, 4 = 전설
+  const rateEl = $('synth_uniqueRate');
+  if (rateEl){
+    let tier = 0;
+    for (const idx of _synthesisPicks){
+      const c = GAME.inventory[idx];
+      if (!c) continue;
+      if (c.grade === 'legend')      { tier = 4; break; }
+      else if (c.grade === 'hero')   tier = Math.max(tier, 3);
+      else if (c.grade === 'unique') tier = Math.max(tier, 2);
+      else if (c.grade === 'rare')   tier = Math.max(tier, 1);
+    }
+    const styles = {
+      1: `color:#a335ee;font-size:11px;font-weight:bold;`,
+      2: `background:#a335ee;color:#fff;padding:2px 8px;border-radius:3px;font-size:12px;font-weight:bold;box-shadow:0 1px 3px rgba(163,53,238,.5);`,
+      3: `background:linear-gradient(180deg,#ff4d5e,#a02040);color:#fff;padding:3px 10px;border-radius:4px;font-size:13px;font-weight:900;box-shadow:0 2px 5px rgba(220,20,60,.6);text-shadow:0 0 4px #fff;`,
+      4: `background:linear-gradient(180deg,#ffd700,#c98d1a);color:#3a1a00;padding:4px 12px;border-radius:4px;font-size:14px;font-weight:900;box-shadow:0 2px 8px rgba(255,215,0,.9);text-shadow:0 0 6px #fff,0 0 12px #ffd700;letter-spacing:0.5px;`,
+    };
+    const labels = {
+      1: `✨ 유니크 확률 UP`,
+      2: `✨✨ 유니크 확률 UP ↑`,
+      3: `🔥 유니크 확률 UP ↑↑`,
+      4: `👑✨ 유니크 확률 UP ↑↑↑`,
+    };
+    rateEl.innerHTML = tier > 0
+      ? `<span style="${styles[tier]}">${labels[tier]}</span>`
+      : '';
+  }
+  const btn = $('synth_confirmBtn');
+  const status = $('synth_status');
+  const remain = SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p);
+  let reason = '';
+  if (p.level < SYNTHESIS_MIN_LEVEL) reason = `Lv ${SYNTHESIS_MIN_LEVEL} 이상만 합성 가능합니다.`;
+  else if (remain <= 0) reason = `오늘 합성 횟수를 모두 사용했습니다 (${SYNTHESIS_DAILY_LIMIT}/일).`;
+  else if (p.gold < SYNTHESIS_COST_GOLD) reason = `골드가 부족합니다 (${SYNTHESIS_COST_GOLD.toLocaleString()}G 필요).`;
+  else if (count !== SYNTHESIS_COST_CARDS) reason = `합성 재료 ${SYNTHESIS_COST_CARDS}장을 정확히 선택하세요. (현재 ${count}장)`;
+  if (reason){
+    btn.disabled = true;
+    btn.style.opacity = '0.4';
+    btn.style.cursor = 'not-allowed';
+    status.textContent = reason;
+  } else {
+    btn.disabled = false;
+    btn.style.opacity = '1';
+    btn.style.cursor = 'pointer';
+    status.textContent = '';
+  }
+}
+function toggleSynthesisPick(idx){
+  if (_synthesisPicks.has(idx)) _synthesisPicks.delete(idx);
+  else {
+    if (_synthesisPicks.size >= SYNTHESIS_COST_CARDS){
+      toast(`최대 ${SYNTHESIS_COST_CARDS}장까지만 선택 가능합니다.`);
+      return;
+    }
+    _synthesisPicks.add(idx);
+  }
+  renderSynthesisGrid();
+}
+function clearSynthesisPicks(){
+  _synthesisPicks.clear();
+  renderSynthesisGrid();
+}
+// 자동 선택 — 등급 우선순위 [일반 → 레어 → 유니크] · 각 등급 내부는 중복 많은 순 → 임의
+// 영웅·전설 카드는 자동 선택 대상 아님 (직접 체크로만 편성).
+function autoPickSynthesisCards(){
+  const picks = new Set();
+  const pickFrom = (list) => {
+    if (!list.length || picks.size >= SYNTHESIS_COST_CARDS) return;
+    const idCount = {};
+    list.forEach(i => {
+      const id = GAME.inventory[i].id;
+      idCount[id] = (idCount[id] || 0) + 1;
+    });
+    const sorted = list.slice().sort((a, b) => {
+      const ca = idCount[GAME.inventory[a].id];
+      const cb = idCount[GAME.inventory[b].id];
+      if (ca !== cb) return cb - ca;
+      if (GAME.inventory[a].id !== GAME.inventory[b].id) return GAME.inventory[a].id < GAME.inventory[b].id ? -1 : 1;
+      return a - b;
+    });
+    for (const i of sorted){
+      if (picks.size >= SYNTHESIS_COST_CARDS) break;
+      picks.add(i);
+    }
+  };
+  pickFrom(_getUnequippedSynthIndices(new Set(['normal'])));
+  if (picks.size < SYNTHESIS_COST_CARDS) pickFrom(_getUnequippedSynthIndices(new Set(['rare'])));
+  if (picks.size < SYNTHESIS_COST_CARDS) pickFrom(_getUnequippedSynthIndices(new Set(['unique'])));
+  _synthesisPicks = picks;
+  renderSynthesisGrid();
+  if (picks.size < SYNTHESIS_COST_CARDS){
+    toast(`⚠ 미장착 카드가 부족합니다 (${picks.size}/${SYNTHESIS_COST_CARDS}장). 영웅·전설은 직접 체크로 추가하세요.`);
+  } else {
+    // 상위 등급 자동 포함 시 안내
+    const hi = _synthesisHighGradeCount(picks);
+    if (hi.unique > 0){
+      toast(`✅ 30장 자동 선택 (일반+레어 부족분을 유니크 ${hi.unique}장으로 보충)`);
+    } else {
+      toast(`✅ 30장 자동 선택 완료`);
+    }
+  }
+}
+function executeSynthesis(){
+  const p = GAME.player;
+  if (p.level < SYNTHESIS_MIN_LEVEL){ toast(`Lv ${SYNTHESIS_MIN_LEVEL} 이상만 합성 가능합니다.`); return; }
+  const remain = SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p);
+  if (remain <= 0){ toast(`오늘 합성 횟수를 모두 사용했습니다.`); return; }
+  if (p.gold < SYNTHESIS_COST_GOLD){ toast(`골드가 부족합니다.`); return; }
+  if (_synthesisPicks.size !== SYNTHESIS_COST_CARDS){
+    toast(`합성 재료 ${SYNTHESIS_COST_CARDS}장을 선택하세요.`); return;
+  }
+  // 선택된 카드 검증 — 모두 미장착 · 존재하는 인벤토리 인스턴스인지 재확인
+  const usableSet = new Set(_getUnequippedSynthIndices());
+  for (const idx of _synthesisPicks){
+    if (!usableSet.has(idx)){
+      alert('일부 선택 카드가 유효하지 않습니다. (장착 상태 변경 감지)\n다시 선택해 주세요.');
+      _synthesisPicks.clear();
+      renderSynthesisGrid();
+      return;
+    }
+  }
+  // 동적 등급 확률 테이블 (구체 수치는 유저에게 공개하지 않음)
+  const table = _computeSynthesisGradeTable(_synthesisPicks);
+  const hi = _synthesisHighGradeCount(_synthesisPicks);
+  // 상위 등급 (유니크·영웅·전설) 포함 시 별도 경고 팝업
+  if (hi.unique + hi.hero + hi.legend > 0){
+    let warnMsg = '⚠ 상위 등급 카드가 재료로 포함되었습니다 ⚠\n\n';
+    if (hi.unique) warnMsg += `• 유니크 ${hi.unique}장\n`;
+    if (hi.hero)   warnMsg += `• 영웅 ${hi.hero}장\n`;
+    if (hi.legend) warnMsg += `• 전설 ${hi.legend}장\n`;
+    warnMsg += `\n합성 시 소모되어 인벤토리에서 영구히 사라집니다.\n`;
+    warnMsg += `✨ 유니크 확률 UP\n\n`;
+    warnMsg += `정말 진행하시겠습니까?`;
+    if (!confirm(warnMsg)) return;
+  } else {
+    // 레어 재료 포함 여부에 따라 부스트 안내 문구만 추가
+    let hasRareBoost = false;
+    for (const idx of _synthesisPicks){
+      const c = GAME.inventory[idx];
+      if (c && c.grade === 'rare'){ hasRareBoost = true; break; }
+    }
+    const boostLine = hasRareBoost ? `\n✨ 유니크 확률 UP\n` : '';
+    if (!confirm(`재료 카드 30장 + 1,000G 를 소모하여\n뽑기 1회를 진행합니다.${boostLine}\n계속하시겠습니까?`)) return;
+  }
+
+  // 인벤토리에서 뒤쪽 index 부터 splice (앞쪽 index 유지)
+  const indices = Array.from(_synthesisPicks).sort((a, b) => b - a);
+  for (const idx of indices){
+    GAME.inventory.splice(idx, 1);
+  }
+  p.gold -= SYNTHESIS_COST_GOLD;
+  _incSynthesisCount(p);
+
+  // 동적 등급 테이블 기반 뽑기
+  const grade = pickGachaGradeForTable(table);
+  const gPool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
+  const card = gPool.length ? _pickWeightedCard(gPool, grade) : null;
+  if (!card){
+    alert('내부 오류: 뽑기 실패. 관리자에게 문의하세요.');
+    return;
+  }
+  GAME.inventory.push(card);
+  try { _markGradeAcquired([card]); } catch(e){}
+
+  // 결과 알림 — 유니크 등급 획득만 채팅에 공지 (일반/레어/영웅/전설은 개인 알림만)
+  const gradeName = gradeKr(grade);
+  const gradeColor = _GRADE_COLORS[grade] || '#000';
+  if (grade === 'unique'){
+    chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${card.name}을(를) 획득하셨습니다!`);
+  }
+  setTimeout(() => {
+    alert(`🔨 합성 완료!\n\n결과: [${gradeName}] ${card.name}\n\n남은 오늘 합성: ${SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p)}회`);
+  }, 100);
+
+  // 상태 갱신
+  _synthesisPicks.clear();
+  saveGame();
+  cloudSaveNow().catch(()=>{});
+  refreshShopUI();
+  renderSynthesisModal();
+  try { renderSheet(); } catch(e){}
 }
 
 const _GACHA_SHOP_ORDER = ['normal','rare','unique','hero','legend'];
@@ -4471,9 +4865,11 @@ function sellSelectedCards(){
   saveGame();
 }
 
-// 보유 카드 한도: Lv 1~25 = 100장, Lv 26+ = 200장
+// 보유 카드 한도: Lv 1~25 = 100장, Lv 26+ = 200장 (운영자 계정은 무제한)
 function inventoryLimit(){
-  const lv = (GAME.player && GAME.player.level) || 1;
+  const p = GAME.player;
+  if (p && p.isOperator) return Infinity;
+  const lv = (p && p.level) || 1;
   return lv >= 26 ? 200 : 100;
 }
 
