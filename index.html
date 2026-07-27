@@ -2787,7 +2787,7 @@ const CARDS = [
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   iconPath:'assets/wc3_reforged_used/holylight.jpg', text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
   { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +5 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:5,max:15},{stat:'def',min:5,max:15}]} },
-  { id:'u08', name:'롱기누스의 검',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.2 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.2,turns:2,dynamic:true}]} },
+  { id:'u08', name:'롱기누스의 검',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.3 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u09', name:'테르시아의 빛',  grade:'unique', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNLightningRevenant.png', text:'시전자 INT% 확률로 2턴 간 기절 / 2턴 간 INT × 1.3 고정 데미지 (방어력 무시, 매턴 현재 INT 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'int'},{type:'dotStat',stats:['int'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u10', name:'크로노스의 혼',  grade:'unique', icon:'ice',    iconPath:'assets/wc3_reforged_used/BTNFrostRevenant.png', text:'시전자 DEX% 확률로 2턴 간 기절 / 2턴 간 DEX × 1.2 고정 데미지 (방어력 무시, 매턴 현재 DEX 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'dex'},{type:'dotStat',stats:['dex'],mult:1.2,turns:2,dynamic:true}]} },
 
@@ -3954,6 +3954,117 @@ function refreshShopUI(){
   } catch(e){}
 }
 
+// ─── 유니크/영웅 카드 교환 로직 (가챠 결과창 즉시 결정, 카드당 1회, 거절 시 소멸) ───
+// 유니크: 25% 다른 유니크 · 75% 레어 · 비용 ✨ 3
+// 영웅:  10% 다른 영웅 · 40% 유니크 · 50% 레어 · 비용 ✨ 10
+// 재추첨은 균등 (1/n) — 주스탯 가중치·최초 유니크 부스트 모두 미적용. 원본 카드 자체는 풀에서 제외.
+const EXCHANGE_COST = { unique: 3, hero: 10 };
+const EXCHANGE_KEEP_PCT = { unique: 25, hero: 10 };   // 동일 등급 유지 확률 (%)
+function _rollExchangeTarget(sourceCard){
+  if (!sourceCard) return null;
+  const grade = sourceCard.grade;
+  let targetGrade;
+  const r = Math.random();
+  if (grade === 'unique'){
+    targetGrade = r < 0.25 ? 'unique' : 'rare';
+  } else if (grade === 'hero'){
+    if (r < 0.10) targetGrade = 'hero';
+    else if (r < 0.50) targetGrade = 'unique';
+    else targetGrade = 'rare';
+  } else {
+    return null;
+  }
+  const pool = CARDS.filter(c =>
+    c.grade === targetGrade &&
+    c.id !== sourceCard.id &&
+    c.id !== 'basic_atk' &&
+    !c.monsterOnly
+  );
+  if (!pool.length) return null;
+  return pool[Math.floor(Math.random() * pool.length)];
+}
+function _offerExchangeForResults(results){
+  if (!Array.isArray(results) || !results.length) return;
+  const p = GAME.player;
+  if (!p) return;
+  for (let i = 0; i < results.length; i++){
+    const c = results[i];
+    if (!c) continue;
+    if (c.grade !== 'unique' && c.grade !== 'hero') continue;
+    const gradeName = c.grade === 'unique' ? '유니크' : '영웅';
+    const emoji = c.grade === 'unique' ? '🔮' : '⭐';
+    const cost = EXCHANGE_COST[c.grade];
+    const keepPct = EXCHANGE_KEEP_PCT[c.grade];
+    const held = p.blessing || 0;
+
+    // 획득 축하 + 교환 안내 통합 팝업
+    let msg = `${emoji} ${gradeName} 카드 획득 — [${c.name}]\n\n`;
+    msg += `잠깐! 마음에 들지 않는다면 여신의 축복 ${cost}개를 소모하여 교환할 수 있습니다.\n`;
+    msg += `다만, 동일 등급(${gradeName})으로 유지될 확률은 ${keepPct}%입니다.\n\n`;
+    if (c.grade === 'unique'){
+      msg += `━ 교환 확률 ━\n`;
+      msg += ` • 25% : 다른 유니크 카드\n`;
+      msg += ` • 75% : 레어 카드로 하향\n`;
+      msg += `━━━━━━━━━━\n`;
+    } else {
+      msg += `━ 교환 확률 ━\n`;
+      msg += ` • 10% : 다른 영웅 카드\n`;
+      msg += ` • 40% : 유니크 카드로 하향\n`;
+      msg += ` • 50% : 레어 카드로 하향\n`;
+      msg += `━━━━━━━━━━\n`;
+    }
+    msg += `\n보유 축복: ✨ ${held}개 (필요 ✨ ${cost}개)\n`;
+    msg += `\n그래도 도전하시겠습니까?\n(1회 한정 · 거절 시 교환 기회 소멸)`;
+
+    // 축복 부족 시 안내만 하고 넘어감
+    if (held < cost){
+      try { alert(msg + `\n\n⚠ 축복이 부족하여 교환 불가 — 원본 유지`); } catch(e){}
+      continue;
+    }
+    let doExchange = false;
+    try { doExchange = confirm(msg); } catch(e){}
+    if (!doExchange) continue;   // 유지 → 다음 카드
+    // 교환 실행 — 축복 차감 후 재추첨
+    const newCard = _rollExchangeTarget(c);
+    if (!newCard){
+      try { alert('교환 실패 — 대체 가능한 카드가 없습니다. 축복 미차감 · 원본 유지.'); } catch(e){}
+      continue;
+    }
+    p.blessing = Math.max(0, held - cost);
+    try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
+    // 칭호 카운터: 교환 도전/성공 트래킹
+    try {
+      // 유니크 이상 (유니크·영웅) 카드 교환 시도 카운트 → 야수의 심장
+      bumpTitleCounter('unique_plus_exchange_attempts', 1);
+      // 결과가 유니크 이상이면 성공 카운트 → 트레이더
+      if (newCard.grade === 'unique' || newCard.grade === 'hero'){
+        bumpTitleCounter('unique_plus_exchange_success', 1);
+      }
+      // 영웅 교환 시도 카운트 → 야수의 뇌
+      if (c.grade === 'hero'){
+        bumpTitleCounter('hero_exchange_attempts', 1);
+        // 영웅 → 영웅 유지 시 성공 카운트 → 이걸 사네
+        if (newCard.grade === 'hero'){
+          bumpTitleCounter('hero_exchange_success', 1);
+        }
+      }
+    } catch(e){}
+    // 인벤토리 in-place 교체
+    const invIdx = GAME.inventory.lastIndexOf(c);
+    if (invIdx >= 0){
+      GAME.inventory[invIdx] = newCard;
+    }
+    results[i] = newCard;
+    const newGradeName = { unique:'유니크', hero:'영웅', rare:'레어', normal:'일반', legend:'전설' }[newCard.grade] || newCard.grade;
+    try {
+      chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`);
+    } catch(e){}
+    try {
+      alert(`🔄 교환 완료! (✨ -${cost} · 잔여 ${p.blessing})\n\n[${c.name}] (${gradeName})\n       ↓\n[${newCard.name}] (${newGradeName})`);
+    } catch(e){}
+  }
+}
+
 // ─── 카드 합성 (일반/레어/유니크/영웅/전설 30장 + 1,000G → 유니크 뽑기 1회) ───
 const SYNTHESIS_COST_GOLD  = 1000;
 const SYNTHESIS_COST_CARDS = 30;
@@ -4371,7 +4482,9 @@ function doGachaShop(shopId, n){
     results.push(card);
   }
   _markGradeAcquired(results);
-  // 결과 렌더링
+  // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
+  try { _offerExchangeForResults(results); } catch(e){ console.warn('[exchange]', e); }
+  // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
   $('gachaResult').hidden = false;
   $('gachaResultGrid').innerHTML = results.map(c => `
     <div class="gc ${c.grade}">
@@ -4430,9 +4543,9 @@ function doGachaShop(shopId, n){
 const CARD_SELL_PRICE = { normal:10, rare:100, unique:1000, hero:10000, legend:100000 };
 
 // 가챠 풀에서 카드 1장 픽 — 등급별 가중 규칙 반영
-// - 최초 유니크 획득: 레인오브파이어(u03) 1.4x, 테르시아의 빛(u09) 1.4x 가중
+// - 최초 유니크 획득: 드렁큰브라우어(u01) 1.4x, 롱기누스의 검(u08) 1.4x 가중 (힘캐 유니크 편향)
 //   판정 기준: p.uniqueEverAcquired 플래그 OR 인벤토리에 유니크 카드 존재 여부 (마이그레이션 겸용)
-const _FIRST_UNIQUE_WEIGHTS = { u03: 1.4, u09: 1.4 };
+const _FIRST_UNIQUE_WEIGHTS = { u01: 1.4, u08: 1.4 };
 
 // 카드별 주스탯 매핑 (cards_list.xlsx '주스탯' 컬럼 기반)
 // 유저 캐릭터 유형 (힘캐/덱캐/인캐/콘캐) 에 따라 가챠 가중치를 조정.
@@ -4524,6 +4637,10 @@ function _markGradeAcquired(results){
   if (!p || !Array.isArray(results)) return;
   if (!p.uniqueEverAcquired && results.some(c => c && c.grade === 'unique')){
     p.uniqueEverAcquired = true;
+  }
+  // 유니크+ (unique/hero/legend) 이력 플래그 — 흑마법사·불혹 판정 영구 실격 마킹
+  if (results.some(c => c && (c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend'))){
+    try { _ensureTitleState(p); p.titleCounters.ever_acquired_unique_plus = 1; } catch(e){}
   }
 }
 
@@ -5077,14 +5194,21 @@ function buyBlessItem(id){
       const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
       const card = pool[Math.floor(Math.random() * pool.length)];
       if (card){
-        const emoji = grade === 'hero' ? '⭐' : '🔮';
         if (GAME.inventory.length >= inventoryLimit()){
+          const emoji = grade === 'hero' ? '⭐' : '🔮';
           resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`);
         } else {
           GAME.inventory.push(card);
-          resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 획득 — ${card.name}`;
+          // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
+          const exResults = [card];
+          try { _offerExchangeForResults(exResults); } catch(e){ console.warn('[bless box exchange]', e); }
+          const finalCard = exResults[0] || card;
+          const fg = finalCard.grade;
+          const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
+          resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`);
         }
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`);
       }
     } else if (chosen.id === 'stat_point'){
       p.xpUp = (p.xpUp || 0) + 1;
@@ -5908,6 +6032,7 @@ const TITLE_POOL = [
   { id:'title_defense_10',     name:'견고한 덱',         tier:'일반', color:'#a8a8a8', desc:'랭킹 방어전 10회 승리',              cond:{type:'rank_defense_wins',        target:10} },
   { id:'title_defense_50',     name:'디펜딩 챔피언',     tier:'일반', color:'#a8a8a8', desc:'랭킹 방어전 50회 승리',              cond:{type:'rank_defense_wins',        target:50} },
   { id:'title_daily_10',       name:'꾸준함의 증표',     tier:'일반', color:'#a8a8a8', desc:'일일퀘스트 완주 10일',                cond:{type:'daily_full_days',          target:10} },
+  { id:'title_dark_mage',      name:'흑마법사',          tier:'일반', color:'#a8a8a8', desc:'유니크 이상 카드 획득 없이 Lv 35 달성', cond:{type:'level_no_unique_plus_history', target:35} },
   // ── 레어 (파란색) ──
   { id:'title_lv35',           name:'별에 가까운 자',    tier:'레어', color:'#3366cc', desc:'Lv 35 도달',                       cond:{type:'level',                    target:35} },
   { id:'title_str_40',         name:'원펀맨',            tier:'레어', color:'#3366cc', desc:'STR 40 달성',                      cond:{type:'stat_str',                 target:40} },
@@ -5929,6 +6054,7 @@ const TITLE_POOL = [
   { id:'title_defense_100',    name:'안잡히죠',          tier:'레어', color:'#3366cc', desc:'랭킹 방어전 100회 승리',            cond:{type:'rank_defense_wins',        target:100} },
   { id:'title_daily_30',       name:'부지런한 도전자',   tier:'레어', color:'#3366cc', desc:'일일퀘스트 완주 30일',               cond:{type:'daily_full_days',          target:30} },
   { id:'title_rank_10',        name:'랭커',              tier:'레어', color:'#3366cc', desc:'랭킹 10위 이내 진입',                cond:{type:'rank_reached_le',          target:10} },
+  { id:'title_bulhok',         name:'불혹',              tier:'레어', color:'#3366cc', desc:'유니크 이상 카드 획득 없이 Lv 40 달성', cond:{type:'level_no_unique_plus_history', target:40} },
   // ── 유니크 (보라색) — Lv 26 게이트 ──
   { id:'title_lv40',           name:'별자리 여행자',     tier:'유니크', color:'#a335ee', desc:'Lv 40 도달',                     cond:{type:'level',                    target:40} },
   { id:'title_lv60',           name:'정복자',            tier:'유니크', color:'#a335ee', desc:'Lv 50 도달',                     cond:{type:'level',                    target:50} },
@@ -5943,6 +6069,9 @@ const TITLE_POOL = [
   { id:'title_daily_100',      name:'근면성실',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 연속 100일 완주',      cond:{type:'daily_full_days',          target:100} },
   { id:'title_daily_200',      name:'장기집권',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 완주 200일',           cond:{type:'daily_full_days',          target:200} },
   { id:'title_rank_top5',      name:'영웅의 길',         tier:'유니크', color:'#a335ee', desc:'랭킹 5위 이내 진입',              cond:{type:'rank_reached_le',          target:5} },
+  { id:'title_trader',         name:'트레이더',          tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 1회 성공 (결과가 유니크 이상)', cond:{type:'unique_plus_exchange_success', target:1} },
+  { id:'title_beast_heart',    name:'야수의 심장',       tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 10회 도전',                    cond:{type:'unique_plus_exchange_attempts', target:10} },
+  { id:'title_beast_brain',    name:'야수의 뇌',         tier:'유니크', color:'#a335ee', desc:'영웅 등급 카드 교환을 1회 도전',                            cond:{type:'hero_exchange_attempts',   target:1} },
   // ── 영웅 (#ff3366) — Lv 26 게이트 ──
   { id:'title_hunt_100000',    name:'전장의 지배자',     tier:'영웅', color:'#ff3366', desc:'수행 100,000회 승리 (누적)',        cond:{type:'hunt_wins',                target:100000} },
   { id:'title_astraia',        name:'천신의 계승자',     tier:'영웅', color:'#ff3366', desc:'천신의 아스트레이아 획득',           cond:{type:'item_owned', itemId:'divine_elaha',  target:1} },
@@ -5953,6 +6082,7 @@ const TITLE_POOL = [
   { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'영웅', color:'#ff3366', desc:'여신의 축복 500개 누적 획득',        cond:{type:'total_blessing_earned',    target:500} },
   { id:'title_gold_100m_spent',name:'보이지 않는 손',    tier:'영웅', color:'#ff3366', desc:'누적 골드 100,000,000G 사용',       cond:{type:'total_gold_spent',         target:100000000} },
   { id:'title_bless_1000_spent',name:'여신의 사랑',      tier:'영웅', color:'#ff3366', desc:'여신의 축복 누적 1,000개 사용',      cond:{type:'total_blessing_spent',     target:1000} },
+  { id:'title_buys_this',      name:'이걸 사네',         tier:'영웅', color:'#ff3366', desc:'영웅 등급 카드 교환을 1회 성공 (영웅 유지)', cond:{type:'hero_exchange_success', target:1} },
   // ── 전설 (황금색) — Lv 26 게이트 ──
   { id:'title_divine_set',     name:'천계대제',          tier:'전설', color:'#ffd700', desc:'천신의 아스트레이아 및 천신의 플루티드 아머 장착', cond:{type:'divine_full_set', target:1} },
   { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설', color:'#ffd700', desc:'영웅 카드 5장 이상 소지',            cond:{type:'hero_cards_owned',         target:5} },
@@ -5982,6 +6112,13 @@ function _ensureTitleState(p){
   if (typeof p.titleCounters.total_heal_from_fountain !== 'number') p.titleCounters.total_heal_from_fountain = 0;
   if (typeof p.titleCounters.total_gold_spent      !== 'number') p.titleCounters.total_gold_spent      = 0;
   if (typeof p.titleCounters.total_blessing_spent  !== 'number') p.titleCounters.total_blessing_spent  = 0;
+  // 유니크·영웅 카드 교환 도전/성공 카운터
+  if (typeof p.titleCounters.unique_plus_exchange_attempts !== 'number') p.titleCounters.unique_plus_exchange_attempts = 0;
+  if (typeof p.titleCounters.unique_plus_exchange_success  !== 'number') p.titleCounters.unique_plus_exchange_success  = 0;
+  if (typeof p.titleCounters.hero_exchange_attempts        !== 'number') p.titleCounters.hero_exchange_attempts        = 0;
+  if (typeof p.titleCounters.hero_exchange_success         !== 'number') p.titleCounters.hero_exchange_success         = 0;
+  // 유니크+ 이력 플래그 (흑마법사·불혹 판정용). 인벤토리 스캔 결과 자동 마킹.
+  if (typeof p.titleCounters.ever_acquired_unique_plus !== 'number') p.titleCounters.ever_acquired_unique_plus = 0;
 }
 // 조건 유형별 현재값 조회
 // useCurrent=true (Lv26 게이트 칭호용) — 역대치가 아니라 현재 상태 기준
@@ -6013,6 +6150,20 @@ function _getTitleCurrentValue(p, cond, useCurrent){
     case 'raid_participations': return p.titleCounters.raid_participations || 0;
     case 'boss_kills': return p.titleCounters.boss_kills || 0;
     case 'abyss_boss_kills': return p.titleCounters.abyss_boss_kills || 0;
+    case 'unique_plus_exchange_attempts': return p.titleCounters.unique_plus_exchange_attempts || 0;
+    case 'unique_plus_exchange_success':  return p.titleCounters.unique_plus_exchange_success  || 0;
+    case 'hero_exchange_attempts':        return p.titleCounters.hero_exchange_attempts        || 0;
+    case 'hero_exchange_success':         return p.titleCounters.hero_exchange_success         || 0;
+    case 'level_no_unique_plus_history': {
+      // 인벤토리 현재 스캔: unique/hero/legend 카드 있으면 이력 플래그 영구 세팅
+      if (GAME.inventory.some(cc => cc && (cc.grade === 'unique' || cc.grade === 'hero' || cc.grade === 'legend'))){
+        p.titleCounters.ever_acquired_unique_plus = 1;
+      }
+      // 과거 획득 이력 확인 (uniqueEverAcquired 는 유니크 최초 획득 시점에 세팅되는 기존 플래그)
+      if (p.uniqueEverAcquired) return 0;
+      if (p.titleCounters.ever_acquired_unique_plus) return 0;
+      return p.level || 1;
+    }
     case 'unique_cards_owned': {
       const set = new Set(GAME.inventory.filter(c => c.grade === 'unique').map(c => c.id));
       return set.size;
