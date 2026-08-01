@@ -17559,8 +17559,28 @@ async function opResetRaid(k){
   } catch(e){ alert('세션 리셋 실패: ' + (e.message||e)); }
   finally { _opRefreshInfo(); }
 }
-async function opBossPhase(k){       try { await adminBossPhase(k);     } finally { _opRefreshInfo(); } }
-async function opKillBoss(k){        try { await adminKillBoss(k);      } finally { _opRefreshInfo(); } }
+// admin*() 은 raid_state 직접 update 라 운영자 본인 세션(RLS)에 막힘.
+// SECURITY DEFINER RPC (raid_op_*) 로 우회.
+async function opBossPhase(k){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { error } = await sb.rpc('raid_op_set_monster_count', { p_raid_key: k, p_count: 0 });
+    if (error){ alert('보스 단계 진입 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    alert(`✔ ${_raidKr(k)} 보스 단계 진입`);
+  } catch(e){ alert('보스 단계 진입 실패: ' + (e.message||e)); }
+  finally { _opRefreshInfo(); }
+}
+async function opKillBoss(k){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { error } = await sb.rpc('raid_op_kill_boss', { p_raid_key: k });
+    if (error){ alert('보스 처치 실패: ' + (error.message||error)); return; }
+    await loadRaidFromCloud();
+    alert(`✔ ${_raidKr(k)} 보스 처치 처리`);
+  } catch(e){ alert('보스 처치 실패: ' + (e.message||e)); }
+  finally { _opRefreshInfo(); }
+}
 async function opSetMonsterCount(k){
   const capMap = { dawn:'Dawn', mist:'Mist', abyss:'Abyss' };
   const inp = document.getElementById(`op${capMap[k]}MonInput`);
@@ -17571,12 +17591,12 @@ async function opSetMonsterCount(k){
   if (isNaN(val) || val < 0 || val > cap){ alert(`0~${cap} 사이 정수를 입력하세요.`); return; }
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   try {
-    const { error } = await sb.from('raid_state').update({ monster_count: val }).eq('raid_key', k);
+    const { error } = await sb.rpc('raid_op_set_monster_count', { p_raid_key: k, p_count: val });
     if (error){ alert('몹수 설정 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     alert(`✔ ${_raidKr(k)} 잔여 몬스터 ${val}마리로 설정`);
   } catch(e){ alert('몹수 설정 실패: ' + (e.message||e)); }
-  _opRefreshInfo();
+  finally { _opRefreshInfo(); }
 }
 async function opSetBoss(k){
   const capMap = { dawn:'Dawn', mist:'Mist', abyss:'Abyss' };
@@ -17586,18 +17606,16 @@ async function opSetBoss(k){
   if (!boss) return;
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   try {
-    const { error } = await sb.from('raid_state').update({
-      boss_id: boss.id,
-      boss_hp: boss.hpMax,
-      boss_hp_max: boss.hpMax,
-      boss_defeated: false,
-      last_killer: null,
-    }).eq('raid_key', k);
+    const { error } = await sb.rpc('raid_op_set_boss', {
+      p_raid_key: k,
+      p_boss_id: boss.id,
+      p_boss_hp_max: boss.hpMax,
+    });
     if (error){ alert('보스 교체 실패: ' + (error.message||error)); return; }
     await loadRaidFromCloud();
     alert(`✔ ${_raidKr(k)} 보스를 ${boss.name}(으)로 교체`);
   } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
-  _opRefreshInfo();
+  finally { _opRefreshInfo(); }
 }
 </script>
 </body>
