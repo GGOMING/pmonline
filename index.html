@@ -2761,7 +2761,7 @@ const CARDS = [
 
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
-  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어구 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
+  { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 매턴 방어구 +5씩 누적', fx:{type:'buffOverTime',stats:{def:5},turns:3} },
   { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'매턴 10 ~ 25 랜덤 데미지 / 5턴 동안 매턴 HP 5 회복 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dot',turns:15,min:10,max:25,summon:true},{type:'hot',heal:5,turns:5}]}, requires:'n41' },
   { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 무기 +5, 방어구 +6 증가 / 상대방 무기 -5, 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
   { id:'r05', name:'마나번',         grade:'rare', icon:'med',      text:'상대방 MP*0.2 데미지 (최대 60) / 상대방 MP -50% 감소 및 기본공격으로 타격', fx:{type:'multi',effects:[{type:'mpDmg',mult:0.2,max:60,mpPct:0.5},{type:'basicAtk'}]} },
