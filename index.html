@@ -3053,11 +3053,19 @@ function applySavePayload(d){
 }
 
 let _cloudSaveTimer = null;
+let _lastCloudSaveAt = 0;
+// Supabase Disk IO Budget 절약: 자동저장 최소 10초 간격 (기존 500ms 대비 20배 감소). 브라우저 종료 시엔 _flushCloudSaveOnUnload 가 beacon 으로 즉시 flush.
+const CLOUD_SAVE_MIN_INTERVAL_MS = 10000;
 function cloudSaveDebounced(){
   if (!sb || !GAME.player) return;
-  if (_cloudSaveTimer) clearTimeout(_cloudSaveTimer);
-  // 500ms — 유저가 잠깐만 멈춰도 저장 나가도록 짧게
-  _cloudSaveTimer = setTimeout(() => { cloudSaveNow().catch(e => console.warn('cloudSave', e)); }, 500);
+  if (_cloudSaveTimer) return; // 이미 대기 중이면 재예약 안 함 → 연속 saveGame() burst 흡수
+  const elapsed = Date.now() - _lastCloudSaveAt;
+  const wait = Math.max(1000, CLOUD_SAVE_MIN_INTERVAL_MS - elapsed);
+  _cloudSaveTimer = setTimeout(() => {
+    _cloudSaveTimer = null;
+    _lastCloudSaveAt = Date.now();
+    cloudSaveNow().catch(e => console.warn('cloudSave', e));
+  }, wait);
 }
 // 마지막 클라우드 저장 실패 원인을 전역에 저장 — alert에서 원인 노출용
 let _lastCloudSaveError = null;
@@ -3080,6 +3088,7 @@ async function cloudSaveNow(){
     console.warn('[cloudSave upsert]', error);
     return false;
   }
+  _lastCloudSaveAt = Date.now(); // 다음 debounced 저장이 60초 간격을 지키도록 갱신
   return true;
 }
 // beforeunload / visibilitychange 시점의 강제 플러시 — fetch keepalive로 브라우저 unload 이후에도 요청 완료 보장
