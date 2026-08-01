@@ -7197,7 +7197,7 @@ async function startRaidBossBattle(){
     def: bossDef.con + A_BONUS,
     weapon: { id:'gladius',        name:'글라디우스',         atkBonus: W_BONUS },
     armor:  { id:'lorica_segment', name:'로리카 세그멘타타', defBonus: A_BONUS },
-    deck: makeBossDeck(),
+    deck: makeBossDeck(raidKey),
     atkType: '특수',
     icon: bossDef.icon,   // RAID_BOSSES 에 정의된 초상화 경로 전달
   };
@@ -7229,7 +7229,7 @@ async function startRaidBossBattle(){
   raidLog(`보스 HP는 누적 유지됩니다. 입힌 데미지만큼 차감됩니다.`, 'info');
 }
 
-function makeBossDeck(){
+function makeBossDeck(raidKey){
   // 보스 덱: 영웅 1, 유니크 2, 레어 7, 노멀 5 = 15장
   // 모든 등급 풀에서 monsterOnly (검거·돈뿌리기 등) 카드는 제외
   const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
@@ -7241,16 +7241,51 @@ function makeBossDeck(){
     for (let i = 0; i < n; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
     return out;
   };
-  const deck = [
-    ...pick(heroPool, 1),
-    ...pick(uniquePool, 2),
-    ...pick(rarePool, 7),
-    ...pick(normalPool, 5),
-  ];
+
+  // abyss(잊혀진 성좌) 보스: 회복 카드 등장 확률 상향
+  //   u06 홀리라이트 (유니크·즉시 회복) → 60% 확률로 유니크 슬롯 1장 강제
+  //   h04 빅베드부두 (영웅·지연 회복+버프)  → 60% 확률로 영웅 슬롯 강제
+  //   → 위 2장은 셔플 후 슬롯 0~1 (2턴 안) 로 재배치
+  //   n78 힐 (일반·INT×1.5 즉시 회복) → 90% 확률로 노멀 슬롯 1장에 등장 (배치 순서 랜덤)
+  const isAbyss = raidKey === 'abyss';
+  const heroSlots   = pick(heroPool, 1);
+  const uniqueSlots = pick(uniquePool, 2);
+  const rareSlots   = pick(rarePool, 7);
+  const normalSlots = pick(normalPool, 5);
+  if (isAbyss){
+    const holyLight = CARDS.find(c => c.id === 'u06');
+    if (holyLight && Math.random() < 0.6 && !uniqueSlots.some(c => c.id === 'u06')){
+      uniqueSlots[0] = holyLight;
+    }
+    const voodoo = CARDS.find(c => c.id === 'h04');
+    if (voodoo && Math.random() < 0.6 && !heroSlots.some(c => c.id === 'h04')){
+      heroSlots[0] = voodoo;
+    }
+    const healCard = CARDS.find(c => c.id === 'n78');
+    if (healCard && !normalSlots.some(c => c.id === 'n78') && Math.random() < 0.9){
+      normalSlots[Math.floor(Math.random() * normalSlots.length)] = healCard;
+    }
+  }
+  const deck = [...heroSlots, ...uniqueSlots, ...rareSlots, ...normalSlots];
   // 슬롯 순서 셔플
   for (let i = deck.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
+  }
+  // abyss: 유니크+ 회복 카드가 슬롯 2 이후에 있으면 슬롯 0~1 (첫 2턴) 로 재배치
+  if (isAbyss){
+    const healIds = ['u06', 'h04'];
+    const reserved = new Set();
+    for (const id of healIds){
+      const idx = deck.findIndex(c => c.id === id);
+      if (idx < 0) continue;
+      if (idx < 2){ reserved.add(idx); continue; }
+      const candidates = [0,1].filter(s => !reserved.has(s));
+      if (!candidates.length) break;
+      const target = candidates[Math.floor(Math.random() * candidates.length)];
+      [deck[target], deck[idx]] = [deck[idx], deck[target]];
+      reserved.add(target);
+    }
   }
   return deck;
 }
