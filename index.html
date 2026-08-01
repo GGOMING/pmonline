@@ -2753,7 +2753,7 @@ const CARDS = [
   { id:'n83', name:'무투',           grade:'normal', icon:'crack',  iconPath:'assets/wc3_reforged_used/BTNFireGauntlets.png', text:'3턴 동안 시전자 방어구 -5 · 상대방 방어구 -10', fx:{type:'multi',effects:[{type:'buff',def:-5,turns:3},{type:'debuff',def:-10,turns:3}]} },
   { id:'n84', name:'분노의 함성',    grade:'normal', icon:'roar',   iconPath:'assets/wc3_reforged_used/BTNRexxar.png', text:'STR +4, 상대 DEX -2', fx:{type:'multi',effects:[{type:'buff',str:4},{type:'debuff',dex:-2}]} },
   { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:3} },
-  { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 STR +1', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buff',str:1,turns:10}]} },
+  { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 매턴 STR +1 누적', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buffOverTime',stats:{str:1},turns:10}]} },
   { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 이번 턴 STR +20, 방어구 +20', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'buff',str:20,def:20,turns:1}]} },
 
   // ───── 레어 카드 30종 ─────
@@ -2825,9 +2825,9 @@ const CARDS = [
   // ───── 힘캐 확장 레어 카드 5종 ─────
   { id:'r43', name:'카니발라이즈',       grade:'rare', icon:'blood',   iconPath:'assets/wc3_reforged_used/BTNCannibalize-NoViolence-Reforged.png', text:'2턴 동안 매턴 STR × 1.2 고정 데미지 (방어력 무시) + 2턴 동안 가한 데미지의 30% HP 흡수', fx:{type:'multi',effects:[{type:'dotStat',stats:['str'],mult:1.2,turns:2,dynamic:true},{type:'lifeleech',turns:2,pct:0.3}]} },
   { id:'r44', name:'브로큰',             grade:'rare', icon:'bomb',    iconPath:'assets/wc3_reforged_used/BTNMeatapult-Reforged.png', text:'자기 HP 30% 소모, STR × 3 데미지 (방어력 무시)', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.30},{type:'dmgStat',stats:['str'],mult:3,ignoreDef:true}]} },
-  { id:'r45', name:'홀리스피어',         grade:'rare', icon:'holy',    iconPath:'assets/wc3_reforged_used/BTNVorpalBlades-Reforged.png', text:'(STR + 무기 + 15) 데미지 + 상대 방어구 -5 (영구)', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true,bonus:15},{type:'debuff',def:-5}]} },
+  { id:'r45', name:'홀리스피어',         grade:'rare', icon:'holy',    iconPath:'assets/wc3_reforged_used/BTNVorpalBlades-Reforged.png', text:'(STR + 무기 + 15) 데미지 + 상대 방어구 -5', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true,bonus:15},{type:'debuff',def:-5}]} },
   { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.5 만큼 고정 데미지 (방어력 무시)', fx:{type:'dmgLostHpPct',pct:0.5,ignoreDef:true} },
-  { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 (영구) / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
+  { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -10174,6 +10174,7 @@ function _tryRebirth(c, side, obj, log){
   c[side + 'ManaShield']        = null;
   if (Array.isArray(c[side + 'DelayedRestores'])) c[side + 'DelayedRestores'].length = 0;
   if (Array.isArray(c[side + 'Transforms'])) c[side + 'Transforms'].length = 0;
+  if (Array.isArray(c[side + 'StatGrowth'])) c[side + 'StatGrowth'].length = 0;
   // 부활 상태 소비 (1회성)
   c[side + 'Rebirth'] = null;
   if (log) log(`  ✨✨ <b>부활의 증표 발동!</b> 완전 회복 + 모든 버프·디버프 초기화 ✨✨`, 'heal');
@@ -10199,6 +10200,7 @@ function _ensureCombatExt(c){
   c.myRebirth ||= null; c.monRebirth ||= null;   // 부활의 증표 — {turns}. HP 0 도달 시 발동 (1회)
   c.myDelayedRestores ||= []; c.monDelayedRestores ||= [];   // 지연 회복 — [{turnsLeft, hp, mp}]. tick에서 카운트다운 → 0 시 발동
   c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 쉴드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
+  c.myStatGrowth ||= []; c.monStatGrowth ||= [];       // 매턴 스탯 누적 buff (메디테이션 n86) — [{stats:{str,dex,int,con,atk,def}, turnsLeft, grade}]
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -11058,6 +11060,25 @@ function applyCardEffect(card, ctx){
       ctx.log(`  + ${ctx.castName} ${msgs.join(', ')}${fx.turns?` (${fx.turns}턴)`:''}`, 'heal');
       return;
     }
+    if (t === 'buffOverTime'){
+      // 매턴 시전자 스탯 누적 buff (메디테이션 n86)
+      // fx: {stats:{str:1,...}, turns:10} — turns 턴 동안 매턴 stats 만큼 영구 buff 스택
+      const stats = fx.stats || {};
+      const turns = fx.turns || 0;
+      const isP = (ctx.caster === 'player');
+      const arr = isP ? ctx.c.myStatGrowth : ctx.c.monStatGrowth;
+      if (arr){
+        // pending 없이 즉시 시전 턴에 첫 스택 발동
+        for (const k of Object.keys(stats)){
+          _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, stats[k], 0, ctx.castObj, selfOpts);
+        }
+        // 남은 (turns-1) 턴은 processCombatTicks 에서 자동 스택
+        arr.push({ stats: {...stats}, turnsLeft: Math.max(0, turns - 1), grade: card.grade });
+      }
+      const desc = Object.entries(stats).map(([k,v]) => `${_korStatKey(k)} +${v}`).join(', ');
+      ctx.log(`  + ${ctx.castName} ${turns}턴 동안 매턴 ${desc} 누적 (영구)`, 'heal');
+      return;
+    }
     if (t === 'debuff'){
       const tgt = _debuffTarget();
       const opts = _debuffOpts(tgt);
@@ -11782,6 +11803,26 @@ function processCombatTicks(kind){
   // 부활의 증표 타이머 감소
   if (c.myRebirth && c.myRebirth.turns > 0){ c.myRebirth.turns--; if (c.myRebirth.turns <= 0){ c.myRebirth = null; log(`  · 부활의 증표 효과 만료`, 'info'); } }
   if (c.monRebirth && c.monRebirth.turns > 0){ c.monRebirth.turns--; if (c.monRebirth.turns <= 0){ c.monRebirth = null; log(`  · ${opp.name} 부활의 증표 효과 만료`, 'info'); } }
+  // 매턴 스탯 누적 buff (buffOverTime · 메디테이션 등) — 매 턴마다 stats 를 영구 buff 로 추가, turnsLeft 카운트다운
+  function _tickStatGrowth(list, buffs, turnBuffs, byGrade, targetObj, targName, isSelf){
+    if (!Array.isArray(list)) return;
+    for (let i = list.length - 1; i >= 0; i--){
+      const e = list[i];
+      if (!e || e.turnsLeft <= 0){ list.splice(i, 1); continue; }
+      const msgs = [];
+      for (const k of Object.keys(e.stats || {})){
+        _addTurnBuff(buffs, turnBuffs, k, e.stats[k], 0, targetObj, { grade: e.grade, byGrade: byGrade });
+        msgs.push(`${_korStatKey(k)} +${e.stats[k]}`);
+      }
+      if (msgs.length){
+        log(`  📈 ${targName} ${msgs.join(', ')} 누적 (남은 ${e.turnsLeft}턴)`, 'heal');
+      }
+      e.turnsLeft--;
+      if (e.turnsLeft <= 0) list.splice(i, 1);
+    }
+  }
+  _tickStatGrowth(c.myStatGrowth,  c.myBuffs,  c.myTurnBuffs,  c.myBuffsByGrade,  me,  '나',       true);
+  _tickStatGrowth(c.monStatGrowth, c.monBuffs, c.monTurnBuffs, c.monBuffsByGrade, opp, opp && opp.name, false);
   // 마나 쉴드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
