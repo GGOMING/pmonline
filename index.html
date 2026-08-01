@@ -7,6 +7,8 @@
 <style>
   /* 모바일 더블탭 확대 방지 (핀치 확대는 허용) — touch-action:manipulation 이 double-tap zoom 만 차단 */
   html, body { touch-action: manipulation; }
+  /* 가로 스크롤 원천 차단 — 모바일에서 우측 엣지 탭이 스와이프로 오인되는 문제 방지 */
+  html, body { overflow-x: hidden; }
   /* 모바일 롱프레스 컨텍스트 메뉴 (이미지 저장/링크 복사 등) 억제 — 운영자 계정은 JS 에서 오버라이드 해제 */
   body.devtools-block, body.devtools-block * { -webkit-touch-callout: none; }
   * { box-sizing:border-box; }
@@ -16,8 +18,8 @@
   .page { display:none; max-width:1000px; margin:0 auto; }
   .page.active { display:block; }
 
-  /* 전반 1.1배 확대 (PC·모바일 공통) */
-  body { zoom: 1.1; }
+  /* 전반 1.1배 확대 (PC 만 적용) — 모바일에선 zoom 이 뷰포트 오버플로우 유발해 우측 슬롯 터치 실패 원인 */
+  body:not(.layout-vertical) { zoom: 1.1; }
 
   /* 패배 결과창 강조 애니메이션 */
   @keyframes loseFlash {
@@ -310,7 +312,7 @@
   }
 
   /* 세로 모드 (모바일) */
-  body.layout-vertical { padding:6px; }
+  body.layout-vertical { padding:4px; }
   body.layout-vertical #pg-main.active { flex-direction:column; align-items:center !important; gap:6px; }
   body.layout-vertical #chat { align-self:center !important; max-height:380px !important; }
   body.layout-vertical #game { align-self:center !important; }
