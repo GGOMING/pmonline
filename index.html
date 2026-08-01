@@ -1486,14 +1486,14 @@
       <div class="menubar">
         <!-- 1줄: 회복·카드샵·무기상점·방어구상점 -->
         <table><tr>
-          <td id="m-heal" onclick="openHeal()">회복의 샘물</td>
-          <td id="m-cardshop" onclick="openCardShop()">카드샵</td>
-          <td id="m-wshop" onclick="openWeaponShop()">무기상점</td>
-          <td id="m-ashop" onclick="openArmorShop()">방어구상점</td>
+          <td id="m-heal" onclick="openHeal()">💧 회복의 샘물</td>
+          <td id="m-cardshop" onclick="openCardShop()">🃏 카드샵</td>
+          <td id="m-wshop" onclick="openWeaponShop()">⚔ 무기상점</td>
+          <td id="m-ashop" onclick="openArmorShop()">🛡 방어구상점</td>
         </tr></table>
         <!-- 2줄: 랭킹전·수행·퀘스트 -->
         <table><tr>
-          <td id="m-rank" class="row2" onclick="openRank()">랭킹전</td>
+          <td id="m-rank" class="row2" onclick="openRank()">🏆 랭킹전</td>
           <td id="m-hunt" class="menu-hunt row2" onclick="openHunt()" style="font-weight:bold;">⚔ 수행 ⚔</td>
           <td class="row2" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
         </tr></table>
@@ -2392,6 +2392,10 @@
           </div>
         </div>
 
+        <div style="text-align:center;margin:14px 0;">
+          <button class="btn-go" onclick="showContent('main')">← 메인으로</button>
+        </div>
+
         <!-- 5) 칭호 (가장 마지막 섹션) -->
         <div class="profile-section">
           <h4>🎖 칭호</h4>
@@ -2401,10 +2405,6 @@
             • 언제든 해제·변경 가능.
           </div>
           <div id="profileTitleList" style="margin-top:10px;"></div>
-        </div>
-
-        <div style="text-align:center;margin-top:14px;">
-          <button class="btn-go" onclick="showContent('main')">← 메인으로</button>
         </div>
       </div>
     </div>
@@ -2691,7 +2691,7 @@ const CARDS = [
   { id:'n23', name:'마나포션',       grade:'normal', icon:'potion', text:'MP 20 회복', fx:{type:'heal',mp:20} },
   { id:'n24', name:'마나플레어',     grade:'normal', icon:'spark2', text:'상대방 INT + CON 만큼 고정 데미지 (방어력 무시)', fx:{type:'dmgStat',stats:['int','con'],useTarget:true,ignoreDef:true} },
   { id:'n25', name:'마법끈묶기',     grade:'normal', icon:'sword',  text:'상대방 DEX -30%', fx:{type:'pctDebuff',stats:{dex:-0.3}} },
-  { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'상대방 버프 해제 후 시전자에게 적용, 4턴 동안 해당 버프 지속', fx:{type:'stealBuff',turns:4} },
+  { id:'n26', name:'마법뺏기',       grade:'normal', icon:'web',    text:'상대방의 지속형 마법 상태 (지속 회복·회피·반사·라이프리치·마나쉴드) 를 훔쳐온다. 남은 턴만큼 유지. 무기·방어구·스탯 버프는 훔칠 수 없음.', fx:{type:'stealPersistent'} },
   { id:'n27', name:'맹독',           grade:'normal', icon:'arrow',  text:'3턴 동안 DEX*0.5 고정 데미지, 무기 +2 증가 / [은신] 시전 후 3턴 안에만 사용 가능', requireStealth:true, fx:{type:'multi',effects:[{type:'dotStat',stats:['dex'],mult:0.5,turns:3},{type:'buff',atk:2}]} },
   { id:'n28', name:'문글레이브',     grade:'normal', icon:'moon',   text:'상대방 무기 -1 감소 / DEX 수치만큼 2회 타격', fx:{type:'multi',effects:[{type:'debuff',atk:-1},{type:'dmgStat',stats:['dex'],mult:2}]} },
   { id:'n29', name:'문스톤',         grade:'normal', icon:'moon',   text:'시전자 HP -25 / MP +100 회복', fx:{type:'sacrifice',hp:25,mp:100} },
@@ -3381,9 +3381,14 @@ function updateHealUI(){
   $('heal_maxMp').textContent = p.mpMax;
   // 회복료 대신 회복 시 지급되는 보너스 표시 (풀피면 0)
   const fullyHealed = (p.hp === p.hpMax && p.mp === p.mpMax);
-  const bonus = fullyHealed ? 0 : getRankBonus();
+  const newbie = ((p.level|0) <= 19) ? 50 : 0;
+  const bonus = fullyHealed ? 0 : (getRankBonus() + newbie);
   const costEl = $('heal_cost');
-  if (costEl) costEl.textContent = fullyHealed ? '0 (풀피 상태 — 지급 없음)' : `+${bonus}`;
+  if (costEl){
+    if (fullyHealed) costEl.textContent = '0 (풀피 상태 — 지급 없음)';
+    else if (newbie > 0) costEl.textContent = `+${bonus} (기본 ${bonus - newbie} + Lv 19↓ 뉴비 +${newbie})`;
+    else costEl.textContent = `+${bonus}`;
+  }
   setHealMsg('', '');
 }
 function setHealMsg(text, cls){
@@ -3392,6 +3397,9 @@ function setHealMsg(text, cls){
   el.className = 'heal-result' + (cls?' '+cls:'');
 }
 let _pendingDefenseFromHeal = false;
+// Lv 19 이하 뉴비 보정 — 회복의 샘물 이용 시마다 추가 50G (랭킹전 참여 불가 구간의 골드 보전)
+const HEAL_NEWBIE_BONUS = 50;
+const HEAL_NEWBIE_MAX_LEVEL = 19;
 function doHeal(){
   const p = GAME.player;
   if (p.hp === p.hpMax && p.mp === p.mpMax){
@@ -3405,18 +3413,22 @@ function doHeal(){
   p.mp = p.mpMax;
   // 회복 보너스 — 랭킹 등록 시 (11-r)*5, 미등록 시 기본 5G
   const rankBonus = getRankBonus();
-  p.gold += rankBonus;
+  // 뉴비 보너스 — Lv 19 이하 유저에게 추가 50G (랭킹전 미참여 구간 보조)
+  const newbieBonus = ((p.level|0) <= HEAL_NEWBIE_MAX_LEVEL) ? HEAL_NEWBIE_BONUS : 0;
+  const totalBonus = rankBonus + newbieBonus;
+  p.gold += totalBonus;
   renderSheet();
   updateHealUI();
   const r = GAME.ranking.myRank;
   const bonusLabel = (r >= 1 && r <= 10) ? `랭킹 ${r}위 보너스` : '기본 보너스';
-  setHealMsg(`✔ 샘물의 힘으로 HP/MP 회복 완료. ${bonusLabel} +${rankBonus} G`, 'ok');
+  const newbieLabel = newbieBonus > 0 ? ` + 뉴비 보너스 +${newbieBonus}G` : '';
+  setHealMsg(`✔ 샘물의 힘으로 HP/MP 회복 완료. ${bonusLabel} +${rankBonus} G${newbieLabel}`, 'ok');
   try { advanceDailyQuest('dq_heal_1', 1); } catch(e){}
   try { bumpTitleCounter('total_heal_from_fountain', healedTotal); } catch(e){}
   try {
-    _bumpDailyCounter('goldGained', rankBonus, 'dq_gold_5k');
-    _bumpWeeklyCounter('goldGained', rankBonus, 'wq_gold_50k');
-    bumpTitleCounter('total_gold_earned', rankBonus);
+    _bumpDailyCounter('goldGained', totalBonus, 'dq_gold_5k');
+    _bumpWeeklyCounter('goldGained', totalBonus, 'wq_gold_50k');
+    bumpTitleCounter('total_gold_earned', totalBonus);
   } catch(e){}
   // 랜덤 방어전 트리거 제거됨 — 순수 유저 간 도전 경쟁으로 운영
 }
@@ -8141,10 +8153,16 @@ function getRankBonus(){
   return (11 - r) * 10;
 }
 
+const RANK_MIN_LEVEL = 20;
 async function openRank(){
   const _p0 = GAME.player;
   if (_p0 && _isBanned(_p0)){ _blockedByBanToast(_p0); return; }
   if (_p0 && !_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  // 레벨 제한 — Lv 20 미만 랭킹전 진입 차단
+  if (_p0 && (_p0.level|0) < RANK_MIN_LEVEL){
+    toast(`랭킹전은 Lv ${RANK_MIN_LEVEL} 이상부터 참여 가능합니다.`);
+    return;
+  }
   // 1) UI 즉시 노출 — 캐시된 slots로 바로 그려서 메뉴 클릭 지연 제거
   showContent('rank');
   $('rank-list').hidden = false;
@@ -8234,6 +8252,10 @@ async function challengeRank(targetRank){
   setTimeout(() => { _rankChallengeBusy = false; }, 800);
 
   if (GAME.player && _isBanned(GAME.player)){ _blockedByBanToast(GAME.player); return; }
+  if (GAME.player && (GAME.player.level|0) < RANK_MIN_LEVEL){
+    toast(`랭킹전은 Lv ${RANK_MIN_LEVEL} 이상부터 참여 가능합니다.`);
+    return;
+  }
   if (GAME.player && !_canDoHourlyActivity(GAME.player)){
     _hourlyBlockToast(); refreshHourlyLimitUI(); return;
   }
@@ -11337,6 +11359,77 @@ function applyCardEffect(card, ctx){
       ctx.log(`  - ${tgt==='enemy'?ctx.targName:ctx.castName} 버프 제거 (${rangeStr})`, ctx.castLogCls);
       return;
     }
+    if (t === 'stealPersistent'){
+      // n26 마법뺏기 전용 — 지속형 마법 상태 (Hot/MpHot/Evade/Leech/Reflect/ManaShield) 만 강탈
+      // 스탯·장비 buff·도트는 훔치지 않음. 남은 턴/횟수 그대로 유지.
+      const targVg = ctx.targVengeance && ctx.targVengeance();
+      if (targVg && targVg.turns > 0){
+        ctx.log(`  ✱ 벤전스 강탈 방어 — 마법뺏기 실패`, 'info');
+        return;
+      }
+      const cx = ctx.c;
+      const isP = (ctx.caster === 'player');
+      const T = isP ? 'mon' : 'my';
+      const C = isP ? 'my'  : 'mon';
+      const stolen = [];
+
+      // 1) Hot 배열 (지속 HP 회복) — r03 라바스폰의 hot 도 이쪽에 저장됨 (dot 은 별도, 훔치지 않음)
+      const targHots = cx[T + 'Hots'];
+      if (Array.isArray(targHots) && targHots.length){
+        cx[C + 'Hots'] ||= [];
+        for (const h of targHots){
+          cx[C + 'Hots'].push({ ...h });
+          const amt = (h.heal != null) ? `${h.heal}HP/턴` : (h.mult ? `${h.stats||['?']}×${h.mult}` : '?');
+          stolen.push(`지속회복 ${h.turns}턴 (${amt})`);
+        }
+        targHots.length = 0;
+      }
+      // 2) MpHot 배열 (지속 MP 회복)
+      const targMpHots = cx[T + 'MpHots'];
+      if (Array.isArray(targMpHots) && targMpHots.length){
+        cx[C + 'MpHots'] ||= [];
+        for (const m of targMpHots){
+          cx[C + 'MpHots'].push({ ...m });
+          stolen.push(`MP회복 ${m.turns}턴 (+${m.mp||'?'}MP/턴)`);
+        }
+        targMpHots.length = 0;
+      }
+      // 3) Evade (회피 상태)
+      const targEvade = cx[T + 'Evade'];
+      if (targEvade && targEvade.turns > 0){
+        cx[C + 'Evade'] = { ...targEvade };
+        stolen.push(`회피 ${targEvade.turns}턴 (${Math.floor((targEvade.pct||0)*100)}%)`);
+        cx[T + 'Evade'] = null;
+      }
+      // 4) Leech (라이프리치)
+      const targLeech = cx[T + 'Leech'];
+      if (targLeech && targLeech.turns > 0){
+        cx[C + 'Leech'] = { ...targLeech };
+        stolen.push(`라이프리치 ${targLeech.turns}턴 (${Math.floor((targLeech.pct||0)*100)}%)`);
+        cx[T + 'Leech'] = null;
+      }
+      // 5) Reflect (반사 · hits 기반)
+      const targReflect = cx[T + 'Reflect'];
+      if (targReflect && targReflect.hits > 0){
+        cx[C + 'Reflect'] = { ...targReflect };
+        stolen.push(`반사 ${targReflect.hits}회 (${Math.floor((targReflect.pct||0)*100)}%)`);
+        cx[T + 'Reflect'] = null;
+      }
+      // 6) ManaShield (마나 쉴드)
+      const targManaShield = cx[T + 'ManaShield'];
+      if (targManaShield && targManaShield.turns > 0){
+        cx[C + 'ManaShield'] = { ...targManaShield };
+        stolen.push(`마나쉴드 ${targManaShield.turns}턴 (${Math.floor((targManaShield.absorb||0)*100)}%)`);
+        cx[T + 'ManaShield'] = null;
+      }
+
+      if (stolen.length === 0){
+        ctx.log(`  ✱ ${ctx.castName} 마법뺏기 — 훔칠 지속 상태 없음`, 'info');
+      } else {
+        ctx.log(`  🌀 ${ctx.castName} 마법뺏기 — ${stolen.join(' / ')} 강탈`, 'heal');
+      }
+      return;
+    }
     if (t === 'stealBuff'){
       const lb = ctx.targLockedBuffs || {};
       const bg = ctx.targBuffsByGrade;
@@ -13693,11 +13786,10 @@ const TUTORIAL_STEPS = [
     target:'#m-hunt', page:'main', position:'corner',
   },
   {
-    icon:'🏆', title:'랭킹전 (초보 추천!)',
-    body:`<p>극초반에는 강조된 <b style="color:#ffd700;">랭킹전</b>이 가장 좋은 사냥터입니다.</p>
-      <p>10위부터 도전 가능, NPC는 Lv1 기본 캐릭터라 비교적 쉽게 이깁니다.</p>
-      <p>승리 시 경험치 + <b>50G</b>를 얻고, 한 위씩 상승합니다.</p>
-      <div class="tip">💰 <b>랭킹 등극 시 수행마다 골드 보너스</b> (1위 +100G ~ 10위 +10G).</div>`,
+    icon:'🏆', title:'랭킹전',
+    body:`<p><b style="color:#ffd700;">랭킹전</b>은 <b>Lv 20 이상</b>부터 참여할 수 있습니다.</p>
+      <p>10위부터 도전 가능하며 승리 시 한 위씩 상승합니다.</p>
+      <div class="tip">💰 <b>랭킹 등극 시 회복의 샘물 이용 시 골드 보너스</b> (1위 +100G ~ 10위 +10G).</div>`,
     target:'#m-rank', page:'main', position:'corner',
   },
   {
@@ -14729,11 +14821,26 @@ async function doLogin(){
     try {
       const { error: aErr } = await sb.auth.signInWithPassword({ email: nickToEmail(name), password: pw });
       if (aErr){
-        const msg = (aErr.message||'').toLowerCase();
-        if (msg.includes('invalid') || msg.includes('credential')){
+        // 에러 상세 정보 — message/status/code 모두 확인 후 유저에게 표시
+        const rawMsg = aErr.message || aErr.msg || '';
+        const status = aErr.status || aErr.statusCode || aErr.code || '';
+        const stringified = (() => {
+          try { return JSON.stringify(aErr, Object.getOwnPropertyNames(aErr)); }
+          catch(e){ return String(aErr); }
+        })();
+        console.error('[login error detail]', aErr, stringified);
+        const lower = rawMsg.toLowerCase();
+        if (lower.includes('invalid') || lower.includes('credential')){
           alert('아이디 또는 비밀번호가 올바르지 않습니다.');
+        } else if (lower.includes('email') && lower.includes('confirm')){
+          alert('이메일 인증 미완료 상태입니다.\n관리자에게 문의: Supabase Auth → Email Confirm 설정 확인 필요.');
+        } else if (lower.includes('rate') || String(status) === '429'){
+          alert('요청이 너무 많아 일시적으로 차단되었습니다. 1~2분 후 다시 시도해 주세요.');
+        } else if (lower.includes('network') || lower.includes('fetch') || lower.includes('failed to fetch')){
+          alert('네트워크 오류: Supabase 서버에 연결할 수 없습니다.\n(관리자: 프로젝트 pause 여부 · URL/API key 확인)');
         } else {
-          alert('로그인 실패: ' + aErr.message);
+          const shown = rawMsg || stringified || '(상세 정보 없음)';
+          alert('로그인 실패\n\n메시지: ' + shown + '\n상태: ' + (status || 'N/A') + '\n\n(F12 콘솔에 상세 로그 남김)');
         }
         return;
       }
