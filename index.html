@@ -594,6 +594,8 @@
   .chat-head { background:#2e53b2; color:#fff; padding:3px 8px; font-size:11px; font-weight:bold; border-bottom:1px solid #888; }
   .chat-users { background:#f8f8f8; padding:2px 4px; font-size:11px; max-height:120px; overflow-y:auto; border-bottom:1px solid #aaa; }
   .chat-users .u { display:block; color:#0066cc; padding:1px 0; }
+  .chat-notice { background:#fff3cd; color:#7c4a03; border-bottom:1px solid #d4a83a; padding:5px 6px; font-size:11px; font-weight:bold; line-height:1.35; flex-shrink:0; }
+  .chat-notice b { color:#c62828; }
   .chat-msgs { flex:1; padding:4px; font-size:11px; overflow-y:auto; line-height:1.4; min-height:300px; }
   .chat-msgs .nick { color:#cc0000; font-weight:bold; }
   .chat-msgs .nick.me { color:#006633; }
@@ -2452,6 +2454,7 @@
   <div id="chat">
     <div class="chat-head">접속자: <span id="chatUsers">8</span>명</div>
     <div class="chat-users" id="chatUserList"></div>
+    <div class="chat-notice" id="chatNotice">⚠ 게임 종료 시 반드시 <b>[로그아웃]</b> 버튼을 눌러주세요. 저장되지 않은 게임 데이터에 대해서는 책임질 수 없습니다.</div>
     <div class="chat-msgs" id="chatMsgs"></div>
     <div class="chat-input">
       <span class="nick-prefix" id="chatNick">-</span>
@@ -3054,8 +3057,8 @@ function applySavePayload(d){
 
 let _cloudSaveTimer = null;
 let _lastCloudSaveAt = 0;
-// Supabase Disk IO Budget 절약: 자동저장 최소 10초 간격 (기존 500ms 대비 20배 감소). 브라우저 종료 시엔 _flushCloudSaveOnUnload 가 beacon 으로 즉시 flush.
-const CLOUD_SAVE_MIN_INTERVAL_MS = 10000;
+// Supabase Disk IO Budget 절약: 자동저장 최소 30초 간격 (기존 500ms 대비 60배 감소). 브라우저 종료 시엔 _flushCloudSaveOnUnload 가 beacon 으로 즉시 flush.
+const CLOUD_SAVE_MIN_INTERVAL_MS = 30000;
 function cloudSaveDebounced(){
   if (!sb || !GAME.player) return;
   if (_cloudSaveTimer) return; // 이미 대기 중이면 재예약 안 함 → 연속 saveGame() burst 흡수
