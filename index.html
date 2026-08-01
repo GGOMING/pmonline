@@ -1500,8 +1500,8 @@
         <!-- 3줄: 공격대 3종 (파스텔 하늘색 통일) -->
         <table><tr>
           <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')"  style="background:#d6ecfa;color:#2a4a6b;">⛅ 새벽의 언덕 (Lv. 25)</td>
-          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')"  style="background:#d6ecfa;color:#2a4a6b;">🌫 안개의 숲 (Lv. 25)</td>
-          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="background:#d6ecfa;color:#2a4a6b;">🌌 잊혀진 성좌 (Lv. 40)</td>
+          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')"  style="background:#d6ecfa;color:#2a4a6b;">🌫 안개의 숲 (Lv. 30)</td>
+          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="background:#d6ecfa;color:#2a4a6b;">🌌 잊혀진 성좌 (Lv. 35)</td>
         </tr></table>
         <!-- 4줄: 카드 도감·프로필·명예의 전당·축복의 상점·오픈채팅방 -->
         <table><tr>
@@ -2825,7 +2825,7 @@ const GAME = {
   raid: {
     dawn:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
     mist:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
-    // 3차 공격대 잊혀진 성좌 — Lv 40+, 6시간 세션 (0/6/12/18시 리셋)
+    // 3차 공격대 잊혀진 성좌 — Lv 35+, 6시간 세션 (0/6/12/18시 리셋)
     abyss: { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
   },
   raidCombat: null,
@@ -6346,12 +6346,13 @@ const RAID_BOSSES = {
     { id:'warden',       name:'워든',         hpMax:10000, str:25, dex:40, int:20, con:20, atk:[45,85], icon:'assets/wc3_icons/darkranger.gif' },
   ],
   mist: [
-    { id:'demonhunter',  name:'데몬헌터',     hpMax:10000, str:30, dex:35, int:30, con:25, atk:[60,110], icon:'assets/wc3_icons/pitlord.gif' },
-    { id:'deathknight',  name:'데스나이트',   hpMax:10000, str:35, dex:25, int:30, con:30, atk:[65,115], icon:'assets/wc3_icons/shadowhunter.gif' },
-    { id:'beastmaster',  name:'비스트마스터', hpMax:10000, str:30, dex:30, int:20, con:35, atk:[55,100], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
-    { id:'darkranger',   name:'다크 레인저',  hpMax:10000, str:25, dex:45, int:25, con:20, atk:[70,120], icon:'assets/wc3_icons/darkranger.gif' },
+    // Lv 30+ 게이트 · dawn 대비 HP +50%, 스탯 +5, 공격력 상단 +10~15
+    { id:'demonhunter',  name:'데몬헌터',     hpMax:15000, str:35, dex:40, int:35, con:30, atk:[70,125], icon:'assets/wc3_icons/pitlord.gif' },
+    { id:'deathknight',  name:'데스나이트',   hpMax:15000, str:40, dex:30, int:35, con:35, atk:[75,130], icon:'assets/wc3_icons/shadowhunter.gif' },
+    { id:'beastmaster',  name:'비스트마스터', hpMax:15000, str:35, dex:35, int:25, con:40, atk:[65,115], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
+    { id:'darkranger',   name:'다크 레인저',  hpMax:15000, str:30, dex:50, int:30, con:25, atk:[80,135], icon:'assets/wc3_icons/darkranger.gif' },
   ],
-  // 3차 공격대 「잊혀진 성좌」 — Lv 40+
+  // 3차 공격대 「잊혀진 성좌」 — Lv 35+
   abyss: [
     // 강한 순: 하데스 > 오리온 > 아폴론 > 헤라클레스 > 아르테미스 > 페르세우스
     { id:'hades',    name:'하데스',     hpMax:110000, str:40, dex:25, int:45, con:40, atk:[90,160],  icon:'assets/The%20Forgotten%20Zodiac/hades.jpg' },
@@ -6395,7 +6396,7 @@ const MONSTERS_ABYSS = [
   { id:'ab_satyr_soulstealer', name:'사티로스 영혼도둑',  race:'undead',   lvRange:[55,60], baseHp:70, baseAtk:[45,80],  stats:{str:16,dex:12,int:28,con:16}, weight:7,  elite:true,  icon:'assets/The%20Forgotten%20Zodiac/abyss_satyr_soulstealer.jpg' },
 ];
 const ABYSS_MOB_TOTAL = 199;   // 세션당 몹 수
-const ABYSS_MIN_LEVEL = 40;    // 입장 최소 레벨
+const ABYSS_MIN_LEVEL = 35;    // 입장 최소 레벨
 const ABYSS_SESSION_HOURS = 6; // 세션 리셋 주기 (시간)
 const ABYSS_ADMIN_PW = 'ekfru2';
 
@@ -6831,7 +6832,7 @@ async function openRaid(raidKey){
     toast(`${nm} 보스 처치 후 재입장 쿨다운 — ${mm}분 ${ss}초 남음`);
     return;
   }
-  const minLv = raidKey === 'dawn' ? 25 : (raidKey === 'mist' ? 25 : ABYSS_MIN_LEVEL);
+  const minLv = raidKey === 'dawn' ? 25 : (raidKey === 'mist' ? 30 : ABYSS_MIN_LEVEL);
   if (p.level < minLv){
     const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
     toast(`공격대(${nm})는 Lv ${minLv} 이상에서 입장 가능합니다.`);
@@ -6917,7 +6918,7 @@ function renderRaidLobby(){
     btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/${cap})`;
     btn.disabled = false;
     if (isAbyss){
-      $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 40+)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리를 모두 처치하면 올림포스 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.`;
+      $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 35+)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리를 모두 처치하면 올림포스 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.`;
     } else {
       $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
     }
@@ -14847,6 +14848,36 @@ async function doLogout(){
 // 규칙: 2~6자, 한글(완성형)·영문·숫자만 허용. 특수문자·공백·자음/모음 단독 사용 금지.
 // [가-힣] 범위는 완성형 한글만 매칭하므로 ㄱ·ㅏ 같은 자음/모음 단독은 자동 배제됨.
 const NICK_ALLOWED_RE = /^[a-zA-Z0-9가-힣]+$/;
+// ─── 닉네임 금칙어 목록 ───
+// 부분 문자열 매칭 (대소문자 무시 · 공백 제거 후 판정)
+// 욕설/성적 표현/차별/혐오 등. 원치 않으면 여기서 삭제·추가.
+const NICK_BAD_WORDS = [
+  // 한국어 욕설·비속어
+  '씨발','시발','씹','ㅅㅂ','ㅆㅂ','ㅄ','병신','븅신','ㅂㅅ','새끼','ㅅㄲ','ㅆㄲ',
+  '개새','개년','개놈','걸레','미친','미틴','ㅁㅊ','좆','존나','졸라','ㅈㄴ',
+  '지랄','ㅈㄹ','또라이','또라이','또라','tlqkf','qudtls','fuck','shit',
+  '느금마','니미','니애미','에미','ㅗ','엿','fuk','bitch','asshole','cunt',
+  '개색','썅','ㅄ','머저리','호로','후레','후장','좃','씨1발','시1발',
+  // 성적 표현
+  '섹스','쎅스','sex','sekus','자지','보지','자짐','보짐','ㅈㅈ','ㅂㅈ',
+  '딸감','딸딸','오르가즘','오르가즘','orgasm','porn','포르노','야동',
+  '성기','음경','음순','유두','젖가슴','젖꼭지','고자','ㅗㅜㅑ',
+  // 차별·혐오
+  '한남','한녀','메갈','일베','틀딱','급식충','한남충','맘충','급식',
+  '전라디언','홍어','짱깨','쪽바리','짱께','따까리',
+  // 운영자 사칭 방지
+  'admin','operator','운영자','관리자','system','시스템','ADMIN','OP',
+  'GM','gm','moderator','모더레이터',
+];
+// 금칙어 스캔 — 대소문자 무시 + 공백/구분자 제거 후 부분 문자열 검사
+function _containsBadWord(name){
+  const norm = String(name || '').toLowerCase().replace(/\s+/g,'');
+  for (const w of NICK_BAD_WORDS){
+    if (!w) continue;
+    if (norm.includes(String(w).toLowerCase())) return w;
+  }
+  return null;
+}
 function validateNicknameFormat(name){
   if (!name) return '닉네임을 입력하세요.';
   if (name.length < 2) return '2자 이상 입력하세요.';
@@ -14859,6 +14890,11 @@ function validateNicknameFormat(name){
       return '자음이나 모음만 있는 글자는 사용할 수 없습니다. (예: ㄱ, ㅏ)';
     }
     return '한글·영문·숫자만 사용할 수 있습니다. (특수문자 불가)';
+  }
+  // 금칙어 검사 (욕설·성적·차별·운영자 사칭)
+  const bad = _containsBadWord(name);
+  if (bad){
+    return '부적절한 단어가 포함되어 사용할 수 없습니다.';
   }
   return null;   // 유효
 }
