@@ -2748,10 +2748,10 @@ const CARDS = [
   { id:'n80', name:'힐링포션',       grade:'normal', icon:'potion2',text:'HP 25 회복', fx:{type:'heal',hp:25} },
 
   // ───── 힘캐 확장 일반 카드 7종 ─────
-  { id:'n81', name:'투사의 심장',    grade:'normal', icon:'heart',  iconPath:'assets/wc3_reforged_used/BTNReincarnation-Reforged.png', text:'STR +4, CON +2', fx:{type:'buff',str:4,con:2} },
-  { id:'n82', name:'광폭화',         grade:'normal', icon:'rage',   iconPath:'assets/wc3_reforged_used/BTNAmuletOftheWild-Reforged.png', text:'전체 HP의 10% 소모, STR +6', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.10},{type:'buff',str:6}]} },
+  { id:'n81', name:'투사의 심장',    grade:'normal', icon:'heart',  iconPath:'assets/wc3_reforged_used/BTNReincarnation-Reforged.png', text:'STR +5, CON +2', fx:{type:'buff',str:5,con:2} },
+  { id:'n82', name:'광폭화',         grade:'normal', icon:'rage',   iconPath:'assets/wc3_reforged_used/BTNAmuletOftheWild-Reforged.png', text:'전체 HP의 10% 소모, STR +7', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.10},{type:'buff',str:7}]} },
   { id:'n83', name:'무투',           grade:'normal', icon:'crack',  iconPath:'assets/wc3_reforged_used/BTNFireGauntlets.png', text:'3턴 동안 시전자 방어구 -5 · 상대방 방어구 -10', fx:{type:'multi',effects:[{type:'buff',def:-5,turns:3},{type:'debuff',def:-10,turns:3}]} },
-  { id:'n84', name:'분노의 함성',    grade:'normal', icon:'roar',   iconPath:'assets/wc3_reforged_used/BTNRexxar.png', text:'STR +4, 상대 DEX -2', fx:{type:'multi',effects:[{type:'buff',str:4},{type:'debuff',dex:-2}]} },
+  { id:'n84', name:'분노의 함성',    grade:'normal', icon:'roar',   iconPath:'assets/wc3_reforged_used/BTNRexxar.png', text:'STR +5, 상대 DEX -2', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'debuff',dex:-2}]} },
   { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:3} },
   { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 매턴 STR +1 누적', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buffOverTime',stats:{str:1},turns:10}]} },
   { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 이번 턴 STR +20, 방어구 +20', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'buff',str:20,def:20,turns:1}]} },
