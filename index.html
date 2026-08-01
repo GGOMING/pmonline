@@ -2747,6 +2747,15 @@ const CARDS = [
   { id:'n79', name:'힐링워드',       grade:'normal', icon:'cross',  text:'5턴 동안 INT*0.6 만큼 HP 회복', fx:{type:'hotStat',stats:['int'],mult:0.6,turns:5} },
   { id:'n80', name:'힐링포션',       grade:'normal', icon:'potion2',text:'HP 25 회복', fx:{type:'heal',hp:25} },
 
+  // ───── 힘캐 확장 일반 카드 7종 ─────
+  { id:'n81', name:'투사의 심장',    grade:'normal', icon:'heart',  iconPath:'assets/wc3_reforged_used/BTNReincarnation-Reforged.png', text:'STR +4, CON +2', fx:{type:'buff',str:4,con:2} },
+  { id:'n82', name:'광폭화',         grade:'normal', icon:'rage',   iconPath:'assets/wc3_reforged_used/BTNAmuletOftheWild-Reforged.png', text:'전체 HP의 10% 소모, STR +6', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.10},{type:'buff',str:6}]} },
+  { id:'n83', name:'무투',           grade:'normal', icon:'crack',  iconPath:'assets/wc3_reforged_used/BTNFireGauntlets.png', text:'3턴 동안 시전자 방어구 -5 · 상대방 방어구 -10', fx:{type:'multi',effects:[{type:'buff',def:-5,turns:3},{type:'debuff',def:-10,turns:3}]} },
+  { id:'n84', name:'분노의 함성',    grade:'normal', icon:'roar',   iconPath:'assets/wc3_reforged_used/BTNRexxar.png', text:'STR +4, 상대 DEX -2', fx:{type:'multi',effects:[{type:'buff',str:4},{type:'debuff',dex:-2}]} },
+  { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:3} },
+  { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 STR +1', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buff',str:1,turns:10}]} },
+  { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 이번 턴 STR +20, 방어구 +20', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'buff',str:20,def:20,turns:1}]} },
+
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
   { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 방어구 +6씩 증가', fx:{type:'buff',def:6,turns:3} },
@@ -2812,6 +2821,13 @@ const CARDS = [
   { id:'r40', name:'팬오브나이프',       grade:'rare', icon:'dagger',   text:'[DEX + 무기]로 3회 타격 / 시전자 무기 및 방어구 0으로 감소', fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true,mult:3},{type:'zeroStat',target:'self',stats:['atk','def']}]} },
   { id:'r41', name:'사령의 로드',       grade:'rare', icon:'wand',     iconPath:'assets/wc3_reforged_used/BTNWandSkull-Reforged.png', text:'INT × (1.0~2.0배 랜덤)으로 2회 타격 (각 hit 독립 시행) / MP 50 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],multMin:1.0,multMax:2.0,hits:2},{type:'mpCost',amount:50}]} },
   { id:'r42', name:'마나 쉴드',         grade:'rare', icon:'shield',   iconPath:'assets/wc3_reforged_used/BTNManaShield-Reforged.png', text:'다음 턴부터 5턴 동안 받는 데미지의 50%를 MP에서 차감 (MP 부족분은 HP로) / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'manaShield',turns:5,absorb:0.5} },
+
+  // ───── 힘캐 확장 레어 카드 5종 ─────
+  { id:'r43', name:'카니발라이즈',       grade:'rare', icon:'blood',   iconPath:'assets/wc3_reforged_used/BTNCannibalize-NoViolence-Reforged.png', text:'2턴 동안 매턴 STR × 1.2 고정 데미지 (방어력 무시) + 2턴 동안 가한 데미지의 30% HP 흡수', fx:{type:'multi',effects:[{type:'dotStat',stats:['str'],mult:1.2,turns:2,dynamic:true},{type:'lifeleech',turns:2,pct:0.3}]} },
+  { id:'r44', name:'브로큰',             grade:'rare', icon:'bomb',    iconPath:'assets/wc3_reforged_used/BTNMeatapult-Reforged.png', text:'자기 HP 30% 소모, STR × 3 데미지 (방어력 무시)', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.30},{type:'dmgStat',stats:['str'],mult:3,ignoreDef:true}]} },
+  { id:'r45', name:'홀리스피어',         grade:'rare', icon:'holy',    iconPath:'assets/wc3_reforged_used/BTNVorpalBlades-Reforged.png', text:'(STR + 무기 + 15) 데미지 + 상대 방어구 -5 (영구)', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true,bonus:15},{type:'debuff',def:-5}]} },
+  { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.5 만큼 고정 데미지 (방어력 무시)', fx:{type:'dmgLostHpPct',pct:0.5,ignoreDef:true} },
+  { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 (영구) / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -4574,11 +4590,12 @@ const CARD_PRIMARY_STAT = {
   n51:'INT', n52:'STR', n53:'CON', n54:'INT', n55:'DEX', n56:'CON', n57:'INT', n58:'CON', n59:'STR', n60:'INT',
   n61:'CON', n62:'CON', n63:'CON', n64:'DEX', n65:'INT', n66:'INT', n67:'INT', n68:'CON', n69:'CON', n70:'INT',
   n71:'INT', n72:'CON', n73:'CON', n74:'공용', n75:'공용', n76:'공용', n77:'DEX', n78:'INT', n79:'INT', n80:'공용',
+  n81:'STR', n82:'STR', n83:'STR', n84:'STR', n85:'STR', n86:'STR', n87:'STR',
   r01:'CON', r02:'CON', r03:'CON', r04:'CON', r05:'공용', r06:'CON', r07:'CON', r08:'CON', r09:'STR', r10:'STR',
   r11:'공용', r12:'CON', r13:'INT', r14:'INT', r15:'CON', r16:'STR', r17:'CON', r18:'DEX', r19:'공용', r20:'CON',
   r21:'DEX', r22:'INT', r23:'DEX', r24:'DEX', r25:'INT', r26:'INT', r27:'CON', r28:'INT', r29:'INT', r30:'INT',
   r31:'공용', r32:'공용', r33:'CON', r34:'공용', r35:'CON', r36:'CON', r37:'CON', r38:'INT', r39:'INT', r40:'DEX',
-  r41:'INT', r42:'INT',
+  r41:'INT', r42:'INT', r43:'STR', r44:'STR', r45:'STR', r46:'STR', r47:'STR',
   u01:'STR', u02:'공용', u03:'INT', u04:'DEX', u05:'CON', u06:'공용', u07:'CON', u08:'STR', u09:'INT', u10:'DEX',
   h01:'공용', h02:'공용', h03:'공용', h04:'CON', h05:'CON',
   l01:'공용', l02:'공용',
@@ -10401,13 +10418,13 @@ function _computeMpCost(fx, castObj){
 // 카드가 적에게 HP 데미지를 주는 효과를 포함하는지 검사 (평타 자동 추가 판정용)
 const _OFFENSIVE_FX_TYPES = new Set([
   'basicAtk','dmg','dmgSelf','dmgStat','dmgHits','dot','dotStat',
-  'mpDmg','lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dotPct',
+  'mpDmg','lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dotPct','dmgLostHpPct',
 ]);
 // 직접(즉시) 데미지 타입 — 도트/고정데미지 계열은 제외. 이 계열만 자동 평타 추가를 억제
 // dot / dotStat / dotPct / mpDmg (고정데미지 계열) 은 기본 공격을 동시에 타격하도록 허용
 const _DIRECT_DAMAGE_FX_TYPES = new Set([
   'basicAtk','dmg','dmgSelf','dmgStat','dmgHits',
-  'lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct',
+  'lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dmgLostHpPct',
 ]);
 function _isOffensiveCard(card){
   function check(fx){
@@ -10874,6 +10891,14 @@ function applyCardEffect(card, ctx){
       } else {
         dealFn(base * mult);
       }
+      return;
+    }
+    if (t === 'dmgLostHpPct'){
+      // 시전자가 지금까지 잃은 HP × pct 만큼 데미지 (r46 데스트레이드)
+      const lostHp = Math.max(0, (ctx.castObj.hpMax || 0) - (ctx.castObj.hp || 0));
+      const raw = Math.floor(lostHp * (fx.pct || 0));
+      if (fx.ignoreDef) _dealIgnoreDef(ctx, raw);
+      else doDmg(raw);
       return;
     }
     if (t === 'dmgHits'){
