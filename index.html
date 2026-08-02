@@ -314,10 +314,12 @@
   /* 세로 모드 (모바일) */
   body.layout-vertical { padding:4px; }
   body.layout-vertical #pg-main.active { flex-direction:column; align-items:center !important; gap:6px; }
-  body.layout-vertical #chat { align-self:center !important; max-height:380px !important; }
+  body.layout-vertical #chat { align-self:center !important; max-height:520px !important; }
   body.layout-vertical #game { align-self:center !important; }
   body.layout-vertical #game { width:100%; max-width:480px; box-sizing:border-box; }
-  body.layout-vertical #chat { width:100%; max-width:480px; max-height:260px; box-sizing:border-box; }
+  body.layout-vertical #chat { width:100%; max-width:480px; max-height:520px; box-sizing:border-box; }
+  /* 모바일: 접속자 명단 세로 확장 (기본 120px → 200px). 유저 많으면 여전히 내부 스크롤 */
+  body.layout-vertical .chat-users { max-height:200px; }
   body.layout-vertical .topbox { flex-wrap:wrap; }
   body.layout-vertical table.stat { width:100% !important; table-layout:fixed; font-size:10px; }
   /* 모바일 전용 — 스탯창 컬럼 비율 재정의 (PC는 8/17/8/17/8/42, 모바일은 짧은 라벨 더 넓게) */
@@ -6398,12 +6400,12 @@ const RAID_BOSSES = {
   // 3차 공격대 「잊혀진 성좌」 — Lv 35+
   abyss: [
     // 강한 순: 하데스 > 오리온 > 아폴론 > 헤라클레스 > 아르테미스 > 페르세우스
-    { id:'hades',    name:'하데스',     hpMax:110000, str:40, dex:25, int:45, con:40, atk:[90,160],  icon:'assets/The%20Forgotten%20Zodiac/hades.jpg' },
-    { id:'orion',    name:'오리온',     hpMax:95000,  str:32, dex:45, int:25, con:30, atk:[85,150],  icon:'assets/The%20Forgotten%20Zodiac/orion.jpg' },
-    { id:'apollo',   name:'아폴론',     hpMax:85000,  str:25, dex:28, int:48, con:28, atk:[70,125],  icon:'assets/The%20Forgotten%20Zodiac/apollo.jpg' },
-    { id:'hercules', name:'헤라클레스', hpMax:78000,  str:48, dex:22, int:15, con:42, atk:[100,170], icon:'assets/The%20Forgotten%20Zodiac/hercules.jpg' },
-    { id:'artemis',  name:'아르테미스', hpMax:72000,  str:22, dex:48, int:30, con:22, atk:[80,140],  icon:'assets/The%20Forgotten%20Zodiac/artemis.jpg' },
-    { id:'perseus',  name:'페르세우스', hpMax:65000,  str:38, dex:35, int:22, con:25, atk:[80,135],  icon:'assets/The%20Forgotten%20Zodiac/perseus.jpg' },
+    { id:'hades',    name:'하데스',     hpMax:130000, str:40, dex:25, int:45, con:40, atk:[90,160],  icon:'assets/The%20Forgotten%20Zodiac/hades.jpg' },
+    { id:'orion',    name:'오리온',     hpMax:115000, str:32, dex:45, int:25, con:30, atk:[85,150],  icon:'assets/The%20Forgotten%20Zodiac/orion.jpg' },
+    { id:'apollo',   name:'아폴론',     hpMax:100000, str:25, dex:28, int:48, con:28, atk:[70,125],  icon:'assets/The%20Forgotten%20Zodiac/apollo.jpg' },
+    { id:'hercules', name:'헤라클레스', hpMax:95000,  str:48, dex:22, int:15, con:42, atk:[100,170], icon:'assets/The%20Forgotten%20Zodiac/hercules.jpg' },
+    { id:'artemis',  name:'아르테미스', hpMax:87000,  str:22, dex:48, int:30, con:22, atk:[80,140],  icon:'assets/The%20Forgotten%20Zodiac/artemis.jpg' },
+    { id:'perseus',  name:'페르세우스', hpMax:80000,  str:38, dex:35, int:22, con:25, atk:[80,135],  icon:'assets/The%20Forgotten%20Zodiac/perseus.jpg' },
   ],
 };
 
@@ -6893,6 +6895,16 @@ async function openRaid(raidKey){
     if (raidKey === 'abyss') checkAbyssReset();
     else checkRaidReset(raidKey);
   }
+  // 세션 보상 수령 여부 체크 — 이번 세션에 보스 보상을 이미 받았으면 재입장 차단
+  // 세션 리셋(자동 6시간 or 축복 초기화) 시 sessionStart 가 갱신되어 자동 해제
+  const rNow = GAME.raid && GAME.raid[raidKey];
+  const curSessionStart = rNow ? (Number(rNow.sessionStart) || 0) : 0;
+  const claimedSession = (p.raidBossClaimed && Number(p.raidBossClaimed[raidKey])) || 0;
+  if (curSessionStart > 0 && claimedSession === curSessionStart){
+    const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
+    toast(`${nm} 보스 보상을 이미 수령하셨습니다.\n세션 리셋 후 재입장 가능합니다.`);
+    return;
+  }
   GAME.currentRaid = raidKey;
   showContent('raid');
   $('raid-lobby').hidden = false;
@@ -6995,6 +7007,7 @@ function raidChallenge(){
 
 // 여신의 축복을 소모하여 현재 공격대를 전체 초기화 (실시간 공유)
 // dawn/mist: 축복 5개, abyss(잊혀진 성좌): 축복 10개
+// 각 공격대별 하루 1회 제한 (todayKey 기준 — YYYY-MM-DD)
 // 정해진 시간(6시간 세션) 리셋에는 영향 없음 — session_start 유지
 async function requestRaidManualReset(){
   const p = GAME.player;
@@ -7013,8 +7026,19 @@ async function requestRaidManualReset(){
     toast(`✨ 여신의 축복이 부족합니다. (필요: ${cost})`);
     return;
   }
+  // 일 1회 제한 체크 — 공격대별로 오늘 이미 초기화했으면 차단
+  if (!p.raidManualResetHistory || typeof p.raidManualResetHistory !== 'object') p.raidManualResetHistory = {};
+  const todayKey = (() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+  })();
+  if (p.raidManualResetHistory[raidKey] === todayKey){
+    const kr = { dawn:'새벽의 언덕', mist:'안개의 숲', abyss:'잊혀진 성좌' }[raidKey] || raidKey;
+    toast(`오늘은 이미 ${kr}을(를) 초기화했습니다. 내일 다시 시도해주세요.`);
+    return;
+  }
   const mobCount = isAbyss ? ABYSS_MOB_TOTAL : 99;
-  if (!confirm(`✨ 여신의 축복 ${cost}개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 ${mobCount}마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 6시간 자동 리셋엔 영향 없음`)) return;
+  if (!confirm(`✨ 여신의 축복 ${cost}개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 ${mobCount}마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 6시간 자동 리셋엔 영향 없음\n· ⚠ 각 공격대별 하루 1회만 초기화 가능`)) return;
   // 새 보스 선정 (클라이언트에서 랜덤 — RPC에 전달)
   const bossList = RAID_BOSSES[raidKey];
   const boss = bossList[Math.floor(Math.random() * bossList.length)];
@@ -7036,6 +7060,8 @@ async function requestRaidManualReset(){
     }
     p.blessing = Math.max(0, (p.blessing||0) - cost);
     try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
+    // 오늘 이 공격대 초기화 완료 기록 (일 1회 제한)
+    p.raidManualResetHistory[raidKey] = todayKey;
     // 본인 pending 몬스터도 초기화 (다음 도전 시 새 몬스터부터)
     p.pendingRaidMob = null;
     saveGame();
@@ -7104,6 +7130,14 @@ function startRaidMobBattle(){
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
   if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단
+  const cs = r ? (Number(r.sessionStart) || 0) : 0;
+  const cl = (p.raidBossClaimed && Number(p.raidBossClaimed[raidKey])) || 0;
+  if (cs > 0 && cl === cs){
+    const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
+    toast(`${nm} 보스 보상을 이미 수령하셨습니다. 세션 리셋 후 재입장 가능합니다.`);
+    return;
+  }
   _incHourlyActivity(p);
   let monster;
   const pending = p.pendingRaidMob;
@@ -7187,13 +7221,23 @@ async function startRaidBossBattle(){
   const _p0 = GAME.player;
   if (_isBanned(_p0)){ _blockedByBanToast(_p0); return; }
   if (!_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
-  _incHourlyActivity(_p0);
   // 진입 직전에 클라우드 최신 boss_hp를 한 번 더 fetch (다른 사용자 누적 데미지 반영)
   // 병렬 클라우드 모드에선 abyss도 포함
   if (sb){
     try { await loadRaidFromCloud(); } catch(e){ console.warn('[startRaidBoss reload]', e); }
   }
   const r = GAME.raid[raidKey];
+  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단 (loadRaidFromCloud 이후 최신 세션 기준으로 체크)
+  {
+    const cs = r ? (Number(r.sessionStart) || 0) : 0;
+    const cl = (_p0.raidBossClaimed && Number(_p0.raidBossClaimed[raidKey])) || 0;
+    if (cs > 0 && cl === cs){
+      const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
+      toast(`${nm} 보스 보상을 이미 수령하셨습니다. 세션 리셋 후 재입장 가능합니다.`);
+      return;
+    }
+  }
+  _incHourlyActivity(_p0);
   const bossDef = RAID_BOSSES[raidKey].find(b => b.id === r.bossId);
   console.log('[raid boss] start with hp', r.bossHp, '/', r.bossHpMax, 'defeated:', r.bossDefeated);
   // 보스는 누적 HP 유지 (r.bossHp 사용)
@@ -7244,8 +7288,74 @@ async function startRaidBossBattle(){
 }
 
 function makeBossDeck(raidKey){
-  // 보스 덱: 영웅 1, 유니크 2, 레어 7, 노멀 5 = 15장
-  // 모든 등급 풀에서 monsterOnly (검거·돈뿌리기 등) 카드는 제외
+  // ─── abyss(잊혀진 성좌) 보스 전용 커스텀 덱 ───
+  // 슬롯 0~1  (1~2턴): 영웅 카드 or 홀리라이트(u06) 랜덤 배치 (2장, 서로 다름)
+  // 슬롯 2~4  (3~5턴): 힐(n78) + 유니크 랜덤 2종 (총 3장, 서로 다름, 셔플)
+  // 슬롯 5~14 (6~15턴): 공격/치료 카드 위주 (모든 등급 mix, 서로 다름, 셔플)
+  // 덱 전체 15장 모두 중복 없음
+  if (raidKey === 'abyss'){
+    const heroPool = CARDS.filter(c => c.grade === 'hero' && !c.monsterOnly);
+    const holyLight = CARDS.find(c => c.id === 'u06');
+    const healCard  = CARDS.find(c => c.id === 'n78');
+    const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly && c.id !== 'u06');
+    // 공격/치료 판정 (multi 는 하위 effect 중 하나라도 매치되면 인정)
+    const ATK_HEAL_TYPES = new Set([
+      'dmg','dmgStat','dmgHits','dmgLostHpPct','dot','dotStat','dmgSelf','mpDmg',
+      'lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dotPct',
+      'heal','healStat','healLevel','hot','hotStat','mpHot',
+    ]);
+    const isAtkOrHeal = (c) => {
+      const fx = c && c.fx;
+      if (!fx) return false;
+      if (ATK_HEAL_TYPES.has(fx.type)) return true;
+      if (fx.type === 'multi' && Array.isArray(fx.effects)){
+        return fx.effects.some(e => e && ATK_HEAL_TYPES.has(e.type));
+      }
+      return false;
+    };
+    const fillerPool = CARDS.filter(c =>
+      c.id !== 'basic_atk' && !c.monsterOnly && isAtkOrHeal(c)
+    );
+
+    const used = new Set();
+    const pickUnique = (pool) => {
+      const avail = pool.filter(c => c && !used.has(c.id));
+      if (!avail.length) return null;
+      const c = avail[Math.floor(Math.random() * avail.length)];
+      used.add(c.id);
+      return c;
+    };
+
+    // 슬롯 0~1: 영웅 or 홀리라이트 풀에서 서로 다른 2장
+    const earlyPool = holyLight ? [...heroPool, holyLight] : [...heroPool];
+    const s0 = pickUnique(earlyPool);
+    const s1 = pickUnique(earlyPool);
+
+    // 슬롯 2~4: 힐(n78) + 유니크 랜덤 2 → 순서 셔플
+    const mid = [];
+    if (healCard){ used.add(healCard.id); mid.push(healCard); }
+    const u1 = pickUnique(uniquePool); if (u1) mid.push(u1);
+    const u2 = pickUnique(uniquePool); if (u2) mid.push(u2);
+    for (let i = mid.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [mid[i], mid[j]] = [mid[j], mid[i]];
+    }
+
+    // 슬롯 5~14: 공격/치료 풀에서 서로 다른 10장 → 순서 셔플
+    const late = [];
+    for (let i = 0; i < 10; i++){
+      const c = pickUnique(fillerPool);
+      if (c) late.push(c);
+    }
+    for (let i = late.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [late[i], late[j]] = [late[j], late[i]];
+    }
+
+    return [s0, s1, ...mid, ...late].filter(Boolean);
+  }
+
+  // ─── dawn/mist 기존 로직: 영웅 1, 유니크 2, 레어 7, 노멀 5 = 15장 (중복 허용, 전체 셔플) ───
   const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
@@ -7255,51 +7365,15 @@ function makeBossDeck(raidKey){
     for (let i = 0; i < n; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
     return out;
   };
-
-  // abyss(잊혀진 성좌) 보스: 회복 카드 등장 확률 상향
-  //   u06 홀리라이트 (유니크·즉시 회복) → 60% 확률로 유니크 슬롯 1장 강제
-  //   h04 빅베드부두 (영웅·지연 회복+버프)  → 60% 확률로 영웅 슬롯 강제
-  //   → 위 2장은 셔플 후 슬롯 0~1 (2턴 안) 로 재배치
-  //   n78 힐 (일반·INT×1.5 즉시 회복) → 90% 확률로 노멀 슬롯 1장에 등장 (배치 순서 랜덤)
-  const isAbyss = raidKey === 'abyss';
-  const heroSlots   = pick(heroPool, 1);
-  const uniqueSlots = pick(uniquePool, 2);
-  const rareSlots   = pick(rarePool, 7);
-  const normalSlots = pick(normalPool, 5);
-  if (isAbyss){
-    const holyLight = CARDS.find(c => c.id === 'u06');
-    if (holyLight && Math.random() < 0.6 && !uniqueSlots.some(c => c.id === 'u06')){
-      uniqueSlots[0] = holyLight;
-    }
-    const voodoo = CARDS.find(c => c.id === 'h04');
-    if (voodoo && Math.random() < 0.6 && !heroSlots.some(c => c.id === 'h04')){
-      heroSlots[0] = voodoo;
-    }
-    const healCard = CARDS.find(c => c.id === 'n78');
-    if (healCard && !normalSlots.some(c => c.id === 'n78') && Math.random() < 0.9){
-      normalSlots[Math.floor(Math.random() * normalSlots.length)] = healCard;
-    }
-  }
-  const deck = [...heroSlots, ...uniqueSlots, ...rareSlots, ...normalSlots];
-  // 슬롯 순서 셔플
+  const deck = [
+    ...pick(heroPool, 1),
+    ...pick(uniquePool, 2),
+    ...pick(rarePool, 7),
+    ...pick(normalPool, 5),
+  ];
   for (let i = deck.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
     [deck[i], deck[j]] = [deck[j], deck[i]];
-  }
-  // abyss: 유니크+ 회복 카드가 슬롯 2 이후에 있으면 슬롯 0~1 (첫 2턴) 로 재배치
-  if (isAbyss){
-    const healIds = ['u06', 'h04'];
-    const reserved = new Set();
-    for (const id of healIds){
-      const idx = deck.findIndex(c => c.id === id);
-      if (idx < 0) continue;
-      if (idx < 2){ reserved.add(idx); continue; }
-      const candidates = [0,1].filter(s => !reserved.has(s));
-      if (!candidates.length) break;
-      const target = candidates[Math.floor(Math.random() * candidates.length)];
-      [deck[target], deck[idx]] = [deck[idx], deck[target]];
-      reserved.add(target);
-    }
   }
   return deck;
 }
@@ -7532,7 +7606,7 @@ async function raidEnd(result){
         if (r.monsterCount > 0) r.monsterCount--;
         remain = r.monsterCount;
       }
-      // 보상 — abyss는 x7 + 250 XP, +200G 추가 (엘리트는 2배)
+      // 보상 — abyss는 x4 + 250 XP, +200G 추가 (엘리트는 2배)
       const eliteMul = (m.elite ? 2 : 1);
       const gold = isAbyssMob ? (m.gold + 200) * eliteMul : (m.gold + 50);
       // dawn/mist XP: Lv 26~40 유저는 (수행 몬스터 XP × 1.2) 로 산정 · Lv 41+ 는 Lv 40 상한
@@ -7547,7 +7621,7 @@ async function raidEnd(result){
           dawnMistXp = m.xp + 15;
         }
       }
-      const xp = isAbyssMob ? (m.xp * 7 + 250) * eliteMul : dawnMistXp;
+      const xp = isAbyssMob ? (m.xp * 4 + 250) * eliteMul : dawnMistXp;
       p.gold += gold; p.xp += xp;
       try {
         _bumpDailyCounter('goldGained', gold, 'dq_gold_5k');
@@ -7663,9 +7737,14 @@ async function raidEnd(result){
     const goldReward = isAbyssBoss ? 5000 + Math.floor(cumDmg * 0.5) : Math.floor(cumDmg * 0.5);
     const xpReward   = isAbyssBoss ? 5000 + Math.floor(cumDmg * 0.1) : Math.floor(cumDmg * 0.1);
 
+    // 막타 판정 — 여러 유저 동시 처치 인정 (로컬 판정 or 클라우드 승인)
+    // 중복 지급 방지는 raidBossClaimed 세션 기록으로 재입장 차단으로 처리
     if (result === 'boss_kill' || cloudKilled){
       r.bossDefeated = true;
       r.lastKiller = p.name;
+      // 이번 세션 보스 보상 수령 기록 → 세션 리셋(자동/수동) 전까지 이 공격대 재입장 차단
+      if (!p.raidBossClaimed || typeof p.raidBossClaimed !== 'object') p.raidBossClaimed = {};
+      p.raidBossClaimed[c.raidKey] = Number(r.sessionStart) || 0;
       // 보상 지급 시점부터 이 raidKey 5분 재입장 쿨다운 시작 (dawn/mist/abyss 각각 독립)
       try { startRaidBossCooldown(c.raidKey); } catch(e){}
       if (isAbyssBoss){
@@ -7674,21 +7753,21 @@ async function raidEnd(result){
         const abyssXp   = 30000 + xpReward;
         p.gold += abyssGold;
         p.xp += abyssXp;
-        p.blessing = (p.blessing||0) + 5;
+        p.blessing = (p.blessing||0) + 3;
         try {
           _bumpDailyCounter('goldGained', abyssGold, 'dq_gold_5k');
           _bumpDailyCounter('xpGained', abyssXp, 'dq_xp_3k');
-          _bumpDailyCounter('blessingGained', 5, 'dq_bless_1');
+          _bumpDailyCounter('blessingGained', 3, 'dq_bless_1');
           _bumpWeeklyCounter('goldGained', abyssGold, 'wq_gold_50k');
           _bumpWeeklyCounter('xpGained', abyssXp, 'wq_xp_50k');
-          _bumpWeeklyCounter('blessingGained', 5, 'wq_bless_5');
+          _bumpWeeklyCounter('blessingGained', 3, 'wq_bless_5');
           advanceWeeklyQuest('wq_boss_finish_3', 1);
           // 칭호: 잊혀진 성좌 보스 킬 (서로 다른 보스만 카운트해야 하나 우선 단순 카운트)
           bumpTitleCounter('abyss_boss_kills', 1);
           bumpTitleCounter('boss_kills', 1);
           bumpTitleCounter('total_gold_earned', abyssGold);
           bumpTitleCounter('total_xp_earned', abyssXp);
-          bumpTitleCounter('total_blessing_earned', 5);
+          bumpTitleCounter('total_blessing_earned', 3);
         } catch(e){}
         // 영웅 뽑기 확률표로 카드 1장 지급
         const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
@@ -7712,9 +7791,9 @@ async function raidEnd(result){
             cardBoxHtml = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${card.name})</p>`;
           }
         }
-        // 5% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
+        // 3% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
         let legendHtml = '';
-        if (Math.random() < 0.05){
+        if (Math.random() < 0.03){
           const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
           if (legendPool.length){
             const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
@@ -7738,7 +7817,7 @@ async function raidEnd(result){
           }
           try { checkTitleUnlocks(); } catch(e){}
         }
-        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +5 (보유 ${p.blessing})</p>`;
+        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +3 (보유 ${p.blessing})</p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 잊혀진 성좌 보스 ${bossName} 처치! 🏆🏆</p>
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${abyssGold}G, +${abyssXp}XP</b></p>
           ${blessLine}
@@ -7746,7 +7825,7 @@ async function raidEnd(result){
           ${legendHtml}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
-        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +5, XP +${abyssXp.toLocaleString()})`);
+        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +3, XP +${abyssXp.toLocaleString()})`);
       } else {
         // 기존 dawn/mist
         p.gold += goldReward;
@@ -7765,12 +7844,39 @@ async function raidEnd(result){
           bumpTitleCounter('total_xp_earned', xpReward);
           bumpTitleCounter('total_blessing_earned', 1);
         } catch(e){}
+        // dawn/mist 도 1% 확률 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
+        let legendHtmlDM = '';
+        if (Math.random() < 0.01){
+          const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
+          if (legendPool.length){
+            const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
+            if (pick.kind === 'weapon'){
+              const w = WEAPONS.find(x => x.id === pick.itemId);
+              if (w){
+                if (!p.weapons) p.weapons = [];
+                p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
+                legendHtmlDM = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 무기 획득! ⚔ ${w.name} (+${w.atkBonus})</p>`;
+                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 무기 [${w.name}] 획득!`); } catch(e){}
+              }
+            } else if (pick.kind === 'armor'){
+              const a = ARMORS.find(x => x.id === pick.itemId);
+              if (a){
+                if (!p.armors) p.armors = [];
+                p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
+                legendHtmlDM = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 방어구 획득! 🛡 ${a.name} (+${a.defBonus})</p>`;
+                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 방어구 [${a.name}] 획득!`); } catch(e){}
+              }
+            }
+          }
+          try { checkTitleUnlocks(); } catch(e){}
+        }
         const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
         const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
           ${blessLine}
           ${cardLine}
+          ${legendHtmlDM}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
         chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
