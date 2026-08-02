@@ -7377,10 +7377,11 @@ function makeBossDeck(raidKey){
   }
 
   // ─── dawn/mist: 15장 덱
-  //   영웅: 35% 확률로 1장 (있으면 유니크 2장), 65% 확률로 영웅 X (유니크 3장으로 대체)
+  //   영웅: 25% 확률로 1장 (있으면 유니크 2장), 75% 확률로 영웅 X (유니크 3장으로 대체)
   //   레어 7장 + 노멀 5장
   //   모든 카드는 중복 없음 (덱 전체 15장 서로 다른 카드)
   //   슬롯 0~4 (1~5턴): 영웅 · 유니크 · 회복 카드 우선 배치
+  //   유니크 1장은 6~7턴 (슬롯 5~6) 로 이동시켜 중반 위협 유지
   const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
@@ -7395,7 +7396,7 @@ function makeBossDeck(raidKey){
     }
     return out;
   };
-  const hasHero = Math.random() < 0.35;
+  const hasHero = Math.random() < 0.25;
   const heroSlots   = hasHero ? pickUnique(heroPool, 1) : [];
   const uniqueSlots = pickUnique(uniquePool, hasHero ? 2 : 3);
   const rareSlots   = pickUnique(rarePool, 7);
@@ -7426,6 +7427,19 @@ function makeBossDeck(raidKey){
   }
   // 2) 우선순위 내림차순 정렬 (안정 정렬 — 동일 우선순위는 셔플 순서 유지)
   rawDeck.sort((a, b) => priorityOf(b) - priorityOf(a));
+  // 3) 유니크 카드 1장을 슬롯 5~6 (6~7턴) 으로 이동 — 중반 위협 유지
+  //    현재 유니크는 앞쪽에 몰려있으므로 마지막 유니크를 뒤로 스왑
+  const uniqueIdxs = [];
+  for (let i = 0; i < rawDeck.length; i++){
+    if (rawDeck[i] && rawDeck[i].grade === 'unique') uniqueIdxs.push(i);
+  }
+  if (uniqueIdxs.length >= 1){
+    const lastUniqueIdx = uniqueIdxs[uniqueIdxs.length - 1];
+    const targetSlot = 5 + Math.floor(Math.random() * 2); // 5 or 6
+    if (lastUniqueIdx < targetSlot){
+      [rawDeck[lastUniqueIdx], rawDeck[targetSlot]] = [rawDeck[targetSlot], rawDeck[lastUniqueIdx]];
+    }
+  }
   return rawDeck;
 }
 
