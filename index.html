@@ -6133,7 +6133,7 @@ const TITLE_POOL = [
   { id:'title_defense_300',    name:'절대방어',          tier:'유니크', color:'#a335ee', desc:'랭킹 방어전 300회 승리',          cond:{type:'rank_defense_wins',        target:300} },
   { id:'title_daily_100',      name:'근면성실',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 연속 100일 완주',      cond:{type:'daily_full_days',          target:100} },
   { id:'title_daily_200',      name:'장기집권',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 완주 200일',           cond:{type:'daily_full_days',          target:200} },
-  { id:'title_rank_top5',      name:'영웅의 길',         tier:'유니크', color:'#a335ee', desc:'랭킹 5위 이내 진입',              cond:{type:'rank_reached_le',          target:5} },
+  { id:'title_rank_top5',      name:'영웅의 길',         tier:'유니크', color:'#a335ee', desc:'전체 유저 레벨 랭킹 5위 이내 진입', cond:{type:'overall_rank_le',        target:5} },
   { id:'title_trader',         name:'트레이더',          tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 1회 성공 (결과가 유니크 이상)', cond:{type:'unique_plus_exchange_success', target:1} },
   { id:'title_beast_heart',    name:'야수의 심장',       tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 10회 도전',                    cond:{type:'unique_plus_exchange_attempts', target:10} },
   { id:'title_beast_brain',    name:'야수의 뇌',         tier:'유니크', color:'#a335ee', desc:'영웅 등급 카드 교환을 1회 도전',                            cond:{type:'hero_exchange_attempts',   target:1} },
@@ -7328,34 +7328,22 @@ async function startRaidBossBattle(){
 }
 
 function makeBossDeck(raidKey){
-  // ─── abyss(잊혀진 성좌) 보스 전용 커스텀 덱 ───
-  // 슬롯 0~1  (1~2턴): 영웅 카드 or 홀리라이트(u06) 랜덤 배치 (2장, 서로 다름)
-  // 슬롯 2~4  (3~5턴): 힐(n78) + 유니크 랜덤 2종 (총 3장, 서로 다름, 셔플)
-  // 슬롯 5~14 (6~15턴): 공격/치료 카드 위주 (모든 등급 mix, 서로 다름, 셔플)
-  // 덱 전체 15장 모두 중복 없음
+  // ─── abyss(잊혀진 성좌) 보스 전용 커스텀 덱 (총 15장, 중복 없음) ───
+  // 슬롯 0  (1턴):  영웅 카드
+  // 슬롯 1  (2턴):  유니크 (홀리라이트 u06 제외)
+  // 슬롯 2~3 (3~4턴): 레어
+  // 슬롯 4~5 (5~6턴): 힐 (n78) 1장 + 레어 1장 (순서 셔플)
+  // 슬롯 6  (7턴):  유니크 (홀리라이트 포함)
+  // 슬롯 7~10 (8~11턴): 레어 or 일반 (각 슬롯 50/50 랜덤)
+  // 슬롯 11 (12턴): 유니크 (홀리라이트 포함)
+  // 슬롯 12~14 (13~15턴): 레어 or 일반 (각 슬롯 50/50 랜덤)
   if (raidKey === 'abyss'){
-    const heroPool = CARDS.filter(c => c.grade === 'hero' && !c.monsterOnly);
-    const holyLight = CARDS.find(c => c.id === 'u06');
-    const healCard  = CARDS.find(c => c.id === 'n78');
-    const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly && c.id !== 'u06');
-    // 공격/치료 판정 (multi 는 하위 effect 중 하나라도 매치되면 인정)
-    const ATK_HEAL_TYPES = new Set([
-      'dmg','dmgStat','dmgHits','dmgLostHpPct','dot','dotStat','dmgSelf','mpDmg',
-      'lifesteal','lifestealStat','dmgStatHealSame','hpDmgPct','dotPct',
-      'heal','healStat','healLevel','hot','hotStat','mpHot',
-    ]);
-    const isAtkOrHeal = (c) => {
-      const fx = c && c.fx;
-      if (!fx) return false;
-      if (ATK_HEAL_TYPES.has(fx.type)) return true;
-      if (fx.type === 'multi' && Array.isArray(fx.effects)){
-        return fx.effects.some(e => e && ATK_HEAL_TYPES.has(e.type));
-      }
-      return false;
-    };
-    const fillerPool = CARDS.filter(c =>
-      c.id !== 'basic_atk' && !c.monsterOnly && isAtkOrHeal(c)
-    );
+    const heroPool         = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
+    const uniqueNoHoly     = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly && c.id !== 'u06');
+    const uniqueAll        = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
+    const rarePool         = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
+    const normalPoolNoHeal = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk' && c.id !== 'n78' && !c.monsterOnly);
+    const healCard         = CARDS.find(c => c.id === 'n78');
 
     const used = new Set();
     const pickUnique = (pool) => {
@@ -7365,34 +7353,40 @@ function makeBossDeck(raidKey){
       used.add(c.id);
       return c;
     };
+    // 레어/일반 중 한 쪽에서 랜덤 픽. 부족하면 반대쪽으로 fallback.
+    const pickRareOrNormal = () => {
+      const wantRareFirst = Math.random() < 0.5;
+      const first  = wantRareFirst ? rarePool : normalPoolNoHeal;
+      const second = wantRareFirst ? normalPoolNoHeal : rarePool;
+      return pickUnique(first) || pickUnique(second);
+    };
 
-    // 슬롯 0~1: 영웅 or 홀리라이트 풀에서 서로 다른 2장
-    const earlyPool = holyLight ? [...heroPool, holyLight] : [...heroPool];
-    const s0 = pickUnique(earlyPool);
-    const s1 = pickUnique(earlyPool);
-
-    // 슬롯 2~4: 힐(n78) + 유니크 랜덤 2 → 순서 셔플
-    const mid = [];
-    if (healCard){ used.add(healCard.id); mid.push(healCard); }
-    const u1 = pickUnique(uniquePool); if (u1) mid.push(u1);
-    const u2 = pickUnique(uniquePool); if (u2) mid.push(u2);
-    for (let i = mid.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * (i + 1));
-      [mid[i], mid[j]] = [mid[j], mid[i]];
+    const deck = new Array(15).fill(null);
+    // 슬롯 0: 영웅
+    deck[0] = pickUnique(heroPool);
+    // 슬롯 1: 유니크 (홀리라이트 제외)
+    deck[1] = pickUnique(uniqueNoHoly);
+    // 슬롯 2~3: 레어
+    deck[2] = pickUnique(rarePool);
+    deck[3] = pickUnique(rarePool);
+    // 슬롯 4~5: 힐(n78) + 레어 1장 → 순서 셔플 (5턴 or 6턴에 힐 랜덤 배치)
+    const rareForMid = pickUnique(rarePool);
+    if (healCard) used.add(healCard.id);
+    if (Math.random() < 0.5){
+      deck[4] = healCard || rareForMid; deck[5] = rareForMid || healCard;
+    } else {
+      deck[4] = rareForMid || healCard; deck[5] = healCard || rareForMid;
     }
+    // 슬롯 6: 유니크 (홀리라이트 포함)
+    deck[6] = pickUnique(uniqueAll);
+    // 슬롯 7~10: 레어 or 일반
+    for (let i = 7; i <= 10; i++) deck[i] = pickRareOrNormal();
+    // 슬롯 11: 유니크 (홀리라이트 포함)
+    deck[11] = pickUnique(uniqueAll);
+    // 슬롯 12~14: 레어 or 일반
+    for (let i = 12; i <= 14; i++) deck[i] = pickRareOrNormal();
 
-    // 슬롯 5~14: 공격/치료 풀에서 서로 다른 10장 → 순서 셔플
-    const late = [];
-    for (let i = 0; i < 10; i++){
-      const c = pickUnique(fillerPool);
-      if (c) late.push(c);
-    }
-    for (let i = late.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * (i + 1));
-      [late[i], late[j]] = [late[j], late[i]];
-    }
-
-    return [s0, s1, ...mid, ...late].filter(Boolean);
+    return deck.filter(Boolean);
   }
 
   // ─── dawn/mist: 15장 덱
@@ -7421,6 +7415,26 @@ function makeBossDeck(raidKey){
   const rareSlots   = pickUnique(rarePool, 7);
   const normalSlots = pickUnique(normalPool, 5);
   const rawDeck = [...heroSlots, ...uniqueSlots, ...rareSlots, ...normalSlots];
+  // 4턴 (슬롯 3) 에 지정 회복 카드 확정 등장: r19/r43/r31/r32/n78/n79 중 랜덤
+  // 자연 픽에 없으면 강제 삽입 (레어면 rareSlots 중 하나 대체, 노멀이면 normalSlots)
+  const REQUIRED_HEAL_IDS = ['r19','r43','r31','r32','n78','n79'];
+  const alreadyHasHeal = rawDeck.some(c => c && REQUIRED_HEAL_IDS.includes(c.id));
+  if (!alreadyHasHeal){
+    const healPool = CARDS.filter(c => REQUIRED_HEAL_IDS.includes(c.id));
+    const healCard = healPool[Math.floor(Math.random() * healPool.length)];
+    if (healCard){
+      // 같은 등급 카드와 교체 (레어 회복이면 레어 슬롯, 노멀 회복이면 노멀 슬롯)
+      const wantGrade = healCard.grade;
+      let replaceIdx = -1;
+      for (let i = rawDeck.length - 1; i >= 0; i--){
+        if (rawDeck[i] && rawDeck[i].grade === wantGrade && !REQUIRED_HEAL_IDS.includes(rawDeck[i].id)){
+          replaceIdx = i;
+          break;
+        }
+      }
+      if (replaceIdx >= 0) rawDeck[replaceIdx] = healCard;
+    }
+  }
   const HEAL_FX_TYPES = new Set(['heal','healStat','healLevel','hot','hotStat','mpHot']);
   const isHealCard = (c) => {
     const fx = c && c.fx;
@@ -7446,7 +7460,14 @@ function makeBossDeck(raidKey){
   }
   // 2) 우선순위 내림차순 정렬 (안정 정렬 — 동일 우선순위는 셔플 순서 유지)
   rawDeck.sort((a, b) => priorityOf(b) - priorityOf(a));
-  // 3) 마지막 유니크 카드 1장을 슬롯 6~7 (7~8턴) 로 이동 — 후반 위협 유지
+  // 3) 슬롯 3 (4턴) 에 지정 회복 카드 (REQUIRED_HEAL_IDS) 강제 배치 — 스왑
+  if (!(rawDeck[3] && REQUIRED_HEAL_IDS.includes(rawDeck[3].id))){
+    const healIdx = rawDeck.findIndex(c => c && REQUIRED_HEAL_IDS.includes(c.id));
+    if (healIdx >= 0 && healIdx !== 3){
+      [rawDeck[3], rawDeck[healIdx]] = [rawDeck[healIdx], rawDeck[3]];
+    }
+  }
+  // 4) 마지막 유니크 카드 1장을 슬롯 6~7 (7~8턴) 로 이동 — 후반 위협 유지
   const uniqueIdxs = [];
   for (let i = 0; i < rawDeck.length; i++){
     if (rawDeck[i] && rawDeck[i].grade === 'unique') uniqueIdxs.push(i);
@@ -7458,7 +7479,7 @@ function makeBossDeck(raidKey){
       [rawDeck[lastUniqueIdx], rawDeck[targetSlot]] = [rawDeck[targetSlot], rawDeck[lastUniqueIdx]];
     }
   }
-  // 4) 슬롯 1 (2턴) 이 여전히 유니크면 슬롯 4 (5턴) 와 스왑 — 초반 화력 완화
+  // 5) 슬롯 1 (2턴) 이 여전히 유니크면 슬롯 4 (5턴) 와 스왑 — 초반 화력 완화
   if (rawDeck[1] && rawDeck[1].grade === 'unique' && rawDeck[4] && rawDeck[4].grade !== 'unique'){
     [rawDeck[1], rawDeck[4]] = [rawDeck[4], rawDeck[1]];
   }
