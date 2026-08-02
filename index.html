@@ -7961,6 +7961,27 @@ async function raidEnd(result){
           bumpTitleCounter('total_xp_earned', xpReward);
           bumpTitleCounter('total_blessing_earned', 1);
         } catch(e){}
+        // dawn/mist 카드 보상 — 유니크 뽑기 확률표로 카드 1장 즉시 지급 + 결과창 노출 (abyss 와 동일 UX)
+        const cardPoolDM = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
+        const gradeDM = pickGachaGradeFor('unique');
+        const gPoolDM = cardPoolDM.filter(c => c.grade === gradeDM);
+        const cardDM = gPoolDM.length ? _pickWeightedCard(gPoolDM, gradeDM) : null;
+        let cardBoxHtmlDM = '';
+        if (cardDM){
+          if (GAME.inventory.length < inventoryLimit()){
+            GAME.inventory.push(cardDM);
+            _markGradeAcquired([cardDM]);
+            let sellBtnDM = '';
+            if (cardDM.grade === 'normal' || cardDM.grade === 'rare'){
+              const priceDM = CARD_SELL_PRICE[cardDM.grade] || 1;
+              sellBtnDM = ` <button id="raidCardSellBtn_${cardDM.id}" onclick="_sellRaidRewardCard('${cardDM.id}', ${priceDM})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${priceDM.toLocaleString()}G)</button>`;
+            }
+            cardBoxHtmlDM = `<p style="color:#a02050;font-weight:bold;" id="raidCardBoxLine">🎁 유니크 뽑기 획득 — [${gradeKr(cardDM.grade)}] ${cardDM.name}${sellBtnDM}</p>`;
+            try { chatSys(`★ ${p.name}님이 ${bossName} 처치로 [${gradeKr(cardDM.grade)}] ${cardDM.name} 획득!`, { sticky: _isHighGradeCard(cardDM.grade) }); } catch(e){}
+          } else {
+            cardBoxHtmlDM = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${cardDM.name})</p>`;
+          }
+        }
         // dawn/mist 도 1% 확률 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
         let legendHtmlDM = '';
         if (Math.random() < 0.01){
@@ -7987,18 +8008,15 @@ async function raidEnd(result){
           }
           try { checkTitleUnlocks(); } catch(e){}
         }
-        const cardLine = `<p style="color:#666;font-size:11px;">🎁 카드·장비 보상은 다음 로그인/메인 진입 시 자동 수령됩니다.</p>`;
         const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
           ${blessLine}
-          ${cardLine}
+          ${cardBoxHtmlDM}
           ${legendHtmlDM}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
         chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
-        // 본인 보상 즉시 수령 시도
-        if (sb){ setTimeout(() => claimRaidRewards(), 500); }
       }
       let raidBossLvUp = false;
       let raidBossBonus = 0;
