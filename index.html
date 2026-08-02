@@ -320,6 +320,26 @@
   body.layout-vertical #chat { width:100%; max-width:480px; max-height:520px; box-sizing:border-box; }
   /* 모바일: 접속자 명단 세로 확장 (기본 120px → 200px). 유저 많으면 여전히 내부 스크롤 */
   body.layout-vertical .chat-users { max-height:200px; }
+  /* 모바일: 명예의 전당 세로 스택 + 덱 카드 축소 (기존 260px 리스트 + flex:1 detail 이 화면 밖으로 넘침) */
+  body.layout-vertical #content-honor .shop-page > div[style*="display:flex"][style*="gap:12px"] {
+    flex-direction: column !important;
+    padding: 4px !important;
+  }
+  body.layout-vertical #honorList {
+    width: 100% !important; max-height: 260px !important;
+  }
+  body.layout-vertical #honorDetail {
+    min-height: auto !important; padding: 8px !important;
+  }
+  /* 덱 카드 아이콘: 64px → 유동. 5열 유지하면서 화면 폭 안에 딱 맞음 */
+  body.layout-vertical #honorDetail > div > div[style*="grid-template-columns:repeat(5"] > div,
+  body.layout-vertical #honorDetail > div > div[style*="grid-template-columns: repeat(5"] > div {
+    width: auto !important;
+  }
+  body.layout-vertical #honorDetail > div > div[style*="grid-template-columns:repeat(5"] > div > div:first-child,
+  body.layout-vertical #honorDetail > div > div[style*="grid-template-columns: repeat(5"] > div > div:first-child {
+    width: 100% !important; height: auto !important; aspect-ratio: 1 / 1;
+  }
   body.layout-vertical .topbox { flex-wrap:wrap; }
   body.layout-vertical table.stat { width:100% !important; table-layout:fixed; font-size:10px; }
   /* 모바일 전용 — 스탯창 컬럼 비율 재정의 (PC는 8/17/8/17/8/42, 모바일은 짧은 라벨 더 넓게) */
@@ -7263,6 +7283,7 @@ async function startRaidBossBattle(){
     raidKey,
     mode: 'boss',
     monster: boss,
+    bossHpAtStart: r.bossHp,        // 순 데미지(회복 반영) 계산용 스냅샷
     maxTurns: GAME.player.level >= 26 ? 15 : 10,
     turn: 0,
     myBuffs:{str:0,dex:0,int:0,con:0,atk:0,def:0},
@@ -7523,11 +7544,9 @@ function raidProcessTicks(){ processCombatTicks('raid'); }
 function raidFlee(){
   const c = GAME.raidCombat;
   if (!c) return;
-  // 보스 모드 기권 시: 입힌 데미지는 보스 HP에 반영 (누적)
+  // 보스 모드 기권 시: 순 HP 변화는 raidEnd 의 클라우드 RPC 가 처리 (raw 데미지 대신 netDelta)
   if (c.mode === 'boss'){
-    const r = GAME.raid[c.raidKey];
-    r.bossHp = Math.max(0, r.bossHp - c.statsMyDmg);
-    raidLog(`🏃 기권. 입힌 데미지 ${c.statsMyDmg}는 보스 HP에 누적 반영됩니다.`, 'sys');
+    raidLog(`🏃 기권. 이번 도전의 순 HP 변화는 보스에 반영됩니다.`, 'sys');
   }
   raidEnd('flee');
 }
@@ -7547,8 +7566,12 @@ function raidFleeToMain(){
       cloudSaveNow().catch(e => console.warn('[raidFleeToMain macroGuard cloudSave]', e));
     } catch(e){ console.warn('[raidFleeToMain macroGuard]', e); }
   } else if (c && c.mode === 'boss'){
+    // 로컬 순 HP 변화만 반영 (클라우드 sync 는 하지 않음 — 다음 loadRaidFromCloud 로 덮어써짐)
     const r = GAME.raid[c.raidKey];
-    r.bossHp = Math.max(0, r.bossHp - c.statsMyDmg);
+    const startHp = Number((c.bossHpAtStart != null) ? c.bossHpAtStart : r.bossHp) || 0;
+    const endHp   = Math.max(0, Math.min(Number(c.monster && c.monster.hpMax) || Infinity, Number(c.monster && c.monster.hp) || 0));
+    const netDelta = startHp - endHp;
+    r.bossHp = Math.max(0, (Number(r.bossHp) || 0) - netDelta);
   }
   GAME.raidCombat = null;
   GAME.currentRaid = null;
@@ -7682,8 +7705,14 @@ async function raidEnd(result){
     }
   } else if (c.mode === 'boss'){
     const isAbyssBoss = c.raidKey === 'abyss';
-    // 보스 모드 — 클라우드 RPC에 누적 데미지 위임 (abyss는 로컬)
+    // 보스 모드 — 클라우드 RPC에 순 데미지(회복 반영) 위임
+    // dealtTotal: 유저 raw 데미지 (보상/누적 트래커 계산용)
+    // netHpDelta: 순 HP 변화 (start - end). 음수 = 순 회복 → 클라우드 HP 증가
     const dealtTotal = c.statsMyDmg;
+    const bossHpAtStart = Number((c.bossHpAtStart != null) ? c.bossHpAtStart : r.bossHp) || 0;
+    const bossHpAtEnd   = Math.max(0, Math.min(Number(m.hpMax) || Infinity, Number(m.hp) || 0));
+    const netHpDelta    = bossHpAtStart - bossHpAtEnd;
+    console.log('[raid boss delta]', c.raidKey, 'start=' + bossHpAtStart, 'end=' + bossHpAtEnd, 'dealt(raw)=' + dealtTotal, 'netDelta=' + netHpDelta);
     // 세션별 개인 누적 데미지 추적 — 보스 처치 보상 계산용
     // (마지막 전투만이 아니라 여러 도전 걸쳐 쌓은 총 데미지 기준)
     if (!p.raidBossDmg) p.raidBossDmg = {};
@@ -7709,12 +7738,13 @@ async function raidEnd(result){
     try { if (dealtTotal > 0) advanceDailyQuest('dq_boss_hit', dealtTotal); } catch(e){}
     let cloudKilled = false;
     let cloudOk = false;
-    if (sb && dealtTotal > 0){
+    if (sb && (dealtTotal > 0 || netHpDelta !== 0)){
       try {
         // 병렬 스키마: raid_deal_damage(p_raid_key, p_damage)
-        const dmgRes = await sb.rpc('raid_deal_damage', { p_raid_key: c.raidKey, p_damage: dealtTotal });
+        // p_damage 는 순 데미지(delta) — 음수면 순 회복으로 클라우드 HP 증가 (RPC 는 boss_hp - p_damage 연산)
+        const dmgRes = await sb.rpc('raid_deal_damage', { p_raid_key: c.raidKey, p_damage: netHpDelta });
         const { data: dmgRows, error } = dmgRes;
-        console.log('[raid_deal_damage]', c.raidKey, 'sent=' + dealtTotal,
+        console.log('[raid_deal_damage]', c.raidKey, 'sent(netDelta)=' + netHpDelta,
                     'error=', error ? JSON.stringify(error) : 'null',
                     'data=', dmgRows ? JSON.stringify(dmgRows) : 'null');
         if (error){
@@ -8571,10 +8601,16 @@ function renderRankBattle(){
     }
   }
   $('rk_level').textContent = m.level;
-  $('rk_str').textContent = m.str;
-  $('rk_dex').textContent = m.dex;
-  $('rk_int').textContent = m.int;
-  $('rk_con').textContent = m.con;
+  // 상대방 primary stat 에 monBuffs 델타 표시 (무기/방어구 델타와 동일 방식)
+  {
+    const mb2 = (c && c.monBuffs) || {};
+    const spanDelta = (d) => d ? ` <span style="font-size:10px;color:${d>0?'#7eff7e':'#ff7e7e'};">(${d>0?'+':''}${d})</span>` : '';
+    const setStat = (id, base, delta) => { const el = $(id); if (el) el.innerHTML = base + spanDelta(delta); };
+    setStat('rk_str', m.str, mb2.str|0);
+    setStat('rk_dex', m.dex, mb2.dex|0);
+    setStat('rk_int', m.int, mb2.int|0);
+    setStat('rk_con', m.con, mb2.con|0);
+  }
   $('rk_hp').textContent = Math.max(0,m.hp) + ' / ' + m.hpMax;
   $('rk_mp').textContent = Math.max(0,m.mp) + ' / ' + m.mpMax;
   $('rk_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
@@ -8608,13 +8644,8 @@ function renderRankBattle(){
     $('rk_weapon').innerHTML = (ow ? `${ow.name||'-'} (+${wBase})` : '-') + span(wEff);
     $('rk_armor').innerHTML  = (oa ? `${oa.name||'-'} (+${aBase})` : '-') + span(aEff);
   }
-  // 내 장비 (p-combat-weapon / p-combat-armor 클래스)
-  const p = GAME.player;
-  if (p){
-    const setMy = (cls, txt) => { document.querySelectorAll('.' + cls).forEach(el => el.textContent = txt); };
-    setMy('p-combat-weapon', p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-');
-    setMy('p-combat-armor',  p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-');
-  }
+  // 내 장비/스탯 델타는 renderSheet 가 이미 p-combat-* 클래스에 buff span 포함해 세팅.
+  // 여기서 textContent 로 재설정하면 델타가 지워지므로 override 하지 않음.
 
   const hpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
@@ -11301,7 +11332,13 @@ function applyCardEffect(card, ctx){
       for (const k of fx.stats){
         // 장비 기반 buff(엔지업 등)는 보존 — 0으로 만들지 않고 locked 값을 남김
         const lockedVal = (locked && locked[k]) || 0;
-        const cur = (obj[k]||0) + (buffs[k]||0) - lockedVal;
+        // atk/def 는 obj[k] 가 스칼라 스탯이 아니라 장비 파생값 → weapon.atkBonus / armor.defBonus 로 base 산정
+        // (특히 atk 는 [low,high] 배열이라 산술 연산 시 NaN → 팬오브나이프 zeroStat 무반영 버그의 원인)
+        let base;
+        if (k === 'atk')      base = (obj.weapon && obj.weapon.atkBonus) || 0;
+        else if (k === 'def') base = (obj.armor  && obj.armor.defBonus)  || 0;
+        else                  base = obj[k] || 0;
+        const cur = base + (buffs[k]||0) - lockedVal;
         _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj, zsOpts);
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
@@ -15074,6 +15111,13 @@ async function doLogin(){
         await cloudSignOut();
         return;
       }
+      // 서버 유지보수 모드 체크 — 운영자 이외 로그인 차단 (isOperator 는 cloudLoad 후 확정)
+      if (localStorage.getItem(MAINTENANCE_LS_KEY) === '1' && !(GAME.player && GAME.player.isOperator)){
+        alert('현재 서버 유지보수 중입니다. 잠시 후 다시 접속해 주세요.');
+        await cloudSignOut();
+        GAME.player = null;
+        return;
+      }
       // 로컬 캐시에도 저장 (오프라인 대비)
       addAccount(GAME.player.name);
       saveGame();
@@ -17385,6 +17429,13 @@ setInterval(()=>{
     <button class="admin-btn small danger" onclick="opForceRankReset()" style="width:100%;background:#5a1a6b;">🏆 랭킹전 강제 초기화</button>
   </div>
 
+  <div style="background:#ffe0e0;border:2px solid #c00;padding:5px;margin-bottom:6px;">
+    <div style="font-size:11px;color:#c00;font-weight:bold;margin-bottom:4px;">🔒 서버 통제 (긴급 유지보수)</div>
+    <button class="admin-btn small danger" onclick="opForceLogoutAll()" style="width:100%;margin-bottom:3px;">🚪 전체 유저 강제 로그아웃</button>
+    <button id="opMaintenanceBtn" class="admin-btn small danger" onclick="opToggleMaintenance()" style="width:100%;">🚧 유지보수 ON</button>
+    <div style="font-size:10px;color:#666;margin-top:3px;">유지보수 ON 시 운영자 이외 계정 로그인·재접속 차단</div>
+  </div>
+
   <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;margin-bottom:6px;">
     <b>⛅ 새벽의 언덕</b> — 몹 <span id="opDawnMon">-</span>, 보스HP <span id="opDawnHp">-</span>
     <div style="margin-top:4px;">
@@ -17541,6 +17592,7 @@ async function toggleOperatorPanel(){
     try { await loadRaidFromCloud(); } catch(e){ console.warn('[op panel load]', e); }
   }
   _opRefreshInfo();
+  try { _updateMaintenanceBtn(); } catch(e){}
   panel.style.display = 'block';
 }
 function closeOperatorPanel(){
@@ -17671,6 +17723,80 @@ async function opForceRankReset(){
     alert('강제 초기화 실패: ' + (e.message || e));
   }
 }
+
+// ─── 서버 유지보수: 전체 로그아웃 + 접속 차단 (Supabase Realtime broadcast) ───
+// 별도 SQL/테이블 없이 broadcast 로 동기화. localStorage 로 각 클라이언트 상태 캐시.
+// 한계: broadcast 미도달 브라우저(신규 방문/캐시 없음)는 로그인 시도 → cloudLoad 후 isOperator 체크로 필터
+const MAINTENANCE_LS_KEY = '__yeoshin_maintenance__';
+async function opForceLogoutAll(){
+  if (!confirm('현재 접속 중인 모든 유저를 강제 로그아웃 시킬까요?\n(운영자 본인은 유지)')) return;
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const ch = sb.channel('admin-broadcast', { config: { broadcast: { self: false } } });
+    await ch.subscribe();
+    await ch.send({ type:'broadcast', event:'force_logout', payload:{ at: Date.now() } });
+    setTimeout(() => { try { sb.removeChannel(ch); } catch(e){} }, 500);
+    try { chatSys('★ 운영자가 전체 로그아웃을 요청하셨습니다.'); } catch(e){}
+    alert('✔ 전체 로그아웃 신호 전송 완료');
+  } catch(e){ alert('전송 실패: ' + (e.message||e)); }
+}
+async function opToggleMaintenance(){
+  const cur = localStorage.getItem(MAINTENANCE_LS_KEY) === '1';
+  const next = !cur;
+  const label = next
+    ? '유지보수 모드 ON → 운영자 이외 계정 로그인·재접속 차단'
+    : '유지보수 모드 OFF → 정상 운영 재개';
+  if (!confirm(`${label}\n\n적용하시겠습니까?`)) return;
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const ch = sb.channel('admin-broadcast', { config: { broadcast: { self: false } } });
+    await ch.subscribe();
+    await ch.send({ type:'broadcast', event:'maintenance', payload:{ on: next, at: Date.now() } });
+    setTimeout(() => { try { sb.removeChannel(ch); } catch(e){} }, 500);
+    if (next) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+    else localStorage.removeItem(MAINTENANCE_LS_KEY);
+    _updateMaintenanceBtn();
+    try { chatSys(next ? '★ 서버 유지보수를 시작합니다.' : '★ 서버 유지보수가 종료되었습니다.'); } catch(e){}
+    alert(`✔ 유지보수 모드 ${next ? 'ON' : 'OFF'}`);
+  } catch(e){ alert('전송 실패: ' + (e.message||e)); }
+}
+function _updateMaintenanceBtn(){
+  const b = document.getElementById('opMaintenanceBtn');
+  if (!b) return;
+  const on = localStorage.getItem(MAINTENANCE_LS_KEY) === '1';
+  b.textContent = on ? '🚧 유지보수 OFF' : '🚧 유지보수 ON';
+  b.style.background = on ? '#0a7' : '';
+}
+// 모든 클라이언트에서 admin-broadcast 채널 구독 — 앱 시작 시 1회 (subscribeChatChannel 등과 유사)
+let _adminBroadcastCh = null;
+function subscribeAdminBroadcast(){
+  if (!sb || _adminBroadcastCh) return;
+  const ch = sb.channel('admin-broadcast');
+  ch.on('broadcast', { event: 'force_logout' }, () => {
+    const p = GAME && GAME.player;
+    if (p && p.isOperator) return; // 운영자 본인은 제외
+    try { alert('운영자에 의해 로그아웃됩니다.'); } catch(e){}
+    try { sb.auth.signOut(); } catch(e){}
+    setTimeout(() => location.reload(), 400);
+  });
+  ch.on('broadcast', { event: 'maintenance' }, (payload) => {
+    const on = !!(payload && payload.payload && payload.payload.on);
+    if (on) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+    else    localStorage.removeItem(MAINTENANCE_LS_KEY);
+    _updateMaintenanceBtn();
+    if (on){
+      const p = GAME && GAME.player;
+      if (p && p.isOperator) return;
+      try { alert('서버 유지보수가 시작됩니다. 접속이 종료됩니다.'); } catch(e){}
+      try { sb.auth.signOut(); } catch(e){}
+      setTimeout(() => location.reload(), 400);
+    }
+  });
+  ch.subscribe();
+  _adminBroadcastCh = ch;
+}
+// SDK 로드 확인 후 즉시 구독 (로그인 전에도 구독해 두어 유지보수 broadcast 를 놓치지 않음)
+if (typeof sb !== 'undefined' && sb){ try { subscribeAdminBroadcast(); } catch(e){} }
 
 // 운영자 조작 함수 — admin과 동일 로직 재사용 후 op 패널 상태 갱신
 // 운영자 계정은 admin@pmonline.system 세션이 없어도 raid_manual_reset RPC (SECURITY DEFINER)로 리셋
