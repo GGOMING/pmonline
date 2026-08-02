@@ -7376,7 +7376,9 @@ function makeBossDeck(raidKey){
     return [s0, s1, ...mid, ...late].filter(Boolean);
   }
 
-  // ─── dawn/mist 기존 로직: 영웅 1, 유니크 2, 레어 7, 노멀 5 = 15장 (중복 허용, 전체 셔플) ───
+  // ─── dawn/mist: 영웅 1 + 유니크 2 + 레어 7 + 노멀 5 = 15장 (등급 비중 유지)
+  // 슬롯 0~4 (1~5턴): 영웅 · 유니크 · 회복 카드 우선 배치. 나머지는 후반 슬롯.
+  // 같은 우선순위 안에서는 무작위 순서로 예측성 낮춤.
   const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
@@ -7386,17 +7388,38 @@ function makeBossDeck(raidKey){
     for (let i = 0; i < n; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
     return out;
   };
-  const deck = [
+  const rawDeck = [
     ...pick(heroPool, 1),
     ...pick(uniquePool, 2),
     ...pick(rarePool, 7),
     ...pick(normalPool, 5),
   ];
-  for (let i = deck.length - 1; i > 0; i--){
+  const HEAL_FX_TYPES = new Set(['heal','healStat','healLevel','hot','hotStat','mpHot']);
+  const isHealCard = (c) => {
+    const fx = c && c.fx;
+    if (!fx) return false;
+    if (HEAL_FX_TYPES.has(fx.type)) return true;
+    if (fx.type === 'multi' && Array.isArray(fx.effects)){
+      return fx.effects.some(e => e && HEAL_FX_TYPES.has(e.type));
+    }
+    return false;
+  };
+  // 우선순위: 영웅 > 유니크 > 회복 (등급 무관) > 레어 > 노멀
+  const priorityOf = (c) => {
+    if (c.grade === 'hero') return 4;
+    if (c.grade === 'unique') return 3;
+    if (isHealCard(c)) return 2;
+    if (c.grade === 'rare') return 1;
+    return 0;
+  };
+  // 1) 동일 우선순위 내 순서 랜덤화 위해 먼저 셔플
+  for (let i = rawDeck.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
-    [deck[i], deck[j]] = [deck[j], deck[i]];
+    [rawDeck[i], rawDeck[j]] = [rawDeck[j], rawDeck[i]];
   }
-  return deck;
+  // 2) 우선순위 내림차순 정렬 (안정 정렬 — 동일 우선순위는 셔플 순서 유지)
+  rawDeck.sort((a, b) => priorityOf(b) - priorityOf(a));
+  return rawDeck;
 }
 
 function renderRaidBattle(){
@@ -15608,12 +15631,17 @@ const _chatRendered = new Set();   // Realtime 중복 표시 방지 (id 기반)
 // 시스템 채팅 메시지 자동 소멸 시간 (ms). 유저 채팅은 영구 유지.
 const SYS_CHAT_AUTOHIDE_MS = 30000;
 function _autoHideSysMsg(el, msFromNow){
+  console.log('[sys msg autohide] 예약', msFromNow + 'ms 후 소멸', el && el.textContent && el.textContent.slice(0, 30));
   if (msFromNow <= 0){ try { el.remove(); } catch(e){} return; }
   setTimeout(() => {
-    if (!el || !el.parentNode) return;
+    console.log('[sys msg autohide] fade 시작', el && el.textContent && el.textContent.slice(0, 30));
+    if (!el || !el.parentNode){ console.log('[sys msg autohide] 이미 없음, skip'); return; }
     el.style.transition = 'opacity 0.5s';
     el.style.opacity = '0';
-    setTimeout(() => { try { el.remove(); } catch(e){} }, 500);
+    setTimeout(() => {
+      try { el.remove(); console.log('[sys msg autohide] 제거 완료'); }
+      catch(e){ console.warn('[sys msg autohide] 제거 실패', e); }
+    }, 500);
   }, msFromNow);
 }
 
