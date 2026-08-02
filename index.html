@@ -15605,6 +15605,18 @@ function escapeHtml(s){ return String(s).replace(/[&<>"']/g, c=>({'&':'&amp;','<
 let _chatChannel = null;
 const _chatRendered = new Set();   // Realtime 중복 표시 방지 (id 기반)
 
+// 시스템 채팅 메시지 자동 소멸 시간 (ms). 유저 채팅은 영구 유지.
+const SYS_CHAT_AUTOHIDE_MS = 30000;
+function _autoHideSysMsg(el, msFromNow){
+  if (msFromNow <= 0){ try { el.remove(); } catch(e){} return; }
+  setTimeout(() => {
+    if (!el || !el.parentNode) return;
+    el.style.transition = 'opacity 0.5s';
+    el.style.opacity = '0';
+    setTimeout(() => { try { el.remove(); } catch(e){} }, 500);
+  }, msFromNow);
+}
+
 function _renderChatRow(row){
   const msgsEl = document.getElementById('chatMsgs');
   if (!msgsEl) return;
@@ -15612,18 +15624,25 @@ function _renderChatRow(row){
   if (row.id) _chatRendered.add(row.id);
   const d = document.createElement('div');
   if (row.kind === 'system'){
+    // 시스템 메시지 — 생성 시각 기준 30초 후 자동 소멸. 이미 지난 메시지는 렌더 안 함.
+    const createdAt = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+    const remain = SYS_CHAT_AUTOHIDE_MS - (Date.now() - createdAt);
+    if (remain <= 0) return;
     d.className = 'sys';
     d.textContent = row.message;
-  } else {
-    const meCls = (GAME.player && row.nickname === GAME.player.name) ? 'me' : '';
-    // 시전 시점 착용 칭호 뱃지 (row.title_id — 신규 필드. 미존재 시 뱃지 생략)
-    let titleBadge = '';
-    if (row.title_id){
-      try { titleBadge = titleBadgeHtml(row.title_id, { size:10, py:1, px:6 }); } catch(e){}
-      if (titleBadge) titleBadge = `<span style="margin-right:4px;">${titleBadge}</span>`;
-    }
-    d.innerHTML = `${titleBadge}<span class="nick ${meCls}">${escapeHtml(row.nickname)}:</span> <span class="msg">${escapeHtml(row.message)}</span>`;
+    msgsEl.appendChild(d);
+    _autoHideSysMsg(d, remain);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return;
   }
+  const meCls = (GAME.player && row.nickname === GAME.player.name) ? 'me' : '';
+  // 시전 시점 착용 칭호 뱃지 (row.title_id — 신규 필드. 미존재 시 뱃지 생략)
+  let titleBadge = '';
+  if (row.title_id){
+    try { titleBadge = titleBadgeHtml(row.title_id, { size:10, py:1, px:6 }); } catch(e){}
+    if (titleBadge) titleBadge = `<span style="margin-right:4px;">${titleBadge}</span>`;
+  }
+  d.innerHTML = `${titleBadge}<span class="nick ${meCls}">${escapeHtml(row.nickname)}:</span> <span class="msg">${escapeHtml(row.message)}</span>`;
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
 }
@@ -15644,13 +15663,14 @@ function chatSys(msg){
       .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
     return;
   }
-  // 오프라인 fallback — 로컬만
+  // 오프라인 fallback — 로컬만. 시스템 메시지는 30초 후 자동 소멸.
   const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
   const d = document.createElement('div');
   d.className = 'sys';
   d.textContent = msg;
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
+  _autoHideSysMsg(d, SYS_CHAT_AUTOHIDE_MS);
 }
 
 function sendChat(){
