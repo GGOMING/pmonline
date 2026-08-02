@@ -6916,9 +6916,17 @@ async function openRaid(raidKey){
     else checkRaidReset(raidKey);
   }
   // 세션 보상 수령 여부 체크 — 이번 세션에 보스 보상을 이미 받았으면 재입장 차단
-  // 세션 리셋(자동 6시간 or 축복 초기화) 시 sessionStart 가 갱신되어 자동 해제
+  // 자동 해제 조건 (아무 유저의 축복 리셋·운영자 리셋·자동 6시간 리셋 모두 커버):
+  //   (a) sessionStart 가 새 앵커로 넘어감  또는
+  //   (b) 클라우드 상 보스가 살아있음 (bossDefeated=false 또는 bossHp > 0)
+  //       → 다른 유저가 리셋한 경우 sessionStart 는 그대로지만 보스가 부활한 상태로 반영됨
   const rNow = GAME.raid && GAME.raid[raidKey];
   const curSessionStart = rNow ? (Number(rNow.sessionStart) || 0) : 0;
+  const bossAlive = rNow && (!rNow.bossDefeated || (Number(rNow.bossHp) || 0) > 0);
+  if (bossAlive && p.raidBossClaimed && p.raidBossClaimed[raidKey]){
+    delete p.raidBossClaimed[raidKey];
+    try { saveGame(); } catch(e){}
+  }
   const claimedSession = (p.raidBossClaimed && Number(p.raidBossClaimed[raidKey])) || 0;
   if (curSessionStart > 0 && claimedSession === curSessionStart){
     const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
@@ -7150,8 +7158,13 @@ function startRaidMobBattle(){
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
   if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
-  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단
+  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단 (보스가 살아있으면 claim 자동 해제)
   const cs = r ? (Number(r.sessionStart) || 0) : 0;
+  const bossAliveMob = r && (!r.bossDefeated || (Number(r.bossHp) || 0) > 0);
+  if (bossAliveMob && p.raidBossClaimed && p.raidBossClaimed[raidKey]){
+    delete p.raidBossClaimed[raidKey];
+    try { saveGame(); } catch(e){}
+  }
   const cl = (p.raidBossClaimed && Number(p.raidBossClaimed[raidKey])) || 0;
   if (cs > 0 && cl === cs){
     const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
@@ -7247,9 +7260,15 @@ async function startRaidBossBattle(){
     try { await loadRaidFromCloud(); } catch(e){ console.warn('[startRaidBoss reload]', e); }
   }
   const r = GAME.raid[raidKey];
-  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단 (loadRaidFromCloud 이후 최신 세션 기준으로 체크)
+  // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단 (loadRaidFromCloud 이후 최신 세션 기준)
+  // 보스가 살아있으면 (축복 리셋·운영자 리셋·자동 리셋 어느 경로든) claim 자동 해제
   {
     const cs = r ? (Number(r.sessionStart) || 0) : 0;
+    const bossAliveBoss = r && (!r.bossDefeated || (Number(r.bossHp) || 0) > 0);
+    if (bossAliveBoss && _p0.raidBossClaimed && _p0.raidBossClaimed[raidKey]){
+      delete _p0.raidBossClaimed[raidKey];
+      try { saveGame(); } catch(e){}
+    }
     const cl = (_p0.raidBossClaimed && Number(_p0.raidBossClaimed[raidKey])) || 0;
     if (cs > 0 && cl === cs){
       const nm = raidKey==='dawn'?'새벽의 언덕':(raidKey==='mist'?'안개의 숲':'잊혀진 성좌');
@@ -7427,18 +7446,21 @@ function makeBossDeck(raidKey){
   }
   // 2) 우선순위 내림차순 정렬 (안정 정렬 — 동일 우선순위는 셔플 순서 유지)
   rawDeck.sort((a, b) => priorityOf(b) - priorityOf(a));
-  // 3) 유니크 카드 1장을 슬롯 5~6 (6~7턴) 으로 이동 — 중반 위협 유지
-  //    현재 유니크는 앞쪽에 몰려있으므로 마지막 유니크를 뒤로 스왑
+  // 3) 마지막 유니크 카드 1장을 슬롯 6~7 (7~8턴) 로 이동 — 후반 위협 유지
   const uniqueIdxs = [];
   for (let i = 0; i < rawDeck.length; i++){
     if (rawDeck[i] && rawDeck[i].grade === 'unique') uniqueIdxs.push(i);
   }
   if (uniqueIdxs.length >= 1){
     const lastUniqueIdx = uniqueIdxs[uniqueIdxs.length - 1];
-    const targetSlot = 5 + Math.floor(Math.random() * 2); // 5 or 6
+    const targetSlot = 6 + Math.floor(Math.random() * 2); // 6 or 7
     if (lastUniqueIdx < targetSlot){
       [rawDeck[lastUniqueIdx], rawDeck[targetSlot]] = [rawDeck[targetSlot], rawDeck[lastUniqueIdx]];
     }
+  }
+  // 4) 슬롯 1 (2턴) 이 여전히 유니크면 슬롯 4 (5턴) 와 스왑 — 초반 화력 완화
+  if (rawDeck[1] && rawDeck[1].grade === 'unique' && rawDeck[4] && rawDeck[4].grade !== 'unique'){
+    [rawDeck[1], rawDeck[4]] = [rawDeck[4], rawDeck[1]];
   }
   return rawDeck;
 }
