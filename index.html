@@ -7376,24 +7376,31 @@ function makeBossDeck(raidKey){
     return [s0, s1, ...mid, ...late].filter(Boolean);
   }
 
-  // ─── dawn/mist: 영웅 1 + 유니크 2 + 레어 7 + 노멀 5 = 15장 (등급 비중 유지)
-  // 슬롯 0~4 (1~5턴): 영웅 · 유니크 · 회복 카드 우선 배치. 나머지는 후반 슬롯.
-  // 같은 우선순위 안에서는 무작위 순서로 예측성 낮춤.
+  // ─── dawn/mist: 15장 덱
+  //   영웅: 35% 확률로 1장 (있으면 유니크 2장), 65% 확률로 영웅 X (유니크 3장으로 대체)
+  //   레어 7장 + 노멀 5장
+  //   모든 카드는 중복 없음 (덱 전체 15장 서로 다른 카드)
+  //   슬롯 0~4 (1~5턴): 영웅 · 유니크 · 회복 카드 우선 배치
   const heroPool   = CARDS.filter(c => c.grade === 'hero'   && !c.monsterOnly);
   const uniquePool = CARDS.filter(c => c.grade === 'unique' && !c.monsterOnly);
   const rarePool   = CARDS.filter(c => c.grade === 'rare'   && !c.monsterOnly);
   const normalPool = CARDS.filter(c => c.grade === 'normal' && c.id !== 'basic_atk' && !c.monsterOnly);
-  const pick = (pool, n) => {
+  const pickUnique = (pool, n) => {
+    const avail = pool.slice();
     const out = [];
-    for (let i = 0; i < n; i++) out.push(pool[Math.floor(Math.random() * pool.length)]);
+    for (let i = 0; i < n && avail.length > 0; i++){
+      const idx = Math.floor(Math.random() * avail.length);
+      out.push(avail[idx]);
+      avail.splice(idx, 1);
+    }
     return out;
   };
-  const rawDeck = [
-    ...pick(heroPool, 1),
-    ...pick(uniquePool, 2),
-    ...pick(rarePool, 7),
-    ...pick(normalPool, 5),
-  ];
+  const hasHero = Math.random() < 0.35;
+  const heroSlots   = hasHero ? pickUnique(heroPool, 1) : [];
+  const uniqueSlots = pickUnique(uniquePool, hasHero ? 2 : 3);
+  const rareSlots   = pickUnique(rarePool, 7);
+  const normalSlots = pickUnique(normalPool, 5);
+  const rawDeck = [...heroSlots, ...uniqueSlots, ...rareSlots, ...normalSlots];
   const HEAL_FX_TYPES = new Set(['heal','healStat','healLevel','hot','hotStat','mpHot']);
   const isHealCard = (c) => {
     const fx = c && c.fx;
