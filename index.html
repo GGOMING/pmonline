@@ -2820,9 +2820,9 @@ const CARDS = [
   { id:'u02', name:'로커스트스웜',   grade:'unique', icon:'skull2', iconPath:'assets/wc3_reforged_used/sworm.jpg', text:'1 ~ 15 랜덤 데미지 *8 / 1 ~ 15 랜덤 회복 *8 (방어력 무시)', fx:{type:'dmgHits',min:1,max:15,hits:8,healMin:1,healMax:15,ignoreDef:true} },
   { id:'u03', name:'레인오브파이어', grade:'unique', icon:'rain',   iconPath:'assets/wc3_reforged_used/rainoffire.jpg', text:'[INT + 무기]로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3,weaponBonus:true},{type:'mpCost',stat:'int'}]} },
   { id:'u04', name:'블랙애로우',     grade:'unique', icon:'darrow', iconPath:'assets/wc3_reforged_used/blackarrow.jpg', text:'[DEX + 무기]로 3회 타격', fx:{type:'dmgStat',stats:['dex'],mult:3,weaponBonus:true} },
-  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 10 ~ 25 랜덤 데미지 (소환의식 불필요)', fx:{type:'dot',turns:15,min:10,max:25,summon:true} },
+  { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 상대 잔여 HP의 10~20% 랜덤 데미지 (최대 40, 방어력 무시, 소환의식 불필요)', fx:{type:'dotPct',turns:10,pctMin:0.10,pctMax:0.20,max:40,dynamic:true,summon:true} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   iconPath:'assets/wc3_reforged_used/holylight.jpg', text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
-  { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +5 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:5,max:15},{stat:'def',min:5,max:15}]} },
+  { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +10 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:10,max:15},{stat:'def',min:10,max:15}]} },
   { id:'u08', name:'롱기누스의 검',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.3 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u09', name:'테르시아의 빛',  grade:'unique', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNLightningRevenant.png', text:'시전자 INT% 확률로 2턴 간 기절 / 2턴 간 INT × 1.3 고정 데미지 (방어력 무시, 매턴 현재 INT 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'int'},{type:'dotStat',stats:['int'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u10', name:'크로노스의 혼',  grade:'unique', icon:'ice',    iconPath:'assets/wc3_reforged_used/BTNFrostRevenant.png', text:'시전자 DEX% 확률로 2턴 간 기절 / 2턴 간 DEX × 1.2 고정 데미지 (방어력 무시, 매턴 현재 DEX 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'dex'},{type:'dotStat',stats:['dex'],mult:1.2,turns:2,dynamic:true}]} },
@@ -3449,8 +3449,8 @@ function setHealMsg(text, cls){
   el.className = 'heal-result' + (cls?' '+cls:'');
 }
 let _pendingDefenseFromHeal = false;
-// Lv 19 이하 뉴비 보정 — 회복의 샘물 이용 시마다 추가 50G (랭킹전 참여 불가 구간의 골드 보전)
-const HEAL_NEWBIE_BONUS = 50;
+// Lv 19 이하 뉴비 보정 — 회복의 샘물 이용 시마다 추가 45G (기본 5G + 뉴비 45G = 총 50G)
+const HEAL_NEWBIE_BONUS = 45;
 const HEAL_NEWBIE_MAX_LEVEL = 19;
 function doHeal(){
   const p = GAME.player;
@@ -3841,7 +3841,7 @@ const GACHA_SHOPS = {
     label: '유니크 뽑기', icon: 'assets/wc3_reforged_used/cardshop_unique.png',
     cost1: 5000, cost10: 45000,
     maxGradeKr: '유니크',
-    minLv: 11,
+    minLv: 30,
     table: [
       { grade:'normal', rate:0.6545 },
       { grade:'rare',   rate:0.3450 },
@@ -3852,7 +3852,7 @@ const GACHA_SHOPS = {
     label: '영웅 뽑기', icon: 'assets/wc3_reforged_used/cardshop_hero.jpg',
     cost1: 10000, cost10: 90000,
     maxGradeKr: '영웅',
-    minLv: 11,
+    minLv: 30,
     table: [
       { grade:'normal', rate:0.5009 },
       { grade:'rare',   rate:0.4980 },
@@ -3864,7 +3864,7 @@ const GACHA_SHOPS = {
     label: '전설 뽑기', icon: 'assets/wc3_reforged_used/cardshop_legend.jpg',
     cost1: 100000, cost10: 900000,
     maxGradeKr: '전설',
-    minLv: 11,
+    minLv: 30,
     table: [
       { grade:'normal', rate:0.30000 },
       { grade:'rare',   rate:0.68400 },
@@ -4121,7 +4121,7 @@ function _offerExchangeForResults(results){
     results[i] = newCard;
     const newGradeName = { unique:'유니크', hero:'영웅', rare:'레어', normal:'일반', legend:'전설' }[newCard.grade] || newCard.grade;
     try {
-      chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`);
+      chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`, { sticky: true });
     } catch(e){}
     try {
       alert(`🔄 교환 완료! (✨ -${cost} · 잔여 ${p.blessing})\n\n[${c.name}] (${gradeName})\n       ↓\n[${newCard.name}] (${newGradeName})`);
@@ -4459,7 +4459,7 @@ function executeSynthesis(){
   const gradeName = gradeKr(grade);
   const gradeColor = _GRADE_COLORS[grade] || '#000';
   if (grade === 'unique'){
-    chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${card.name}을(를) 획득하셨습니다!`);
+    chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${card.name}을(를) 획득하셨습니다!`, { sticky: true });
   }
   setTimeout(() => {
     alert(`🔨 합성 완료!\n\n결과: [${gradeName}] ${card.name}\n\n남은 오늘 합성: ${SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p)}회`);
@@ -4571,13 +4571,13 @@ function doGachaShop(shopId, n){
   const heroCards   = results.filter(c => c.grade === 'hero');
   const uniqueCards = results.filter(c => c.grade === 'unique');
   if (legendCards.length){
-    chatSys(`✨👑 ${p.name}님이 ${s.label}에서 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`);
+    chatSys(`✨👑 ${p.name}님이 ${s.label}에서 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`, { sticky: true });
   }
   if (heroCards.length){
-    chatSys(`★ ${p.name}님이 ${s.label}에서 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+    chatSys(`★ ${p.name}님이 ${s.label}에서 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
   }
   if (uniqueCards.length){
-    chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+    chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
   }
   // 일일 퀘스트 진행
   try {
@@ -5211,13 +5211,13 @@ function buyBlessItem(id){
     const heroCards   = results.filter(c => c.grade === 'hero');
     const uniqueCards = results.filter(c => c.grade === 'unique');
     if (legendCards.length){
-      chatSys(`✨👑 ${p.name}님이 여신의 축복으로 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`);
+      chatSys(`✨👑 ${p.name}님이 여신의 축복으로 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`, { sticky: true });
     }
     if (heroCards.length){
-      chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+      chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
     if (uniqueCards.length){
-      chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+      chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
     // 일일 퀘스트 진행 (축복 뽑기도 카드 획득으로 카운트)
     try {
@@ -5262,7 +5262,7 @@ function buyBlessItem(id){
         if (GAME.inventory.length >= inventoryLimit()){
           const emoji = grade === 'hero' ? '⭐' : '🔮';
           resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`);
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: _isHighGradeCard(grade) });
         } else {
           GAME.inventory.push(card);
           // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
@@ -5272,7 +5272,7 @@ function buyBlessItem(id){
           const fg = finalCard.grade;
           const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
           resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`);
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: _isHighGradeCard(fg) });
         }
       }
     } else if (chosen.id === 'stat_point'){
@@ -5612,13 +5612,13 @@ function doGacha(n){
     const heroCards   = results.filter(c => c.grade === 'hero');
     const uniqueCards = results.filter(c => c.grade === 'unique');
     if (legendCards.length){
-      chatSys(`✨👑 ${p.name}님이 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`);
+      chatSys(`✨👑 ${p.name}님이 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`, { sticky: true });
     }
     if (heroCards.length){
-      chatSys(`★ ${p.name}님이 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`);
+      chatSys(`★ ${p.name}님이 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
     if (uniqueCards.length){
-      chatSys(`★ ${p.name}님이 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`);
+      chatSys(`★ ${p.name}님이 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
   }
 
@@ -7839,7 +7839,7 @@ async function raidEnd(result){
               sellBtn = ` <button id="raidCardSellBtn_${card.id}" onclick="_sellRaidRewardCard('${card.id}', ${price})" style="margin-left:8px;padding:3px 10px;font-size:11px;background:#b88600;color:#fff;border:0;border-radius:3px;cursor:pointer;font-weight:bold;">💰 판매 (+${price.toLocaleString()}G)</button>`;
             }
             cardBoxHtml = `<p style="color:#a02050;font-weight:bold;" id="raidCardBoxLine">🎁 영웅 뽑기 획득 — [${gradeKr(card.grade)}] ${card.name}${sellBtn}</p>`;
-            try { chatSys(`★ ${p.name}님이 잊혀진 성좌 보스 처치로 [${gradeKr(card.grade)}] ${card.name} 획득!`); } catch(e){}
+            try { chatSys(`★ ${p.name}님이 잊혀진 성좌 보스 처치로 [${gradeKr(card.grade)}] ${card.name} 획득!`, { sticky: _isHighGradeCard(card.grade) }); } catch(e){}
           } else {
             cardBoxHtml = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${card.name})</p>`;
           }
@@ -7856,7 +7856,7 @@ async function raidEnd(result){
                 if (!p.weapons) p.weapons = [];
                 p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
                 legendHtml = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 무기 획득! ⚔ ${w.name} (+${w.atkBonus})</p>`;
-                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 무기 [${w.name}] 획득!`); } catch(e){}
+                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 무기 [${w.name}] 획득!`, { sticky: true }); } catch(e){}
               }
             } else if (pick.kind === 'armor'){
               const a = ARMORS.find(x => x.id === pick.itemId);
@@ -7864,7 +7864,7 @@ async function raidEnd(result){
                 if (!p.armors) p.armors = [];
                 p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
                 legendHtml = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 방어구 획득! 🛡 ${a.name} (+${a.defBonus})</p>`;
-                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 방어구 [${a.name}] 획득!`); } catch(e){}
+                try { chatSys(`💎 ${p.name}님이 잊혀진 성좌 보스 처치로 전설 방어구 [${a.name}] 획득!`, { sticky: true }); } catch(e){}
               }
             }
           }
@@ -7909,7 +7909,7 @@ async function raidEnd(result){
                 if (!p.weapons) p.weapons = [];
                 p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
                 legendHtmlDM = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 무기 획득! ⚔ ${w.name} (+${w.atkBonus})</p>`;
-                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 무기 [${w.name}] 획득!`); } catch(e){}
+                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 무기 [${w.name}] 획득!`, { sticky: true }); } catch(e){}
               }
             } else if (pick.kind === 'armor'){
               const a = ARMORS.find(x => x.id === pick.itemId);
@@ -7917,7 +7917,7 @@ async function raidEnd(result){
                 if (!p.armors) p.armors = [];
                 p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
                 legendHtmlDM = `<p style="color:#ffd700;font-weight:bold;font-size:15px;">💎 전설 방어구 획득! 🛡 ${a.name} (+${a.defBonus})</p>`;
-                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 방어구 [${a.name}] 획득!`); } catch(e){}
+                try { chatSys(`💎 ${p.name}님이 ${bossName} 처치로 전설 방어구 [${a.name}] 획득!`, { sticky: true }); } catch(e){}
               }
             }
           }
@@ -11413,13 +11413,32 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'dotPct'){
-      // dynamic:true — 매 턴 대상의 현재 HP 기반 재계산 (애스드밤 등). false/undefined — 시전 시점 hpMax 스냅.
+      // dynamic:true — 매 턴 대상의 현재 HP 기반 재계산 (애스드밤·썬더리저드 등). false/undefined — 시전 시점 hpMax 스냅.
+      // pctMin/pctMax 지정 시 매턴 그 범위 안에서 랜덤 % (썬더리저드 등)
       if (fx.dynamic){
-        const entry = {pctRemaining: fx.pct, turns: fx.turns, dmg: 0};
+        const entry = {turns: fx.turns, dmg: 0};
+        if (fx.pctMin != null && fx.pctMax != null){
+          entry.pctRemainingMin = fx.pctMin;
+          entry.pctRemainingMax = fx.pctMax;
+        } else {
+          entry.pctRemaining = fx.pct;
+        }
         if (fx.max) entry.max = fx.max;
+        if (fx.summon){
+          entry.summon = true;
+          // 소환수는 한 마리만 — 기존 소환 dot 제거 후 신규 소환수로 교체
+          let replaced = 0;
+          for (let i = ctx.castDots.length - 1; i >= 0; i--){
+            if (ctx.castDots[i].summon){ ctx.castDots.splice(i, 1); replaced++; }
+          }
+          if (replaced > 0) ctx.log(`  · 기존 소환수 → 새 소환수로 교체`, ctx.castLogCls);
+        }
         ctx.castDots.push(entry);
         const cap = fx.max ? ` (최대 ${fx.max})` : '';
-        ctx.log(`  + ${ctx.targName} 도트 잔여 HP ${Math.floor(fx.pct*100)}% × ${fx.turns}턴${cap}`, ctx.castLogCls);
+        const label = (fx.pctMin != null && fx.pctMax != null)
+          ? `${Math.floor(fx.pctMin*100)}~${Math.floor(fx.pctMax*100)}%`
+          : `${Math.floor(fx.pct*100)}%`;
+        ctx.log(`  + ${ctx.targName} 도트 잔여 HP ${label} × ${fx.turns}턴${cap}`, ctx.castLogCls);
         return;
       }
       let dmg = Math.floor(ctx.targObj.hpMax * fx.pct);
@@ -11882,6 +11901,13 @@ function processCombatTicks(kind){
   _ensureCombatExt(c);
   const me = GAME.player;
   function rollDot(d, tgt){
+    // 잔여 HP 기반 랜덤 % 도트 (썬더리저드 등) — 매턴 pctMin~pctMax 범위에서 무작위
+    if (d.pctRemainingMin != null && d.pctRemainingMax != null && tgt){
+      const pct = d.pctRemainingMin + Math.random() * (d.pctRemainingMax - d.pctRemainingMin);
+      let v = Math.floor((tgt.hp || 0) * pct);
+      if (d.max != null) v = Math.min(d.max, v);
+      return Math.max(1, v);
+    }
     // 잔여 HP 기반 동적 도트 (애스드밤 등)
     if (d.pctRemaining != null && tgt){
       let v = Math.floor((tgt.hp || 0) * d.pctRemaining);
@@ -12207,6 +12233,12 @@ function processTrainTicks(){
   const opp = c.opp;
   // 적 dots/hots
   function _trainRollDot(d, tgt){
+    if (d.pctRemainingMin != null && d.pctRemainingMax != null && tgt){
+      const pct = d.pctRemainingMin + Math.random() * (d.pctRemainingMax - d.pctRemainingMin);
+      let v = Math.floor((tgt.hp || 0) * pct);
+      if (d.max != null) v = Math.min(d.max, v);
+      return Math.max(1, v);
+    }
     if (d.pctRemaining != null && tgt){
       let v = Math.floor((tgt.hp || 0) * d.pctRemaining);
       if (d.max != null) v = Math.min(d.max, v);
@@ -12360,7 +12392,7 @@ function _handleMacroGuardHunt(result){
   } else {
     penalty = _macroGuardPenalty(p);
     huntLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
-    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`, { sticky: true });
   }
   try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
   try { renderSheet(); renderDeck(); } catch(e){}
@@ -12435,7 +12467,7 @@ async function _handleMacroGuardRaid(result){
   } else {
     penalty = _macroGuardPenalty(p);
     raidLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
-    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`);
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`, { sticky: true });
   }
   // 매크로 방지는 raid 몹 카운트 · pendingRaidMob 에 영향 없음 (정상 몹이 아님)
   p.pendingRaidMob = null;
@@ -12455,14 +12487,28 @@ async function _handleMacroGuardRaid(result){
 //   · 영웅 카드 / 장비(+15 초과)   : 여신의 축복 3개
 //   · 레어 카드도 유니크와 동일하게 1개 (사용자 편의)
 // confirm 응답 전 새로고침·강제 종료 시 파괴 확정 (파괴는 이미 저장돼 있음)
-function _blessingCostForDestruction(destroyed){
-  if (!destroyed) return 0;
+// 파괴 대상의 복구 등급 판정
+// - 카드: grade 기반. 유니크→hero 로 처리하려면 명시적 매핑 (레어/유니크/영웅/전설 → rare/unique/hero 티어)
+// - 장비: bonus 값 기반 (<15 rare, 15~20 unique, >20 hero)
+function _destroyRestoreTier(destroyed){
+  if (!destroyed) return null;
   if (destroyed.kind === 'card'){
-    return destroyed.grade === 'hero' ? 3 : 1;  // rare / unique = 1, hero = 3
+    const g = destroyed.grade;
+    if (g === 'hero' || g === 'legend') return 'hero';
+    if (g === 'unique') return 'unique';
+    return 'rare';
   }
-  // 장비: bonus > 15 이면 3, 이하면 1
-  return (destroyed.bonus||0) > 15 ? 3 : 1;
+  const b = destroyed.bonus || 0;
+  if (b > 20) return 'hero';
+  if (b >= 15) return 'unique';
+  return 'rare';
 }
+// 등급별 복구 파라미터 (attempt: 0-indexed 1차/2차/3차)
+const RESTORE_PARAMS = {
+  rare:   { costs: [1, 2, 3],  chance: 0.70, label: '레어급'   },
+  unique: { costs: [3, 5, 7],  chance: 0.50, label: '유니크급' },
+  hero:   { costs: [5, 7, 10], chance: 0.20, label: '영웅급'   },
+};
 function _restoreDestroyedItem(destroyed){
   const p = GAME.player;
   if (!p || !destroyed) return;
@@ -12487,38 +12533,71 @@ function _offerBlessingToPreventDestroy(destroyed){
   const p = GAME.player;
   if (!p || !destroyed) return;
   const kindKr = destroyed.kind==='card' ? '카드' : destroyed.kind==='weapon' ? '무기' : '방어구';
-  const cost = _blessingCostForDestruction(destroyed);
-  const held = p.blessing || 0;
-  // 축복 부족 → 그냥 파괴 알림
-  if (held < cost){
-    try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.'); } catch(e){}
-    try { advanceWeeklyQuest('wq_death_destroy', 1); } catch(e){}
-    try { alert('보유하신 여신의 축복이 부족하여 장비가 즉시 파괴되었습니다.'); } catch(e){}
-    return;
-  }
-  // 축복 사용 제안 — confirm 응답 전 종료 시 파괴 확정
-  let msg = `☠ ${kindKr} 「${destroyed.name}」 파괴 위기!\n\n`;
-  msg += `✨ 여신의 축복 ${cost}개를 사용하여 파괴를 방지하시겠습니까?\n`;
-  msg += `(보유: ${held}개 → 사용 후: ${held - cost}개)\n\n`;
-  msg += `※ 이 창을 닫거나 새로고침하면 파괴가 확정됩니다.`;
-  let ok = false;
-  try { ok = confirm(msg); } catch(e){ ok = false; }
-  if (!ok){
-    try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.'); } catch(e){}
+  const tier = _destroyRestoreTier(destroyed);
+  const params = tier && RESTORE_PARAMS[tier];
+  if (!tier || !params){
+    // 파라미터 없는 경우 (예외) → 파괴 확정
+    try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.', { sticky: true }); } catch(e){}
     try { advanceWeeklyQuest('wq_death_destroy', 1); } catch(e){}
     return;
   }
-  // 축복 사용 → 아이템 복원 + 즉시 저장
-  p.blessing = held - cost;
-  try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
-  _restoreDestroyedItem(destroyed);
-  GAME._lastHuntLoss.destroyed = null;
-  try { renderSheet(); } catch(e){}
-  try { renderDeck(); } catch(e){}
+  // 다단계 복구: attempt 0/1/2 순차 시도. 각 시도마다 confirm → 축복 소모 → 확률 롤
+  let attempt = 0;
+  while (attempt < params.costs.length){
+    const cost = params.costs[attempt];
+    const held = p.blessing || 0;
+    const chancePct = Math.floor(params.chance * 100);
+    const attemptLabel = attempt === 0 ? '1차 시도' : attempt === 1 ? '재도전 (2차)' : '마지막 시도 (3차)';
+    if (held < cost){
+      // 축복 부족 → 파괴 확정
+      try {
+        alert(`✨ 여신의 축복 부족 (필요 ${cost}개 / 보유 ${held}개)\n\n${kindKr} 「${destroyed.name}」 복구를 포기합니다. 파괴 확정.`);
+      } catch(e){}
+      break;
+    }
+    let msg = `☠ ${kindKr} 「${destroyed.name}」 (${params.label}) — ${attemptLabel}\n\n`;
+    msg += `✨ 여신의 축복 ${cost}개 소모 · 성공 확률 ${chancePct}%\n`;
+    msg += `(보유 ${held}개 → 사용 시 ${held - cost}개)\n\n`;
+    if (attempt + 1 < params.costs.length){
+      const nextCost = params.costs[attempt + 1];
+      msg += `※ 실패 시 재도전 가능 (다음 비용: ${nextCost}개)\n`;
+    } else {
+      msg += `※ 마지막 시도입니다. 실패 시 완전 파괴.\n`;
+    }
+    msg += `※ 이 창을 닫으면 이 시도는 포기 처리 (지금까지 소모한 축복은 반환되지 않음).`;
+    let ok = false;
+    try { ok = confirm(msg); } catch(e){ ok = false; }
+    if (!ok){
+      // 유저 포기 → 완전 파괴
+      try { alert(`✨ 복구를 포기하셨습니다.\n\n${kindKr} 「${destroyed.name}」 파괴 확정.`); } catch(e){}
+      break;
+    }
+    // 축복 소모 (성공/실패 무관)
+    p.blessing = Math.max(0, (p.blessing || 0) - cost);
+    try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
+    const succeed = Math.random() < params.chance;
+    if (succeed){
+      // 복구 성공 → 아이템 복원 + 채팅 알림 (auto-hide)
+      _restoreDestroyedItem(destroyed);
+      try { renderSheet(); renderDeck(); } catch(e){}
+      try { saveGame(); } catch(e){}
+      try { cloudSaveNow().catch(function(e){ console.warn('[blessingRestore cloudSave]', e); }); } catch(e){}
+      try { alert(`🌟 복구 성공! ${kindKr} 「${destroyed.name}」 을(를) 되찾았습니다.\n(축복 ${cost}개 소모, 남은 축복 ${p.blessing}개)`); } catch(e){}
+      try { chatSys(`✨ ${p.name}님이 여신의 축복 ${cost}개로 ${kindKr} [${destroyed.name}] 파괴를 막았습니다.`); } catch(e){}
+      return; // 성공 시 함수 종료
+    }
+    // 실패 → 다음 시도 or 종료
+    attempt++;
+    if (attempt >= params.costs.length){
+      try { alert(`💥 마지막 시도 실패...\n\n${kindKr} 「${destroyed.name}」 파괴 확정. (총 ${params.costs.reduce(function(a,b){return a+b;}, 0)} 축복 소모)`); } catch(e){}
+    }
+  }
+  // 여기 도달 = 파괴 확정
+  try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.', { sticky: true }); } catch(e){}
+  try { advanceWeeklyQuest('wq_death_destroy', 1); } catch(e){}
+  try { renderSheet(); renderDeck(); } catch(e){}
   try { saveGame(); } catch(e){}
-  cloudSaveNow().catch(e => console.warn('[blessingRestore cloudSave]', e));
-  try { alert(`✨ 여신의 축복 ${cost}개 사용\n\n${kindKr} 「${destroyed.name}」 파괴를 방지했습니다!\n(남은 축복: ${p.blessing}개)`); } catch(e){}
-  try { chatSys(`✨ ${p.name}님이 여신의 축복 ${cost}개로 ${kindKr} [${destroyed.name}] 파괴를 막았습니다.`); } catch(e){}
+  try { cloudSaveNow().catch(function(e){ console.warn('[blessingFail cloudSave]', e); }); } catch(e){}
 }
 
 function huntEnd(result){
@@ -12591,13 +12670,14 @@ function huntEnd(result){
     // HP·MP 0으로
     p.hp = 0;
     p.mp = 0;
-    // 패배 파괴 — 총 2%: 카드 1.2% + 장비 0.8%
-    //  • 카드 파괴: 장착 중인 레어 이상만 대상. 가장 높은 등급(동급은 가장 앞 슬롯)이 1.1배 가중치
-    //  • 장비 파괴: 장착 중인 무기/방어구만 대상 (기본 장비 제외, 균등 추첨)
+    // 패배 파괴 — 총 3.0%: 카드 2.5% + 장비 0.5%
+    //  • 카드 파괴 대상: 장착 중 레어 이상. 유니크+ 가 있으면 50% "가장 앞 최고등급" · 50% "나머지 레어+ 균등"
+    //                    유니크+ 가 없으면 (레어만) 균등 추첨
+    //  • 장비 파괴: 장착 중 무기/방어구 균등 (기본 장비 제외)
     var destroyed = null;
     var lossRoll = Math.random();
-    if (lossRoll < 0.012){
-      // 카드 파괴 — 장착 중 grade in (rare/unique/hero)
+    if (lossRoll < 0.025){
+      // 카드 파괴 대상 선정
       var candidates = [];
       for (var ci = 0; ci < GAME.myDeck.length; ci++){
         var cd = GAME.myDeck[ci];
@@ -12606,23 +12686,28 @@ function huntEnd(result){
         candidates.push({ slot: ci, card: cd });
       }
       if (candidates.length){
-        var gradeOrder = { rare:1, unique:2, hero:3 };
-        var topGrade = 0;
+        // 유니크+ 카드 목록 (grade 우선순위)
+        var gradeOrder = { rare:1, unique:2, hero:3, legend:4 };
+        var topUniquePlus = null;
         for (var k = 0; k < candidates.length; k++){
-          if (gradeOrder[candidates[k].card.grade] > topGrade) topGrade = gradeOrder[candidates[k].card.grade];
+          var g = candidates[k].card.grade;
+          if (g === 'unique' || g === 'hero' || g === 'legend'){
+            if (!topUniquePlus || gradeOrder[g] > gradeOrder[topUniquePlus.card.grade]){
+              topUniquePlus = candidates[k];
+            }
+          }
         }
-        // 동급일 경우 가장 앞 슬롯 카드만 1.1배
-        var topIdx = -1;
-        for (var k = 0; k < candidates.length; k++){
-          if (gradeOrder[candidates[k].card.grade] === topGrade){ topIdx = k; break; }
-        }
-        var weights = candidates.map(function(_, k){ return k === topIdx ? 1.1 : 1.0; });
-        var sum = weights.reduce(function(a,b){ return a+b; }, 0);
-        var pickW = Math.random() * sum;
-        var chosen = candidates[candidates.length - 1];
-        for (var k = 0; k < candidates.length; k++){
-          pickW -= weights[k];
-          if (pickW <= 0){ chosen = candidates[k]; break; }
+        var chosen;
+        if (topUniquePlus && Math.random() < 0.5){
+          // 50% — 가장 앞 최고등급 유니크+ 확정
+          chosen = topUniquePlus;
+        } else if (topUniquePlus){
+          // 나머지 50% — 유니크+ 를 제외한 후보 중 균등 (없으면 유니크+ 자체)
+          var others = candidates.filter(function(x){ return x !== topUniquePlus; });
+          chosen = others.length ? others[Math.floor(Math.random() * others.length)] : topUniquePlus;
+        } else {
+          // 유니크+ 없음 → 레어 중 균등
+          chosen = candidates[Math.floor(Math.random() * candidates.length)];
         }
         // 인벤토리에서 동일 id 1장 제거 + 덱 슬롯 비움
         var invIdx = GAME.inventory.findIndex(function(c){ return c.id === chosen.card.id; });
@@ -12630,7 +12715,7 @@ function huntEnd(result){
         GAME.myDeck[chosen.slot] = BASIC_ATTACK;
         destroyed = { kind: 'card', name: chosen.card.name, card: chosen.card, slot: chosen.slot, grade: chosen.card.grade };
       }
-    } else if (lossRoll < 0.020){
+    } else if (lossRoll < 0.030){
       // 장비 파괴 — 장착 중 무기/방어구 (기본 장비 제외)
       var equipped = [];
       if (p.weapon && p.weapon.id && p.weapon.id !== 'basic_club') equipped.push({ kind:'weapon', item:p.weapon });
@@ -15651,6 +15736,14 @@ function _renderChatRow(row){
   if (row.id && _chatRendered.has(row.id)) return;
   if (row.id) _chatRendered.add(row.id);
   const d = document.createElement('div');
+  // sticky 시스템 메시지 — 유저 메시지처럼 영구 유지 (유니크+ 획득, 합성·교환, 매크로 적발 등 중요 이벤트)
+  if (row.kind === 'system_sticky'){
+    d.className = 'sys';
+    d.textContent = row.message;
+    msgsEl.appendChild(d);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return;
+  }
   if (row.kind === 'system'){
     // 시스템 메시지 — 생성 시각 기준 30초 후 자동 소멸. 이미 지난 메시지는 렌더 안 함.
     const createdAt = row.created_at ? new Date(row.created_at).getTime() : Date.now();
@@ -15684,22 +15777,27 @@ function chat(nick, msg, cls=''){
   msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
-function chatSys(msg){
+// opts.sticky=true → kind='system_sticky' 로 저장, 유저 메시지처럼 영구 유지
+function chatSys(msg, opts){
+  const sticky = !!(opts && opts.sticky);
+  const kind = sticky ? 'system_sticky' : 'system';
   // 클라우드 broadcast 우선 (fire-and-forget)
   if (sb && GAME.player){
-    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind:'system' })
+    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind })
       .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
     return;
   }
-  // 오프라인 fallback — 로컬만. 시스템 메시지는 30초 후 자동 소멸.
+  // 오프라인 fallback — 로컬만. sticky 아니면 30초 후 자동 소멸.
   const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
   const d = document.createElement('div');
   d.className = 'sys';
   d.textContent = msg;
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
-  _autoHideSysMsg(d, SYS_CHAT_AUTOHIDE_MS);
+  if (!sticky) _autoHideSysMsg(d, SYS_CHAT_AUTOHIDE_MS);
 }
+// 고등급 카드 (유니크/영웅/전설) 판정 헬퍼 — 채팅 sticky 여부 결정에 재사용
+function _isHighGradeCard(g){ return g === 'unique' || g === 'hero' || g === 'legend'; }
 
 function sendChat(){
   const input = $('chatInput');
