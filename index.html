@@ -2829,7 +2829,7 @@ const CARDS = [
 
   // ───── 영웅 카드 5종 ─────
   { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
-  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/demon.jpg', text:'Str +40, Dex +40, Int +40 (데몬 변신)', fx:{type:'buff',str:40,dex:40,int:40} },
+  { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/wc3_reforged_used/demon.jpg', text:'STR·DEX·INT 를 40으로 고정 (데몬 변신)', fx:{type:'setStat',target:'self',stats:{str:40,dex:40,int:40}} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/wc3_reforged_used/BTNSpiritOfVengeance-Reforged.png', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 턴부터 3턴간 방어구 +20 증가, CON +20 증가 / 3턴 후 시전자 레벨 × 2.5 만큼 HP·MP 회복', fx:{type:'multi',effects:[{type:'buff',def:20,con:20,turns:3},{type:'delayedRestore',after:3,hpFromLevel:2.5,mpFromLevel:2.5}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/wc3_reforged_used/BTNAvatar-Reforged.png', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
@@ -3841,7 +3841,7 @@ const GACHA_SHOPS = {
     label: '유니크 뽑기', icon: 'assets/wc3_reforged_used/cardshop_unique.png',
     cost1: 5000, cost10: 45000,
     maxGradeKr: '유니크',
-    minLv: 30,
+    minLv: 26,
     table: [
       { grade:'normal', rate:0.6545 },
       { grade:'rare',   rate:0.3450 },
@@ -11372,6 +11372,37 @@ function applyCardEffect(card, ctx){
         _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj, zsOpts);
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
+      return;
+    }
+    // setStat — 지정 스탯을 fx.stats 객체의 값으로 "고정" (base + buff = target)
+    // ex: fx.stats = {str:40, dex:40, int:40} → 세 스탯 모두 40 으로 설정
+    //     STR base 5 → +35 delta 적용 · STR base 55 → -15 delta 적용 (원래 스탯이 높으면 하향됨)
+    // 대상: fx.target === 'self' → 시전자 · 그 외 → 상대
+    if (t === 'setStat'){
+      let obj, buffs, tBuffs, locked, name, logCls, byGrade;
+      if (fx.target === 'self'){
+        obj = ctx.castObj; buffs = ctx.castBuffs; tBuffs = ctx.castTurnBuffs; locked = ctx.castLockedBuffs; name = ctx.castName; logCls = ctx.castLogCls;
+        byGrade = ctx.castBuffsByGrade;
+      } else {
+        const tgt = _debuffTarget();
+        obj = tgt.obj; buffs = tgt.buffs; tBuffs = tgt.turnBuffs; locked = (tgt.obj===ctx.targObj ? ctx.targLockedBuffs : ctx.castLockedBuffs); name = tgt.name; logCls = tgt.logCls;
+        byGrade = (buffs === ctx.castBuffs) ? ctx.castBuffsByGrade : ctx.targBuffsByGrade;
+      }
+      const ssOpts = { grade: card.grade, byGrade };
+      const msgs = [];
+      for (const k of Object.keys(fx.stats)){
+        const target = fx.stats[k] | 0;
+        const lockedVal = (locked && locked[k]) || 0;
+        let base;
+        if (k === 'atk')      base = (obj.weapon && obj.weapon.atkBonus) || 0;
+        else if (k === 'def') base = (obj.armor  && obj.armor.defBonus)  || 0;
+        else                  base = obj[k] || 0;
+        const cur = base + (buffs[k]||0) - lockedVal;
+        const delta = target - cur;
+        _addTurnBuff(buffs, tBuffs, k, delta, fx.turns||0, obj, ssOpts);
+        msgs.push(`${_korStatKey(k)}=${target}`);
+      }
+      ctx.log(`  + ${name} ${msgs.join(', ')} 고정${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
       return;
     }
     if (t === 'dot'){
