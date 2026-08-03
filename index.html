@@ -7868,8 +7868,10 @@ async function raidEnd(result){
     const xpReward   = isAbyssBoss ? 5000 + Math.floor(cumDmg * 0.1) : Math.floor(cumDmg * 0.1);
 
     // 막타 판정 — 여러 유저 동시 처치 인정 (로컬 판정 or 클라우드 승인)
-    // 중복 지급 방지는 raidBossClaimed 세션 기록으로 재입장 차단으로 처리
-    if (result === 'boss_kill' || cloudKilled){
+    //   BUT dealtTotal === 0 (데미지 0) 인 유저는 cloudKilled 라도 막타 인정 안 함
+    //   → "내가 아무것도 안 했는데 다른 유저가 죽여서 나도 보상 받는" 무임승차 방지
+    //   중복 지급 방지는 raidBossClaimed 세션 기록으로 재입장 차단으로 처리
+    if (result === 'boss_kill' || (cloudKilled && dealtTotal > 0)){
       r.bossDefeated = true;
       r.lastKiller = p.name;
       // 이번 세션 보스 보상 수령 기록 → 세션 리셋(자동/수동) 전까지 이 공격대 재입장 차단
