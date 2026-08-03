@@ -11589,8 +11589,10 @@ function applyCardEffect(card, ctx){
       // fx.snap:true → 시전 시점 값으로 데미지 고정. false/undefined → 매 턴 현재 값으로 재계산.
       const entry = {dmg:fx.dmg, turns:fx.turns};
       if (fx.pct){
-        entry.dmg = Math.floor(ctx.castObj.hpMax * fx.pct);
-        if (!fx.snap) entry.pct = fx.pct;
+        // 5% 당 최대 50 상한 (동일 비율). HP 폭발 방지 · 매턴 재계산 시에도 tick 에서 캡 적용
+        const cap = Math.floor(fx.pct * 1000);
+        entry.dmg = Math.min(cap, Math.floor(ctx.castObj.hpMax * fx.pct));
+        if (!fx.snap){ entry.pct = fx.pct; entry.max = cap; }
       }
       if (fx.mpPct){
         entry.dmg = Math.floor((ctx.castObj.mp||0) * fx.mpPct);
@@ -11599,7 +11601,7 @@ function applyCardEffect(card, ctx){
       ctx.castSelfDots.push(entry);
       const label = fx.snap
         ? `${entry.dmg} 고정`
-        : (fx.pct ? `HP ${Math.floor(fx.pct*100)}%` : (fx.mpPct ? `MP ${Math.floor(fx.mpPct*100)}%` : entry.dmg));
+        : (fx.pct ? `HP ${Math.floor(fx.pct*100)}% (최대 ${Math.floor(fx.pct*1000)})` : (fx.mpPct ? `MP ${Math.floor(fx.mpPct*100)}%` : entry.dmg));
       ctx.log(`  - ${ctx.castName} 자해 도트 ${label} × ${fx.turns}턴`, ctx.targLogCls);
       return;
     }
@@ -11695,7 +11697,15 @@ function applyCardEffect(card, ctx){
     if (t === 'sacrifice'){
       let lost = 0;
       if (fx.hp){ ctx.castObj.hp = Math.max(1, ctx.castObj.hp - fx.hp); lost = fx.hp; ctx.log(`  - HP -${fx.hp} 희생`, ctx.targLogCls); }
-      if (fx.hpPct){ const d = Math.floor(ctx.castObj.hpMax * fx.hpPct); ctx.castObj.hp = Math.max(1, ctx.castObj.hp - d); lost = d; ctx.log(`  - HP -${d} 희생 (${Math.floor(fx.hpPct*100)}%)`, ctx.targLogCls); }
+      if (fx.hpPct){
+        // 10% 당 최대 100 상한 (예: 30% → max 300, 80% → max 800). HP 폭발 방지.
+        const cap = Math.floor(fx.hpPct * 1000);
+        const raw = Math.floor(ctx.castObj.hpMax * fx.hpPct);
+        const d = Math.min(raw, cap);
+        ctx.castObj.hp = Math.max(1, ctx.castObj.hp - d);
+        lost = d;
+        ctx.log(`  - HP -${d} 희생 (${Math.floor(fx.hpPct*100)}% · 최대 ${cap})`, ctx.targLogCls);
+      }
       if (fx.mp){ ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + fx.mp); }
       if (fx.buff){ for (const k of Object.keys(fx.buff)) ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + fx.buff[k]; }
       if (fx.dmgToEnemy){
@@ -12107,10 +12117,10 @@ function processCombatTicks(kind){
     if (d.growth) d.dmg = (d.dmg || 0) + d.growth;
   }
   c.myDots = c.myDots.filter(d=>d.turns>0);
-  // 자해 도트 (나) — pct/mpPct는 매 턴 재계산
-  for (const d of c.mySelfDots){ let dmg = d.dmg; if (d.pct) dmg = Math.floor(me.hpMax * d.pct); if (d.mpPct) dmg = Math.floor((me.mp||0) * d.mpPct); me.hp -= dmg; log(`  ☠ 자해 도트 → 나 -${dmg}`, 'opp'); d.turns--; }
+  // 자해 도트 (나) — pct/mpPct는 매 턴 재계산 (pct 계열은 entry.max cap 적용)
+  for (const d of c.mySelfDots){ let dmg = d.dmg; if (d.pct){ dmg = Math.floor(me.hpMax * d.pct); if (d.max != null) dmg = Math.min(d.max, dmg); } if (d.mpPct) dmg = Math.floor((me.mp||0) * d.mpPct); me.hp -= dmg; log(`  ☠ 자해 도트 → 나 -${dmg}`, 'opp'); d.turns--; }
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
-  for (const d of c.monSelfDots){ let dmg = d.dmg; if (d.pct) dmg = Math.floor(opp.hpMax * d.pct); if (d.mpPct) dmg = Math.floor((opp.mp||0) * d.mpPct); opp.hp -= dmg; log(`  ☠ 자해 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
+  for (const d of c.monSelfDots){ let dmg = d.dmg; if (d.pct){ dmg = Math.floor(opp.hpMax * d.pct); if (d.max != null) dmg = Math.min(d.max, dmg); } if (d.mpPct) dmg = Math.floor((opp.mp||0) * d.mpPct); opp.hp -= dmg; log(`  ☠ 자해 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
   c.monSelfDots = c.monSelfDots.filter(d=>d.turns>0);
   // 지속 회복 — 플레이어(me) 회복은 dq_heal_500 (하루 누적 회복) 카운트에 반영
   for (const h of c.myHots){
