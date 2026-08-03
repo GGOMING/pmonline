@@ -5472,14 +5472,20 @@ function renderHonorList(){
       </div>
     </div>`;
   }).join('');
+  // 운영자 계정은 11~100위 랭커도 클릭해 상세 뷰 조회 가능 (일반 유저는 UI 그대로 · 클릭 불가)
+  const isOpHof = !!(GAME.player && GAME.player.isOperator);
   const restHtml = rest.length ? (
-    `<div style="border-top:2px solid #c9a26b;margin-top:6px;padding:6px 4px;font-size:11px;color:#7E181E;font-weight:bold;background:#f4ead0;text-align:center;">11 ~ ${10 + rest.length}위</div>` +
+    `<div style="border-top:2px solid #c9a26b;margin-top:6px;padding:6px 4px;font-size:11px;color:#7E181E;font-weight:bold;background:#f4ead0;text-align:center;">11 ~ ${10 + rest.length}위${isOpHof ? ' <span style="color:#a02050;font-weight:bold;">(운영자: 클릭 가능)</span>' : ''}</div>` +
     rest.map((r, idx) => {
       const rank = 11 + idx;
       const isMe = myName && r.name === myName;
       const rowBg = isMe ? 'background:linear-gradient(90deg,#fff7c0,#ffe07a);border-left:3px solid #ff6600;' : '';
       const meTag = isMe ? '<span style="background:#ff6600;color:#fff;padding:1px 5px;border-radius:2px;font-size:9px;margin-left:4px;">나</span>' : '';
-      return `<div style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-bottom:1px solid #f0e6d0;font-size:11px;${rowBg}">
+      const globalIdx = 10 + idx; // _honorRankers 배열 인덱스 (renderHonorDetail 파라미터용)
+      const clickAttr = isOpHof
+        ? ` onclick="renderHonorDetail(${globalIdx})" style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-bottom:1px solid #f0e6d0;font-size:11px;cursor:pointer;${rowBg}"`
+        : ` style="display:flex;align-items:center;gap:6px;padding:3px 6px;border-bottom:1px solid #f0e6d0;font-size:11px;${rowBg}"`;
+      return `<div${clickAttr}>
         <span style="width:32px;text-align:right;color:#7E181E;font-weight:bold;">${rank}.</span>
         <span style="flex:1;color:#333;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${(r.name||'?')}${meTag}</span>
         <span style="color:#888;font-size:10px;">Lv ${r.level}</span>
@@ -11235,6 +11241,8 @@ function applyCardEffect(card, ctx){
         const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
         ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시${_sgNote})</span>`, ctx.castLogCls);
       }
+      const isPlayerMH = ctx.castObj === GAME.player;
+      let mhGainedTotal = 0;
       for (let i = 0; i < fx.hits; i++){
         if (doesDmg){
           const raw = rnd(fx.min, fx.max);
@@ -11242,11 +11250,15 @@ function applyCardEffect(card, ctx){
         }
         if (fx.healMin != null){
           const h = rnd(fx.healMin, fx.healMax);
+          const beforeMH = ctx.castObj.hp;
           ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + h);
+          const gainedMH = ctx.castObj.hp - beforeMH;
           totalHeal += h;
+          mhGainedTotal += gainedMH;
         }
       }
       if (totalHeal) ctx.log(`  + HP +${totalHeal} (멀티히트 회복 합계)`, 'heal');
+      if (isPlayerMH && mhGainedTotal > 0){ try { _bumpDailyCounter('healing', mhGainedTotal, 'dq_heal_500'); } catch(e){} }
       return;
     }
     if (t === 'lifestealStat'){
@@ -11260,7 +11272,11 @@ function applyCardEffect(card, ctx){
       if (fx.bonus) base += fx.bonus;
       const dmg = Math.floor(base * (fx.mult||1));
       doDmg(dmg);
+      const isPlayerCastLS = ctx.castObj === GAME.player;
+      const beforeLS = ctx.castObj.hp;
       ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + Math.floor(dmg * (fx.healMult||1)));
+      const gainedLS = ctx.castObj.hp - beforeLS;
+      if (isPlayerCastLS && gainedLS > 0){ try { _bumpDailyCounter('healing', gainedLS, 'dq_heal_500'); } catch(e){} }
       ctx.log(`  + HP ${Math.floor(dmg * (fx.healMult||1))} 흡수`, 'heal');
       return;
     }
@@ -11624,7 +11640,11 @@ function applyCardEffect(card, ctx){
     if (t === 'lifesteal'){
       const dmg = rnd(fx.min, fx.max);
       doDmg(dmg);
+      const isPlayerLS2 = ctx.castObj === GAME.player;
+      const beforeLS2 = ctx.castObj.hp;
       ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + fx.steal);
+      const gainedLS2 = ctx.castObj.hp - beforeLS2;
+      if (isPlayerLS2 && gainedLS2 > 0){ try { _bumpDailyCounter('healing', gainedLS2, 'dq_heal_500'); } catch(e){} }
       ctx.log(`  + HP ${fx.steal} 흡수`, 'heal');
       return;
     }
@@ -12092,8 +12112,15 @@ function processCombatTicks(kind){
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
   for (const d of c.monSelfDots){ let dmg = d.dmg; if (d.pct) dmg = Math.floor(opp.hpMax * d.pct); if (d.mpPct) dmg = Math.floor((opp.mp||0) * d.mpPct); opp.hp -= dmg; log(`  ☠ 자해 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
   c.monSelfDots = c.monSelfDots.filter(d=>d.turns>0);
-  // 지속 회복
-  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); log(`  + 나 회복 +${h.heal}`, 'heal'); h.turns--; }
+  // 지속 회복 — 플레이어(me) 회복은 dq_heal_500 (하루 누적 회복) 카운트에 반영
+  for (const h of c.myHots){
+    const before = me.hp;
+    me.hp = Math.min(me.hpMax, me.hp + h.heal);
+    const gained = me.hp - before;
+    log(`  + 나 회복 +${h.heal}`, 'heal');
+    if (gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
+    h.turns--;
+  }
   c.myHots = c.myHots.filter(h=>h.turns>0);
   for (const h of c.monHots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); log(`  + ${opp.name} 회복 +${h.heal}`, 'heal'); h.turns--; }
   c.monHots = c.monHots.filter(h=>h.turns>0);
@@ -12199,7 +12226,9 @@ function processCombatTicks(kind){
         if (e.hp > 0){
           const before = tgt.hp;
           tgt.hp = Math.min(tgt.hpMax, tgt.hp + e.hp);
-          log(`  💫 예약 회복 → ${tgtName} HP +${tgt.hp - before}`, 'heal');
+          const gainedDR = tgt.hp - before;
+          log(`  💫 예약 회복 → ${tgtName} HP +${gainedDR}`, 'heal');
+          if (tgt === GAME.player && gainedDR > 0){ try { _bumpDailyCounter('healing', gainedDR, 'dq_heal_500'); } catch(e){} }
         }
         if (e.mp > 0){
           const before = tgt.mp;
@@ -15388,12 +15417,13 @@ async function doLogin(){
   enterMain();
 }
 
-// ─── 비활성 자동 로그아웃 (10분) ───
+// ─── 비활성 자동 로그아웃 (10분) — 운영자 계정은 예외 (idle timeout 미적용) ───
 const IDLE_LOGOUT_MS = 10 * 60 * 1000;
 let _idleTimer = null;
 function resetIdleTimer(){
   if (_idleTimer) clearTimeout(_idleTimer);
   if (!GAME.player) return;
+  if (GAME.player.isOperator) return; // 운영자는 idle 로 로그아웃되지 않음
   _idleTimer = setTimeout(autoLogoutOnIdle, IDLE_LOGOUT_MS);
 }
 async function autoLogoutOnIdle(){
@@ -15944,6 +15974,11 @@ function sendChat(){
   const msg = (input.value || '').trim();
   if (!msg) return;
   input.value = '';
+  // 운영자 계정은 채팅창에도 노출되지 않음 → 로컬만 표시, broadcast 안 함
+  if (GAME.player && GAME.player.isOperator){
+    chat(GAME.player.name, msg, 'me');
+    return;
+  }
   if (sb && GAME.player){
     const payload = { nickname:GAME.player.name, message:msg, kind:'user' };
     if (GAME.player.equippedTitle) payload.title_id = GAME.player.equippedTitle;
@@ -15961,8 +15996,10 @@ function sendChat(){
 
 async function initChat(){
   const myName = GAME.player ? GAME.player.name : '';
-  $('chatUserList').innerHTML = myName ? `<span class="u">${escapeHtml(myName)}</span>` : '';
-  $('chatUsers').textContent = myName ? 1 : 0;
+  const isOp = !!(GAME.player && GAME.player.isOperator);
+  // 운영자 계정은 접속자 리스트에서 자신을 표시하지 않음
+  $('chatUserList').innerHTML = (myName && !isOp) ? `<span class="u">${escapeHtml(myName)}</span>` : '';
+  $('chatUsers').textContent = (myName && !isOp) ? 1 : 0;
   $('chatMsgs').innerHTML = '';
   _chatRendered.clear();
 
@@ -16008,7 +16045,8 @@ async function initChat(){
       } catch(e){ console.warn('[presence sync]', e); }
     })
     .subscribe(async (status) => {
-      if (status === 'SUBSCRIBED' && myName){
+      if (status === 'SUBSCRIBED' && myName && !isOp){
+        // 운영자 계정은 presence track 안 함 (접속자 리스트에 노출 안 됨)
         try { await _chatChannel.track({ name: myName, at: Date.now() }); }
         catch(e){ console.warn('[presence track]', e); }
       }
