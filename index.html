@@ -4314,8 +4314,14 @@ function _updateSynthesisFooter(){
       3: `🔥 유니크 확률 UP ↑↑`,
       4: `👑✨ 유니크 확률 UP ↑↑↑`,
     };
+    // 재료 등급별 유니크 확률 상승 힌트 (표시용 문구 — 실제 확률은 SYNTHESIS_UNIQUE_BOOST_PER_CARD 로 별도 계산)
+    const hints = {
+      2: '(유니크 카드 성공 확률 10%↑)',
+      3: '(유니크 카드 성공 확률 20%↑)',
+      4: '(유니크 카드 성공 확률 30%↑)',
+    };
     rateEl.innerHTML = tier > 0
-      ? `<span style="${styles[tier]}">${labels[tier]}</span>`
+      ? `<span style="${styles[tier]}">${labels[tier]}</span>${hints[tier] ? ` <span style="font-size:11px;color:#7E181E;font-weight:bold;margin-left:6px;">${hints[tier]}</span>` : ''}`
       : '';
   }
   const btn = $('synth_confirmBtn');
@@ -5075,12 +5081,12 @@ const BLESS_SHOP_ITEMS = [
   {
     id:'card1', name:'카드 1뽑', cost:1,
     icon:'assets/wc3_reforged_used/card1.png',
-    desc:'여신의 축복 1개로 카드 1장을 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
+    desc:'여신의 축복 1개로 카드 1장을 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다. <span style="color:#a02050;font-weight:bold;">(카드샵 영웅 뽑기 대비 매우 높은 확률)</span>',
   },
   {
     id:'card11', name:'카드 11뽑', cost:10,
     icon:'assets/wc3_reforged_used/card20.png',
-    desc:'여신의 축복 10개로 카드 11장을 한 번에 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다.',
+    desc:'여신의 축복 10개로 카드 11장을 한 번에 뽑는다. 최대 영웅 등급의 카드를 획득할 수 있다. <span style="color:#a02050;font-weight:bold;">(카드샵 영웅 뽑기 대비 매우 높은 확률)</span>',
   },
   {
     id:'box', name:'축복의 랜덤 상자', cost:100,
@@ -5104,7 +5110,8 @@ function refreshBlessShop(){
       ? 'background:#a02050;color:#fff;cursor:pointer;'
       : 'background:#777;color:#ccc;cursor:not-allowed;';
     const iconEnc = it.icon.replace(/ /g, '%20');
-    const desc = (it.desc || '').replace(/</g, '&lt;');
+    // desc 는 하드코딩 BLESS_SHOP_ITEMS 에서만 옴 → HTML span 허용 (신뢰 가능)
+    const desc = it.desc || '';
     return `<div style="display:flex;align-items:center;gap:14px;padding:12px;background:#fff;border:2px solid #c9a26b;border-radius:6px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
       <img src="${iconEnc}" style="width:72px;height:72px;object-fit:contain;background:#000;border:1px solid #888;flex:none;">
       <div style="flex:1;min-width:0;">
