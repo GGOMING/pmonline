@@ -15921,10 +15921,18 @@ function _renderChatRow(row){
 }
 
 function chat(nick, msg, cls=''){
-  // 호환용 즉시 표시 (id 없는 로컬 메시지)
+  // 호환용 즉시 표시 (id 없는 로컬 메시지) — 본인 착용 title 뱃지 함께 표시
   const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
   const d = document.createElement('div');
-  d.innerHTML = `<span class="nick ${cls}">${escapeHtml(nick)}:</span> <span class="msg">${escapeHtml(msg)}</span>`;
+  let titleBadge = '';
+  const isSelf = GAME.player && nick === GAME.player.name;
+  if (isSelf && GAME.player.equippedTitle){
+    try {
+      const b = titleBadgeHtml(GAME.player.equippedTitle, { size:10, py:1, px:6 });
+      if (b) titleBadge = `<span style="margin-right:4px;">${b}</span>`;
+    } catch(e){}
+  }
+  d.innerHTML = `${titleBadge}<span class="nick ${cls}">${escapeHtml(nick)}:</span> <span class="msg">${escapeHtml(msg)}</span>`;
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
 }
@@ -15974,9 +15982,22 @@ function sendChat(){
   const msg = (input.value || '').trim();
   if (!msg) return;
   input.value = '';
-  // 운영자 계정은 채팅창에도 노출되지 않음 → 로컬만 표시, broadcast 안 함
+  // 운영자 계정은 이름을 감추고 SYSTEM 메시지로 브로드캐스트 — '[GM] 메시지' 형식
+  //   상시 공지가 필요하면 별도 [📢 공지] 기능 사용 (admin 페이지)
   if (GAME.player && GAME.player.isOperator){
-    chat(GAME.player.name, msg, 'me');
+    const gmMsg = '[GM] ' + msg;
+    if (sb){
+      sb.from('chat_messages').insert({ nickname:'SYSTEM', message: gmMsg, kind:'system' })
+        .then(({ error }) => {
+          if (error){
+            console.warn('[sendChat GM]', error);
+            _renderLocalSysMsg(gmMsg + ' (전송 실패)', false);
+          }
+        });
+    } else {
+      // 오프라인 fallback — 로컬만
+      _renderLocalSysMsg(gmMsg, false);
+    }
     return;
   }
   if (sb && GAME.player){
