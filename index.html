@@ -2494,14 +2494,15 @@
 <div id="pg-tower" class="page">
   <div style="max-width:900px;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:18px;color:#fff;">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:10px;margin-bottom:14px;">
-      <div style="font-size:22px;font-weight:bold;color:#ffd700;text-shadow:1px 1px 0 #000;">🏛 여신의 탑</div>
+      <div style="font-size:22px;font-weight:bold;color:#ffd700;text-shadow:1px 1px 0 #000;">👼 여신의 탑</div>
       <button onclick="exitTowerLobby()" style="padding:6px 16px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-weight:bold;">← 메인으로</button>
     </div>
     <div style="background:#2a1a3a;padding:12px;border-radius:6px;border:1px solid #a335ee;font-size:12px;line-height:1.7;color:#e6d3ff;margin-bottom:14px;">
       <b style="color:#ffd700;">진입 조건 Lv 26+</b> · 1층부터 최대 50층까지 순차 도전.<br>
       매 층 시작 전 <b style="color:#ffd700;">10장 덱</b>을 새로 편성해야 하며, <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b>.<br>
-      층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복 · 특정 층 첫 도달 시 축복·골드 보상.<br>
-      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋 · 지난 주 랭킹 시상은 <b style="color:#7eff7e;">아래 수령 버튼</b>으로 직접 수령.
+      층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복.<br>
+      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.<br>
+      <b style="color:#ff9966;">⚠ 테스트 기간 · 층 도달 보상·주간 랭킹 시상은 정식 오픈 시 지급됩니다.</b>
     </div>
     <div id="towerWeeklyClaimBanner" style="display:none;background:linear-gradient(135deg,#3a2a0a,#5a4a1a);border:2px solid #ffd700;border-radius:6px;padding:12px;margin-bottom:14px;text-align:center;color:#fff;">
       <div id="towerWeeklyClaimText" style="font-size:13px;color:#ffd700;font-weight:bold;margin-bottom:8px;">지난 주 랭킹 시상을 수령할 수 있습니다.</div>
@@ -2530,8 +2531,9 @@
       </div>
     </div>
     <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;">
-      <b style="color:#ffd700;">📜 층 첫 도달 보상 (이번 주 지급 여부)</b>
-      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;"></div>
+      <b style="color:#ffd700;">📜 층 첫 도달 보상 (정식 오픈 시 지급)</b>
+      <div style="color:#ff9966;font-size:11px;margin-top:4px;">⚠ 테스트 기간 · 아래 보상은 지급 안 됨</div>
+      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;opacity:0.55;"></div>
     </div>
   </div>
 </div>
@@ -2571,7 +2573,7 @@
 <div id="pg-tower-battle" class="page">
   <div style="max-width:1000px;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:12px;color:#fff;">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:8px;margin-bottom:10px;">
-      <div style="font-size:18px;font-weight:bold;color:#ffd700;">🏛 여신의 탑 — <span id="tower_battle_floor_label">-</span>층</div>
+      <div style="font-size:18px;font-weight:bold;color:#ffd700;">👼 여신의 탑 — <span id="tower_battle_floor_label">-</span>층</div>
       <div id="tower_battle_turn_info" style="font-size:12px;color:#e6d3ff;">턴 -/-</div>
     </div>
     <div class="combat-grid">
@@ -2858,7 +2860,7 @@ const CARDS = [
   { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'상대방 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
   { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'매턴 5 ~ 10 랜덤 데미지 / [소환의식] 선행 필요', fx:{type:'dot',turns:15,min:5,max:10,summon:true}, requires:'n41' },
   { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어구 +4 증가, 3턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
-  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수', fx:{type:'lifestealStat',stats:['con']} },
+  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수', fx:{type:'lifestealStat',stats:['con'],source:'target'} },
   { id:'n18', name:'라이프업',       grade:'normal', icon:'heart',  text:'최대 HP 30% 증가', fx:{type:'maxHpBuff',pct:0.3} },
   { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'STR +4 증가, 무기 +3 증가', fx:{type:'buff',str:4,atk:3} },
   { id:'n20', name:'리쥬베네이션',   grade:'normal', icon:'leaf',   text:'4턴 동안 HP 10씩 회복', fx:{type:'hot',turns:4,heal:10} },
@@ -2933,7 +2935,7 @@ const CARDS = [
   { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 이번 턴 STR +20, 방어구 +20', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'buff',str:20,def:20,turns:1}]} },
 
   // ───── 레어 카드 30종 ─────
-  { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'HP 60 회복 / (시전자에게 소환물이 있을 경우에만 발동)', fx:{type:'heal',hp:60} },
+  { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'소환수 흡수 후 HP 60 회복 (소환수 없으면 발동 실패)', requireSummon:true, fx:{type:'heal',hp:60} },
   { id:'r02', name:'디보우션오라',   grade:'rare', icon:'shield',   text:'3턴 동안 매턴 방어구 +5씩 누적', fx:{type:'buffOverTime',stats:{def:5},turns:3} },
   { id:'r03', name:'라바스폰소환',   grade:'rare', icon:'eye',      text:'매턴 10 ~ 25 랜덤 데미지 / 5턴 동안 매턴 HP 5 회복 / [소환의식] 선행 필요', fx:{type:'multi',effects:[{type:'dot',turns:15,min:10,max:25,summon:true},{type:'hot',heal:5,turns:5}]}, requires:'n41' },
   { id:'r04', name:'라이트닝오브',   grade:'rare', icon:'sword2',   text:'시전자 무기 +5, 방어구 +6 증가 / 상대방 무기 -5, 방어구 -5 감소 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'buff',atk:5,def:6},{type:'debuff',atk:-5,def:-5}]} },
@@ -4280,6 +4282,8 @@ function _offerExchangeForResults(results){
       GAME.inventory[invIdx] = newCard;
     }
     results[i] = newCard;
+    // 교환 결과 카드가 유니크+ 면 로그 (원본 카드는 이미 획득 시 로그됨)
+    try { _logCardAcquisition(newCard, 'card_exchange'); } catch(e){}
     const newGradeName = { unique:'유니크', hero:'영웅', rare:'레어', normal:'일반', legend:'전설' }[newCard.grade] || newCard.grade;
     try {
       chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`, { sticky: true });
@@ -4621,6 +4625,7 @@ function executeSynthesis(){
   }
   GAME.inventory.push(card);
   try { _markGradeAcquired([card]); } catch(e){}
+  try { _logCardAcquisition(card, 'card_synthesis'); } catch(e){}
 
   // 결과 알림 — 유니크 등급 획득만 채팅에 공지 (일반/레어/영웅/전설은 개인 알림만)
   const gradeName = gradeKr(grade);
@@ -4711,6 +4716,7 @@ function doGachaShop(shopId, n){
     const card = _pickWeightedCard(gPool, grade);
     GAME.inventory.push(card);
     results.push(card);
+    try { _logCardAcquisition(card, 'gacha_shop_' + shopId); } catch(e){}
   }
   _markGradeAcquired(results);
   // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
@@ -5358,6 +5364,7 @@ function buyBlessItem(id){
     // 가챠 풀 — 축복 상점은 영웅 뽑기 확률표 그대로 사용
     const pool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
     const results = [];
+    const blessSrc = id === 'card1' ? 'bless_gacha_1' : 'bless_gacha_10';
     for (let i = 0; i < n; i++){
       const grade = pickGachaGradeFor('hero');
       const gPool = pool.filter(c => c.grade === grade);
@@ -5365,6 +5372,7 @@ function buyBlessItem(id){
       const card = _pickWeightedCard(gPool, grade);
       GAME.inventory.push(card);
       results.push(card);
+      try { _logCardAcquisition(card, blessSrc); } catch(e){}
     }
     _markGradeAcquired(results);
     const legends = results.filter(c => c.grade === 'legend').length;
@@ -5433,10 +5441,15 @@ function buyBlessItem(id){
           chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: _isHighGradeCard(grade) });
         } else {
           GAME.inventory.push(card);
+          try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
           // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
           const exResults = [card];
           try { _offerExchangeForResults(exResults); } catch(e){ console.warn('[bless box exchange]', e); }
           const finalCard = exResults[0] || card;
+          // 교환으로 카드가 바뀐 경우 최종 카드도 로그 (교환 결과)
+          if (finalCard && finalCard.id !== card.id){
+            try { _logCardAcquisition(finalCard, 'card_exchange'); } catch(e){}
+          }
           const fg = finalCard.grade;
           const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
           resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
@@ -5756,6 +5769,7 @@ function doGacha(n){
     const card = gPool[Math.floor(Math.random()*gPool.length)];
     GAME.inventory.push(card);
     results.push(card);
+    try { _logCardAcquisition(card, 'gacha_shop_hero'); } catch(e){}
   }
 
   // 결과 렌더링
@@ -6123,6 +6137,7 @@ function _claimQuestReward(slot, def){
         if (GAME.inventory.length < inventoryLimit()){
           GAME.inventory.push(card);
           _markGradeAcquired([card]);
+          try { _logCardAcquisition(card, 'quest_reward'); } catch(e){}
           parts.push(`🎁 ${gradeKr(card.grade)} 카드: ${card.name}`);
         } else {
           parts.push(`⚠ 카드 한도 초과`);
@@ -6861,6 +6876,7 @@ async function claimRaidRewards(){
             lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}] · ⚠ 보유 한도(${inventoryLimit()}) 초과로 지급 누락`);
           } else {
             GAME.inventory.push(card);
+            try { _logCardAcquisition(card, 'raid_claim_reward'); } catch(e){}
             _markGradeAcquired([card]);
             lines.push(`🎁 카드 — ${card.name} [${gradeKr(card.grade)}]`);
             if (card.grade === 'unique' || card.grade === 'hero'){
@@ -8081,6 +8097,7 @@ async function raidEnd(result){
           if (GAME.inventory.length < inventoryLimit()){
             GAME.inventory.push(card);
             _markGradeAcquired([card]);
+            try { _logCardAcquisition(card, 'raid_boss_abyss'); } catch(e){}
             // 일반/레어 카드는 인라인 즉시 판매 버튼 노출
             let sellBtn = '';
             if (card.grade === 'normal' || card.grade === 'rare'){
@@ -8156,6 +8173,7 @@ async function raidEnd(result){
           if (GAME.inventory.length < inventoryLimit()){
             GAME.inventory.push(cardDM);
             _markGradeAcquired([cardDM]);
+            try { _logCardAcquisition(cardDM, 'raid_boss_' + c.raidKey); } catch(e){}
             let sellBtnDM = '';
             if (cardDM.grade === 'normal' || cardDM.grade === 'rare'){
               const priceDM = CARD_SELL_PRICE[cardDM.grade] || 1;
@@ -11019,6 +11037,18 @@ function applyCardEffect(card, ctx){
       ctx.log(`  ✱ ${ctx.castName} 은신 상태가 아님 — <b>${card.name}</b> 발동 실패`, 'info');
       return false;
     }
+  }
+  // 소환수 존재 요구 — 데스팩 등: 시전자 dots 중 summon:true 인 항목 필요. 발동 시 소환수 흡수(제거)
+  if (card.requireSummon){
+    const dots = ctx.castDots || [];
+    const summonIdx = dots.findIndex(d => d && d.summon);
+    if (summonIdx < 0){
+      ctx.log(`  ✱ ${ctx.castName} 소환수 없음 — <b>${card.name}</b> 발동 실패`, 'info');
+      return false;
+    }
+    // 소환수 흡수 — 발동 성공 시 첫 소환 dot 제거
+    dots.splice(summonIdx, 1);
+    ctx.log(`  · ${ctx.castName} 소환수 흡수`, 'info');
   }
   // 스탯 조건 검사 — 원본 + buff 합산 (동일 턴 앞 슬롯의 buff 카드 시너지 허용)
   // AND: card.statReq:{str:10}, OR: card.statReqAny:[{str:10},{dex:10}]
@@ -13896,7 +13926,7 @@ function towerBattleEnd(result){
       } catch(e){ console.warn('[tower title]', e); }
       towerLog(`🎉🎉🎉 <b>여신의 탑 정복 완료!</b> 🎉🎉🎉`, 'sys');
       setTimeout(() => {
-        alert('🏆🎉 여신의 탑 50층 완전 정복!\n\n★ 칭호 「탑의 정복자」 획득!\n★ 축복 30 + 50,000G 획득!\n\n메인으로 복귀합니다.');
+        alert('🏆🎉 여신의 탑 50층 완전 정복!\n\n★ 칭호 「탑의 정복자」 획득!\n\n(테스트 기간 · 골드·축복 보상은 정식 오픈 시 지급 예정)\n\n메인으로 복귀합니다.');
         _endTowerRun(true);
       }, 700);
       _saveTowerRecordSafe();
@@ -13939,6 +13969,9 @@ function towerBattleEnd(result){
 }
 
 // ── 층 첫 도달 보상 ──
+// 테스트 기간 — 층 첫 도달 보상 전면 지급 중단. 기록만 남기고 골드/축복 지급 없음.
+// (정식 오픈 시 이 flag 를 false 로 바꾸면 원래 로직 복귀)
+const TOWER_REWARDS_ENABLED = false;
 function checkTowerReward(floor){
   const p = GAME.player;
   if (!p) return;
@@ -13949,12 +13982,16 @@ function checkTowerReward(floor){
   if (done.has(floor)) return;
   done.add(floor);
   p.dojo.clearedFloorsThisWeek = Array.from(done);
+  if (!TOWER_REWARDS_ENABLED){
+    towerLog(`🎁 <b>${floor}층 첫 도달</b> — 테스트 기간 · 보상 지급 없음`, 'sys');
+    return;
+  }
   p.gold = (p.gold|0) + (r.gold|0);
   p.blessing = (p.blessing|0) + (r.bless|0);
   try { bumpTitleCounter('total_gold_earned', r.gold|0); } catch(e){}
   try { bumpTitleCounter('total_blessing_earned', r.bless|0); } catch(e){}
   towerLog(`🎁 <b>${floor}층 첫 도달 보상</b> — ✨${r.bless} · +${(r.gold|0).toLocaleString()}G`, 'sys');
-  try { chatSys(`🗼 ${p.name}님이 여신의 탑 ${floor}층 첫 도달! (+✨${r.bless} · +${(r.gold|0).toLocaleString()}G)`); } catch(e){}
+  try { chatSys(`👼 ${p.name}님이 여신의 탑 ${floor}층 첫 도달! (+✨${r.bless} · +${(r.gold|0).toLocaleString()}G)`, { local: true }); } catch(e){}
 }
 
 // ── 도전 종료 정리 ──
@@ -14072,6 +14109,8 @@ async function checkWeeklyRankingClaimStatus(){
   const label  = $('towerWeeklyClaimText');
   if (!banner) return;
   banner.style.display = 'none';
+  // 테스트 기간 — 주간 랭킹 시상 지급 중단. 배너 표시 안 함.
+  if (!TOWER_REWARDS_ENABLED) return;
   if (!sb) return;
   const p = GAME.player;
   if (!p) return;
@@ -14107,6 +14146,10 @@ async function checkWeeklyRankingClaimStatus(){
 
 // ── 주간 랭킹 시상 수령 (버튼 클릭 시 호출) ──
 async function claimWeeklyRankingReward(){
+  if (!TOWER_REWARDS_ENABLED){
+    try { alert('테스트 기간입니다.\n\n주간 랭킹 시상은 정식 오픈 시 지급됩니다.'); } catch(e){}
+    return;
+  }
   if (!sb){ try { alert('클라우드 모드에서만 수령 가능합니다.'); } catch(e){} return; }
   const p = GAME.player;
   if (!p) return;
@@ -17062,6 +17105,28 @@ function chatSys(msg, opts){
 }
 // 고등급 카드 (유니크/영웅/전설) 판정 헬퍼 — 채팅 sticky 여부 결정에 재사용
 function _isHighGradeCard(g){ return g === 'unique' || g === 'hero' || g === 'legend'; }
+
+// 유니크 이상 카드 획득 로그 (Supabase card_acquisition_log 테이블에 기록)
+// - 채팅 broadcast 와 별도, 개인 이벤트도 기록
+// - 유니크·영웅·전설만 저장 (일반·레어는 무시)
+// - fire-and-forget (실패해도 게임 진행 방해 안 됨)
+function _logCardAcquisition(card, source){
+  try {
+    if (!sb || !GAME.player || !card) return;
+    if (!_isHighGradeCard(card.grade)) return;
+    sb.auth.getUser().then(({ data: ud }) => {
+      if (!ud || !ud.user) return;
+      sb.from('card_acquisition_log').insert({
+        user_id: ud.user.id,
+        nickname: GAME.player.name,
+        card_id: card.id,
+        card_name: card.name,
+        grade: card.grade,
+        source: source || 'unknown',
+      }).then(({ error }) => { if (error) console.warn('[cardLog]', error); });
+    }).catch(e => console.warn('[cardLog getUser]', e));
+  } catch(e){ console.warn('[cardLog]', e); }
+}
 
 function sendChat(){
   const input = $('chatInput');
