@@ -3679,7 +3679,7 @@ function buyWeapon(id){
   refreshWeaponShop();
   $('wshop_msg').textContent = `✔ ${w.name} 구매 → 보관함에 추가 (-${w.price}G)`;
   $('wshop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${w.name}을(를) 구매하셨습니다.`);
+  chatSys(`★ ${p.name}님이 ${w.name}을(를) 구매하셨습니다.`, { local: true });
   try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
@@ -3734,7 +3734,7 @@ function buyArmor(id){
   refreshArmorShop();
   $('ashop_msg').textContent = `✔ ${a.name} 구매 → 보관함에 추가 (-${a.price}G)`;
   $('ashop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${a.name}을(를) 구매하셨습니다.`);
+  chatSys(`★ ${p.name}님이 ${a.name}을(를) 구매하셨습니다.`, { local: true });
   try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
@@ -3767,7 +3767,7 @@ function sellWeapon(id){
   p.gold += price;
   $('wshop_msg').textContent = `✔ ${tpl.name} 판매 +${price.toLocaleString()}G`;
   $('wshop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`);
+  chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`, { local: true });
   renderSheet();
   refreshWeaponShop();
   saveGame();
@@ -3784,7 +3784,7 @@ function sellArmor(id){
   p.gold += price;
   $('ashop_msg').textContent = `✔ ${tpl.name} 판매 +${price.toLocaleString()}G`;
   $('ashop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`);
+  chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`, { local: true });
   renderSheet();
   refreshArmorShop();
   saveGame();
@@ -3905,7 +3905,7 @@ function _grantLvBonusGold(p, newLevel){
   const bonus = isGrad ? 30000 : gachaCost1For(newLevel) * 3;
   p.gold += bonus;
   const tag = isGrad ? '🎓 Lv 10 졸업 축하 보너스' : `Lv ${newLevel} 달성 축하 보너스`;
-  try { chatSys(`★ ${p.name}님 ${tag}! +${bonus.toLocaleString()}G`); } catch(e){}
+  try { chatSys(`★ ${p.name}님 ${tag}! +${bonus.toLocaleString()}G`, { local: true }); } catch(e){}
   try { toast(`🎁 ${tag} +${bonus.toLocaleString()}G`); } catch(e){}
   return bonus;
 }
@@ -6724,7 +6724,7 @@ async function claimRaidRewards(){
     }
     // 채팅 공지: 무기/방어구 드랍 + 유니크/영웅 카드만 (일반·레어 카드는 노이즈 방지)
     if (noteworthy.length > 0){
-      try { chatSys(`🏆 ${GAME.player.name}님 공격대 보상 획득 — ${noteworthy.join(' / ')}`); } catch(e){}
+      try { chatSys(`🏆 ${GAME.player.name}님 공격대 보상 획득 — ${noteworthy.join(' / ')}`, { local: true }); } catch(e){}
     }
   } catch(e){ console.warn('[claimRaidRewards]', e); }
 }
@@ -8929,7 +8929,8 @@ async function rankEnd(result){
         <p>랭킹 보너스: <b>+${getRankBonus()} G</b> / 회복의 샘물 이용 시 자동 지급</p>`;
       // NPC 상대는 채팅에 올리지 않음 — 유저 vs 유저 역전만 알림
       if (c.opponent && c.opponent.isNPC === false){
-        chatSys(`★ ${p.name}님이 ${c.opponent.name||'?'}님을 꺾고 랭킹 ${c.targetRank}위에 등록되었습니다!`);
+        // 랭킹 등극 — 상위 3위만 전체 방송, 나머지는 로컬만
+        chatSys(`★ ${p.name}님이 ${c.opponent.name||'?'}님을 꺾고 랭킹 ${c.targetRank}위에 등록되었습니다!`, { local: c.targetRank > 3 });
       }
     } else {
       bodyHtml = `<p style="color:#a00;">💀 패배... 랭킹 변동 없음</p>
@@ -8945,7 +8946,7 @@ async function rankEnd(result){
       try { await demoteFromRank(); } catch(e){ console.warn('[defense demote]', e); }
       bodyHtml = `<p style="color:#a00;">💀 방어 실패... <b>${lostRank}위</b>에서 퇴출되었습니다.</p>
         <p style="font-size:11px;color:#666;">10위부터 다시 도전할 수 있습니다.</p>`;
-      chatSys(`★ ${p.name}님이 방어전에 실패하여 ${lostRank}위에서 퇴출되셨습니다.`);
+      chatSys(`★ ${p.name}님이 방어전에 실패하여 ${lostRank}위에서 퇴출되셨습니다.`, { local: lostRank > 3 });
     }
   }
   // 랭킹전 inline 레벨업 처리 — 결과창 박스에 표시
@@ -8958,7 +8959,8 @@ async function rankEnd(result){
       p.xpUp += 1;
       rankLvBonus += _grantLvBonusGold(p, p.level);
       rankLvUp = true;
-      chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
+      // 저레벨 레벨업은 로컬만 (Supabase Realtime 절감). 주요 마일스톤(10·20·25·30·40·50) 만 전체 방송.
+      chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`, { local: !( [10,20,25,30,40,50].includes(p.level) ) });
       if (p.level === 26 && !p.lv26BonusClaimed){
         p.lv26BonusClaimed = true;
         p.gold += 30000;
@@ -14535,7 +14537,7 @@ function checkLevelUp(){
     p.level++;
     p.xpUp += 1;
     leveled = true;
-    chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`);
+    chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`, { local: !( [10,20,25,30,40,50].includes(p.level) ) });
     _grantLvBonusGold(p, p.level);
     if (p.level === 26 && !p.lv26BonusClaimed){
       p.lv26BonusClaimed = true;
@@ -15181,7 +15183,7 @@ function resetStats(){
     ? `-${COST.toLocaleString()}G · -✨ ${BLESS_COST}`
     : `-${COST.toLocaleString()}G`;
   toast(`✔ 스탯 초기화 완료. ${costSummary}, 스탯 포인트 ${usedPoints} 환급`);
-  chatSys(`★ ${p.name}님이 스탯을 초기화하였습니다.`);
+  chatSys(`★ ${p.name}님이 스탯을 초기화하였습니다.`, { local: true });
   saveGame();
   // 중요 액션 — 클라우드 즉시 flush (탭 즉시 종료 시 유실 방지)
   cloudSaveNow().catch(e => console.warn('[resetStats cloudSave]', e));
@@ -15819,7 +15821,7 @@ function enterMain(){
   checkLevelUp();
   // 채팅창 닉네임 표시
   $('chatNick').textContent = GAME.player.name + ':';
-  chatSys(`★ ${GAME.player.name}님이 게임에 입장하셨습니다.`);
+  chatSys(`★ ${GAME.player.name}님이 게임에 입장하셨습니다.`, { local: true });
   // 신규 사용자 튜토리얼 자동 시작 (첫 입장만)
   if (GAME.player.tutorialDone === false){
     setTimeout(() => { try { startTutorial(); } catch(e){ console.warn('tutorial', e); } }, 1000);
@@ -15897,17 +15899,12 @@ function chat(nick, msg, cls=''){
   msgsEl.scrollTop = msgsEl.scrollHeight;
 }
 
-// opts.sticky=true → kind='system_sticky' 로 저장, 유저 메시지처럼 영구 유지
-function chatSys(msg, opts){
-  const sticky = !!(opts && opts.sticky);
-  const kind = sticky ? 'system_sticky' : 'system';
-  // 클라우드 broadcast 우선 (fire-and-forget)
-  if (sb && GAME.player){
-    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind })
-      .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
-    return;
-  }
-  // 오프라인 fallback — 로컬만. sticky 아니면 30초 후 자동 소멸.
+// opts.sticky=true → kind='system_sticky' (유저 메시지처럼 영구 유지)
+// opts.local=true  → broadcast 없이 로컬만 표시 (Supabase Realtime 메시지 절감용)
+// rate limit: sticky·local 아닌 일반 메시지는 유저당 초당 1개로 제한, 초과분은 로컬만
+let _chatSysLastAt = 0;
+const CHATSYS_MIN_INTERVAL_MS = 1000;
+function _renderLocalSysMsg(msg, sticky){
   const msgsEl = document.getElementById('chatMsgs'); if (!msgsEl) return;
   const d = document.createElement('div');
   d.className = 'sys';
@@ -15915,6 +15912,29 @@ function chatSys(msg, opts){
   msgsEl.appendChild(d);
   msgsEl.scrollTop = msgsEl.scrollHeight;
   if (!sticky) _autoHideSysMsg(d, SYS_CHAT_AUTOHIDE_MS);
+}
+function chatSys(msg, opts){
+  const sticky = !!(opts && opts.sticky);
+  const local  = !!(opts && opts.local);
+  // 로컬 전용 → broadcast 스킵 (개인 이벤트: 상점·회복·로그인 등)
+  if (local){ _renderLocalSysMsg(msg, sticky); return; }
+  // Rate limit (sticky 예외 — 중요 이벤트는 무조건 전송)
+  if (!sticky && sb && GAME.player){
+    const now = Date.now();
+    if (now - _chatSysLastAt < CHATSYS_MIN_INTERVAL_MS){
+      _renderLocalSysMsg(msg, false);
+      return;
+    }
+    _chatSysLastAt = now;
+  }
+  const kind = sticky ? 'system_sticky' : 'system';
+  if (sb && GAME.player){
+    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind })
+      .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
+    return;
+  }
+  // 오프라인 fallback
+  _renderLocalSysMsg(msg, sticky);
 }
 // 고등급 카드 (유니크/영웅/전설) 판정 헬퍼 — 채팅 sticky 여부 결정에 재사용
 function _isHighGradeCard(g){ return g === 'unique' || g === 'hero' || g === 'legend'; }
@@ -16096,7 +16116,7 @@ function doContinue(){
   }
   if (lastName && loadGame(lastName)){
     enterMain();
-    chatSys(`★ ${GAME.player.name}님 다시 접속하셨습니다.`);
+    chatSys(`★ ${GAME.player.name}님 다시 접속하셨습니다.`, { local: true });
   } else {
     alert('저장된 캐릭터가 없습니다.');
   }
