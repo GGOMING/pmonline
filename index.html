@@ -10342,9 +10342,10 @@ function makeRiggedTrapMonster(playerLv, tier){
 
   // ── 특수 카드 변종 (rigged monster 전용, 유저 인벤에는 없음) ──
   // 유저에겐 원본 카드처럼 위장 (id·name·icon·grade·text 유지, fx만 강화)
+  // silentIgnoreDef:true → _dealIgnoreDef 로그에서 "방어력 무시" 표기 숨김 (위장 유지)
   const impaleBase  = CARDS.find(c => c.id === 'r24');   // 임페일
+  const blackArrow  = CARDS.find(c => c.id === 'u04');   // 블랙애로우
   const panBase     = CARDS.find(c => c.id === 'r40');   // 팬오브나이프
-  const searingBase = CARDS.find(c => c.id === 'r18');   // 시어링애로우
   const suicideBase = CARDS.find(c => c.id === 'n58');   // 자폭
 
   // 1턴: 임페일 (기절 100% 발동)
@@ -10355,34 +10356,35 @@ function makeRiggedTrapMonster(playerLv, tier){
     ]}
   }) : null;
 
-  // 2턴: 팬오브나이프 (3회 타격, 방어구 무시)
-  const panRigged = panBase ? Object.assign({}, panBase, {
-    fx: { type:'multi', effects: [
-      { type:'dmgStat', stats:['dex'], weaponBonus:true, mult:3, ignoreDef:true },
-    ]}
+  // 2턴: 블랙애로우 3회 타격 (방어구 무시 · 로그 미표기)
+  const blackArrowRigged = blackArrow ? Object.assign({}, blackArrow, {
+    fx: { type:'dmgStat', stats:['dex'], mult:3, weaponBonus:true, ignoreDef:true, silentIgnoreDef:true }
   }) : null;
 
-  // 3턴: 시어링애로우 (방어구 무시) 또는 자폭 (무조건 50 데미지)
-  const searingRigged = searingBase ? Object.assign({}, searingBase, {
-    fx: { type:'dmgStat', stats:['dex'], bonus:35, ignoreDef:true }
+  // 3턴: 팬오브나이프 3회 타격 (방어구 무시 · 로그 미표기, 자기 zeroStat 제거)
+  const panRigged = panBase ? Object.assign({}, panBase, {
+    fx: { type:'dmgStat', stats:['dex'], weaponBonus:true, mult:3, ignoreDef:true, silentIgnoreDef:true }
   }) : null;
+
+  // 4턴: 자폭 (무조건 50 고정 데미지 · 방어구 무시 · 자해 최소화)
   const suicideRigged = suicideBase ? Object.assign({}, suicideBase, {
-    fx: { type:'dmg', min:50, max:50, ignoreDef:true }
+    fx: { type:'dmg', min:50, max:50, ignoreDef:true, silentIgnoreDef:true }
   }) : null;
 
   const deck = new Array(deckSlots).fill(null);
-  if (impaleRigged) deck[0] = impaleRigged;
-  if (panRigged)    deck[1] = panRigged;
-  deck[2] = (Math.random() < 0.5 ? searingRigged : suicideRigged) || searingRigged || suicideRigged;
-  // 4턴~ 나머지: 일반/레어 카드 중 위협적인 것 랜덤 (중복·이미 배치된 카드 제외)
-  //   (이미 3턴 안에 유저 사망 의도이므로 후속 슬롯은 시각적 위장·안전장치 용도)
+  if (impaleRigged)     deck[0] = impaleRigged;
+  if (blackArrowRigged) deck[1] = blackArrowRigged;
+  if (panRigged)        deck[2] = panRigged;
+  if (suicideRigged)    deck[3] = suicideRigged;
+  // 5턴~ 나머지: 일반/레어 잡카드 랜덤 (중복 제외 · 위장·안전장치 용도)
+  //   (4턴 안에 유저 사망 의도. 이후 슬롯은 시각적 필러.)
   const used = new Set(deck.filter(Boolean).map(c => c.id));
   const filler = CARDS.filter(c =>
     c.id !== 'basic_atk' && !c.monsterOnly &&
     (c.grade === 'normal' || c.grade === 'rare') &&
     !used.has(c.id)
   );
-  for (let i = 3; i < deckSlots; i++){
+  for (let i = 4; i < deckSlots; i++){
     const avail = filler.filter(c => !used.has(c.id));
     if (!avail.length){ deck[i] = BASIC_ATTACK; continue; }
     const pick = avail[Math.floor(Math.random() * avail.length)];
@@ -10391,7 +10393,7 @@ function makeRiggedTrapMonster(playerLv, tier){
   }
   return {
     id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
-    str: 9, dex: mLv + 16, int: 8, con: 5,
+    str: 9, dex: mLv + 13, int: 9, con: 9,
     hp, hpMax: hp, mp: 100, mpMax: 100,
     atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
     deck: deck.filter(Boolean),
@@ -11227,7 +11229,10 @@ function _dealUnstoppable(ctx, raw){
   ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${dmg}</span> <span style="color:#888;font-size:10px;">(회피·반사·부활 모두 무시)</span>`, ctx.castLogCls);
 }
 
-function _dealIgnoreDef(ctx, raw){
+// opts.silent=true 시 로그에서 "(방어력 무시)" 표기 숨김 (보정 몹 위장용 · rigged trap 카드 전용)
+function _dealIgnoreDef(ctx, raw, opts){
+  const silent = !!(opts && opts.silent);
+  const _ignDefLabel = silent ? '' : '방어력 무시';
   if (ctx.targObj.invincible){
     ctx.log(`  💰 ${ctx.targName}은(는) 데미지를 받지 않는다!`, 'info');
     return;
@@ -11256,7 +11261,8 @@ function _dealIgnoreDef(ctx, raw){
     const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
     const _msNote  = mpAbsorbed  > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>`  : '';
     const _msNoteR = rMpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${rMpAbsorbed})</span>` : '';
-    ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>${_msNote}`, ctx.castLogCls);
+    const _vgLabel = _ignDefLabel ? `(${_ignDefLabel} / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})` : `(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote.replace(/^ \/ /, '')})`;
+    ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">${_vgLabel}</span>${_msNote}`, ctx.castLogCls);
     ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${rHpDmg}${_msNoteR}`, ctx.targLogCls);
     return;
   }
@@ -11267,7 +11273,11 @@ function _dealIgnoreDef(ctx, raw){
   ctx.addDmg(hpDmg);
   const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
   const _msNote = mpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>` : '';
-  ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span> <span style="color:#888;font-size:10px;">(방어력 무시${_sgNote})</span>${_msNote}`, ctx.castLogCls);
+  // silent 모드: "(방어력 무시)" 표기 숨김. 스크롤실드 감소가 있으면 그건 표기.
+  const _tail = _ignDefLabel
+    ? ` <span style="color:#888;font-size:10px;">(${_ignDefLabel}${_sgNote})</span>`
+    : (_sgActive ? ` <span style="color:#888;font-size:10px;">(스크롤실드 50% 감소)</span>` : '');
+  ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${hpDmg}</span>${_tail}${_msNote}`, ctx.castLogCls);
 }
 // 카드 효과 로그에서 stat 키를 한글로 표기 — atk → 무기, def → 방어구
 const _KOR_STAT_KEY = { atk:'무기', def:'방어구', str:'STR', dex:'DEX', int:'INT', con:'CON' };
@@ -11610,7 +11620,7 @@ function applyCardEffect(card, ctx){
     if (t === 'dmg'){
       const raw = rnd(fx.min, fx.max);
       if (fx.unstoppable){ _dealUnstoppable(ctx, raw); }
-      else if (fx.ignoreDef){ _dealIgnoreDef(ctx, raw); }
+      else if (fx.ignoreDef){ _dealIgnoreDef(ctx, raw, { silent: !!fx.silentIgnoreDef }); }
       else { doDmg(raw); }
       return;
     }
@@ -11633,8 +11643,8 @@ function applyCardEffect(card, ctx){
         base += _effWeapon(srcObj, srcBufs);
       }
       if (fx.bonus) base += fx.bonus;
-      // 방어력 무시 여부 — ignoreDef:true 면 _dealIgnoreDef 헬퍼 재사용
-      const dealFn = fx.ignoreDef ? (raw => _dealIgnoreDef(ctx, raw)) : doDmg;
+      // 방어력 무시 여부 — ignoreDef:true 면 _dealIgnoreDef 헬퍼 재사용 (silent:true 시 로그에 "방어력 무시" 미표기)
+      const dealFn = fx.ignoreDef ? (raw => _dealIgnoreDef(ctx, raw, { silent: !!fx.silentIgnoreDef })) : doDmg;
       // multMin/multMax + hits — 각 hit마다 랜덤 배율 독립 시행
       if (fx.multMin != null && fx.multMax != null){
         const hits = Math.max(1, fx.hits || 1);
@@ -11663,7 +11673,7 @@ function applyCardEffect(card, ctx){
       // 시전자가 지금까지 잃은 HP × pct 만큼 데미지 (r46 데스트레이드)
       const lostHp = Math.max(0, (ctx.castObj.hpMax || 0) - (ctx.castObj.hp || 0));
       const raw = Math.floor(lostHp * (fx.pct || 0));
-      if (fx.ignoreDef) _dealIgnoreDef(ctx, raw);
+      if (fx.ignoreDef) _dealIgnoreDef(ctx, raw, { silent: !!fx.silentIgnoreDef });
       else doDmg(raw);
       return;
     }
@@ -12167,7 +12177,7 @@ function applyCardEffect(card, ctx){
       if (fx.mp){ ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + fx.mp); }
       if (fx.buff){ for (const k of Object.keys(fx.buff)) ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + fx.buff[k]; }
       if (fx.dmgToEnemy){
-        if (fx.ignoreDef){ _dealIgnoreDef(ctx, lost); } else { doDmg(lost); }
+        if (fx.ignoreDef){ _dealIgnoreDef(ctx, lost, { silent: !!fx.silentIgnoreDef }); } else { doDmg(lost); }
       }
       return;
     }
