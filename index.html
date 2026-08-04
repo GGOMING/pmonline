@@ -2186,8 +2186,8 @@
           <div style="font-size:11px;color:#e6c8a8;text-align:center;margin-bottom:12px;line-height:1.6;font-style:italic;">
             RE: 여신전쟁 설립과 운영에 후원해주신 유저분들을 위한 전당입니다.
           </div>
-          <div id="visionaryCircleList" style="background:rgba(20,4,6,0.55);border:1px solid rgba(201,162,107,0.4);border-radius:6px;padding:10px;min-height:60px;">
-            <div style="text-align:center;color:#c9a26b;padding:16px;font-size:12px;">불러오는 중...</div>
+          <div id="visionaryCircleList" style="background:rgba(20,4,6,0.55);border:1px solid rgba(201,162,107,0.4);border-radius:6px;padding:14px;min-height:60px;">
+            <div style="text-align:center;color:#c9a26b;padding:16px;font-size:12px;font-style:italic;">불러오는 중...</div>
           </div>
         </div>
 
@@ -5528,34 +5528,101 @@ async function openHonor(){
   try { advanceDailyQuest('dq_honor_visit', 1); } catch(e){}
 }
 
-// ─── Visionary Circle (후원자 순위 · 금액 비공개) ───
-// _honorRankers 재사용 (이미 saves 전체 조회). sponsorAmount > 0 만 필터, 금액 내림차순, 순위만 표시
+// ─── Visionary Circle (후원자 순위 · 금액 비공개 · 동점자 동일 순위) ───
+// 정렬: sponsorAmount 내림차순. 동점자 dense rank (1,1,1,2 방식) — 1등 3명이면 4번째는 2등.
 function renderVisionaryCircle(){
   const el = $('visionaryCircleList');
   if (!el) return;
-  const sponsors = (_honorRankers || [])
+  const allRankers = _honorRankers || [];
+  const sponsors = allRankers
     .filter(r => (r.sponsorAmount|0) > 0)
     .sort((a, b) => (b.sponsorAmount|0) - (a.sponsorAmount|0));
+  // 진단 로그 — F12 콘솔로 확인 가능 (문제 발생 시 디버깅 용도)
+  console.log('[VisionaryCircle] _honorRankers 총 ' + allRankers.length + '명 · 후원자(sponsorAmount>0) ' + sponsors.length + '명');
+  if (allRankers.length > 0){
+    const preview = allRankers.slice(0, 5).map(r => `${r.name}(sponsor=${r.sponsorAmount|0})`).join(', ');
+    console.log('[VisionaryCircle] 상위 5명 후원액 프리뷰: ' + preview);
+  }
   if (!sponsors.length){
-    el.innerHTML = `<div style="text-align:center;color:#c9a26b;padding:16px;font-size:12px;">등록된 후원자가 아직 없습니다.</div>`;
+    el.innerHTML = `<div style="text-align:center;color:#c9a26b;padding:20px;font-size:12px;font-style:italic;">등록된 후원자가 아직 없습니다.<br><span style="font-size:10px;opacity:0.7;">(전체 유저 ${allRankers.length}명 조회 · 후원액 0)</span></div>`;
     return;
   }
   const myName = (GAME.player && GAME.player.name) || '';
-  const medals = ['🥇','🥈','🥉'];
-  const html = sponsors.map((r, i) => {
-    const rank = i + 1;
-    const medal = medals[i] || `${rank}.`;
+
+  // dense rank 계산
+  let rank = 0;
+  let prevAmt = -1;
+  const ranked = sponsors.map((r, i) => {
+    const amt = r.sponsorAmount|0;
+    if (amt !== prevAmt){ rank += 1; prevAmt = amt; }
+    return { r, rank };
+  });
+
+  // 등급별 럭셔리 스타일 팔레트
+  const tierStyles = {
+    1: { // 골드
+      row:  'background:linear-gradient(90deg,rgba(255,215,0,0.28) 0%,rgba(184,134,11,0.15) 55%,rgba(0,0,0,0) 100%);border:1px solid rgba(255,215,0,0.55);box-shadow:inset 0 0 12px rgba(255,215,0,0.15);',
+      icon: '🥇', iconColor: '#ffd700', label: 'GOLD',
+      labelStyle: 'color:#3a1a00;background:linear-gradient(180deg,#ffe680,#c9a233);',
+    },
+    2: { // 실버
+      row:  'background:linear-gradient(90deg,rgba(200,200,220,0.22) 0%,rgba(150,155,170,0.12) 55%,rgba(0,0,0,0) 100%);border:1px solid rgba(200,200,220,0.5);box-shadow:inset 0 0 10px rgba(200,200,220,0.12);',
+      icon: '🥈', iconColor: '#dcdce6', label: 'SILVER',
+      labelStyle: 'color:#1a1a1a;background:linear-gradient(180deg,#e8e8ee,#a8a8b5);',
+    },
+    3: { // 브론즈
+      row:  'background:linear-gradient(90deg,rgba(205,127,50,0.22) 0%,rgba(139,69,19,0.14) 55%,rgba(0,0,0,0) 100%);border:1px solid rgba(205,127,50,0.5);box-shadow:inset 0 0 10px rgba(205,127,50,0.12);',
+      icon: '🥉', iconColor: '#cd7f32', label: 'BRONZE',
+      labelStyle: 'color:#1a0a00;background:linear-gradient(180deg,#e5a570,#8b4513);',
+    },
+  };
+  // 비메달권 (4위 이상) — 여전히 고급스러운 크림슨·엔티크 골드 톤
+  const commonRow = 'background:linear-gradient(90deg,rgba(74,14,20,0.55) 0%,rgba(42,5,8,0.35) 100%);border:1px solid rgba(201,162,107,0.28);box-shadow:inset 0 0 6px rgba(0,0,0,0.4);';
+
+  // 로마 숫자 (1~50 정도 커버) — 4위부터 사용
+  const toRoman = (n) => {
+    const map = [[1000,'M'],[900,'CM'],[500,'D'],[400,'CD'],[100,'C'],[90,'XC'],[50,'L'],[40,'XL'],[10,'X'],[9,'IX'],[5,'V'],[4,'IV'],[1,'I']];
+    let s = ''; let x = n;
+    for (const [v, r] of map){ while (x >= v){ s += r; x -= v; } }
+    return s;
+  };
+
+  const html = ranked.map(({ r, rank }) => {
     const isMe = myName && r.name === myName;
-    const bg = isMe ? 'background:linear-gradient(90deg,rgba(220,20,60,0.25),rgba(201,162,107,0.12));border-left:3px solid #c9a26b;' : '';
-    const meTag = isMe ? '<span style="margin-left:6px;padding:1px 6px;background:#c9a26b;color:#2a0508;font-size:10px;font-weight:bold;border-radius:3px;">★ 본인</span>' : '';
-    // 후원액 자체는 숨김 — 순위만 표기
-    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid rgba(201,162,107,0.2);${bg}">
-      <span style="width:36px;text-align:center;color:#e6c8a8;font-weight:bold;font-size:${i < 3 ? '22px' : '13px'};text-shadow:0 1px 2px rgba(0,0,0,0.5);">${medal}</span>
-      <span style="flex:1;color:#f5deb3;font-size:13px;font-weight:bold;letter-spacing:0.5px;">${(r.name||'?')}${meTag}</span>
-      <span style="color:#c9a26b;font-size:11px;opacity:0.9;">Lv ${r.level}</span>
+    const tier = tierStyles[rank];
+    const inMedal = !!tier;
+    const rowStyle = inMedal ? tier.row : commonRow;
+    const meHighlight = isMe
+      ? 'box-shadow: inset 0 0 0 2px #c9a26b, ' + (inMedal ? '0 0 14px rgba(220,20,60,0.35)' : '0 0 8px rgba(201,162,107,0.35)') + ' !important;'
+      : '';
+    // 좌측 순위 표시 — 메달권은 이모지, 그 외는 로마 숫자 (다이아 프레임)
+    const rankHtml = inMedal
+      ? `<div style="width:52px;text-align:center;">
+          <div style="font-size:28px;line-height:1;text-shadow:0 2px 4px rgba(0,0,0,0.55);">${tier.icon}</div>
+          <div style="font-size:9px;font-weight:bold;letter-spacing:1.5px;padding:1px 4px;margin-top:3px;border-radius:2px;${tier.labelStyle}">${tier.label}</div>
+        </div>`
+      : `<div style="width:52px;text-align:center;">
+          <div style="display:inline-block;padding:4px 8px;background:linear-gradient(180deg,rgba(201,162,107,0.28),rgba(122,24,30,0.35));border:1px solid rgba(201,162,107,0.55);border-radius:4px;color:#f5deb3;font-family:'Georgia','굴림',serif;font-weight:bold;font-size:14px;letter-spacing:1px;text-shadow:0 1px 2px rgba(0,0,0,0.6);min-width:24px;">${toRoman(rank)}</div>
+          <div style="font-size:8px;color:#c9a26b;margin-top:3px;letter-spacing:1px;">RANK</div>
+        </div>`;
+    const meTag = isMe ? '<span style="margin-left:8px;padding:2px 8px;background:linear-gradient(180deg,#e6c8a8,#c9a26b);color:#2a0508;font-size:10px;font-weight:bold;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.4);letter-spacing:0.5px;">★ ME</span>' : '';
+    const titleBadge = r.equippedTitle ? (() => { try { return titleBadgeHtml(r.equippedTitle, {size:9, py:1, px:5}); } catch(e){ return ''; } })() : '';
+    return `<div style="display:flex;align-items:center;gap:12px;padding:10px 14px;margin-bottom:6px;border-radius:6px;${rowStyle}${meHighlight ? ' ' + meHighlight : ''}">
+      ${rankHtml}
+      <div style="flex:1;min-width:0;">
+        <div style="color:#f5deb3;font-size:14px;font-weight:bold;font-family:'Georgia','굴림',serif;letter-spacing:0.5px;text-shadow:0 1px 2px rgba(0,0,0,0.5);">
+          ${(r.name||'?')}${meTag}
+        </div>
+        ${titleBadge ? `<div style="margin-top:2px;">${titleBadge}</div>` : ''}
+      </div>
+      <div style="color:#c9a26b;font-size:11px;text-align:right;font-family:'Georgia',serif;">
+        <div style="letter-spacing:1px;opacity:0.85;">LEVEL</div>
+        <div style="font-size:16px;font-weight:bold;color:#e6c8a8;text-shadow:0 1px 2px rgba(0,0,0,0.5);">${r.level}</div>
+      </div>
     </div>`;
   }).join('');
-  el.innerHTML = html;
+  const footer = `<div style="text-align:center;color:#c9a26b;padding:8px 0 0;font-size:10px;font-style:italic;opacity:0.75;letter-spacing:1px;">— 총 ${sponsors.length}명의 후원자 · 전체 유저 ${allRankers.length}명 조회 —</div>`;
+  el.innerHTML = html + footer;
 }
 async function _loadHonorRankers(){
   // 클라우드 우선: saves 전체에서 level+xp 상위 추출. 운영자 권한이 없으면 saves 전체 select가 막힐 수 있음
@@ -5589,7 +5656,7 @@ async function _loadHonorRankers(){
           };
         });
         list.sort((a,b) => (b.level - a.level) || (b.xp - a.xp));
-        return list.slice(0, 100);
+        return list;   // 전체 반환. renderHonorList 는 top 100 만 표시, Visionary Circle 은 전 인원 사용
       }
     } catch(e){ console.warn('[honor cloud]', e); }
   }
@@ -5619,7 +5686,7 @@ async function _loadHonorRankers(){
     } catch(e){}
   }
   list.sort((a,b) => (b.level - a.level) || (b.xp - a.xp));
-  return list.slice(0, 100);
+  return list;   // 로컬 fallback — 전체 반환 (renderHonorList 가 상단에서 자체 슬라이스)
 }
 function _honorAvatarHtml(r, size){
   const sz = size || 56;
@@ -5677,9 +5744,10 @@ function renderHonorList(){
   }
   const medals = ['🥇','🥈','🥉'];
   const myName = (GAME.player && GAME.player.name) || '';
-  // TOP 10 — 상세 카드 (클릭 시 상세 뷰), 11~100 — 이름만 간단 리스트
-  const top10 = _honorRankers.slice(0, 10);
-  const rest  = _honorRankers.slice(10);
+  // TOP 10 — 상세 카드 (클릭 시 상세 뷰), 11~100 — 이름만 간단 리스트 (명예의 전당은 100위까지만)
+  const top100 = _honorRankers.slice(0, 100);
+  const top10 = top100.slice(0, 10);
+  const rest  = top100.slice(10);
   const top10Html = top10.map((r, i) => {
     const rank = i + 1;
     const medal = medals[i] || `${rank}.`;
@@ -5902,7 +5970,7 @@ const DAILY_QUEST_POOL = [
   { id:'dq_hunt_3',           name:'첫 걸음',            diff:'쉬움',  desc:'수행 30회 진행 (승패 무관)',    target:30,     gold:2000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_gacha_3',          name:'카드 획득',           diff:'쉬움',  desc:'카드샵에서 아무 뽑기 10회',     target:10,     gold:1000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_heal_1',           name:'회복의 손길',         diff:'쉬움',  desc:'회복의 샘물 10회 사용',         target:10,     gold:500,  xp:0, card:null,    bless:0, minLevel:1  },
-  { id:'dq_rank_try',         name:'랭킹 도전자',         diff:'쉬움',  desc:'랭킹전 1회 시도 (승패 무관)',   target:1,      gold:500,  xp:0, card:null,    bless:0, minLevel:1  },
+  { id:'dq_rank_try',         name:'랭킹 도전자',         diff:'쉬움',  desc:'랭킹전 1회 시도 (승패 무관)',   target:1,      gold:500,  xp:0, card:null,    bless:0, minLevel:20 },
   { id:'dq_sell_3',           name:'카드 정리',           diff:'쉬움',  desc:'카드 3장 판매',                 target:3,      gold:500,  xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_login_1h',         name:'장기 접속자',         diff:'쉬움',  desc:'로그인 시간 1시간 충족',        target:3600,   gold:4000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_status_msg',       name:'프로필 확인',         diff:'쉬움',  desc:'상태메시지 1회 변경',           target:1,      gold:500,  xp:0, card:'rare',  bless:0, minLevel:1  },
@@ -5913,7 +5981,7 @@ const DAILY_QUEST_POOL = [
   { id:'dq_title_change',     name:'명함 교환',           diff:'쉬움',  desc:'칭호 변경 1회',                 target:1,      gold:1000, xp:0, card:null,    bless:0, minLevel:1  },
   // ── 보통 ──
   { id:'dq_gold_5k',          name:'골드 파머',           diff:'보통',  desc:'하루 누적 골드 5,000 획득',     target:5000,   gold:2000, xp:0, card:null,    bless:0, minLevel:1  },
-  { id:'dq_raid_mob_5',       name:'공격대 정예',         diff:'보통',  desc:'공격대 몹 5마리 처치',          target:5,      gold:3000, xp:0, card:null,    bless:0, minLevel:15 },
+  { id:'dq_raid_mob_5',       name:'공격대 정예',         diff:'보통',  desc:'공격대 몹 5마리 처치',          target:5,      gold:3000, xp:0, card:null,    bless:0, minLevel:26 },
   { id:'dq_rare_1',           name:'레어 헌터',           diff:'보통',  desc:'레어 이상 카드 1장 획득',       target:1,      gold:2500, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_xp_3k',            name:'경험치 수집가',       diff:'보통',  desc:'하루 누적 XP 3,000 획득',       target:3000,   gold:2500, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_gacha10',          name:'뽑기 마니아',         diff:'보통',  desc:'10뽑 1회 진행',                 target:1,      gold:3000, xp:0, card:'rare',  bless:0, minLevel:1  },
@@ -5925,9 +5993,9 @@ const DAILY_QUEST_POOL = [
   { id:'dq_streak_3',         name:'연속 승리',           diff:'어려움', desc:'수행 10연승 달성',              target:10,     gold:2000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_dmg_3k',           name:'파괴자',              diff:'어려움', desc:'하루 누적 데미지 3,000 이상',   target:3000,   gold:4000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_full_hp_win_1',    name:'샘물 스킵',           diff:'어려움', desc:'HP 100%인 상태로 전투 종료 1회', target:1,      gold:30000, xp:0, card:null,   bless:0, minLevel:1  },
-  { id:'dq_bless_1',          name:'축복 수집가',         diff:'어려움', desc:'여신의 축복 1개 획득',           target:1,      gold:4000, xp:0, card:null,    bless:0, minLevel:15 },
+  { id:'dq_bless_1',          name:'축복 수집가',         diff:'어려움', desc:'여신의 축복 1개 획득',           target:1,      gold:4000, xp:0, card:null,    bless:0, minLevel:26 },
   // ── 도전 ──
-  { id:'dq_boss_hit',         name:'보스 킬러',           diff:'도전',  desc:'공격대 보스에 2,000 이상 데미지', target:2000,  gold:4000, xp:0, card:'rare',  bless:0, minLevel:15 },
+  { id:'dq_boss_hit',         name:'보스 킬러',           diff:'도전',  desc:'공격대 보스에 2,000 이상 데미지', target:2000,  gold:4000, xp:0, card:'rare',  bless:0, minLevel:26 },
 ];
 // 고정 배정 퀘스트 — 5개 랜덤 완료 시 자동 완료
 const DAILY_QUEST_FIXED = {
@@ -5939,12 +6007,12 @@ const DAILY_RESET_HOUR = 4;              // 04:00 KST 리셋
 // 주간 퀘스트 풀 — 4개 랜덤 배정. 매주 월요일 04:00 KST 리셋.
 const WEEKLY_QUEST_POOL = [
   { id:'wq_hunt_30',        name:'폭업! 폭업! 폭업!',   diff:'주간', desc:'수행 200회 승리',                 target:200,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
-  { id:'wq_rank_20',        name:'주간 챔피언',        diff:'주간', desc:'랭킹전 1위 20회 달성',            target:20,     gold:15000, xp:0, card:null,     bless:1, minLevel:1  },
-  { id:'wq_raid_mob_50',    name:'던전 방황자',        diff:'주간', desc:'공격대 몹 200마리 처치',          target:200,    gold:10000, xp:0, card:null,     bless:0, minLevel:15 },
+  { id:'wq_rank_20',        name:'주간 챔피언',        diff:'주간', desc:'랭킹전 1위 20회 달성',            target:20,     gold:15000, xp:0, card:null,     bless:1, minLevel:20 },
+  { id:'wq_raid_mob_50',    name:'던전 방황자',        diff:'주간', desc:'공격대 몹 200마리 처치',          target:200,    gold:10000, xp:0, card:null,     bless:0, minLevel:26 },
   { id:'wq_gold_50k',       name:'개같이 벌어서',      diff:'주간', desc:'주간 누적 골드 100,000 획득',     target:100000, gold:10000, xp:0, card:'unique', bless:0, minLevel:1  },
   { id:'wq_xp_50k',         name:'주간 경험치 마스터', diff:'주간', desc:'주간 누적 XP 50,000',             target:50000,  gold:5000,  xp:0, card:null,     bless:0, minLevel:1  },
-  { id:'wq_boss_finish_3',  name:'보스 담당 일진',     diff:'주간', desc:'공격대 보스 최종 타격 10회',      target:10,     gold:30000, xp:0, card:null,     bless:1, minLevel:15 },
-  { id:'wq_bless_5',        name:'축복이 충만하리',    diff:'주간', desc:'여신의 축복 5개 획득',            target:5,      gold:10000, xp:0, card:'unique', bless:0, minLevel:15 },
+  { id:'wq_boss_finish_3',  name:'보스 담당 일진',     diff:'주간', desc:'공격대 보스 최종 타격 10회',      target:10,     gold:30000, xp:0, card:null,     bless:1, minLevel:26 },
+  { id:'wq_bless_5',        name:'축복이 충만하리',    diff:'주간', desc:'여신의 축복 5개 획득',            target:5,      gold:10000, xp:0, card:'unique', bless:0, minLevel:26 },
   { id:'wq_daily_full_3',   name:'주간 완벽주의자',    diff:'주간', desc:'일일퀘스트 전부 완료 5일',        target:5,      gold:25000, xp:0, card:null,     bless:3, minLevel:1  },
   { id:'wq_gold_spent',     name:'정승같이 쓰자',      diff:'주간', desc:'주간 누적 골드 100,000 사용',     target:100000, gold:10000, xp:0, card:'unique', bless:0, minLevel:1  },
   { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1  },
@@ -8171,9 +8239,9 @@ async function raidEnd(result){
             cardBoxHtml = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${card.name})</p>`;
           }
         }
-        // 3% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
+        // 0.3% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용) — 기존 3% 에서 1/10 하향
         let legendHtml = '';
-        if (Math.random() < 0.03){
+        if (Math.random() < 0.003){
           const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
           if (legendPool.length){
             const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
@@ -8246,9 +8314,9 @@ async function raidEnd(result){
             cardBoxHtmlDM = `<p style="color:#a00;">⚠ 보유 카드 한도 초과 — 카드 지급 누락 (${cardDM.name})</p>`;
           }
         }
-        // dawn/mist 도 1% 확률 전설 장비 랜덤 드롭 (축복 상자 loot 재사용)
+        // dawn/mist 0.1% 확률 전설 장비 랜덤 드롭 (축복 상자 loot 재사용) — 기존 1% 에서 1/10 하향
         let legendHtmlDM = '';
-        if (Math.random() < 0.01){
+        if (Math.random() < 0.001){
           const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
           if (legendPool.length){
             const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
