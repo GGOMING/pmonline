@@ -3065,6 +3065,16 @@ const GAME = {
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
   $('pg-'+id).classList.add('active');
+  // main 페이지 진입 시에도 전투 버프 초기화 (여신의 탑 종료 등 showContent 경유하지 않는 경로 대응)
+  if (id === 'main' && typeof _resetPlayerBattleState === 'function'){
+    try {
+      if (_resetPlayerBattleState()){
+        try { renderSheet(); } catch(e){}
+        try { saveGame(); } catch(e){}
+        try { cloudSaveNow().catch(err => console.warn('[showPage main cloudSave]', err)); } catch(e){}
+      }
+    } catch(e){}
+  }
 }
 
 // ─── 전투 모드 토글 (가로 3-column 그리드 활성화) ───
@@ -3585,6 +3595,27 @@ function todo(name){
   toast(`「${name}」 — 다음 단계에서 구현 예정`);
 }
 
+// ─── 전투 중 플레이어에게 걸린 버프·디버프·flat maxHp/mpBuff 초기화 ───
+// 메인으로 돌아가는 모든 경로 (정상 종료, 중도 퇴장, 도주 등) 에서 호출.
+//   • _hpMaxBonus / _mpMaxBonus (라이프업·지능책·버서커스트렝스 등 flat 보너스) → 0
+//   • calcDerived 로 hpMax·mpMax·atk·def 원복
+//   • hp/mp 새 max 로 clamp (중도 퇴장 시 부풀린 hp 유지 방지)
+// 반환: 실제로 변경이 있었으면 true (호출부에서 저장 여부 결정용).
+function _resetPlayerBattleState(){
+  const p = GAME.player;
+  if (!p) return false;
+  const hadBonus = (p._hpMaxBonus|0) !== 0 || (p._mpMaxBonus|0) !== 0;
+  const prevHpMax = p.hpMax, prevMpMax = p.mpMax, prevHp = p.hp, prevMp = p.mp;
+  try {
+    p._hpMaxBonus = 0;
+    p._mpMaxBonus = 0;
+    calcDerived(p);
+    if (p.hp > p.hpMax) p.hp = p.hpMax;
+    if (p.mp > p.mpMax) p.mp = p.mpMax;
+  } catch(e){ console.warn('[_resetPlayerBattleState]', e); return false; }
+  return hadBonus || prevHpMax !== p.hpMax || prevMpMax !== p.mpMax || prevHp !== p.hp || prevMp !== p.mp;
+}
+
 // ─── 콘텐츠 영역 전환 (메인 ↔ 회복의샘물 ↔ ...) ───
 function showContent(name){
   document.querySelectorAll('.content-pane').forEach(p=>p.hidden = true);
@@ -3599,6 +3630,14 @@ function showContent(name){
     ['raid-lobby','rank-list'].forEach(id => {
       const el = document.getElementById(id); if (el) el.hidden = false;
     });
+    // 모든 전투 파생 버프·디버프·flat maxHp/mpBuff 초기화 — 중도 퇴장 시 hp/hpMax 이월 방지
+    // 실제 변경이 있을 때만 저장 (UI 네비게이션 스팸으로 Supabase disk IO 낭비 방지)
+    const changed = _resetPlayerBattleState();
+    if (changed){
+      try { renderSheet(); } catch(e){}
+      try { saveGame(); } catch(e){}
+      try { cloudSaveNow().catch(err => console.warn('[showContent main cloudSave]', err)); } catch(e){}
+    }
   }
 }
 
