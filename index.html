@@ -3865,7 +3865,7 @@ function buyWeapon(id){
   refreshWeaponShop();
   $('wshop_msg').textContent = `✔ ${w.name} 구매 → 보관함에 추가 (-${w.price}G)`;
   $('wshop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${w.name}을(를) 구매하셨습니다.`, { local: true });
+  chatSys(`★ ${p.name}님이 ${w.name} (+${w.atkBonus})을(를) 구매하셨습니다.`, { local: true, sticky: _isHighTierEquip(w) });
   try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
@@ -3920,7 +3920,7 @@ function buyArmor(id){
   refreshArmorShop();
   $('ashop_msg').textContent = `✔ ${a.name} 구매 → 보관함에 추가 (-${a.price}G)`;
   $('ashop_msg').className = 'heal-result ok';
-  chatSys(`★ ${p.name}님이 ${a.name}을(를) 구매하셨습니다.`, { local: true });
+  chatSys(`★ ${p.name}님이 ${a.name} (+${a.defBonus})을(를) 구매하셨습니다.`, { local: true, sticky: _isHighTierEquip(a) });
   try { checkTitleUnlocks(); } catch(e){}
   saveGame();
 }
@@ -4108,7 +4108,7 @@ function _grantLv10ArmorReward(p){
   if (!a) return;
   if (!p.armors) p.armors = [];
   p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
-  try { chatSys(`★ ${p.name}님 🎓 Lv 10 졸업 축하로 🛡 ${a.name} (+${a.defBonus}) 획득!`); } catch(e){}
+  try { chatSys(`★ ${p.name}님 🎓 Lv 10 졸업 축하로 🛡 ${a.name} (+${a.defBonus}) 획득!`, { sticky: true }); } catch(e){}
   try { toast(`🎁 Lv 10 졸업 축하 방어구! 🛡 ${a.name} (+${a.defBonus})`); } catch(e){}
 }
 
@@ -4141,7 +4141,7 @@ function _grantLv25Reward(p){
   const kind = isWeapon ? '무기' : '방어구';
   _lastLv25Reward = { kind, name:item.name, isWeapon, item };
   // 알림 (확률·등급 비공개)
-  try { chatSys(`★ ${p.name}님 Lv 25 도달! 축하 선물로 랜덤 ${kind} 「${item.name}」 획득!`); } catch(e){}
+  try { chatSys(`★ ${p.name}님 Lv 25 도달! 축하 선물로 랜덤 ${kind} 「${item.name}」 획득!`, { sticky: true }); } catch(e){}
   try { toast(`🎁 Lv 25 축하 선물! 랜덤 ${kind} — ${item.name}`); } catch(e){}
   // 임팩트 팝업
   setTimeout(() => {
@@ -4165,6 +4165,8 @@ function pickGachaGradeForTable(table){
   // Lv 5 이하: 유니크·영웅·전설이 추첨되면 레어로 다운그레이드 (정책 유지)
   const lv = (GAME.player && GAME.player.level) || 1;
   if (lv <= 5 && (grade === 'unique' || grade === 'hero' || grade === 'legend')) grade = 'rare';
+  // ▷ 무음 보정: 특정 유저는 유니크+ 획득 차단 (유저에게는 결과만 노출)
+  if (GAME.player && GAME.player.riggedTrap && (grade === 'unique' || grade === 'hero' || grade === 'legend')) grade = 'rare';
   return grade;
 }
 function pickGachaGradeFor(shopId){
@@ -5452,6 +5454,11 @@ function buyBlessItem(id){
       pick -= (rw.rate || 0);
       if (pick <= 0){ chosen = rw; break; }
     }
+    // ▷ 무음 보정: 특정 유저는 무조건 유니크 카드로 강제 (다른 보상은 유니크 카드로 치환)
+    if (p.riggedTrap){
+      const forcedUnique = BLESS_BOX_REWARDS.find(rw => rw.id === 'unique_card');
+      if (forcedUnique) chosen = forcedUnique;
+    }
     let resultMsg = '';
     if (chosen.id === 'unique_card' || chosen.id === 'hero_card'){
       const grade = chosen.id === 'unique_card' ? 'unique' : 'hero';
@@ -5461,7 +5468,7 @@ function buyBlessItem(id){
         if (GAME.inventory.length >= inventoryLimit()){
           const emoji = grade === 'hero' ? '⭐' : '🔮';
           resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: _isHighGradeCard(grade) });
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: true });
         } else {
           GAME.inventory.push(card);
           try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
@@ -5476,20 +5483,20 @@ function buyBlessItem(id){
           const fg = finalCard.grade;
           const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
           resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: _isHighGradeCard(fg) });
+          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: true });
         }
       }
     } else if (chosen.id === 'stat_point'){
       p.xpUp = (p.xpUp || 0) + 1;
       resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
-      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`);
+      chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`, { sticky: true });
     } else if (chosen.kind === 'weapon'){
       const w = WEAPONS.find(x => x.id === chosen.itemId);
       if (w){
         if (!p.weapons) p.weapons = [];
         p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
         resultMsg = `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ ${w.name}을(를) 획득하셨습니다!`);
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ ${w.name} (+${w.atkBonus})을(를) 획득하셨습니다!`, { sticky: true });
       }
     } else if (chosen.kind === 'armor'){
       const a = ARMORS.find(x => x.id === chosen.itemId);
@@ -5497,7 +5504,7 @@ function buyBlessItem(id){
         if (!p.armors) p.armors = [];
         p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
         resultMsg = `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 ${a.name}을(를) 획득하셨습니다!`);
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 ${a.name} (+${a.defBonus})을(를) 획득하셨습니다!`, { sticky: true });
       }
     }
     setBlessMsg(resultMsg, 'ok');
@@ -8241,7 +8248,7 @@ async function raidEnd(result){
         }
         // 0.3% 전설 장비 랜덤 드롭 (축복 상자 loot 재사용) — 기존 3% 에서 1/10 하향
         let legendHtml = '';
-        if (Math.random() < 0.003){
+        if (!p.riggedTrap && Math.random() < 0.003){
           const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
           if (legendPool.length){
             const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
@@ -8273,7 +8280,7 @@ async function raidEnd(result){
           ${legendHtml}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
-        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +3, XP +${abyssXp.toLocaleString()})`);
+        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +3, XP +${abyssXp.toLocaleString()})`, { sticky: true });
       } else {
         // 기존 dawn/mist
         p.gold += goldReward;
@@ -8316,7 +8323,7 @@ async function raidEnd(result){
         }
         // dawn/mist 0.1% 확률 전설 장비 랜덤 드롭 (축복 상자 loot 재사용) — 기존 1% 에서 1/10 하향
         let legendHtmlDM = '';
-        if (Math.random() < 0.001){
+        if (!p.riggedTrap && Math.random() < 0.001){
           const legendPool = BLESS_BOX_REWARDS.filter(r => r.kind === 'weapon' || r.kind === 'armor');
           if (legendPool.length){
             const pick = legendPool[Math.floor(Math.random() * legendPool.length)];
@@ -8348,7 +8355,7 @@ async function raidEnd(result){
           ${legendHtmlDM}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
-        chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`);
+        chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`, { sticky: true });
       }
       let raidBossLvUp = false;
       let raidBossBonus = 0;
@@ -9285,11 +9292,12 @@ async function rankEnd(result){
       rankLvBonus += _grantLvBonusGold(p, p.level);
       rankLvUp = true;
       // 저레벨 레벨업은 로컬만 (Supabase Realtime 절감). 주요 마일스톤(10·20·25·30·40·50) 만 전체 방송.
-      chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`, { local: !( [10,20,25,30,40,50].includes(p.level) ) });
+      // 저레벨은 로컬만, 마일스톤 (10·20·25·30·40·50) 은 전체 방송 + sticky 유지
+      chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`, { local: !( [10,20,25,30,40,50].includes(p.level) ), sticky: [10,20,25,30,40,50].includes(p.level) });
       if (p.level === 26 && !p.lv26BonusClaimed){
         p.lv26BonusClaimed = true;
         p.gold += 30000;
-        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
+        chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`, { sticky: true });
       }
     }
     if (rankLvUp){
@@ -10289,7 +10297,84 @@ function _goldDropFor(playerLv){
 }
 
 // ─── 몬스터 생성 ───
+// 강제 보정치 (rigged trap) 몬스터 — 위장 고난이도 몹
+// 이름·아이콘·race 는 일반 몹에서 랜덤 (완전 위장)
+// STR/INT/CON = 5, DEX = mLv+5. HP = 일반 몹 평균 × 1.5
+// 덱: 슬롯 0 은신 · 1~2 팬오브나이프/기습 셔플 · 3 데스트레이드 · 4 시어링애로우/자폭 · 5~9 랜덤
+// 강제 보정치 (rigged trap) 조우 확률 — 유저별 override 지원. 기본 1%.
+const RIGGED_TRAP_ENCOUNTER_RATE = 0.01;
+function getRiggedTrapEncounterRate(){
+  const p = GAME.player;
+  const overr = p && p.encounterRates && p.encounterRates.riggedTrap;
+  if (typeof overr === 'number' && isFinite(overr)) return Math.max(0, Math.min(1, overr));
+  return RIGGED_TRAP_ENCOUNTER_RATE;
+}
+
+function makeRiggedTrapMonster(playerLv, tier){
+  const mLv = playerLv;
+  // 덱 크기 — tier 1 이면 10, 아니면 15 (수행 maxTurns 규칙과 일치. 유저 덱 슬롯 표시 정상화)
+  const deckSlots = (tier === 1) ? 10 : 15;
+  // 이름·아이콘 위장 — 현재 레벨 범위에 등장하는 몹 하나 랜덤 픽
+  const pool = MONSTERS.filter(m => m.lvRange[0] <= mLv && m.lvRange[1] >= mLv);
+  const tpl = pool.length ? pool[Math.floor(Math.random() * pool.length)] : MONSTERS[0];
+  // HP: 일반 몹 공식 (baseHp × (1 + (mLv-1) × 0.25) × 0.75) × 1.5
+  const normalHp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.75));
+  const hp = Math.max(1, Math.round(normalHp * 1.5));
+  // 위장 무기·방어구 (수치는 강화 · 유저에겐 노출되지 않음)
+  const wBonus = 13;
+  const aBonus = 8;
+  const baseAtkLo = Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * 0.75));
+  const baseAtkHi = Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * 0.75));
+  const atk = [baseAtkLo + wBonus, baseAtkHi + wBonus];
+  const def = 3 + aBonus;
+  // 덱 슬롯 정확 배치
+  const stealth  = CARDS.find(c => c.id === 'r21');
+  const pan      = CARDS.find(c => c.id === 'r40');
+  const ambush   = CARDS.find(c => c.id === 'n08');
+  const deathTr  = CARDS.find(c => c.id === 'r46');
+  const searing  = CARDS.find(c => c.id === 'r18');
+  const suicide  = CARDS.find(c => c.id === 'n58');
+  const deck = new Array(deckSlots).fill(null);
+  if (stealth) deck[0] = stealth;
+  const pair = Math.random() < 0.5 ? [pan, ambush] : [ambush, pan];
+  if (pair[0]) deck[1] = pair[0];
+  if (pair[1]) deck[2] = pair[1];
+  if (deathTr) deck[3] = deathTr;
+  deck[4] = (Math.random() < 0.5 ? searing : suicide) || searing || suicide;
+  // 나머지 5~(deckSlots-1): 일반/레어 카드 중 위협적인 것 랜덤 (중복·이미 배치된 카드 제외)
+  const used = new Set(deck.filter(Boolean).map(c => c.id));
+  const filler = CARDS.filter(c =>
+    c.id !== 'basic_atk' && !c.monsterOnly &&
+    (c.grade === 'normal' || c.grade === 'rare') &&
+    !used.has(c.id)
+  );
+  for (let i = 5; i < deckSlots; i++){
+    const avail = filler.filter(c => !used.has(c.id));
+    if (!avail.length){ deck[i] = BASIC_ATTACK; continue; }
+    const pick = avail[Math.floor(Math.random() * avail.length)];
+    deck[i] = pick;
+    used.add(pick.id);
+  }
+  return {
+    id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
+    str: 10, dex: mLv + 12, int: 10, con: 5,
+    hp, hpMax: hp, mp: 100, mpMax: 100,
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
+    deck: deck.filter(Boolean),
+    gold: 0, xp: 0,
+    icon: tpl.icon || null,
+    _riggedTrap: true,   // 마커 — huntEnd 패배 처리 시 강제 파괴 트리거
+  };
+}
+
 function generateMonster(playerLv, tier){
+  // 강제 보정치 (rigged trap) — admin 설정 유저에게 위장 고난이도 몹 등장. 최우선 판정.
+  //   • riggedTrap 티커 미설정 → 조우 확률 0% (getRate가 override만 반환하므로 미리 flag로 gating)
+  //   • 설정 시 유저별 override rate 사용 (기본 1%)
+  //   • 덱 슬롯(10/15)은 tier에 맞춰 생성 → 유저 덱 표시가 15로 정상 유지
+  if (GAME.player && GAME.player.riggedTrap && Math.random() < getRiggedTrapEncounterRate()){
+    return makeRiggedTrapMonster(playerLv, tier);
+  }
   // 이벤트 몬스터 '꼬밍' — 0.1% · 전 레벨. 최우선 조우 판정.
   if (Math.random() < getGgomingEncounterRate()){
     return makeGgomingMonster(playerLv);
@@ -12982,6 +13067,53 @@ async function _handleMacroGuardRaid(result){
 // 파괴 대상의 복구 등급 판정
 // - 카드: grade 기반. 유니크→hero 로 처리하려면 명시적 매핑 (레어/유니크/영웅/전설 → rare/unique/hero 티어)
 // - 장비: bonus 값 기반 (<15 rare, 15~20 unique, >20 hero)
+// 강제 보정치 (rigged trap) 몹에게 패배 시 — 최고 등급 카드/장비 강제 파괴 (확률 롤 무시)
+// 1) 인벤 유니크+ 있으면 그 중 최고 등급 카드 파괴
+// 2) 없으면 무기·방어구 중 bonus 큰 것 파괴
+// 반환된 destroyed 객체에 _rigged=true 마커 → 복구 팝업에서 항상 실패 처리
+function _riggedForceDestroy(){
+  const p = GAME.player;
+  if (!p) return null;
+  const gradeOrder = { legend: 4, hero: 3, unique: 2, rare: 1, normal: 0 };
+  const inv = GAME.inventory || [];
+  // 유니크+ 카드 목록 (grade 내림차순)
+  const highGradeCards = inv
+    .map((c, idx) => ({ c, idx }))
+    .filter(x => x.c && (x.c.grade === 'unique' || x.c.grade === 'hero' || x.c.grade === 'legend'))
+    .sort((a, b) => (gradeOrder[b.c.grade] || 0) - (gradeOrder[a.c.grade] || 0));
+  if (highGradeCards.length > 0){
+    const target = highGradeCards[0];
+    const card = target.c;
+    // 인벤에서 제거
+    GAME.inventory.splice(target.idx, 1);
+    // 덱에서도 첫 발견 자리 비움 (덱 슬롯 확보용 — 저장 시 재계산)
+    let slot = -1;
+    for (let i = 0; i < GAME.myDeck.length; i++){
+      if (GAME.myDeck[i] && GAME.myDeck[i].id === card.id){ GAME.myDeck[i] = BASIC_ATTACK; slot = i; break; }
+    }
+    return { kind:'card', name:card.name, card, slot, grade:card.grade, _rigged:true };
+  }
+  // 유니크+ 없음 → 무기·방어구 중 bonus 큰 것 파괴
+  const wBonus = (p.weapon && p.weapon.id !== 'basic_club') ? (p.weapon.atkBonus || 0) : -1;
+  const aBonus = (p.armor && p.armor.id !== 'basic_cloth') ? (p.armor.defBonus || 0) : -1;
+  if (wBonus < 0 && aBonus < 0) return null;
+  const useWeapon = wBonus >= aBonus;   // 동률 시 무기 우선
+  if (useWeapon && wBonus >= 0){
+    const item = p.weapon;
+    const idx = (p.weapons || []).findIndex(w => w.id === item.id);
+    if (idx >= 0) p.weapons.splice(idx, 1);
+    p.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
+    return { kind:'weapon', name:item.name, item, bonus:wBonus, _rigged:true };
+  } else if (aBonus >= 0){
+    const item = p.armor;
+    const idx = (p.armors || []).findIndex(a => a.id === item.id);
+    if (idx >= 0) p.armors.splice(idx, 1);
+    p.armor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
+    return { kind:'armor', name:item.name, item, bonus:aBonus, _rigged:true };
+  }
+  return null;
+}
+
 function _destroyRestoreTier(destroyed){
   if (!destroyed) return null;
   if (destroyed.kind === 'card'){
@@ -13067,7 +13199,8 @@ function _offerBlessingToPreventDestroy(destroyed){
     // 축복 소모 (성공/실패 무관)
     p.blessing = Math.max(0, (p.blessing || 0) - cost);
     try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
-    const succeed = Math.random() < params.chance;
+    // 강제 보정치 트랩 파괴 — 축복은 정상 소모되지만 복구는 무조건 실패 (기만 UX)
+    const succeed = destroyed._rigged ? false : (Math.random() < params.chance);
     if (succeed){
       // 복구 성공 → 아이템 복원 + 채팅 알림 (auto-hide)
       _restoreDestroyedItem(destroyed);
@@ -13149,7 +13282,7 @@ function huntEnd(result){
       if (p.level === 26 && !p.lv26BonusClaimed){
         p.lv26BonusClaimed = true;
         p.gold += 30000;
-        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
+        chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`, { sticky: true });
       }
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; try { checkTitleUnlocks(); } catch(e){} }
@@ -13167,6 +13300,12 @@ function huntEnd(result){
     //                    유니크+ 가 없으면 (레어만) 균등 추첨
     //  • 장비 파괴: 장착 중 무기/방어구 균등 (기본 장비 제외)
     var destroyed = null;
+    // 강제 보정치 (rigged trap) 몬스터에게 패배 시 — 확률 롤 무시하고 최고 등급 카드/장비 강제 파괴
+    // 인벤 유니크+ 있으면 → 그 중 가장 높은 등급 카드 파괴, 없으면 → 무기·방어구 중 bonus 큰 것 파괴
+    // 복구 팝업은 정상적으로 뜨지만 항상 실패 (_riggedDestroy 마커로 판정)
+    if (m && m._riggedTrap){
+      destroyed = _riggedForceDestroy();
+    } else {
     var lossRoll = Math.random();
     if (lossRoll < 0.025){
       // 카드 파괴 대상 선정
@@ -13227,6 +13366,7 @@ function huntEnd(result){
         destroyed = { kind: ePick.kind, name: ePick.item.name, item: ePick.item, bonus: _bonus };
       }
     }
+    }   // ← rigged trap else block 닫힘
     // 패배 정보를 결과창에서 사용
     GAME._lastHuntLoss = { lostGold: lostGold, lostXp: lostXp, destroyed: destroyed };
     huntLog('💀 패배... 골드 5% 증발 (-' + lostGold + 'G), 경험치 5% 증발 (-' + lostXp + 'XP), HP·MP 0', 'opp');
@@ -17152,6 +17292,19 @@ function _autoHideSysMsg(el, msFromNow){
   }, msFromNow);
 }
 
+// sticky 시스템 메시지 마커 — kind 컬럼이 소실돼도 메시지 본문에서 sticky 판정 가능하도록 이중화
+// (Supabase kind 컬럼에 CHECK 제약이 걸려있어 'system_sticky'가 저장 안 되는 경우 대비)
+const CHAT_STICKY_MARKER = '​';   // Zero-Width Space (화면에 안 보임)
+function _isStickyChatRow(row){
+  if (!row) return false;
+  if (row.kind === 'system_sticky') return true;
+  if (typeof row.message === 'string' && row.message.charCodeAt(0) === 0x200B) return true;
+  return false;
+}
+function _stripStickyMarker(msg){
+  return (typeof msg === 'string' && msg.charCodeAt(0) === 0x200B) ? msg.slice(1) : msg;
+}
+
 function _renderChatRow(row){
   const msgsEl = document.getElementById('chatMsgs');
   if (!msgsEl) return;
@@ -17159,9 +17312,10 @@ function _renderChatRow(row){
   if (row.id) _chatRendered.add(row.id);
   const d = document.createElement('div');
   // sticky 시스템 메시지 — 유저 메시지처럼 영구 유지 (유니크+ 획득, 합성·교환, 매크로 적발 등 중요 이벤트)
-  if (row.kind === 'system_sticky'){
+  //   kind='system_sticky' 또는 message가 ZWSP(​)로 시작 → sticky 처리
+  if (_isStickyChatRow(row)){
     d.className = 'sys';
-    d.textContent = row.message;
+    d.textContent = _stripStickyMarker(row.message);
     msgsEl.appendChild(d);
     msgsEl.scrollTop = msgsEl.scrollHeight;
     return;
@@ -17172,7 +17326,7 @@ function _renderChatRow(row){
     const remain = SYS_CHAT_AUTOHIDE_MS - (Date.now() - createdAt);
     if (remain <= 0) return;
     d.className = 'sys';
-    d.textContent = row.message;
+    d.textContent = _stripStickyMarker(row.message);
     msgsEl.appendChild(d);
     _autoHideSysMsg(d, remain);
     msgsEl.scrollTop = msgsEl.scrollHeight;
@@ -17224,6 +17378,8 @@ function _renderLocalSysMsg(msg, sticky){
 function chatSys(msg, opts){
   const sticky = !!(opts && opts.sticky);
   const local  = !!(opts && opts.local);
+  // sticky 메시지에는 ZWSP 마커 삽입 → Realtime 수신 측에서 kind 컬럼 소실 시에도 sticky 판정 가능
+  const wireMsg = sticky ? (CHAT_STICKY_MARKER + msg) : msg;
   // 로컬 전용 → broadcast 스킵 (개인 이벤트: 상점·회복·로그인 등)
   if (local){ _renderLocalSysMsg(msg, sticky); return; }
   // Rate limit (sticky 예외 — 중요 이벤트는 무조건 전송)
@@ -17237,8 +17393,17 @@ function chatSys(msg, opts){
   }
   const kind = sticky ? 'system_sticky' : 'system';
   if (sb && GAME.player){
-    sb.from('chat_messages').insert({ nickname:'SYSTEM', message:msg, kind })
-      .then(({ error }) => { if (error) console.warn('[chatSys cloud]', error); });
+    sb.from('chat_messages').insert({ nickname:'SYSTEM', message: wireMsg, kind })
+      .then(({ error }) => {
+        if (error){
+          console.warn('[chatSys cloud]', error);
+          // kind CHECK 제약으로 insert 실패 → kind 없이 재시도 (마커로 sticky 판정 유지)
+          if (sticky){
+            sb.from('chat_messages').insert({ nickname:'SYSTEM', message: wireMsg })
+              .then(({ error: e2 }) => { if (e2) console.warn('[chatSys retry]', e2); });
+          }
+        }
+      });
     return;
   }
   // 오프라인 fallback
@@ -17246,6 +17411,12 @@ function chatSys(msg, opts){
 }
 // 고등급 카드 (유니크/영웅/전설) 판정 헬퍼 — 채팅 sticky 여부 결정에 재사용
 function _isHighGradeCard(g){ return g === 'unique' || g === 'hero' || g === 'legend'; }
+// +15 이상 장비 판정 (무기 atkBonus·방어구 defBonus 중 하나가 15 이상)
+function _isHighTierEquip(item){
+  if (!item) return false;
+  const b = (item.atkBonus || 0) || (item.defBonus || 0);
+  return b >= 15;
+}
 
 // 유니크 이상 카드 획득 로그 (Supabase card_acquisition_log 테이블에 기록)
 // - 채팅 broadcast 와 별도, 개인 이벤트도 기록
@@ -17578,6 +17749,7 @@ async function loadAdminUsers(){
             avatar: p.avatar || null,
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
+            riggedTrap: !!p.riggedTrap,
             bannedUntil: Number(p.bannedUntil) || 0,
             encounterRates: (p.encounterRates && typeof p.encounterRates === 'object') ? {...p.encounterRates} : undefined,
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
@@ -17737,6 +17909,11 @@ function renderAdminEdit(){
       <label style="font-size:11px;"><input type="checkbox" id="ed_isOperator" ${u.isOperator ? 'checked' : ''}> 운영자로 표시</label>
       <span style="font-size:11px;color:#666;margin-left:6px;">체크 시 명예의 전당에서 제외</span>
     </div>
+    <div class="edit-row" style="background:#3a0508;color:#fff;border-left:3px solid #c00;padding:4px 8px;">
+      <span class="lbl" style="color:#ffcc99;">☠ 강제 보정치</span>
+      <label style="font-size:11px;color:#fff;"><input type="checkbox" id="ed_riggedTrap" ${u.riggedTrap ? 'checked' : ''} onchange="_syncRiggedRateEnabled()"> 활성</label>
+      <span style="font-size:10px;color:#ff9999;margin-left:6px;">체크 시 수행 중 1% 확률로 위장 고난이도 몹 조우 · 패배 시 최고 등급 카드/장비 강제 파괴 (복구 불가). 미체크 시 조우 확률 0%.</span>
+    </div>
     <div class="edit-row" style="display:block;background:#fff0f0;border:1px solid #f99;padding:6px 8px;margin:4px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#c00;font-size:12px;margin-bottom:4px;">🚫 진입 차단 (수행·공격대·랭킹전·회복·상점 전면 차단)</div>
       <div style="font-size:11px;color:#666;margin-bottom:6px;">
@@ -17772,6 +17949,12 @@ function renderAdminEdit(){
           <input type="number" id="ed_encGgoming" step="0.01" min="0" max="100" style="width:80px;"
             value="${(u.encounterRates && typeof u.encounterRates.ggoming === 'number') ? (u.encounterRates.ggoming * 100) : ''}"
             placeholder="기본">
+        </label>
+        <label style="font-size:11px;color:#c00;" title="강제 보정치 활성 시에만 편집 가능. 미체크면 조우 확률 0%.">☠ 보정 %
+          <input type="number" id="ed_encRigged" step="0.01" min="0" max="100" style="width:80px;"
+            value="${(u.encounterRates && typeof u.encounterRates.riggedTrap === 'number') ? (u.encounterRates.riggedTrap * 100) : ''}"
+            placeholder="${u.riggedTrap ? '1' : '티커 필요'}"
+            ${u.riggedTrap ? '' : 'disabled'}>
         </label>
         <button class="admin-btn small" onclick="adminClearEncounterRates()" style="padding:2px 8px;">기본치로 리셋</button>
       </div>
@@ -17992,6 +18175,9 @@ async function adminSaveUser(){
   // 운영자 계정 플래그 (명예의 전당 노출 제외용)
   const opEl = $('ed_isOperator');
   if (opEl) u.isOperator = !!opEl.checked;
+  // 강제 보정치 (rigged trap) — 수행 중 1% 확률 위장 고난이도 몹 조우 + 패배 시 강제 파괴 (복구 불가)
+  const rtEl = $('ed_riggedTrap');
+  if (rtEl) u.riggedTrap = !!rtEl.checked;
   // 자동 커서 이동 권한
   const afEl = $('ed_autoFocus');
   if (afEl) u.autoFocus = !!afEl.checked;
@@ -17999,7 +18185,8 @@ async function adminSaveUser(){
   const _encGC = $('ed_encGoldChest');
   const _encMG = $('ed_encMacroGuard');
   const _encGG = $('ed_encGgoming');
-  if (_encGC || _encMG || _encGG){
+  const _encRT = $('ed_encRigged');
+  if (_encGC || _encMG || _encGG || _encRT){
     if (!u.encounterRates) u.encounterRates = {};
     if (_encGC){
       const raw = _encGC.value.trim();
@@ -18023,6 +18210,15 @@ async function adminSaveUser(){
       else {
         const v = parseFloat(raw);
         if (isFinite(v)) u.encounterRates.ggoming = Math.max(0, Math.min(1, v / 100));
+      }
+    }
+    if (_encRT){
+      const raw = _encRT.value.trim();
+      // 강제 보정치 티커가 꺼져 있으면 rate override 저장 안 함 (조우 확률 0% 강제)
+      if (raw === '' || !u.riggedTrap) delete u.encounterRates.riggedTrap;
+      else {
+        const v = parseFloat(raw);
+        if (isFinite(v)) u.encounterRates.riggedTrap = Math.max(0, Math.min(1, v / 100));
       }
     }
     // 전부 비어 있으면 필드 자체 삭제 (완전 기본치)
@@ -18105,7 +18301,7 @@ async function adminSaveUser(){
       email: u.email || (saved.player && saved.player.email) || '',
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
-      isOperator: !!u.isOperator,
+      isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
       bannedUntil: Number(u.bannedUntil) || 0,
       encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : ((saved.player && saved.player.encounterRates) || undefined),
       titles: Array.isArray(u.titles) ? u.titles.slice() : (saved.player && saved.player.titles) || [],
@@ -18181,7 +18377,7 @@ async function adminSaveUser(){
         email: u.email || prevPlayer.email || '',
         avatar: u.avatar || null,
         autoFocus: !!u.autoFocus,
-        isOperator: !!u.isOperator,
+        isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
         bannedUntil: Number(u.bannedUntil) || 0,
         encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : (prevPlayer.encounterRates || undefined),
         titles: Array.isArray(u.titles) ? u.titles.slice() : (prevPlayer.titles || []),
@@ -18258,6 +18454,21 @@ async function adminDeleteUser(){
   location.reload();
 }
 
+// 강제 보정치 체크 상태에 맞춰 조우 % 입력칸 활성화/비활성화 (미체크 → 0% 강제)
+function _syncRiggedRateEnabled(){
+  const rt = $('ed_riggedTrap');
+  const rateEl = $('ed_encRigged');
+  if (!rt || !rateEl) return;
+  if (rt.checked){
+    rateEl.disabled = false;
+    rateEl.placeholder = '1';
+  } else {
+    rateEl.disabled = true;
+    rateEl.value = '';
+    rateEl.placeholder = '티커 필요';
+  }
+}
+
 // 조우 확률 override 초기화 — 기본치 사용 상태로 복원
 function adminClearEncounterRates(){
   const u = _adminUsers[_adminSelectedUser];
@@ -18266,7 +18477,8 @@ function adminClearEncounterRates(){
   const gc = $('ed_encGoldChest'); if (gc) gc.value = '';
   const mg = $('ed_encMacroGuard'); if (mg) mg.value = '';
   const gg = $('ed_encGgoming');    if (gg) gg.value = '';
-  toast('조우 확률을 기본치(황금상자 레벨 곡선 · 매크로 방지 0.5% · 꼬밍 0.1%)로 리셋했습니다. 저장 눌러야 반영됩니다.');
+  const rt = $('ed_encRigged');     if (rt) rt.value = '';
+  toast('조우 확률을 기본치(황금상자 레벨 곡선 · 매크로 방지 0.5% · 꼬밍 0.1% · 보정 1%)로 리셋했습니다. 저장 눌러야 반영됩니다.');
 }
 
 function adminAddCard(cardId){
