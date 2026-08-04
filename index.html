@@ -3381,6 +3381,15 @@ async function cloudNicknameTaken(nick){
     return !!data;
   } catch(e){ console.warn('[nicknameExists]', e); return false; }
 }
+// 이메일 중복 체크 (SECURITY DEFINER RPC · RLS 우회 · 대소문자 무시)
+async function cloudEmailTaken(email){
+  if (!sb || !email) return false;
+  try {
+    const { data, error } = await sb.rpc('email_exists', { check_email: email });
+    if (error){ console.warn('[emailExists]', error); return false; }
+    return !!data;
+  } catch(e){ console.warn('[emailExists]', e); return false; }
+}
 async function cloudSignOut(){
   if (sb) { try { await sb.auth.signOut(); } catch(e){} }
 }
@@ -16565,6 +16574,7 @@ async function autoLogoutOnIdle(){
   await _teardownChat();
   await _teardownRanking();
   await _teardownRaid();
+  try { await _teardownSessionChannel(); } catch(e){}
   _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
@@ -16593,6 +16603,7 @@ async function doLogout(){
   try { await cloudSaveNow(); } catch(e){}
   await _teardownRanking();
   await _teardownRaid();
+  try { await _teardownSessionChannel(); } catch(e){}
   _myUserId = null;
   await cloudSignOut();
   GAME.player = null;
@@ -16835,10 +16846,16 @@ async function doRegisterSubmit(){
   const finalName = name.slice(0,6);
   const finalEmail = _regVerifiedEmail;
 
-  // 클라우드: 닉네임 중복 + Auth 가입
+  // 클라우드: 닉네임 중복 + 이메일 중복 + Auth 가입
   if (sb){
     const nickTaken = await cloudNicknameTaken(finalName);
     if (nickTaken){ alert('해당 아이디는 이미 사용 중입니다. 다른 아이디로 가입해 주세요.'); return; }
+    // 이메일 중복 체크 — 같은 이메일로 여러 계정 가입 차단
+    const emailTaken = await cloudEmailTaken(finalEmail);
+    if (emailTaken){
+      alert('해당 이메일로 이미 가입된 계정이 있습니다.\n다른 이메일로 가입해 주세요.');
+      return;
+    }
     const authEmail = nickToEmail(finalName);
     const { data: signUpData, error } = await sb.auth.signUp({
       email: authEmail,
@@ -16943,6 +16960,8 @@ function enterMain(){
   try { if (typeof updateOperatorFloatVisibility === 'function') updateOperatorFloatVisibility(); } catch(e){}
   // 운영자 실시간 차단 브로드캐스트 채널 구독 (모든 유저)
   try { if (typeof _setupOpBanChannel === 'function') _setupOpBanChannel(); } catch(e){}
+  // 단일 세션 강제 — 다른 기기·브라우저에서 로그인 시 이전 세션 자동 종료
+  try { _setupSingleSessionEnforcement(); } catch(e){ console.warn('[singleSession]', e); }
   // 비활성 자동 로그아웃 타이머 시작
   resetIdleTimer();
   checkRankingReset();  // 랭킹 일일 리셋 체크 (async, fire-and-forget)
@@ -17993,10 +18012,20 @@ async function adminSaveUser(){
         if (row.nickname !== newName) update.nickname = newName;
         const { error: upErr } = await sb.from('saves').update(update).eq('user_id', ud.user.id);
         if (upErr){ console.warn('[admin cloud update]', upErr); return; }
-        // 비밀번호 변경 시 Auth 비번도 갱신
+        // 비밀번호 변경 시 대상 유저의 auth.users 비밀번호도 갱신 (SECURITY DEFINER RPC)
+        // sb.auth.updateUser 는 현재 로그인 유저(=운영자) 본인 비번만 바꾸므로 사용 불가
         const pwInput = document.getElementById('ed_pw');
         if (pwInput && pwInput.value && pwInput.value.trim()){
-          try { await sb.auth.updateUser({ password: pwInput.value.trim() }); } catch(e){ console.warn('[admin pw update]', e); }
+          try {
+            const { error: pwErr } = await sb.rpc('admin_set_user_password', {
+              p_nickname: newName,
+              p_new_password: pwInput.value.trim(),
+            });
+            if (pwErr){
+              console.warn('[admin pw RPC]', pwErr);
+              alert('비밀번호 변경 실패 (auth): ' + (pwErr.message || pwErr));
+            }
+          } catch(e){ console.warn('[admin pw update]', e); }
         }
         console.log('[admin] cloud synced for', newName);
       } catch(e){ console.warn('[admin cloud sync]', e); }
@@ -18047,7 +18076,27 @@ async function adminSaveUser(){
       alert('클라우드 저장 실패: ' + (error.message || error));
       return;
     }
-    alert(`✔ 클라우드 계정(${newName}) 저장 완료`);
+    // 비밀번호 변경 시 auth.users 도 갱신 (SECURITY DEFINER RPC)
+    const pwInputC = document.getElementById('ed_pw');
+    if (pwInputC && pwInputC.value && pwInputC.value.trim()){
+      try {
+        const { error: pwErr } = await sb.rpc('admin_set_user_password', {
+          p_nickname: newName,
+          p_new_password: pwInputC.value.trim(),
+        });
+        if (pwErr){
+          console.warn('[admin cloud pw RPC]', pwErr);
+          alert(`✔ 저장 완료 · ⚠ 비밀번호 변경 실패: ${pwErr.message || pwErr}`);
+        } else {
+          alert(`✔ 클라우드 계정(${newName}) 저장 · 비밀번호 변경 완료`);
+        }
+      } catch(e){
+        console.warn('[admin cloud pw update]', e);
+        alert(`✔ 저장 완료 · ⚠ 비밀번호 변경 예외: ${e.message||e}`);
+      }
+    } else {
+      alert(`✔ 클라우드 계정(${newName}) 저장 완료`);
+    }
   } else {
     alert('✔ NPC 데이터 임시 저장 (메모리). 서버 연동 후 영구 반영됩니다.');
   }
@@ -19098,6 +19147,55 @@ function closeOperatorPanel(){
 
 // ─── 운영자: 유저 실시간 차단 (Supabase Realtime broadcast + 클라우드 saves 업데이트 시도) ───
 let _opBanChannel = null;
+// ─── 단일 세션 강제 (동시 접속 차단) ───
+// 로그인 시 랜덤 sessionId 생성 → 유저별 Realtime 채널로 broadcast
+// 기존 세션이 이 broadcast 를 받으면 sessionId 가 다르므로 자동 종료 (sign out + reload)
+let _sessionChannel = null;
+let _mySessionId = null;
+async function _setupSingleSessionEnforcement(){
+  if (!sb || !GAME.player) return;
+  // 운영자 계정은 단일 세션 강제에서 예외 (여러 기기·브라우저 동시 사용 허용)
+  if (GAME.player.isOperator) return;
+  try {
+    // 기존 채널 정리
+    if (_sessionChannel){ try { await sb.removeChannel(_sessionChannel); } catch(e){} _sessionChannel = null; }
+    const { data: ud } = await sb.auth.getUser();
+    if (!ud || !ud.user) return;
+    const userId = ud.user.id;
+    // 새 sessionId 생성 (random)
+    _mySessionId = 'sess_' + Date.now() + '_' + Math.random().toString(36).slice(2, 10);
+    const ch = sb.channel('session-' + userId, { config: { broadcast: { self: false } } });
+    ch.on('broadcast', { event: 'new_session' }, ({ payload }) => {
+      // 다른 기기·브라우저에서 새 로그인 감지
+      if (!payload || !payload.sessionId) return;
+      if (payload.sessionId === _mySessionId) return; // 내 broadcast (self:false 로 안 오지만 이중 안전)
+      // 이 세션은 오래된 것 → 즉시 종료
+      try { alert('다른 곳에서 로그인이 감지되어 이 세션이 종료됩니다.\n(한 아이디는 한 곳에서만 로그인 가능)'); } catch(e){}
+      try { sb.auth.signOut(); } catch(e){}
+      try { if (_sessionChannel) sb.removeChannel(_sessionChannel); } catch(e){}
+      _sessionChannel = null;
+      _mySessionId = null;
+      setTimeout(() => { try { location.reload(); } catch(e){} }, 400);
+    });
+    await ch.subscribe(async (status) => {
+      if (status !== 'SUBSCRIBED') return;
+      // 구독 성공 후 내 sessionId 브로드캐스트 → 기존 세션들 종료 트리거
+      try {
+        await ch.send({ type: 'broadcast', event: 'new_session', payload: { sessionId: _mySessionId, at: Date.now() } });
+      } catch(e){ console.warn('[singleSession broadcast]', e); }
+    });
+    _sessionChannel = ch;
+  } catch(e){ console.warn('[singleSession setup]', e); }
+}
+// 로그아웃 시 세션 채널 정리
+async function _teardownSessionChannel(){
+  if (sb && _sessionChannel){
+    try { await sb.removeChannel(_sessionChannel); } catch(e){}
+    _sessionChannel = null;
+    _mySessionId = null;
+  }
+}
+
 function _setupOpBanChannel(){
   if (!sb || _opBanChannel) return;
   try {
