@@ -6440,6 +6440,8 @@ const TITLE_POOL = [
   { id:'title_daily_30',       name:'부지런한 도전자',   tier:'레어', color:'#3366cc', desc:'일일퀘스트 완주 30일',               cond:{type:'daily_full_days',          target:30} },
   { id:'title_rank_10',        name:'랭커',              tier:'레어', color:'#3366cc', desc:'랭킹 10위 이내 진입',                cond:{type:'rank_reached_le',          target:10} },
   { id:'title_bulhok',         name:'불혹',              tier:'레어', color:'#3366cc', desc:'유니크 이상 카드 획득 없이 Lv 40 달성', cond:{type:'level_no_unique_plus_history', target:40} },
+  { id:'title_knight_set',     name:'기사단',            tier:'레어', color:'#3366cc', desc:'기사단의 의전검 및 기사단의 갑옷 착용', cond:{type:'equipped_full_set', weaponId:'knight_sword', armorId:'knight_armor', target:1} },
+  { id:'title_gladius_set',    name:'성스러운 투사',     tier:'레어', color:'#3366cc', desc:'글라디우스 및 로리카 세그멘타타 착용',    cond:{type:'equipped_full_set', weaponId:'gladius', armorId:'lorica_segment', target:1} },
   // ── 유니크 (보라색) — Lv 26 게이트 ──
   { id:'title_lv40',           name:'별자리 여행자',     tier:'유니크', color:'#a335ee', desc:'Lv 40 도달',                     cond:{type:'level',                    target:40} },
   { id:'title_lv60',           name:'정복자',            tier:'유니크', color:'#a335ee', desc:'Lv 50 도달',                     cond:{type:'level',                    target:50} },
@@ -6458,18 +6460,22 @@ const TITLE_POOL = [
   { id:'title_trader',         name:'트레이더',          tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 1회 성공 (결과가 유니크 이상)', cond:{type:'unique_plus_exchange_success', target:1} },
   { id:'title_beast_heart',    name:'야수의 심장',       tier:'유니크', color:'#a335ee', desc:'유니크 등급 이상 카드 교환을 10회 도전',                    cond:{type:'unique_plus_exchange_attempts', target:10} },
   { id:'title_beast_brain',    name:'야수의 뇌',         tier:'유니크', color:'#a335ee', desc:'영웅 등급 카드 교환을 1회 도전',                            cond:{type:'hero_exchange_attempts',   target:1} },
-  // ── 영웅 (#ff3366) — Lv 26 게이트 ──
-  { id:'title_hunt_100000',    name:'전장의 지배자',     tier:'영웅', color:'#ff3366', desc:'수행 100,000회 승리 (누적)',        cond:{type:'hunt_wins',                target:100000} },
-  { id:'title_astraia',        name:'천신의 계승자',     tier:'영웅', color:'#ff3366', desc:'천신의 아스트레이아 획득',           cond:{type:'item_owned', itemId:'divine_elaha',  target:1} },
-  { id:'title_fluted',         name:'천계의 수호자',     tier:'영웅', color:'#ff3366', desc:'천신의 플루티드 아머 획득',          cond:{type:'item_owned', itemId:'divine_fluted', target:1} },
-  { id:'title_rank_top1',      name:'정점을 밟은 자',    tier:'영웅', color:'#ff3366', desc:'전체 랭킹 1위 (레벨·경험치 기준)',   cond:{type:'overall_rank_le',         target:1} },
-  { id:'title_card_hero_1',    name:'영웅 소환자',       tier:'영웅', color:'#ff3366', desc:'영웅 카드 1장 이상 소지',            cond:{type:'hero_cards_owned',         target:1} },
-  { id:'title_card_all_grades',name:'도감 마스터',       tier:'영웅', color:'#ff3366', desc:'일반/레어/유니크/영웅 카드 최소 1장씩 소지', cond:{type:'all_grades_owned', target:4} },
-  { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'영웅', color:'#ff3366', desc:'여신의 축복 500개 누적 획득',        cond:{type:'total_blessing_earned',    target:500} },
-  { id:'title_gold_100m_spent',name:'보이지 않는 손',    tier:'영웅', color:'#ff3366', desc:'누적 골드 100,000,000G 사용',       cond:{type:'total_gold_spent',         target:100000000} },
-  { id:'title_bless_1000_spent',name:'여신의 사랑',      tier:'영웅', color:'#ff3366', desc:'여신의 축복 누적 1,000개 사용',      cond:{type:'total_blessing_spent',     target:1000} },
-  { id:'title_buys_this',      name:'이걸 사네',         tier:'영웅', color:'#ff3366', desc:'영웅 등급 카드 교환을 1회 성공 (영웅 유지)', cond:{type:'hero_exchange_success', target:1} },
+  { id:'title_mithril_set',    name:'미스릴',            tier:'유니크', color:'#a335ee', desc:'미스릴 아스칼론 및 미스릴 풀 플레이트 착용', cond:{type:'equipped_full_set', weaponId:'mithril_ascalon', armorId:'mithril_plate', target:1} },
+  // ── 영웅 (#FFBB2A) — Lv 26 게이트 ──
+  { id:'title_hunt_100000',    name:'전장의 지배자',     tier:'영웅', color:'#FFBB2A', desc:'수행 100,000회 승리 (누적)',        cond:{type:'hunt_wins',                target:100000} },
+  { id:'title_astraia',        name:'천신의 계승자',     tier:'영웅', color:'#FFBB2A', desc:'천신의 아스트레이아 획득',           cond:{type:'item_owned', itemId:'divine_elaha',  target:1} },
+  { id:'title_fluted',         name:'천계의 수호자',     tier:'영웅', color:'#FFBB2A', desc:'천신의 플루티드 아머 획득',          cond:{type:'item_owned', itemId:'divine_fluted', target:1} },
+  { id:'title_rank_top1',      name:'정점을 밟은 자',    tier:'영웅', color:'#FFBB2A', desc:'전체 랭킹 1위 (레벨·경험치 기준)',   cond:{type:'overall_rank_le',         target:1} },
+  { id:'title_card_hero_1',    name:'영웅 소환자',       tier:'영웅', color:'#FFBB2A', desc:'영웅 카드 1장 이상 소지',            cond:{type:'hero_cards_owned',         target:1} },
+  { id:'title_card_all_grades',name:'도감 마스터',       tier:'영웅', color:'#FFBB2A', desc:'일반/레어/유니크/영웅 카드 최소 1장씩 소지', cond:{type:'all_grades_owned', target:4} },
+  { id:'title_bless_500',      name:'신에게 사랑받는자', tier:'영웅', color:'#FFBB2A', desc:'여신의 축복 500개 누적 획득',        cond:{type:'total_blessing_earned',    target:500} },
+  { id:'title_gold_100m_spent',name:'보이지 않는 손',    tier:'영웅', color:'#FFBB2A', desc:'누적 골드 100,000,000G 사용',       cond:{type:'total_gold_spent',         target:100000000} },
+  { id:'title_bless_1000_spent',name:'여신의 사랑',      tier:'영웅', color:'#FFBB2A', desc:'여신의 축복 누적 1,000개 사용',      cond:{type:'total_blessing_spent',     target:1000} },
+  { id:'title_buys_this',      name:'이걸 사네',         tier:'영웅', color:'#FFBB2A', desc:'영웅 등급 카드 교환을 1회 성공 (영웅 유지)', cond:{type:'hero_exchange_success', target:1} },
+  { id:'title_saint_set',      name:'성왕의 집정관',     tier:'영웅', color:'#FFBB2A', desc:'성왕의 엘라하 및 성왕의 큐이라스 착용',       cond:{type:'equipped_full_set', weaponId:'saint_elaha',       armorId:'saint_cuirass',      target:1} },
+  { id:'title_lord_set',       name:'명왕의 군단장',     tier:'영웅', color:'#FFBB2A', desc:'명왕의 레퀴엠 및 명왕의 크루오르 착용',       cond:{type:'equipped_full_set', weaponId:'lord_requiem',      armorId:'lord_cruor',         target:1} },
   // ── 전설 (황금색) — Lv 26 게이트 ──
+  { id:'title_ancient_set',    name:'잊혀진 군주',       tier:'전설', color:'#ffd700', desc:'고대 군주의 엑스칼리버 및 고대 군주의 브리간딘 착용', cond:{type:'equipped_full_set', weaponId:'ancient_excalibur', armorId:'ancient_brigandine', target:1} },
   { id:'title_divine_set',     name:'천계대제',          tier:'전설', color:'#ffd700', desc:'천신의 아스트레이아 및 천신의 플루티드 아머 장착', cond:{type:'divine_full_set', target:1} },
   { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설', color:'#ffd700', desc:'영웅 카드 5장 이상 소지',            cond:{type:'hero_cards_owned',         target:5} },
   { id:'title_legend_first',   name:'전설의 시작',       tier:'전설', color:'#ffd700', desc:'전설 카드 1장 이상 소지',            cond:{type:'legend_cards_owned',       target:1} },
@@ -6478,7 +6484,7 @@ const TITLE_POOL = [
   // ── 후원자 칭호 4종 (관리자 지급 전용, 미보유자 프로필 목록에서 숨김) ──
   { id:'title_sponsor_visionary', name:'Visionary', tier:'신화',   color:'#a00010', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_partner',   name:'Partner',   tier:'전설',   color:'#ffd700', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
-  { id:'title_sponsor_patron',    name:'Patron',    tier:'영웅',   color:'#ff3366', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_sponsor_patron',    name:'Patron',    tier:'영웅',   color:'#FFBB2A', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_sponsor',   name:'Sponsor',   tier:'유니크', color:'#a335ee', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
 ];
 // Lv 26 게이트 — 유니크·영웅·전설·신화 tier 는 조건을 이전에 충족했더라도 Lv 26 도달 시점에 여전히 조건이 성립해야 지급됨
@@ -6592,6 +6598,12 @@ function _getTitleCurrentValue(p, cond, useCurrent){
       // 아스트레이아 + 플루티드 아머 둘 다 장착 중일 때만 충족
       const wpn = p.weapon && p.weapon.id === 'divine_elaha';
       const arm = p.armor  && p.armor.id  === 'divine_fluted';
+      return (wpn && arm) ? cond.target : 0;
+    }
+    case 'equipped_full_set': {
+      // cond.weaponId + cond.armorId 둘 다 장착 중일 때만 충족 (범용 세트 칭호용)
+      const wpn = p.weapon && p.weapon.id === cond.weaponId;
+      const arm = p.armor  && p.armor.id  === cond.armorId;
       return (wpn && arm) ? cond.target : 0;
     }
     case 'admin_only': return 0;   // 조건 자동 충족 없음 — 관리자 지급 전용
@@ -10372,7 +10384,15 @@ function generateMonster(playerLv, tier){
   //   • riggedTrap 티커 미설정 → 조우 확률 0% (getRate가 override만 반환하므로 미리 flag로 gating)
   //   • 설정 시 유저별 override rate 사용 (기본 1%)
   //   • 덱 슬롯(10/15)은 tier에 맞춰 생성 → 유저 덱 표시가 15로 정상 유지
+  //   • 조우 성공 시 티커 자동 해제 + rate override 제거 → 관리자가 다시 켜기 전까진 재조우 없음
   if (GAME.player && GAME.player.riggedTrap && Math.random() < getRiggedTrapEncounterRate()){
+    GAME.player.riggedTrap = false;
+    if (GAME.player.encounterRates){
+      delete GAME.player.encounterRates.riggedTrap;
+      if (Object.keys(GAME.player.encounterRates).length === 0) delete GAME.player.encounterRates;
+    }
+    try { saveGame(); } catch(e){}
+    try { cloudSaveNow().catch(err => console.warn('[riggedTrap disarm cloudSave]', err)); } catch(e){}
     return makeRiggedTrapMonster(playerLv, tier);
   }
   // 이벤트 몬스터 '꼬밍' — 0.1% · 전 레벨. 최우선 조우 판정.
