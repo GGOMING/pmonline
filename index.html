@@ -2177,6 +2177,20 @@
             <div style="text-align:center;color:#888;padding:40px;font-size:12px;">왼쪽에서 랭커를 선택하세요.</div>
           </div>
         </div>
+
+        <!-- ─── Visionary Circle (후원자 순위) — 크림슨 세련 톤 ─── -->
+        <div style="margin-top:14px;background:linear-gradient(135deg,#4a0e14 0%,#2a0508 55%,#1a0304 100%);border:2px solid #c9a26b;border-radius:8px;padding:16px;box-shadow:0 4px 18px rgba(122,24,30,0.5), inset 0 0 24px rgba(0,0,0,0.35);">
+          <div style="font-size:19px;font-weight:bold;color:#f5deb3;text-align:center;letter-spacing:2px;text-shadow:0 1px 3px rgba(0,0,0,0.6), 0 0 12px rgba(201,162,107,0.4);margin-bottom:6px;font-family:'Georgia','굴림',serif;">
+            ✦ Visionary Circle ✦
+          </div>
+          <div style="font-size:11px;color:#e6c8a8;text-align:center;margin-bottom:12px;line-height:1.6;font-style:italic;">
+            RE: 여신전쟁 설립과 운영에 후원해주신 유저분들을 위한 전당입니다.
+          </div>
+          <div id="visionaryCircleList" style="background:rgba(20,4,6,0.55);border:1px solid rgba(201,162,107,0.4);border-radius:6px;padding:10px;min-height:60px;">
+            <div style="text-align:center;color:#c9a26b;padding:16px;font-size:12px;">불러오는 중...</div>
+          </div>
+        </div>
+
         <div class="shop-actions">
           <button class="btn-back" onclick="showContent('main')">메인으로<br>돌아가기</button>
         </div>
@@ -5510,7 +5524,38 @@ async function openHonor(){
   $('honorDetail').innerHTML = '<div style="text-align:center;color:#888;padding:40px;font-size:12px;">왼쪽에서 랭커를 선택하세요.</div>';
   _honorRankers = await _loadHonorRankers();
   renderHonorList();
+  renderVisionaryCircle();   // 후원자 순위 (금액 비공개)
   try { advanceDailyQuest('dq_honor_visit', 1); } catch(e){}
+}
+
+// ─── Visionary Circle (후원자 순위 · 금액 비공개) ───
+// _honorRankers 재사용 (이미 saves 전체 조회). sponsorAmount > 0 만 필터, 금액 내림차순, 순위만 표시
+function renderVisionaryCircle(){
+  const el = $('visionaryCircleList');
+  if (!el) return;
+  const sponsors = (_honorRankers || [])
+    .filter(r => (r.sponsorAmount|0) > 0)
+    .sort((a, b) => (b.sponsorAmount|0) - (a.sponsorAmount|0));
+  if (!sponsors.length){
+    el.innerHTML = `<div style="text-align:center;color:#c9a26b;padding:16px;font-size:12px;">등록된 후원자가 아직 없습니다.</div>`;
+    return;
+  }
+  const myName = (GAME.player && GAME.player.name) || '';
+  const medals = ['🥇','🥈','🥉'];
+  const html = sponsors.map((r, i) => {
+    const rank = i + 1;
+    const medal = medals[i] || `${rank}.`;
+    const isMe = myName && r.name === myName;
+    const bg = isMe ? 'background:linear-gradient(90deg,rgba(220,20,60,0.25),rgba(201,162,107,0.12));border-left:3px solid #c9a26b;' : '';
+    const meTag = isMe ? '<span style="margin-left:6px;padding:1px 6px;background:#c9a26b;color:#2a0508;font-size:10px;font-weight:bold;border-radius:3px;">★ 본인</span>' : '';
+    // 후원액 자체는 숨김 — 순위만 표기
+    return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;border-bottom:1px solid rgba(201,162,107,0.2);${bg}">
+      <span style="width:36px;text-align:center;color:#e6c8a8;font-weight:bold;font-size:${i < 3 ? '22px' : '13px'};text-shadow:0 1px 2px rgba(0,0,0,0.5);">${medal}</span>
+      <span style="flex:1;color:#f5deb3;font-size:13px;font-weight:bold;letter-spacing:0.5px;">${(r.name||'?')}${meTag}</span>
+      <span style="color:#c9a26b;font-size:11px;opacity:0.9;">Lv ${r.level}</span>
+    </div>`;
+  }).join('');
+  el.innerHTML = html;
 }
 async function _loadHonorRankers(){
   // 클라우드 우선: saves 전체에서 level+xp 상위 추출. 운영자 권한이 없으면 saves 전체 select가 막힐 수 있음
@@ -5539,6 +5584,7 @@ async function _loadHonorRankers(){
             blessing: p.blessing || 0,
             comment: p.comment || '',
             equippedTitle: p.equippedTitle || null,
+            sponsorAmount: p.sponsorAmount || 0,
             myDeck: (d.myDeck || []).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
           };
         });
@@ -5567,6 +5613,7 @@ async function _loadHonorRankers(){
         avatar: p.avatar||null, blessing: p.blessing||0,
         comment: p.comment||'',
         equippedTitle: p.equippedTitle||null,
+        sponsorAmount: p.sponsorAmount || 0,
         myDeck: (d.myDeck||[]).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
       });
     } catch(e){}
@@ -6352,7 +6399,7 @@ const TITLE_POOL = [
   { id:'title_card_hero_5',    name:'영웅 대군',         tier:'전설', color:'#ffd700', desc:'영웅 카드 5장 이상 소지',            cond:{type:'hero_cards_owned',         target:5} },
   { id:'title_legend_first',   name:'전설의 시작',       tier:'전설', color:'#ffd700', desc:'전설 카드 1장 이상 소지',            cond:{type:'legend_cards_owned',       target:1} },
   // ── 신화 (붉은색) — 관리자 지급 전용 ──
-  { id:'title_mythic_beta',    name:'신화의 창조자',     tier:'신화', color:'#a00010', desc:'RE: 여신전쟁 베타 테스터 한정 (관리자 지급)', cond:{type:'admin_only', target:1} },
+  { id:'title_mythic_beta',    name:'신화의 창조자',     tier:'신화', color:'#a00010', desc:'RE: 여신전쟁 베타 테스터 한정 (관리자 지급) (최초 수령 시 스탯 P +1 지급)', cond:{type:'admin_only', target:1} },
   // ── 후원자 칭호 4종 (관리자 지급 전용, 미보유자 프로필 목록에서 숨김) ──
   { id:'title_sponsor_visionary', name:'Visionary', tier:'신화',   color:'#a00010', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_partner',   name:'Partner',   tier:'전설',   color:'#ffd700', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
@@ -17450,6 +17497,7 @@ async function loadAdminUsers(){
             str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
             gold: p.gold || 0,
             blessing: p.blessing || 0,
+            sponsorAmount: p.sponsorAmount || 0,
             weapon: p.weapon || { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
             armor:  p.armor  || { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
             weapons: p.weapons || [],
@@ -17609,6 +17657,7 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">스탯 P</span> <input type="number" id="ed_xpUp" value="${u.xpUp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">골드</span> <input type="number" id="ed_gold" value="${u.gold||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">✨ 축복</span> <input type="number" id="ed_blessing" value="${u.blessing||0}" min="0"></div>
+    <div class="edit-row" style="background:#fff3cd;border-left:3px solid #ffd700;padding:2px 4px;"><span class="lbl">💎 후원액</span> <input type="number" id="ed_sponsorAmount" value="${u.sponsorAmount||0}" min="0" placeholder="원 단위 수기 입력"> <span style="font-size:10px;color:#666;margin-left:6px;">Visionary Circle 순위 반영 (금액 비공개)</span></div>
     <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1"></div>
     <div class="edit-row"><span class="lbl">INT</span> <input type="number" id="ed_int" value="${u.int||5}" min="1"></div>
@@ -17830,6 +17879,7 @@ async function adminSaveUser(){
   u.xpUp = parseInt($('ed_xpUp').value) || 0;
   u.gold = parseInt($('ed_gold').value) || 0;
   u.blessing = parseInt($('ed_blessing').value) || 0;
+  { const _sp = $('ed_sponsorAmount'); u.sponsorAmount = _sp ? (parseInt(_sp.value) || 0) : (u.sponsorAmount || 0); }
   u.str = parseInt($('ed_str').value) || 5;
   u.dex = parseInt($('ed_dex').value) || 5;
   u.int = parseInt($('ed_int').value) || 5;
@@ -17976,7 +18026,7 @@ async function adminSaveUser(){
       name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
       hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
       str:u.str, dex:u.dex, int:u.int, con:u.con,
-      gold:u.gold, blessing: u.blessing || 0,
+      gold:u.gold, blessing: u.blessing || 0, sponsorAmount: u.sponsorAmount || 0,
       weapon:u.weapon, armor:u.armor,
       weapons: u.weapons || [],
       armors: u.armors || [],
@@ -18052,7 +18102,7 @@ async function adminSaveUser(){
         name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
         hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
         str:u.str, dex:u.dex, int:u.int, con:u.con,
-        gold:u.gold, blessing: u.blessing || 0,
+        gold:u.gold, blessing: u.blessing || 0, sponsorAmount: u.sponsorAmount || 0,
         weapon:u.weapon, armor:u.armor,
         weapons: u.weapons || [],
         armors: u.armors || [],
