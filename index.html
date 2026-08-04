@@ -3616,6 +3616,42 @@ function _resetPlayerBattleState(){
   return hadBonus || prevHpMax !== p.hpMax || prevMpMax !== p.mpMax || prevHp !== p.hp || prevMp !== p.mp;
 }
 
+// ─── 화면 전환 딜레이 (수행/공격대 입장·결과·회복샘물·메인 복귀) ───
+// 유저가 너무 빠르게 사냥하는 것을 완화 — 지정된 진입/복귀 지점에 0.5초 오버레이 지연 삽입.
+//   • 일반 UI 네비게이션은 즉시 반응 (showContent 자체엔 훅 안 함)
+//   • 회복의 샘물만 0.2초 (호출부에서 delay 오버라이드)
+//   • 진행 중엔 중복 클릭 억제 (_navBusy 락)
+const NAV_DELAY_MS = 500;
+let _navBusy = false;
+function _showNavOverlay(text){
+  let ov = document.getElementById('_transOv');
+  if (!ov){
+    ov = document.createElement('div');
+    ov.id = '_transOv';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,4,6,0.55);z-index:99999;display:none;justify-content:center;align-items:center;color:#f5deb3;font-size:14px;letter-spacing:2px;font-family:Georgia,serif;pointer-events:auto;';
+    ov.innerHTML = '<div id="_transOvTxt" style="padding:16px 28px;background:rgba(0,0,0,0.35);border:1px solid rgba(201,162,107,0.5);border-radius:6px;">⏳ 잠시만 기다려주세요...</div>';
+    document.body.appendChild(ov);
+  }
+  const t = document.getElementById('_transOvTxt');
+  if (t && text) t.textContent = text;
+  ov.style.display = 'flex';
+}
+function _hideNavOverlay(){
+  const ov = document.getElementById('_transOv');
+  if (ov) ov.style.display = 'none';
+}
+// 함수를 지연 실행 래퍼로 감싸는 헬퍼. once=true 이면 마커로 재진입 시 즉시 실행.
+function _slowNav(fn, opts){
+  if (_navBusy) return;
+  _navBusy = true;
+  _showNavOverlay(opts && opts.text);
+  setTimeout(() => {
+    _hideNavOverlay();
+    _navBusy = false;
+    try { fn(); } catch(e){ console.warn('[_slowNav]', e); }
+  }, (opts && opts.delay) || NAV_DELAY_MS);
+}
+
 // ─── 콘텐츠 영역 전환 (메인 ↔ 회복의샘물 ↔ ...) ───
 function showContent(name){
   document.querySelectorAll('.content-pane').forEach(p=>p.hidden = true);
@@ -3647,6 +3683,14 @@ function calcHealCost(){
   return 0;
 }
 function openHeal(){
+  // 화면 전환 지연 — 회복의 샘물은 짧게 0.2초
+  if (!openHeal._slowed){
+    _slowNav(() => {
+      openHeal._slowed = true;
+      try { openHeal(); } finally { openHeal._slowed = false; }
+    }, { text: '💧 회복의 샘물로 이동 중...', delay: 200 });
+    return;
+  }
   showContent('heal');
   updateHealUI();
 }
@@ -7270,6 +7314,14 @@ async function openRaid(raidKey){
     openHeal();
     return;
   }
+  // 화면 전환 지연 — 사냥 페이스 조절 0.7초 오버레이
+  if (!openRaid._slowed){
+    _slowNav(() => {
+      openRaid._slowed = true;
+      openRaid(raidKey).finally(() => { openRaid._slowed = false; });
+    }, { text: '⚔ 공격대 준비 중...' });
+    return;
+  }
   // 보스 처치 쿨다운 — 마지막 보상 획득 후 5분간 동일 공격대 진입 차단 (raidKey 별 독립)
   const remainMs = getRaidBossCooldownRemain(raidKey);
   if (remainMs > 0){
@@ -8026,6 +8078,14 @@ function raidFlee(){
 }
 
 function raidFleeToMain(){
+  // 화면 전환 지연 — 사냥 페이스 조절 0.7초 오버레이 (첫 진입만)
+  if (!raidFleeToMain._slowed){
+    _slowNav(() => {
+      raidFleeToMain._slowed = true;
+      try { raidFleeToMain(); } finally { raidFleeToMain._slowed = false; }
+    }, { text: '🏠 메인으로 이동 중...' });
+    return;
+  }
   // 결과 화면 없이 즉시 메인으로 복귀 (단, 보스 데미지는 반영)
   const c = GAME.raidCombat;
   // 매크로 방지 몹 회피 → +1,000G 보상
@@ -8461,9 +8521,12 @@ async function raidEnd(result){
   cloudSaveNow().catch(e => console.warn('[raidEnd cloudSave]', e));
   $('raid_result_title').textContent = `공격대 결과 — ${c.mode==='mob'?'몬스터':'보스'}`;
   $('raid_result_body').innerHTML = bodyHtml;
-  $('raid-battle').hidden = true;
-  $('raid-result').hidden = false;
-  _autoFocusBtn('raidAgainBtn');
+  // 결과창 표시 지연 — 사냥 페이스 조절 0.7초 오버레이
+  _slowNav(() => {
+    $('raid-battle').hidden = true;
+    $('raid-result').hidden = false;
+    _autoFocusBtn('raidAgainBtn');
+  }, { text: '⚔ 전투 결과 정리 중...' });
   // 전투 로그 CSV 업로드 (fire-and-forget)
   try {
     const tc = c._currentTurnCards || {};
@@ -8485,6 +8548,14 @@ function goBackToRaidLobby(){
 }
 
 function exitRaid(){
+  // 화면 전환 지연 — 사냥 페이스 조절 0.7초 오버레이
+  if (!exitRaid._slowed){
+    _slowNav(() => {
+      exitRaid._slowed = true;
+      try { exitRaid(); } finally { exitRaid._slowed = false; }
+    }, { text: '🏠 메인으로 이동 중...' });
+    return;
+  }
   GAME.raidCombat = null;
   GAME.currentRaid = null;
   setCombatMode(false);
@@ -8501,6 +8572,14 @@ function exitRaid(){
 // 공격대 결과창에서 같은 raid 한 번 더 도전
 async function raidChallengeAgain(){
   if (!GAME.currentRaid){ exitRaid(); return; }
+  // 화면 전환 지연 — "몬스터를 찾는 중" 오버레이
+  if (!raidChallengeAgain._slowed){
+    _slowNav(() => {
+      raidChallengeAgain._slowed = true;
+      raidChallengeAgain().finally(() => { raidChallengeAgain._slowed = false; });
+    }, { text: '🔍 몬스터를 찾는 중...' });
+    return;
+  }
   GAME.raidCombat = null;
   setCombatMode(false);
   $('raid-battle').hidden = true;
@@ -9387,8 +9466,11 @@ async function rankEnd(result){
     <p>총 진행 턴: <b>${c.turn}</b> / ${c.maxTurns}</p>
     <p>내가 입힌 데미지: <b>${c.statsMyDmg}</b></p>
     <p>상대가 입힌 데미지: <b>${c.statsMonDmg}</b></p>`;
-  $('rank-battle').hidden = true;
-  $('rank-result').hidden = false;
+  // 결과창 표시 지연 — 사냥 페이스 조절 0.7초 오버레이
+  _slowNav(() => {
+    $('rank-battle').hidden = true;
+    $('rank-result').hidden = false;
+  }, { text: '⚔ 전투 결과 정리 중...' });
   // 전투 로그 CSV 업로드 (fire-and-forget)
   try {
     const tc = c._currentTurnCards || {};
@@ -9570,6 +9652,14 @@ function goBackToRankList(){
 }
 
 function exitRank(){
+  // 화면 전환 지연 — 사냥 페이스 조절 0.7초 오버레이
+  if (!exitRank._slowed){
+    _slowNav(() => {
+      exitRank._slowed = true;
+      try { exitRank(); } finally { exitRank._slowed = false; }
+    }, { text: '🏠 메인으로 이동 중...' });
+    return;
+  }
   GAME.rankCombat = null;
   setCombatMode(false);
   showContent('main');
@@ -10617,6 +10707,14 @@ function openHunt(tier){
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
+    return;
+  }
+  // 화면 전환 지연 — 유저가 너무 빠르게 사냥하지 못하게 0.7초 오버레이
+  if (!openHunt._slowed){
+    _slowNav(() => {
+      openHunt._slowed = true;
+      try { openHunt(tier); } finally { openHunt._slowed = false; }
+    }, { text: '⚔ 수행 준비 중...' });
     return;
   }
   _incHourlyActivity(p);
@@ -13539,6 +13637,14 @@ function huntEnd(result){
 function showHuntResult(outcome, info){
   const titles = { win:'🏆 승리', lose:'💀 패배', flee:'🏃 기권' };
   $('hunt_result_title').textContent = `수행 결과 — ${titles[outcome]} (${info.m.name})`;
+  // 결과창 표시 지연 — 사냥 페이스 조절 0.7초 오버레이 (승리·패배·기권 모두)
+  if (!showHuntResult._slowed){
+    _slowNav(() => {
+      showHuntResult._slowed = true;
+      try { showHuntResult(outcome, info); } finally { showHuntResult._slowed = false; }
+    }, { text: '⚔ 전투 결과 정리 중...' });
+    return;
+  }
   $('hunt-battle').hidden = true;
   $('hunt-result').hidden = false;
   _autoFocusBtn('huntAgainBtn');
@@ -13601,7 +13707,11 @@ function showHuntResult(outcome, info){
 function huntAgain(){
   if (window._huntReturnTimer) clearInterval(window._huntReturnTimer);
   if (window._huntReturnTimeout) clearTimeout(window._huntReturnTimeout);
-  openHunt();  // 레벨에 맞는 tier 자동 결정
+  // 화면 전환 지연 — "몬스터를 찾는 중" 오버레이 (openHunt 자체 지연은 스킵)
+  _slowNav(() => {
+    openHunt._slowed = true;
+    try { openHunt(); } finally { openHunt._slowed = false; }
+  }, { text: '🔍 몬스터를 찾는 중...' });
 }
 function exitHuntToHeal(){
   if (window._huntReturnTimer) clearInterval(window._huntReturnTimer);
@@ -13617,6 +13727,14 @@ function exitHuntToHeal(){
 function exitHunt(){
   if (window._huntReturnTimer) clearInterval(window._huntReturnTimer);
   if (window._huntReturnTimeout) clearTimeout(window._huntReturnTimeout);
+  // 화면 전환 지연 — 사냥 페이스 조절 0.7초 오버레이 (첫 진입만)
+  if (!exitHunt._slowed){
+    _slowNav(() => {
+      exitHunt._slowed = true;
+      try { exitHunt(); } finally { exitHunt._slowed = false; }
+    }, { text: '🏠 메인으로 이동 중...' });
+    return;
+  }
   // 전투 중 매크로 방지 몹에서 벗어나는 경우 = 회피 성공 → +1,000G 보상 지급
   const c = GAME.huntCombat;
   if (c && !c.finished && c.monster && c.monster.id === 'macro_guard'){
