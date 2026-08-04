@@ -5694,7 +5694,7 @@ function renderVisionaryCircle(){
         </div>`
       : `<div style="width:72px;text-align:center;">
           <div style="display:inline-block;padding:4px 8px;background:linear-gradient(180deg,rgba(201,162,107,0.28),rgba(122,24,30,0.35));border:1px solid rgba(201,162,107,0.55);border-radius:4px;color:#f5deb3;font-family:'Georgia','굴림',serif;font-weight:bold;font-size:14px;letter-spacing:1px;text-shadow:0 1px 2px rgba(0,0,0,0.6);min-width:24px;">${toRoman(rank)}</div>
-          <div style="font-size:8px;color:#c9a26b;margin-top:3px;letter-spacing:1px;">RANK</div>
+          <div style="font-size:9px;color:#c9a26b;margin-top:3px;letter-spacing:0.5px;font-family:Georgia,serif;font-weight:bold;white-space:nowrap;">Sponsor</div>
         </div>`;
     const meTag = isMe ? '<span style="margin-left:8px;padding:2px 8px;background:linear-gradient(180deg,#e6c8a8,#c9a26b);color:#2a0508;font-size:10px;font-weight:bold;border-radius:3px;box-shadow:0 1px 3px rgba(0,0,0,0.4);letter-spacing:0.5px;">★ ME</span>' : '';
     const titleBadge = r.equippedTitle ? (() => { try { return titleBadgeHtml(r.equippedTitle, {size:9, py:1, px:5}); } catch(e){ return ''; } })() : '';
