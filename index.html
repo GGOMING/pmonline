@@ -6353,6 +6353,11 @@ const TITLE_POOL = [
   { id:'title_legend_first',   name:'전설의 시작',       tier:'전설', color:'#ffd700', desc:'전설 카드 1장 이상 소지',            cond:{type:'legend_cards_owned',       target:1} },
   // ── 신화 (붉은색) — 관리자 지급 전용 ──
   { id:'title_mythic_beta',    name:'신화의 창조자',     tier:'신화', color:'#a00010', desc:'RE: 여신전쟁 베타 테스터 한정 (관리자 지급)', cond:{type:'admin_only', target:1} },
+  // ── 후원자 칭호 4종 (관리자 지급 전용, 미보유자 프로필 목록에서 숨김) ──
+  { id:'title_sponsor_visionary', name:'Visionary', tier:'신화',   color:'#a00010', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_sponsor_partner',   name:'Partner',   tier:'전설',   color:'#ffd700', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_sponsor_patron',    name:'Patron',    tier:'영웅',   color:'#ff3366', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_sponsor_sponsor',   name:'Sponsor',   tier:'유니크', color:'#a335ee', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
 ];
 // Lv 26 게이트 — 유니크·영웅·전설·신화 tier 는 조건을 이전에 충족했더라도 Lv 26 도달 시점에 여전히 조건이 성립해야 지급됨
 // 랭킹처럼 유동적인 조건은 역대 최고치가 아니라 현재 상태로 판정 (_getTitleCurrentValue useCurrent)
@@ -15899,6 +15904,8 @@ function renderProfileTitles(){
   const items = TITLE_POOL
     // 신화 등급 칭호는 소지·수령대기 상태가 아니면 목록에서 숨김 (관리자 지급 전용, 이스터에그성)
     .filter(t => t.tier !== '신화' || owned.has(t.id) || pending.has(t.id))
+    // hiddenIfUnowned 플래그가 있는 칭호(후원자 시리즈)는 미보유자에게 숨김
+    .filter(t => !t.hiddenIfUnowned || owned.has(t.id) || pending.has(t.id))
     .map(t => {
     const has = owned.has(t.id);
     const isPending = pending.has(t.id);
