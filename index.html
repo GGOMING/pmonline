@@ -2761,7 +2761,8 @@
   <div style="background:#1a1238;border:2px solid #ffd700;border-radius:6px;padding:24px 28px;width:320px;text-align:center;box-shadow:0 0 24px rgba(255,215,0,.3);">
     <div style="font-size:22px;margin-bottom:10px;">🛡️</div>
     <h2 style="color:#ffd700;font-size:18px;margin:0 0 8px;text-shadow:1px 1px 0 #000;">매크로 방지</h2>
-    <p style="color:#fff;font-size:12px;margin:0 0 14px;">아래 덧셈 문제의 정답을 입력해주세요.</p>
+    <p style="color:#fff;font-size:12px;margin:0 0 8px;">아래 문제의 정답을 입력해주세요.</p>
+    <p style="color:#ff9999;font-size:11px;margin:0 0 14px;">⚠ 3회 연속 오답 시 <b>24시간 접속 차단</b></p>
     <div id="captcha_q" style="font-size:24px;color:#fff;font-weight:bold;margin:8px 0 14px;">- + - = ?</div>
     <input id="captcha_input" type="number" inputmode="numeric" autocomplete="off"
       style="width:140px;padding:8px 10px;font-size:18px;text-align:center;border:1px solid #ffd700;border-radius:4px;background:#0a0a1f;color:#fff;"
@@ -10653,17 +10654,33 @@ function generateMonster(playerLv, tier){
 // ─── 수행 진입 ───
 // ─── 매크로 방지 (덧셈 캡차) ───
 // 수행/공격대 진입 시 2.5% 확률로 발생, 정답 맞춰야만 진입 가능
+// 3회 연속 오답 시 24시간 자동 접속 차단 (admin 페이지에서 수동 해제 가능)
 const CAPTCHA_RATE = 0.025;
+const CAPTCHA_MAX_FAILS = 3;
+const CAPTCHA_BAN_MS = 24 * 60 * 60 * 1000;
 let _captchaCb = null;
 let _captchaAns = 0;
+let _captchaFailCount = 0;
 function _captchaNewProblem(){
-  const a = Math.floor(Math.random() * 9) + 1;
-  const b = Math.floor(Math.random() * 9) + 1;
-  _captchaAns = a + b;
-  const q = $('captcha_q'); if (q) q.textContent = `${a} + ${b} = ?`;
+  // 세 자릿수 랜덤 (100~999) + 덧셈/뺄셈 랜덤. 뺄셈은 항상 a >= b 로 결과가 음수 아니도록 스왑.
+  let a = Math.floor(Math.random() * 900) + 100;
+  let b = Math.floor(Math.random() * 900) + 100;
+  const isSub = Math.random() < 0.5;
+  let op, ans;
+  if (isSub){
+    if (b > a){ const t = a; a = b; b = t; }
+    op = '-';
+    ans = a - b;
+  } else {
+    op = '+';
+    ans = a + b;
+  }
+  _captchaAns = ans;
+  const q = $('captcha_q'); if (q) q.textContent = `${a} ${op} ${b} = ?`;
 }
 function showCaptcha(onPass){
   _captchaCb = onPass || null;
+  _captchaFailCount = 0;   // 세션마다 오답 카운터 리셋 (성공 통과 or overlay 재진입 시)
   _captchaNewProblem();
   const ov = $('captchaOverlay'); if (!ov) { if (onPass) onPass(); return; }
   const inp = $('captcha_input'); if (inp) inp.value = '';
@@ -10675,17 +10692,44 @@ function submitCaptcha(){
   const inp = $('captcha_input');
   const v = inp ? parseInt(inp.value, 10) : NaN;
   if (v === _captchaAns){
+    _captchaFailCount = 0;
     $('captchaOverlay').style.display = 'none';
     try { advanceDailyQuest('dq_captcha_5', 1); } catch(e){}
     const cb = _captchaCb;
     _captchaCb = null;
     if (typeof cb === 'function') cb();
-  } else {
-    // 오답 — 새 문제로 갱신 (매크로가 정답 학습 못하도록)
-    _captchaNewProblem();
-    if (inp){ inp.value = ''; try { inp.focus(); } catch(e){} }
-    const msg = $('captcha_msg'); if (msg) msg.textContent = '❌ 오답입니다. 새 문제로 다시 풀어주세요.';
+    return;
   }
+  // 오답 처리
+  _captchaFailCount++;
+  if (_captchaFailCount >= CAPTCHA_MAX_FAILS){
+    // 3회 연속 오답 → 24시간 자동 접속 차단
+    const p = GAME.player;
+    if (p){
+      const untilTs = Date.now() + CAPTCHA_BAN_MS;
+      p.bannedUntil = Math.max(Number(p.bannedUntil||0), untilTs);
+      try { saveGame(); } catch(e){}
+      try { cloudSaveNow().catch(err => console.warn('[captcha ban cloudSave]', err)); } catch(e){}
+      // 다른 브라우저 세션에도 강제 밴 브로드캐스트 (opBroadcastBan 활용)
+      try { if (typeof opBroadcastBan === 'function') opBroadcastBan(p.name, untilTs); } catch(e){}
+    }
+    // overlay 닫기 + 안내
+    $('captchaOverlay').style.display = 'none';
+    _captchaCb = null;
+    _captchaFailCount = 0;
+    try {
+      alert('❌ 매크로 방지 인증 3회 연속 실패\n\n계정이 24시간 접속 차단되었습니다.\n\n조기 해제를 원하시면 운영자에게 문의하세요.');
+    } catch(e){}
+    // 진입 차단 UI 반영을 위해 강제 새로고침
+    try { location.reload(); } catch(e){}
+    return;
+  }
+  // 남은 기회 안내 후 새 문제
+  _captchaNewProblem();
+  if (inp){ inp.value = ''; try { inp.focus(); } catch(e){} }
+  const remain = CAPTCHA_MAX_FAILS - _captchaFailCount;
+  const msg = $('captcha_msg');
+  if (msg) msg.innerHTML = `❌ 오답 (남은 기회 <b style="color:#c00;">${remain}회</b>) — 새 문제로 다시 풀어주세요. <span style="color:#c00;font-size:10px;">3회 연속 실패 시 24시간 접속 차단</span>`;
 }
 function captchaGate(onPass){
   if (Math.random() >= CAPTCHA_RATE){ if (onPass) onPass(); return; }
@@ -18102,18 +18146,18 @@ function renderAdminEdit(){
       <button class="admin-btn small" onclick="adminQuickResetStats()">스탯 5/5/5/5 리셋</button>
     </div>
 
-    <div class="edit-row"><span class="lbl">레벨</span> <input type="number" id="ed_level" value="${u.level}" min="1" max="100"></div>
+    <div class="edit-row"><span class="lbl">레벨</span> <input type="number" id="ed_level" value="${u.level}" min="1" max="100" oninput="_adminRecalcHpMp()"></div>
     <div class="edit-row"><span class="lbl">경험치</span> <input type="number" id="ed_xp" value="${u.xp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">스탯 P</span> <input type="number" id="ed_xpUp" value="${u.xpUp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">골드</span> <input type="number" id="ed_gold" value="${u.gold||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">✨ 축복</span> <input type="number" id="ed_blessing" value="${u.blessing||0}" min="0"></div>
     <div class="edit-row" style="background:#fff3cd;border-left:3px solid #ffd700;padding:2px 4px;"><span class="lbl">💎 후원액</span> <input type="number" id="ed_sponsorAmount" value="${u.sponsorAmount||0}" min="0" placeholder="원 단위 수기 입력"> <span style="font-size:10px;color:#666;margin-left:6px;">Visionary Circle 순위 반영 (금액 비공개)</span></div>
-    <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1"></div>
-    <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1"></div>
-    <div class="edit-row"><span class="lbl">INT</span> <input type="number" id="ed_int" value="${u.int||5}" min="1"></div>
-    <div class="edit-row"><span class="lbl">CON</span> <input type="number" id="ed_con" value="${u.con||5}" min="1"></div>
-    <div class="edit-row"><span class="lbl">HP</span> <input type="number" id="ed_hp" value="${u.hp||0}"> / Max <input type="number" id="ed_hpMax" value="${u.hpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 CON 자동 역산)</span></div>
-    <div class="edit-row"><span class="lbl">MP</span> <input type="number" id="ed_mp" value="${u.mp||0}"> / Max <input type="number" id="ed_mpMax" value="${u.mpMax||0}" style="width:80px;"> <span style="font-size:10px;color:#888;">(저장 시 INT 자동 역산)</span></div>
+    <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1" oninput="_adminRecalcHpMp()"></div>
+    <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1" oninput="_adminRecalcHpMp()"></div>
+    <div class="edit-row"><span class="lbl">INT</span> <input type="number" id="ed_int" value="${u.int||5}" min="1" oninput="_adminRecalcHpMp()"></div>
+    <div class="edit-row"><span class="lbl">CON</span> <input type="number" id="ed_con" value="${u.con||5}" min="1" oninput="_adminRecalcHpMp()"></div>
+    <div class="edit-row"><span class="lbl">HP</span> <input type="number" id="ed_hp" value="${u.hp||0}"> / Max <input type="number" id="ed_hpMax" value="${u.hpMax||0}" style="width:80px;" readonly> <span style="font-size:10px;color:#888;">(레벨·스탯 기반 자동 계산)</span></div>
+    <div class="edit-row"><span class="lbl">MP</span> <input type="number" id="ed_mp" value="${u.mp||0}"> / Max <input type="number" id="ed_mpMax" value="${u.mpMax||0}" style="width:80px;" readonly> <span style="font-size:10px;color:#888;">(레벨·INT 기반 자동 계산)</span></div>
     <div class="edit-row"><span class="lbl">랭킹 순위</span> <input type="number" id="ed_rankPos" value="${u.rankPos||0}" min="0" max="10" style="width:80px;"> <span style="font-size:11px;color:#666;">0=미등록, 1~10=순위</span></div>
     <div class="edit-row"><span class="lbl">🛡 운영자 계정</span>
       <label style="font-size:11px;"><input type="checkbox" id="ed_isOperator" ${u.isOperator ? 'checked' : ''}> 운영자로 표시</label>
@@ -18329,6 +18373,33 @@ function adminRevokeTitle(){
   renderAdminEdit();
 }
 
+// admin edit 페이지에서 레벨·STR·DEX·INT·CON 입력 시 HP/MP Max 를 자동 계산 (calcDerived 공식과 동일)
+//   hpMax = 26 + (lv-1)*2 + (str-5)*2 + (dex-5)*2 + (int-5)*2 + (con-5)*5
+//   mpMax = 25 + (lv-1)*1 + floor((int-5)*7.5)
+// 현재 HP/MP 값이 새 Max 초과면 Max 로 클램프.
+function _adminRecalcHpMp(){
+  const lv  = parseInt(($('ed_level')||{}).value) || 1;
+  const str = parseInt(($('ed_str')||{}).value)  || 5;
+  const dex = parseInt(($('ed_dex')||{}).value)  || 5;
+  const int_ = parseInt(($('ed_int')||{}).value) || 5;
+  const con = parseInt(($('ed_con')||{}).value)  || 5;
+  const hpMax = 26 + (lv - 1) * 2 + (str - 5) * 2 + (dex - 5) * 2 + (int_ - 5) * 2 + (con - 5) * 5;
+  const mpMax = 25 + (lv - 1) * 1 + Math.floor((int_ - 5) * 7.5);
+  const hpMaxEl = $('ed_hpMax'); if (hpMaxEl) hpMaxEl.value = Math.max(1, hpMax);
+  const mpMaxEl = $('ed_mpMax'); if (mpMaxEl) mpMaxEl.value = Math.max(0, mpMax);
+  // 현재 HP/MP 가 새 Max 초과면 Max 로 클램프
+  const hpEl = $('ed_hp');
+  if (hpEl){
+    const cur = parseInt(hpEl.value) || 0;
+    if (cur > hpMax) hpEl.value = Math.max(1, hpMax);
+  }
+  const mpEl = $('ed_mp');
+  if (mpEl){
+    const cur = parseInt(mpEl.value) || 0;
+    if (cur > mpMax) mpEl.value = Math.max(0, mpMax);
+  }
+}
+
 async function adminSaveUser(){
   const u = _adminUsers[_adminSelectedUser];
   if (!u) return;
@@ -18347,37 +18418,16 @@ async function adminSaveUser(){
   u.con = parseInt($('ed_con').value) || 5;
   u.hp = parseInt($('ed_hp').value) || 0;
   u.mp = parseInt($('ed_mp').value) || 0;
-  // hpMax / mpMax 입력값에 맞춰 CON / INT 역산 (calcDerived가 매번 공식으로 덮어쓰므로)
-  // 실제 calcDerived 공식과 정확히 일치해야 로그인 시 재계산해도 값이 튀지 않음
+  // hpMax / mpMax 는 레벨·스탯 기반 자동 계산 (calcDerived 공식과 동일 · UI 는 readonly)
   //   hpMax = 26 + (lv-1)*2 + (str-5)*2 + (dex-5)*2 + (int-5)*2 + (con-5)*5
-  //   → con = 5 + (hpMax - 26 - (lv-1)*2 - (str-5)*2 - (dex-5)*2 - (int-5)*2) / 5
   //   mpMax = 25 + (lv-1)*1 + floor((int-5)*7.5)
-  //   → int = 5 + (mpMax - 25 - (lv-1)) / 7.5
   const lvForCalc = u.level || 1;
-  const _nonConHpBase = 26 + (lvForCalc - 1) * 2
-                       + (u.str - 5) * 2 + (u.dex - 5) * 2 + (u.int - 5) * 2;
-  const editedHpMax = parseInt($('ed_hpMax').value);
-  if (!isNaN(editedHpMax) && editedHpMax > 0){
-    const expectedHp = _nonConHpBase + (u.con - 5) * 5;
-    if (editedHpMax !== expectedHp){
-      u.con = Math.max(0, 5 + Math.round((editedHpMax - _nonConHpBase) / 5));
-    }
-    u.hpMax = _nonConHpBase + (u.con - 5) * 5;
-  }
-  const editedMpMax = parseInt($('ed_mpMax').value);
-  if (!isNaN(editedMpMax) && editedMpMax > 0){
-    const expectedMp = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
-    if (editedMpMax !== expectedMp){
-      u.int = Math.max(0, 5 + Math.round((editedMpMax - 25 - (lvForCalc - 1)) / 7.5));
-    }
-    u.mpMax = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
-    // INT 가 바뀌면 HP 공식에도 영향 (INT 도 hpMax 에 +2/포인트 기여) → hpMax 재계산
-    if (!isNaN(editedHpMax) && editedHpMax > 0){
-      const recalcNonCon = 26 + (lvForCalc - 1) * 2
-                           + (u.str - 5) * 2 + (u.dex - 5) * 2 + (u.int - 5) * 2;
-      u.hpMax = recalcNonCon + (u.con - 5) * 5;
-    }
-  }
+  u.hpMax = 26 + (lvForCalc - 1) * 2
+          + (u.str - 5) * 2 + (u.dex - 5) * 2 + (u.int - 5) * 2
+          + (u.con - 5) * 5;
+  u.mpMax = 25 + (lvForCalc - 1) * 1 + Math.floor((u.int - 5) * 7.5);
+  if (u.hpMax < 1) u.hpMax = 1;
+  if (u.mpMax < 0) u.mpMax = 0;
   // hp/mp 는 새 max 를 초과하지 않도록 캡
   if (u.hp > u.hpMax) u.hp = u.hpMax;
   if (u.mp > u.mpMax) u.mp = u.mpMax;
