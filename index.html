@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
 <title>RE: 여신전쟁</title>
 <style>
-  /* 모바일 더블탭 확대 방지 (핀치 확대는 허용) — touch-action:manipulation 이 double-tap zoom 만 차단 */
-  html, body { touch-action: manipulation; }
-  /* 가로 스크롤 원천 차단 — 모바일에서 우측 엣지 탭이 스와이프로 오인되는 문제 방지 */
-  html, body { overflow-x: hidden; }
+  /* 모바일 핀치 줌·팬 드래그 완전 허용 (auto 로 두면 브라우저 기본 동작 그대로) */
+  html, body { touch-action: auto; }
   /* 모바일 롱프레스 컨텍스트 메뉴 (이미지 저장/링크 복사 등) 억제 — 운영자 계정은 JS 에서 오버라이드 해제 */
   body.devtools-block, body.devtools-block * { -webkit-touch-callout: none; }
   * { box-sizing:border-box; }
@@ -223,15 +221,16 @@
   #game { width:900px; background:#FFFFCC; padding:6px; border:1px solid #555; }
   #chat { width:320px; background:#fff; border:1px solid #555; display:flex; flex-direction:column; align-self:stretch; max-height:none; }
 
-  /* 레이아웃 토글 버튼 */
+  /* 레이아웃 토글 버튼 — 우측 하단 (모바일에서 상단 UI 가림 방지) */
   #layoutToggle {
-    position:fixed; top:8px; right:8px; z-index:500;
-    padding:6px 12px; cursor:pointer;
+    position:fixed; bottom:12px; right:12px; z-index:500;
+    padding:6px 10px; cursor:pointer;
     background:#7E181E; color:#fff; border:1px solid #4a0d10;
-    font-size:12px; font-weight:bold;
+    font-size:11px; font-weight:bold;
     box-shadow:1px 1px 3px rgba(0,0,0,.3);
+    border-radius:4px; opacity:0.85;
   }
-  #layoutToggle:hover { background:#a02050; }
+  #layoutToggle:hover { background:#a02050; opacity:1; }
   /* 로그아웃 버튼 */
   #logoutBtn {
     position:fixed; top:8px; right:130px; z-index:500;
@@ -3019,7 +3018,7 @@ const CARDS = [
   { id:'r43', name:'카니발라이즈',       grade:'rare', icon:'blood',   iconPath:'assets/wc3_reforged_used/BTNCannibalize-NoViolence-Reforged.png', text:'2턴 동안 매턴 STR × 1.2 고정 데미지 (방어력 무시) + 2턴 동안 가한 데미지의 30% HP 흡수', fx:{type:'multi',effects:[{type:'dotStat',stats:['str'],mult:1.2,turns:2,dynamic:true},{type:'lifeleech',turns:2,pct:0.3}]} },
   { id:'r44', name:'브로큰',             grade:'rare', icon:'bomb',    iconPath:'assets/wc3_reforged_used/BTNMeatapult-Reforged.png', text:'자기 HP 30% 소모, STR × 3 데미지 (방어력 무시)', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.30},{type:'dmgStat',stats:['str'],mult:3,ignoreDef:true}]} },
   { id:'r45', name:'홀리스피어',         grade:'rare', icon:'holy',    iconPath:'assets/wc3_reforged_used/BTNVorpalBlades-Reforged.png', text:'(STR + 무기 + 15) 데미지 + 상대 방어구 -5', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true,bonus:15},{type:'debuff',def:-5}]} },
-  { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.5 만큼 고정 데미지 (방어력 무시)', fx:{type:'dmgLostHpPct',pct:0.5,ignoreDef:true} },
+  { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.4 만큼 고정 데미지 (방어력 무시 · 최대 50)', fx:{type:'dmgLostHpPct',pct:0.4,ignoreDef:true,maxDmg:50} },
   { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
@@ -6109,7 +6108,6 @@ const WEEKLY_QUEST_POOL = [
   { id:'wq_gold_spent',     name:'정승같이 쓰자',      diff:'주간', desc:'주간 누적 골드 100,000 사용',     target:100000, gold:10000, xp:0, card:'unique', bless:0, minLevel:1  },
   { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1  },
   { id:'wq_gacha_normal',   name:'꽝손 토닥토닥',      diff:'주간', desc:'일반 뽑기 100장',                 target:100,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
-  { id:'wq_death_destroy',  name:'죽으란 법은 없지',   diff:'주간', desc:'사망으로 장비·카드 파괴 2회 (축복 방어 제외)', target:2, gold:100000, xp:0, card:null, bless:5, minLevel:15 },
   { id:'wq_gacha_unique',   name:'이번엔 진짜 나온다', diff:'주간', desc:'유니크·영웅·전설 뽑기(또는 축복 뽑기) 50회',  target:50,     gold:30000, xp:0, card:null,     bless:0, minLevel:1  },
 ];
 const WEEKLY_QUEST_ASSIGN_COUNT = 4;
@@ -7299,8 +7297,8 @@ function _startRaidLobbyCooldownTicker(){
 }
 
 async function openRaid(raidKey){
-  // 매크로 방지 — 3% 확률 덧셈 캡차 통과 후 진입
-  if (!openRaid._captchaPassed && Math.random() < CAPTCHA_RATE){
+  // 매크로 방지 — 확률 or F5 이탈로 인한 pending 상태면 캡차 통과 후 진입
+  if (!openRaid._captchaPassed && (Math.random() < CAPTCHA_RATE || (GAME.player && GAME.player.captchaPending))){
     showCaptcha(() => {
       openRaid._captchaPassed = true;
       try { openRaid(raidKey); } finally { openRaid._captchaPassed = false; }
@@ -8487,24 +8485,12 @@ async function raidEnd(result){
       }
     } else if (result === 'lose'){
       p.hp = 0; p.mp = 0;
-      // abyss 보스는 참여자에게도 소액 보상 (여러 유저 협공 시스템의 로컬 근사)
-      let abyssPartHtml = '';
-      if (isAbyssBoss && dealtTotal >= 100){
-        p.xp += 5000;
-        abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
-      }
+      // abyss 참여 보상 폐지 — 이제 XP 지급 없음, 데미지 누적만 반영
       bodyHtml = `<p style="color:#a00;">💀 보스에게 패배. HP·MP가 0이 됩니다 (골드·경험치 패널티 없음)</p>
         <p>이번 도전 입힌 데미지 <b>${dealtTotal}</b>는 보스 HP에 누적되었습니다.</p>
-        ${abyssPartHtml}
         <p>보스 잔여 HP: <b>${r.bossHp}/${r.bossHpMax}</b></p>`;
     } else if (result === 'time' || result === 'flee'){
-      let abyssPartHtml = '';
-      if (isAbyssBoss && dealtTotal >= 100 && result !== 'flee'){
-        p.xp += 5000;
-        abyssPartHtml = `<p style="color:#7E181E;font-weight:bold;">🎁 참여 보상: +5,000 XP</p>`;
-      }
       bodyHtml = `<p>${result==='flee'?'기권':'턴 종료'}. 입힌 누적 데미지 <b>${dealtTotal}</b> 반영됨.</p>
-        ${abyssPartHtml}
         <p>보스 잔여 HP: <b>${r.bossHp}/${r.bossHpMax}</b></p>
         <p style="font-size:11px;color:#666;">다시 도전해서 최종 타격를 노려보세요.</p>`;
     }
@@ -10654,23 +10640,23 @@ function generateMonster(playerLv, tier){
 // ─── 수행 진입 ───
 // ─── 매크로 방지 (덧셈 캡차) ───
 // 수행/공격대 진입 시 2.5% 확률로 발생, 정답 맞춰야만 진입 가능
-// 3회 연속 오답 시 24시간 자동 접속 차단 (admin 페이지에서 수동 해제 가능)
+// 5회 연속 오답 시 24시간 자동 접속 차단 (admin 페이지에서 수동 해제 가능)
+// F5 등 이탈 시 pending 플래그가 유지되어 다음 진입 시 재출현
 const CAPTCHA_RATE = 0.025;
-const CAPTCHA_MAX_FAILS = 3;
+const CAPTCHA_MAX_FAILS = 5;
 const CAPTCHA_BAN_MS = 24 * 60 * 60 * 1000;
 let _captchaCb = null;
 let _captchaAns = 0;
 let _captchaFailCount = 0;
 function _captchaNewProblem(){
-  // 세 자릿수 랜덤 (100~999) + 덧셈/뺄셈 랜덤. 뺄셈은 항상 a >= b 로 결과가 음수 아니도록 스왑.
-  let a = Math.floor(Math.random() * 900) + 100;
-  let b = Math.floor(Math.random() * 900) + 100;
+  // 두자릿수 (10~99) ± 한자릿수 (1~9). 뺄셈 시 결과가 음수 안 되게 조건 보장 (a >= b 항상 성립).
+  let a = Math.floor(Math.random() * 90) + 10;   // 10~99
+  const b = Math.floor(Math.random() * 9) + 1;   // 1~9
   const isSub = Math.random() < 0.5;
   let op, ans;
   if (isSub){
-    if (b > a){ const t = a; a = b; b = t; }
     op = '-';
-    ans = a - b;
+    ans = a - b;   // a >= 10 >= b 이므로 항상 양수
   } else {
     op = '+';
     ans = a + b;
@@ -10680,7 +10666,17 @@ function _captchaNewProblem(){
 }
 function showCaptcha(onPass){
   _captchaCb = onPass || null;
-  _captchaFailCount = 0;   // 세션마다 오답 카운터 리셋 (성공 통과 or overlay 재진입 시)
+  // 세션마다 오답 카운터 리셋 (성공 통과 시). F5 이탈 후 재진입 시엔 이어져야 하므로 pending 시엔 저장값 유지
+  const p = GAME.player;
+  if (p){
+    // 이미 pending 상태면 기존 fail count 이어받기, 아니면 0 부터
+    _captchaFailCount = Number(p.captchaFailCount || 0);
+    p.captchaPending = true;
+    try { saveGame(); } catch(e){}
+    try { cloudSaveNow().catch(err => console.warn('[captcha pending save]', err)); } catch(e){}
+  } else {
+    _captchaFailCount = 0;
+  }
   _captchaNewProblem();
   const ov = $('captchaOverlay'); if (!ov) { if (onPass) onPass(); return; }
   const inp = $('captcha_input'); if (inp) inp.value = '';
@@ -10693,6 +10689,14 @@ function submitCaptcha(){
   const v = inp ? parseInt(inp.value, 10) : NaN;
   if (v === _captchaAns){
     _captchaFailCount = 0;
+    // pending 해제 + fail count 초기화 저장
+    const p0 = GAME.player;
+    if (p0){
+      p0.captchaPending = false;
+      p0.captchaFailCount = 0;
+      try { saveGame(); } catch(e){}
+      try { cloudSaveNow().catch(err => console.warn('[captcha pass save]', err)); } catch(e){}
+    }
     $('captchaOverlay').style.display = 'none';
     try { advanceDailyQuest('dq_captcha_5', 1); } catch(e){}
     const cb = _captchaCb;
@@ -10702,12 +10706,21 @@ function submitCaptcha(){
   }
   // 오답 처리
   _captchaFailCount++;
+  // fail count 즉시 저장 → F5 로 이탈해도 실패 횟수 이어짐
+  const _pFail = GAME.player;
+  if (_pFail){
+    _pFail.captchaFailCount = _captchaFailCount;
+    try { saveGame(); } catch(e){}
+    try { cloudSaveNow().catch(err => console.warn('[captcha fail save]', err)); } catch(e){}
+  }
   if (_captchaFailCount >= CAPTCHA_MAX_FAILS){
-    // 3회 연속 오답 → 24시간 자동 접속 차단
+    // 5회 연속 오답 → 24시간 자동 접속 차단
     const p = GAME.player;
     if (p){
       const untilTs = Date.now() + CAPTCHA_BAN_MS;
       p.bannedUntil = Math.max(Number(p.bannedUntil||0), untilTs);
+      p.captchaPending = false;
+      p.captchaFailCount = 0;
       try { saveGame(); } catch(e){}
       try { cloudSaveNow().catch(err => console.warn('[captcha ban cloudSave]', err)); } catch(e){}
       // 다른 브라우저 세션에도 강제 밴 브로드캐스트 (opBroadcastBan 활용)
@@ -10718,7 +10731,7 @@ function submitCaptcha(){
     _captchaCb = null;
     _captchaFailCount = 0;
     try {
-      alert('❌ 매크로 방지 인증 3회 연속 실패\n\n계정이 24시간 접속 차단되었습니다.\n\n조기 해제를 원하시면 운영자에게 문의하세요.');
+      alert('❌ 매크로 방지 인증 5회 연속 실패\n\n계정이 24시간 접속 차단되었습니다.\n\n조기 해제를 원하시면 운영자에게 문의하세요.');
     } catch(e){}
     // 진입 차단 UI 반영을 위해 강제 새로고침
     try { location.reload(); } catch(e){}
@@ -10737,8 +10750,8 @@ function captchaGate(onPass){
 }
 
 function openHunt(tier){
-  // 매크로 방지 — 3% 확률 덧셈 캡차 통과 후 진입
-  if (!openHunt._captchaPassed && Math.random() < CAPTCHA_RATE){
+  // 매크로 방지 — 확률 or F5 이탈로 인한 pending 상태면 캡차 통과 후 진입
+  if (!openHunt._captchaPassed && (Math.random() < CAPTCHA_RATE || (GAME.player && GAME.player.captchaPending))){
     showCaptcha(() => {
       openHunt._captchaPassed = true;
       try { openHunt(tier); } finally { openHunt._captchaPassed = false; }
@@ -11852,9 +11865,10 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'dmgLostHpPct'){
-      // 시전자가 지금까지 잃은 HP × pct 만큼 데미지 (r46 데스트레이드)
+      // 시전자가 지금까지 잃은 HP × pct 만큼 데미지 (r46 데스트레이드). fx.maxDmg 상한 옵션.
       const lostHp = Math.max(0, (ctx.castObj.hpMax || 0) - (ctx.castObj.hp || 0));
-      const raw = Math.floor(lostHp * (fx.pct || 0));
+      let raw = Math.floor(lostHp * (fx.pct || 0));
+      if (fx.maxDmg != null) raw = Math.min(raw, fx.maxDmg);
       if (fx.ignoreDef) _dealIgnoreDef(ctx, raw, { silent: !!fx.silentIgnoreDef });
       else doDmg(raw);
       return;
@@ -13396,7 +13410,6 @@ function _offerBlessingToPreventDestroy(destroyed){
   if (!tier || !params){
     // 파라미터 없는 경우 (예외) → 파괴 확정
     try { chatSys('☠ ' + p.name + '님이 패배로 ' + kindKr + ' [' + destroyed.name + ']을(를) 잃으셨습니다.', { sticky: true }); } catch(e){}
-    try { advanceWeeklyQuest('wq_death_destroy', 1); } catch(e){}
     return;
   }
   // 다단계 복구: attempt 0/1/2 순차 시도. 각 시도마다 confirm → 축복 소모 → 확률 롤
