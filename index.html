@@ -18026,6 +18026,8 @@ async function loadAdminUsers(){
             isOperator: !!p.isOperator,
             riggedTrap: !!p.riggedTrap,
             bannedUntil: Number(p.bannedUntil) || 0,
+            captchaPending: !!p.captchaPending,
+            captchaFailCount: Number(p.captchaFailCount) || 0,
             encounterRates: (p.encounterRates && typeof p.encounterRates === 'object') ? {...p.encounterRates} : undefined,
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
             pendingTitles: Array.isArray(p.pendingTitles) ? p.pendingTitles.slice() : [],
@@ -18584,6 +18586,8 @@ async function adminSaveUser(){
       autoFocus: !!u.autoFocus,
       isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
       bannedUntil: Number(u.bannedUntil) || 0,
+      captchaPending: !!u.captchaPending,
+      captchaFailCount: Number(u.captchaFailCount) || 0,
       encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : ((saved.player && saved.player.encounterRates) || undefined),
       titles: Array.isArray(u.titles) ? u.titles.slice() : (saved.player && saved.player.titles) || [],
       pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (saved.player && saved.player.pendingTitles) || [],
@@ -18660,6 +18664,8 @@ async function adminSaveUser(){
         autoFocus: !!u.autoFocus,
         isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
         bannedUntil: Number(u.bannedUntil) || 0,
+        captchaPending: !!u.captchaPending,
+        captchaFailCount: Number(u.captchaFailCount) || 0,
         encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : (prevPlayer.encounterRates || undefined),
         titles: Array.isArray(u.titles) ? u.titles.slice() : (prevPlayer.titles || []),
         pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (prevPlayer.pendingTitles || []),
@@ -18789,8 +18795,11 @@ function adminClearBan(){
   const u = _adminUsers[_adminSelectedUser];
   if (!u) return;
   u.bannedUntil = 0;
+  // 매크로 방지 캡차 관련 상태도 함께 리셋 (5회 오답 자동 차단 유저 대비)
+  u.captchaPending = false;
+  u.captchaFailCount = 0;
   try { opBroadcastUnban(u.name); } catch(e){}
-  alert(`✔ ${u.name} 님 차단 해제 예약.\n💾 저장 버튼을 눌러 클라우드에 반영하세요.`);
+  alert(`✔ ${u.name} 님 차단 해제 예약 (매크로 캡차 상태 포함).\n💾 저장 버튼을 눌러 클라우드에 반영하세요.`);
   renderAdminEdit();
 }
 function adminRemoveCard(cardId){
@@ -19651,8 +19660,8 @@ setInterval(()=>{
   </div>
 
   <div style="border:2px solid #c00;border-radius:4px;padding:6px;margin-top:8px;background:#fff0f0;">
-    <b style="color:#c00;">🚫 유저 실시간 차단</b>
-    <div style="font-size:10px;color:#666;margin:3px 0;">닉네임+분 입력 → 브로드캐스트로 대상에게 즉시 반영. 대상이 온라인이면 실시간 차단, 오프라인은 다음 로그인 후 클라우드 사인크 필요.</div>
+    <b style="color:#c00;">🚫 유저 실시간 차단 / 해제</b>
+    <div style="font-size:10px;color:#666;margin:3px 0;">닉네임+분 입력 → 브로드캐스트로 대상에게 즉시 반영. 대상이 온라인이면 실시간 차단, 오프라인은 다음 로그인 후 클라우드 사인크 필요.<br><b style="color:#0a7;">✓ 해제</b> 버튼은 <b>매크로 방지 5회 오답 자동 차단</b> 유저도 해제 가능 (캡차 상태 함께 초기화).</div>
     <div style="margin-top:4px;display:flex;gap:4px;flex-wrap:wrap;align-items:center;">
       <input type="text" id="opBanNick" style="width:120px;font-size:11px;" placeholder="닉네임">
       <input type="number" id="opBanMin" style="width:60px;font-size:11px;" placeholder="분" min="1" max="10080" value="30">
@@ -19894,7 +19903,13 @@ async function opUnbanUser(){
         .select('user_id, data').eq('nickname', nick).maybeSingle();
       if (row && row.data){
         const newData = { ...row.data };
-        newData.player = { ...(newData.player||{}), bannedUntil: 0 };
+        // 매크로 방지 캡차 관련 상태도 함께 리셋 (5회 오답 자동 차단 유저 대비)
+        newData.player = {
+          ...(newData.player||{}),
+          bannedUntil: 0,
+          captchaPending: false,
+          captchaFailCount: 0,
+        };
         const { error } = await sb.from('saves').update({ data: newData })
           .eq('user_id', row.user_id);
         if (!error) cloudOk = true;
@@ -19902,7 +19917,7 @@ async function opUnbanUser(){
     } catch(e){ console.warn('[opUnbanUser]', e); }
   }
   if (st){
-    st.innerHTML = `📡 <b>${nick}</b> 차단 해제 브로드캐스트`
+    st.innerHTML = `📡 <b>${nick}</b> 차단 해제 (매크로 캡차 상태 포함)`
       + (cloudOk ? ' <span style="color:#0a7;">· 클라우드 반영 ✓</span>'
                  : ' <span style="color:#c98d1a;">· 클라우드 미반영 (관리자 세션 필요)</span>');
   }
