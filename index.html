@@ -3624,21 +3624,19 @@ function _resetPlayerBattleState(){
 const NAV_DELAY_MS = 500;
 let _navBusy = false;
 function _showNavOverlay(text){
-  let ov = document.getElementById('_transOv');
-  if (!ov){
-    ov = document.createElement('div');
-    ov.id = '_transOv';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,4,6,0.55);z-index:99999;display:none;justify-content:center;align-items:center;color:#f5deb3;font-size:14px;letter-spacing:2px;font-family:Georgia,serif;pointer-events:auto;';
-    ov.innerHTML = '<div id="_transOvTxt" style="padding:16px 28px;background:rgba(0,0,0,0.35);border:1px solid rgba(201,162,107,0.5);border-radius:6px;">⏳ 잠시만 기다려주세요...</div>';
-    document.body.appendChild(ov);
-  }
-  const t = document.getElementById('_transOvTxt');
+  // 매번 새로 생성 · 표시 후 hide 시 완전 제거 → DOM 잔재로 인한 터치 블록 방지
+  _hideNavOverlay();   // 혹시 남아있는 이전 오버레이 제거
+  const ov = document.createElement('div');
+  ov.id = '_transOv';
+  ov.style.cssText = 'position:fixed;inset:0;background:rgba(20,4,6,0.55);z-index:99999;display:flex;justify-content:center;align-items:center;color:#f5deb3;font-size:14px;letter-spacing:2px;font-family:Georgia,serif;pointer-events:auto;';
+  ov.innerHTML = '<div id="_transOvTxt" style="padding:16px 28px;background:rgba(0,0,0,0.35);border:1px solid rgba(201,162,107,0.5);border-radius:6px;">⏳ 잠시만 기다려주세요...</div>';
+  const t = ov.querySelector('#_transOvTxt');
   if (t && text) t.textContent = text;
-  ov.style.display = 'flex';
+  document.body.appendChild(ov);
 }
 function _hideNavOverlay(){
-  const ov = document.getElementById('_transOv');
-  if (ov) ov.style.display = 'none';
+  // 모든 잔재 제거 (id 중복 대비 querySelectorAll)
+  document.querySelectorAll('#_transOv').forEach(el => { try { el.remove(); } catch(e){} });
 }
 // 함수를 지연 실행 래퍼로 감싸는 헬퍼. once=true 이면 마커로 재진입 시 즉시 실행.
 function _slowNav(fn, opts){
@@ -3648,8 +3646,18 @@ function _slowNav(fn, opts){
   setTimeout(() => {
     _hideNavOverlay();
     _navBusy = false;
-    try { fn(); } catch(e){ console.warn('[_slowNav]', e); }
+    try { fn(); } catch(e){ console.warn('[_slowNav]', e); _hideNavOverlay(); _navBusy = false; }
   }, (opts && opts.delay) || NAV_DELAY_MS);
+}
+// 페이지 로드/포커스 복귀 시 잔재 오버레이 강제 청소 (F5, 앱 백그라운드 복귀 등 케이스 대응)
+if (typeof window !== 'undefined'){
+  window.addEventListener('load', () => { try { _hideNavOverlay(); _navBusy = false; } catch(e){} });
+  window.addEventListener('pageshow', () => { try { _hideNavOverlay(); _navBusy = false; } catch(e){} });
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible'){
+      try { _hideNavOverlay(); _navBusy = false; } catch(e){}
+    }
+  });
 }
 
 // ─── 콘텐츠 영역 전환 (메인 ↔ 회복의샘물 ↔ ...) ───
