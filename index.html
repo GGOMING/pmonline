@@ -10440,7 +10440,10 @@ function _goldDropFor(playerLv){
 // ─── 여신의 탑 최고 층수 기반 수행 골드 보너스 (%) ───
 // 주간 리셋 시 p.dojo.bestFloor 도 0으로 초기화되므로 자동으로 보너스도 사라짐 (그 주에 재갱신 필요).
 // 계단식: 5/10/15/20/25/30/35/40/45/50층 → 1/2/3/5/7/10/15/20/25/30 %
+//
+// ⏸ 테스트 기간 임시 중단 (2026-08-09) — 재개하려면 아래 early-return 라인 삭제
 function _towerFloorGoldBonusPct(p){
+  return 0;   // ← 테스트 기간 임시 비활성. 재개 시 이 줄 삭제.
   const bf = (p && p.dojo && p.dojo.bestFloor|0) || 0;
   if (bf >= 50) return 30;
   if (bf >= 45) return 25;
