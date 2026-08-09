@@ -7,6 +7,8 @@
 <style>
   /* 모바일 핀치 줌·팬 드래그 완전 허용 (auto 로 두면 브라우저 기본 동작 그대로) */
   html, body { touch-action: auto; }
+  /* 우측 엣지 스와이프로 인한 브라우저 뒤로가기/오버스크롤 네비게이션 차단 (줌 · 팬은 유지) */
+  html, body { overscroll-behavior-x: contain; }
   /* 모바일 롱프레스 컨텍스트 메뉴 (이미지 저장/링크 복사 등) 억제 — 운영자 계정은 JS 에서 오버라이드 해제 */
   body.devtools-block, body.devtools-block * { -webkit-touch-callout: none; }
   * { box-sizing:border-box; }
@@ -2563,6 +2565,8 @@
     <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
       <b style="color:#ffd700;">10장</b> 채워야 다음 층 도전 가능 · 회색 카드는 <b style="color:#ff6b6b;">직전 층 사용</b> (선택 불가) · 인벤 보유 카드만 선택 가능 (같은 카드 여러 장이어도 1회만 표시).
     </div>
+    <!-- 다음 층 상대방 미리보기 + 내 스탯 -->
+    <div id="tower_deck_preview" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
         <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">편성된 덱 (<span id="tower_deck_count">0</span>/10)</div>
@@ -10433,6 +10437,24 @@ function _goldDropFor(playerLv){
   return Math.max(1, Math.round(mean * (0.9 + Math.random() * 0.2)));
 }
 
+// ─── 여신의 탑 최고 층수 기반 수행 골드 보너스 (%) ───
+// 주간 리셋 시 p.dojo.bestFloor 도 0으로 초기화되므로 자동으로 보너스도 사라짐 (그 주에 재갱신 필요).
+// 계단식: 5/10/15/20/25/30/35/40/45/50층 → 1/2/3/5/7/10/15/20/25/30 %
+function _towerFloorGoldBonusPct(p){
+  const bf = (p && p.dojo && p.dojo.bestFloor|0) || 0;
+  if (bf >= 50) return 30;
+  if (bf >= 45) return 25;
+  if (bf >= 40) return 20;
+  if (bf >= 35) return 15;
+  if (bf >= 30) return 10;
+  if (bf >= 25) return 7;
+  if (bf >= 20) return 5;
+  if (bf >= 15) return 3;
+  if (bf >= 10) return 2;
+  if (bf >= 5)  return 1;
+  return 0;
+}
+
 // ─── 몬스터 생성 ───
 // 강제 보정치 (rigged trap) 몬스터 — 위장 고난이도 몹
 // 이름·아이콘·race 는 일반 몹에서 랜덤 (완전 위장)
@@ -13509,6 +13531,13 @@ function huntEnd(result){
   if (outcome === 'win'){
     gold = m.gold;
     xp   = m.xp;
+    // 여신의 탑 최고 층수 보너스 (주간 갱신 필요) — 골드에만 적용, XP 는 그대로
+    const towerPct = _towerFloorGoldBonusPct(p);
+    let towerBonusGold = 0;
+    if (towerPct > 0){
+      towerBonusGold = Math.floor(gold * towerPct / 100);
+      gold += towerBonusGold;
+    }
     p.gold += gold;
     p.xp   += xp;
     try {
@@ -13524,7 +13553,8 @@ function huntEnd(result){
       bumpTitleCounter('total_gold_earned', gold);
       bumpTitleCounter('total_xp_earned', xp);
     } catch(e){}
-    huntLog(`🏆 승리! +${gold}G, +${xp}XP`, 'sys');
+    const towerTag = towerPct > 0 ? ` <span style="color:#ffd700;">(🗼탑 +${towerPct}% · +${towerBonusGold}G)</span>` : '';
+    huntLog(`🏆 승리! +${gold}G, +${xp}XP${towerTag}`, 'sys');
     while (p.xp >= xpForNextLevel(p.level)){
       p.xp -= xpForNextLevel(p.level);
       p.level++;
@@ -14014,6 +14044,13 @@ function openTowerDeckEdit(){
   _towerDeckSelected = [];
   showPage('tower-deck');
   if ($('tower_deck_floor_label')) $('tower_deck_floor_label').textContent = GAME.tower.currentFloor;
+  // 다음 층 몹 미리 생성 (한 번만 · floor 바뀌면 재생성). 실전에서 다시 랜덤 굴리지 않도록 캐시.
+  const curFloor = GAME.tower.currentFloor;
+  if (!GAME.tower.previewMonster || GAME.tower.previewMonster._floor !== curFloor){
+    const mon = generateTowerMonster(curFloor);
+    mon._floor = curFloor;
+    GAME.tower.previewMonster = mon;
+  }
   renderTowerDeckEdit();
 }
 
@@ -14039,6 +14076,66 @@ function _towerGetAvailableCards(){
   });
   return list;
 }
+// 다음 층 상대방 (미리 캐시된 previewMonster) + 내 스탯을 덱 편집 화면 상단에 미리보기로 출력
+function _renderTowerPreview(gradeColor){
+  const el = $('tower_deck_preview');
+  if (!el) return;
+  const p = GAME.player;
+  const m = GAME.tower && GAME.tower.previewMonster;
+  if (!p || !m){ el.innerHTML = ''; return; }
+  try { calcDerived(p); } catch(e){}
+  const monDeckHtml = (m.deck || []).map(c => {
+    if (!c) return '';
+    const border = gradeColor[c.grade] || '#bbb';
+    const iconTxt = (typeof cardIcon === 'function') ? cardIcon(c) : (c.icon || '?');
+    return `<div title="${(c.name||'').replace(/"/g,'&quot;')} — ${(c.text||'').replace(/"/g,'&quot;')}" style="background:#1a0a2a;border:1.5px solid ${border};border-radius:3px;padding:2px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:44px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <div style="font-size:12px;">${iconTxt}</div>
+      <div style="color:${c.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:1px;font-size:9px;line-height:1.1;">${c.name||'?'}</div>
+    </div>`;
+  }).join('');
+  const monWpn = (m.weapon && m.weapon.atkBonus) || 0;
+  const monArm = (m.armor  && m.armor.defBonus) || 0;
+  el.innerHTML = `
+    <!-- 상대방 -->
+    <div style="background:#1e0a1a;border:1px solid #c00;border-radius:6px;padding:8px;">
+      <div style="font-size:12px;color:#ff9999;font-weight:bold;margin-bottom:6px;border-bottom:1px solid #c00;padding-bottom:4px;">
+        👹 다음 상대 — ${m.name||'?'} <span style="font-size:10px;color:#ff6666;font-weight:normal;">(Lv ${m.level||1})</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px;color:#fff;">
+        <div>❤ HP <b style="color:#ff9999;">${m.hpMax}</b></div>
+        <div>💧 MP <b style="color:#99bbff;">${m.mpMax}</b></div>
+        <div>⚔ ATK <b>${m.atk[0]}-${m.atk[1]}</b> <span style="color:#888;font-size:10px;">(+${monWpn})</span></div>
+        <div>🛡 DEF <b>${m.def}</b> <span style="color:#888;font-size:10px;">(+${monArm})</span></div>
+        <div>💪 STR <b>${m.str}</b></div>
+        <div>🏃 DEX <b>${m.dex}</b></div>
+        <div>🧠 INT <b>${m.int}</b></div>
+        <div>❤‍🩹 CON <b>${m.con}</b></div>
+      </div>
+      <div style="font-size:10px;color:#ffcccc;margin-top:6px;margin-bottom:3px;">🃏 상대 덱 (${(m.deck||[]).length}장)</div>
+      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;">${monDeckHtml}</div>
+    </div>
+    <!-- 나 -->
+    <div style="background:#0a1a24;border:1px solid #2e53b2;border-radius:6px;padding:8px;">
+      <div style="font-size:12px;color:#99ccff;font-weight:bold;margin-bottom:6px;border-bottom:1px solid #2e53b2;padding-bottom:4px;">
+        🛡 내 스탯 — ${p.name||'나'} <span style="font-size:10px;color:#88aaff;font-weight:normal;">(Lv ${p.level||1})</span>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;font-size:11px;color:#fff;">
+        <div>❤ HP <b style="color:#99ff99;">${p.hp}/${p.hpMax}</b></div>
+        <div>💧 MP <b style="color:#99bbff;">${p.mp}/${p.mpMax}</b></div>
+        <div>⚔ ATK <b>${p.atk[0]}-${p.atk[1]}</b> <span style="color:#888;font-size:10px;">(+${(p.weapon&&p.weapon.atkBonus)||0})</span></div>
+        <div>🛡 DEF <b>${p.def}</b> <span style="color:#888;font-size:10px;">(+${(p.armor&&p.armor.defBonus)||0})</span></div>
+        <div>💪 STR <b>${p.str}</b></div>
+        <div>🏃 DEX <b>${p.dex}</b></div>
+        <div>🧠 INT <b>${p.int}</b></div>
+        <div>❤‍🩹 CON <b>${p.con}</b></div>
+      </div>
+      <div style="font-size:10px;color:#aaccff;margin-top:8px;line-height:1.5;">
+        ⚔ 무기: <b>${(p.weapon&&p.weapon.name)||'-'}</b><br>
+        🛡 방어구: <b>${(p.armor&&p.armor.name)||'-'}</b>
+      </div>
+    </div>`;
+}
+
 function _towerPrevFloorDeckSet(){
   const hist = GAME.tower.deckHistory || [];
   if (!hist.length) return new Set();
@@ -14054,6 +14151,9 @@ function renderTowerDeckEdit(){
   if (!selectedEl || !poolEl) return;
   const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
   const prevSet = _towerPrevFloorDeckSet();
+
+  // ── 상대방 · 내 미리보기 패널 ──
+  try { _renderTowerPreview(gradeColor); } catch(e){ console.warn('[towerPreview]', e); }
 
   // ── 편성된 덱 ──
   const selCards = _towerDeckSelected.map(id => CARDS.find(c => c.id === id)).filter(Boolean);
@@ -14146,8 +14246,16 @@ function startTowerFloor(floorN){
   }
   GAME.myDeck = newDeck;
 
-  // 몬스터 생성
-  const monster = generateTowerMonster(floorN);
+  // 몬스터 생성 — 덱 편성 화면에서 미리 생성한 previewMonster 재사용 (없거나 층 불일치 시 새로 생성)
+  let monster;
+  const preview = GAME.tower.previewMonster;
+  if (preview && preview._floor === floorN){
+    monster = preview;
+    delete monster._floor;   // 마커 제거 — 실전 진입 후엔 필요 없음
+  } else {
+    monster = generateTowerMonster(floorN);
+  }
+  GAME.tower.previewMonster = null;   // 소진
   GAME.tower.monster = monster;
 
   const maxTurns = floorN <= 25 ? 10 : 15;
