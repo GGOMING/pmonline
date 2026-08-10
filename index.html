@@ -244,6 +244,14 @@
   }
   #logoutBtn:hover { background:#666; }
   #pg-main.active ~ #logoutBtn, body:has(#pg-main.active) #logoutBtn { display:block; }
+  /* 모바일: 상단 로그아웃 버튼이 캐릭터 스탯 셀 위에 겹쳐 표시되는 문제 → 좌측 하단으로 이동 (PC모드 버튼 반대쪽) */
+  body.layout-vertical #logoutBtn {
+    top:auto; right:auto;
+    bottom:12px; left:12px;
+    padding:6px 10px; font-size:11px;
+    opacity:0.85; border-radius:4px;
+  }
+  body.layout-vertical #logoutBtn:hover { opacity:1; }
 
   /* 전투 중: PC 가로 모드에서 #game 와이드 + 좌우대칭 3-column + 세로 가운데 */
   body.combat-active:not(.layout-vertical) { padding:6px; min-height:100vh; box-sizing:border-box; }
@@ -352,9 +360,14 @@
   body.layout-vertical table.stat colgroup col:nth-of-type(6) { width:18% !important; }
   body.layout-vertical table.stat td { padding:0 2px; }
   /* (avatar는 기본 사이즈 100×100 사용) */
-  /* 메인 카드 덱 (15슬롯) — 셀 padding:1px 로 상하좌우 1px 여백, 이미지는 정사각 */
+  /* 메인 카드 덱 (15슬롯) — padding·border 완전 제거하여 이미지가 셀 100% 꽉 참 */
   body.layout-vertical .deck { table-layout:fixed; width:100%; font-size:10px; }
-  body.layout-vertical .deck tr.icons td { width:20%; padding:1px; vertical-align:top; }
+  body.layout-vertical .deck tr.icons td {
+    width:20%;
+    padding:0;
+    border:0;
+    vertical-align:top;
+  }
   body.layout-vertical .deck tr.icons td .card-ico {
     display:block;
     width:100%;
@@ -366,7 +379,12 @@
   body.layout-vertical .deck tr.icons td .card-ico svg { max-height:100%; }
   /* mini deck (전투/덱설정) — 동일 규칙 */
   body.layout-vertical table.deck.mini { table-layout:fixed; width:100%; }
-  body.layout-vertical table.deck.mini tr.icons td { width:20%; padding:1px; vertical-align:top; }
+  body.layout-vertical table.deck.mini tr.icons td {
+    width:20%;
+    padding:0;
+    border:0;
+    vertical-align:top;
+  }
   body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; height:50px; }
   body.layout-vertical table.deck.mini tr.icons td .card-ico {
     display:block;
