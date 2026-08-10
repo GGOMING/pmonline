@@ -16090,8 +16090,39 @@ const ICON_PMCARD_MAP = {
 };
 
 // 카드 아이콘 — 카드별 iconPath 명시 시 우선, 이후 pmcards → wc3_icons → SVG fallback
+// ─── renew 폴더 최우선 매핑 (자동 생성 + 특수 파일명 예외) ───
+// 게임에 새 카드가 추가되면 여기 파일 목록을 확장하거나, 파일명 규칙에 맞게 renew 폴더에 넣기만 하면 자동 반영.
+const RENEW_ICON_MAP = (function(){
+  const m = {
+    arrest:     'arrest.jpg',
+    gold_throw: 'goldthrow.jpg',
+  };
+  const pad = n => (n < 10 ? '0' : '') + n;
+  // n01~n87 → .png
+  for (let i = 1; i <= 87; i++) m['n' + pad(i)] = 'n' + pad(i) + '.png';
+  // r01~r47 → .png (r34 만 .jpg 예외)
+  for (let i = 1; i <= 47; i++) m['r' + pad(i)] = 'r' + pad(i) + (i === 34 ? '.jpg' : '.png');
+  // u01~u10 → .jpg
+  for (let i = 1; i <= 10; i++) m['u' + pad(i)] = 'u' + pad(i) + '.jpg';
+  // h01~h05 → .jpg
+  for (let i = 1; i <= 5;  i++) m['h' + pad(i)] = 'h' + pad(i) + '.jpg';
+  // l01~l02 → .jpg
+  for (let i = 1; i <= 2;  i++) m['l' + pad(i)] = 'l' + pad(i) + '.jpg';
+  return m;
+})();
+
 function cardIcon(card){
   // 인라인 스타일로 컨테이너 100% 채움 — CSS 스코프 없는 컨테이너(명예의 전당 덱 등)에서도 정상 렌더
+  const IMG_STYLE = "width:100%;height:100%;object-fit:contain;image-rendering:auto;display:block;";
+  // 최우선: renew 폴더 (새 아트) — 로드 실패 시 기존 iconPath/pmcards/wc3_icons 순으로 폴백
+  const renewFile = RENEW_ICON_MAP[card.id];
+  if (renewFile){
+    return `<img src="assets/renew/${renewFile}" alt="${card.name}" class="renew-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIcon.__legacyRender(card)}</div>`;
+  }
+  return cardIcon.__legacyRender(card);
+}
+// 기존 렌더 로직 (renew 로드 실패 폴백용 + renew 미등록 카드용)
+cardIcon.__legacyRender = function(card){
   const IMG_STYLE = "width:100%;height:100%;object-fit:contain;image-rendering:pixelated;display:block;";
   if (card.iconPath){
     return `<img src="${card.iconPath}" alt="${card.name}" class="wc3-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
@@ -16105,7 +16136,7 @@ function cardIcon(card){
     return `<img src="assets/wc3_icons/${img}" alt="${card.name}" class="wc3-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIconSvg(card.icon||'sword', card.grade)}</div>`;
   }
   return cardIconSvg(card.icon||'sword', card.grade);
-}
+};
 
 // ─── 카드 아이콘 SVG 라이브러리 ───
 function cardIconSvg(type, grade){
