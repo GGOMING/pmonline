@@ -1445,17 +1445,17 @@
         <tr>
           <td class="lbl">공격력</td><td class="val" id="s_atk">- - -</td>
           <td class="lbl">방어력</td><td class="val" id="s_def">-</td>
-          <td class="lbl">골드</td><td class="val" id="s_gold">-</td>
+          <td class="lbl">무기</td><td class="val" id="s_weapon">(+)</td>
         </tr>
         <tr>
-          <td class="lbl">HP</td><td class="val" id="s_hp">- (-)</td>
-          <td class="lbl">MP</td><td class="val" id="s_mp">- (-)</td>
-          <td class="lbl">무기</td><td class="val" id="s_weapon">(+)</td>
+          <td class="lbl">타입</td><td class="val" id="s_atkType">-</td>
+          <td class="lbl">골드</td><td class="val" id="s_gold">-</td>
+          <td class="lbl">방어구</td><td class="val" id="s_armor">(+)</td>
         </tr>
         <tr>
           <td class="lbl">STR</td><td class="val"><span id="s_str">-</span> <button class="statup-btn" onclick="addStat('str')">＋</button></td>
           <td class="lbl">DEX</td><td class="val"><span id="s_dex">-</span> <button class="statup-btn" onclick="addStat('dex')">＋</button></td>
-          <td class="lbl">방어구</td><td class="val" id="s_armor">(+)</td>
+          <td class="lbl">🌿 정령</td><td class="val"><b id="s_spirit" style="color:#7ee08a;">0</b>&nbsp;<span style="color:#888;font-size:10px;">개</span></td>
         </tr>
         <tr>
           <td class="lbl">INT</td><td class="val"><span id="s_int">-</span> <button class="statup-btn" onclick="addStat('int')">＋</button></td>
@@ -2342,6 +2342,21 @@
     <div class="content-pane" id="content-profile" hidden>
       <div class="profile-page">
         <div class="profile-banner">프로필 관리</div>
+
+        <!-- 0) 공격 타입 (최상단) -->
+        <div class="profile-section">
+          <h4>⚔ 공격 타입</h4>
+          <div style="font-size:11px;color:#555;line-height:1.6;margin-bottom:8px;">
+            평타의 주 스탯이 결정됩니다. 무기와 무관하게 선택한 타입의 스탯만 반영.
+            <br><b style="color:#c04040;">⚔ 근접</b> = STR · <b style="color:#3a9c9c;">🏹 사격</b> = DEX · <b style="color:#a335ee;">✨ 마법</b> = INT
+          </div>
+          <div id="profile_atkType_row" style="display:flex;gap:8px;">
+            <button type="button" onclick="setAtkType('근접')" data-atktype="근접" style="flex:1;padding:10px 8px;border:2px solid #c04040;background:#fff;color:#c04040;font-weight:bold;cursor:pointer;border-radius:4px;">⚔ 근접<br><span style="font-size:10px;font-weight:normal;">STR 기반</span></button>
+            <button type="button" onclick="setAtkType('사격')" data-atktype="사격" style="flex:1;padding:10px 8px;border:2px solid #3a9c9c;background:#fff;color:#3a9c9c;font-weight:bold;cursor:pointer;border-radius:4px;">🏹 사격<br><span style="font-size:10px;font-weight:normal;">DEX 기반</span></button>
+            <button type="button" onclick="setAtkType('마법')" data-atktype="마법" style="flex:1;padding:10px 8px;border:2px solid #a335ee;background:#fff;color:#a335ee;font-weight:bold;cursor:pointer;border-radius:4px;">✨ 마법<br><span style="font-size:10px;font-weight:normal;">INT 기반</span></button>
+          </div>
+          <div id="profile_atkType_msg" style="font-size:11px;color:#060;margin-top:6px;min-height:14px;"></div>
+        </div>
 
         <!-- 1) 프로필 사진 -->
         <div class="profile-section">
@@ -3260,6 +3275,14 @@ function applySavePayload(d){
   // 옛 '몽둥이' → '훈련용 목검' 마이그레이션
   if (GAME.player.weapon.id === 'basic_club' && GAME.player.weapon.name === '몽둥이'){
     GAME.player.weapon.name = '훈련용 목검';
+  }
+  // 공격 타입 마이그레이션 — 없으면 근접 기본
+  if (GAME.player.atkType !== '근접' && GAME.player.atkType !== '사격' && GAME.player.atkType !== '마법'){
+    GAME.player.atkType = '근접';
+  }
+  // 정령의 축복 — 초기값 0
+  if (typeof GAME.player.spiritBlessing !== 'number' || !isFinite(GAME.player.spiritBlessing)){
+    GAME.player.spiritBlessing = 0;
   }
   // 파생 스탯 재계산 — 로직 변경(CON→def 제거 등) 반영. 저장된 옛 def·atk·hpMax·mpMax를 새 공식으로 자동 마이그레이션
   try { calcDerived(GAME.player); } catch(e){ console.warn('[applySavePayload calcDerived]', e); }
@@ -16049,7 +16072,7 @@ const TUTORIAL_STEPS = [
     icon:'📊', title:'스탯 (STR · DEX · INT · CON)',
     body:`<p>레벨업 시 받는 스탯 포인트의 분배가 전략의 핵심입니다.</p>
       <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력 ↑. 배쉬·슬램·도려내기 등 묵직한 근접 카드와 시너지. <i>정면 돌파형</i> 빌드의 기반.<br>
-         • <b style="color:#aaffaa;">DEX (민첩)</b> — 선공 결정·기본공격력 보조. 시어링애로우·임페일·블랙애로우 등 DEX 스케일 원거리 카드와 잘 맞는 <i>속공형</i> 빌드.<br>
+         • <b style="color:#aaffaa;">DEX (민첩)</b> — 선공 결정·기본공격력 보조. 시어링애로우·임페일·블랙애로우 등 DEX 스케일 사격 카드와 잘 맞는 <i>속공형</i> 빌드.<br>
          • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·파이어볼트처럼 <b>MP를 소모해 강력한 데미지</b>를 주는 <i>마법사형</i> 빌드.<br>
          • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력 ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
       <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.<br>
@@ -16112,6 +16135,14 @@ const TUTORIAL_STEPS = [
     body:`<p>강조된 <b style="color:#ffd700;">프로필 관리</b>에서 다음을 변경할 수 있어요.</p>
       <p>• 프로필 사진 (10,000G)<br>• 닉네임 (50,000G)<br>• 비밀번호 (무료)</p>
       <div class="tip">📷 부적절한 사진·닉네임은 운영자 판단으로 계정이 삭제될 수 있습니다.</div>`,
+    target:'#m-profile', page:'main', position:'corner',
+  },
+  {
+    icon:'⚔', title:'공격 타입',
+    body:`<p>내 평타의 주 스탯은 <b style="color:#ffd700;">공격 타입</b>에 따라 달라집니다.</p>
+      <p>• <b style="color:#c04040;">⚔ 근접</b> — <b>STR</b><br>• <b style="color:#3a9c9c;">🏹 사격</b> — <b>DEX</b><br>• <b style="color:#a335ee;">✨ 마법</b> — <b>INT</b></p>
+      <p>무기와 관계없이 선택한 타입의 주 스탯이 평타 공격력에 반영됩니다.</p>
+      <div class="tip">🛠 공격 타입은 <b>프로필 관리</b> 페이지 상단에서 자유롭게 변경할 수 있어요.</div>`,
     target:'#m-profile', page:'main', position:'corner',
   },
   {
@@ -16382,13 +16413,21 @@ function calcDerived(p){
   // renderSheet가 매 턴 calcDerived를 호출하는데 이 값이 없으면 flat 버프가 매턴 리셋됨
   if (p._hpMaxBonus) p.hpMax += p._hpMaxBonus;
   if (p._mpMaxBonus) p.mpMax += p._mpMaxBonus;
-  // 공격력 wBase: STR(1당 +1) + 무기.atkBonus + DEX*0.5 + INT*0.5. 표기는 반올림(round).
-  // 최소값은 0.6배로 range 좁힘 — 평타가 너무 약하게 굴러나오지 않도록.
+  // 공격 타입별 wBase (평타에만 적용) — 프로필 관리에서 선택
+  //   • 근접   : STR × 1   + 무기
+  //   • 사격 : DEX × 0.6 + 무기
+  //   • 마법   : INT × 0.6 + 무기
+  // 범위: [wBase × 0.6, wBase × 1.0] 롤. 스탯창 표기는 중간값.
+  if (p.atkType !== '근접' && p.atkType !== '사격' && p.atkType !== '마법'){
+    p.atkType = '근접';   // 마이그레이션 · 기본값
+  }
   const wBonus = (p.weapon && p.weapon.atkBonus) || 0;
-  const wBase = p.str + wBonus + (p.dex || 0) * 0.5 + (p.int || 0) * 0.5;
+  let wBase;
+  if (p.atkType === '사격')      wBase = (p.dex || 0) * 0.6 + wBonus;
+  else if (p.atkType === '마법')   wBase = (p.int || 0) * 0.6 + wBonus;
+  else                              wBase = (p.str || 0) * 1.0 + wBonus;   // 근접
   p.atk = [Math.max(2, Math.round(wBase * 0.6)),
            Math.max(5, Math.round(wBase * 1.0))];
-  p.atkType = '근접';
   // 방어력 = 방어구 보너스만 반영 (CON은 HP에만 기여, 이중 수혜 제거)
   p.def = (p.armor ? (p.armor.defBonus || 0) : 0);
 }
@@ -16489,6 +16528,37 @@ function profileRemoveAvatar(){
   toast('프로필 사진이 삭제되었습니다.');
 }
 
+// ─── 공격 타입 선택 (프로필 관리 페이지) ───
+function setAtkType(t){
+  const p = GAME.player;
+  if (!p){ toast('로그인 후 사용하세요.'); return; }
+  if (t !== '근접' && t !== '사격' && t !== '마법'){ return; }
+  if (p.atkType === t){ return; }
+  p.atkType = t;
+  try { calcDerived(p); } catch(e){}
+  try { renderSheet(); } catch(e){}
+  try { _syncAtkTypeButtons(); } catch(e){}
+  const msg = $('profile_atkType_msg');
+  if (msg) msg.textContent = `✔ 공격 타입이 [${t}] 로 변경되었습니다. (평타 계산 즉시 반영)`;
+  try { saveGame(); } catch(e){}
+  try { cloudSaveNow().catch(err => console.warn('[setAtkType cloudSave]', err)); } catch(e){}
+}
+function _syncAtkTypeButtons(){
+  const p = GAME.player; if (!p) return;
+  const cur = p.atkType || '근접';
+  const row = document.getElementById('profile_atkType_row');
+  if (!row) return;
+  const btns = row.querySelectorAll('button[data-atktype]');
+  btns.forEach(btn => {
+    const t = btn.getAttribute('data-atktype');
+    const active = (t === cur);
+    const color = t === '사격' ? '#3a9c9c' : (t === '마법' ? '#a335ee' : '#c04040');
+    btn.style.background = active ? color : '#fff';
+    btn.style.color      = active ? '#fff'  : color;
+    btn.style.boxShadow  = active ? `0 0 0 3px ${color}44 inset` : 'none';
+  });
+}
+
 // ─── 프로필 관리 페이지 ───
 function openProfilePage(){
   if (!GAME.player){ alert('로그인 후 사용하세요.'); return; }
@@ -16505,6 +16575,8 @@ function _renderProfilePage(){
       box.innerHTML = `<span style="color:#aaa;font-size:42px;line-height:120px;">${(p.name||'?').charAt(0).toUpperCase()}</span>`;
     }
   }
+  // 공격 타입 선택 버튼 하이라이트
+  try { _syncAtkTypeButtons(); } catch(e){}
   // 입력 필드 비우기
   ['profileNewNick','profileCurPw','profileNewPw','profileNewPw2'].forEach(id => { if ($(id)) $(id).value = ''; });
   const st = $('profileNickStatus'); if (st) st.textContent = '';
@@ -16820,15 +16892,20 @@ function renderSheet(){
   }
   setText('s_xpup', (p.xpUp||0).toLocaleString());
   setText('s_blessing', (p.blessing||0).toLocaleString());
+  setText('s_spirit',   (p.spiritBlessing||0).toLocaleString());
   const isMobile = document.body.classList.contains('layout-vertical');
-  if (isMobile){
-    setText('s_hp', (p.hpMax||0).toLocaleString());
-    setText('s_mp', (p.mpMax||0).toLocaleString());
-  } else {
-    setText('s_hp', (p.hp||0).toLocaleString() + ' / ' + (p.hpMax||0).toLocaleString());
-    setText('s_mp', (p.mp||0).toLocaleString() + ' / ' + (p.mpMax||0).toLocaleString());
-  }
+  // HP/MP 텍스트는 스탯창에서 제거 (아래 main-bars 로 대체). 잔재 element 있으면 안전하게 무시.
   setText('s_gold', (p.gold||0).toLocaleString());
+  // 공격 타입 — 색상 강조 (근접 크림슨 · 사격 청록 · 마법 보라)
+  {
+    const atEl = $('s_atkType');
+    if (atEl){
+      const t = p.atkType || '근접';
+      const color = t === '사격' ? '#3a9c9c' : (t === '마법' ? '#a335ee' : '#c04040');
+      const icon  = t === '사격' ? '🏹' : (t === '마법' ? '✨' : '⚔');
+      atEl.innerHTML = `<b style="color:${color};">${icon} ${t}</b>`;
+    }
+  }
   setText('s_str', p.str);
   setText('s_dex', p.dex);
   // 전투 중이면 myBuffs 합산 표시
