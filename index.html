@@ -534,7 +534,7 @@
     border:1px solid #444;
     text-align:center;
     vertical-align:middle;
-    padding:4px;
+    padding:1px;
     cursor:pointer;
     position:relative;
   }
@@ -548,9 +548,11 @@
     font-size:11px;
     color:#000;
   }
-  .card-ico { width:99px; height:95px; display:inline-block; line-height:0; }
+  .card-ico { width:100%; height:100%; display:block; line-height:0; }
   .card-ico svg { width:100%; height:100%; }
-  .card-ico img.wc3-icon { width:100%; height:100%; image-rendering:pixelated; display:block; object-fit:contain; }
+  .card-ico img.wc3-icon   { width:100%; height:100%; image-rendering:pixelated; display:block; object-fit:contain; }
+  /* renew 이미지는 정사각 페인터리 아트 — 셀 여백 없이 꽉 채우도록 cover 사용 */
+  .card-ico img.renew-icon { width:100%; height:100%; image-rendering:auto;     display:block; object-fit:cover; }
   .ctip {
     display:none; position:absolute; left:0; top:100%; z-index:99;
     background:#FFFFCC; color:#000; padding:6px 8px; border:1px solid #B02025;
@@ -16094,6 +16096,7 @@ const ICON_PMCARD_MAP = {
 // 게임에 새 카드가 추가되면 여기 파일 목록을 확장하거나, 파일명 규칙에 맞게 renew 폴더에 넣기만 하면 자동 반영.
 const RENEW_ICON_MAP = (function(){
   const m = {
+    basic_atk:  'basic.jpg',
     arrest:     'arrest.jpg',
     gold_throw: 'goldthrow.jpg',
   };
@@ -16112,12 +16115,12 @@ const RENEW_ICON_MAP = (function(){
 })();
 
 function cardIcon(card){
-  // 인라인 스타일로 컨테이너 100% 채움 — CSS 스코프 없는 컨테이너(명예의 전당 덱 등)에서도 정상 렌더
-  const IMG_STYLE = "width:100%;height:100%;object-fit:contain;image-rendering:auto;display:block;";
+  // renew 아트는 정사각 페인터리 → object-fit:cover 로 셀 여백 없이 꽉 채움 (인라인이 CSS 덮어씀 방지)
+  const RENEW_STYLE = "width:100%;height:100%;object-fit:cover;image-rendering:auto;display:block;";
   // 최우선: renew 폴더 (새 아트) — 로드 실패 시 기존 iconPath/pmcards/wc3_icons 순으로 폴백
   const renewFile = RENEW_ICON_MAP[card.id];
   if (renewFile){
-    return `<img src="assets/renew/${renewFile}" alt="${card.name}" class="renew-icon" style="${IMG_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIcon.__legacyRender(card)}</div>`;
+    return `<img src="assets/renew/${renewFile}" alt="${card.name}" class="renew-icon" style="${RENEW_STYLE}" onerror="this.onerror=null;this.style.display='none';this.nextElementSibling.style.display='block';"><div style="display:none;width:100%;height:100%;">${cardIcon.__legacyRender(card)}</div>`;
   }
   return cardIcon.__legacyRender(card);
 }
