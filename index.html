@@ -1455,9 +1455,9 @@
         <tr>
           <td class="lbl">STR</td><td class="val"><span id="s_str">-</span> <button class="statup-btn" onclick="addStat('str')">＋</button></td>
           <td class="lbl">DEX</td><td class="val"><span id="s_dex">-</span> <button class="statup-btn" onclick="addStat('dex')">＋</button></td>
-          <td colspan="2" style="padding:0;background:#2e6b3a;">
+          <td colspan="2" style="padding:0;background:#2e53b2;">
             <div style="display:flex;height:20px;align-items:stretch;">
-              <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#c8f2c8;font-weight:bold;border-right:1px solid #c8f2c8;">🌿 정령의 축복</div>
+              <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#FFFF99;font-weight:bold;border-right:1px solid #FFFF99;">🌿 정령의 축복</div>
               <div style="flex:1;display:flex;align-items:center;justify-content:center;color:#fff;font-weight:bold;"><b id="s_spirit" style="color:#7ee08a;">0</b>&nbsp;개</div>
             </div>
           </td>
@@ -16901,14 +16901,13 @@ function renderSheet(){
   const isMobile = document.body.classList.contains('layout-vertical');
   // HP/MP 텍스트는 스탯창에서 제거 (아래 main-bars 로 대체). 잔재 element 있으면 안전하게 무시.
   setText('s_gold', (p.gold||0).toLocaleString());
-  // 공격 타입 — 색상 강조 (근접 크림슨 · 사격 청록 · 마법 보라)
+  // 공격 타입 — 다른 val 셀과 동일한 흰색 톤 (아이콘만 유지)
   {
     const atEl = $('s_atkType');
     if (atEl){
       const t = p.atkType || '근접';
-      const color = t === '사격' ? '#3a9c9c' : (t === '마법' ? '#a335ee' : '#c04040');
-      const icon  = t === '사격' ? '🏹' : (t === '마법' ? '✨' : '⚔');
-      atEl.innerHTML = `<b style="color:${color};">${icon} ${t}</b>`;
+      const icon = t === '사격' ? '🏹' : (t === '마법' ? '✨' : '⚔');
+      atEl.innerHTML = `${icon} ${t}`;
     }
   }
   setText('s_str', p.str);
