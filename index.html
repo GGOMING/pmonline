@@ -3044,7 +3044,7 @@ const CARDS = [
   { id:'u05', name:'썬더리저드 소환', grade:'unique', icon:'dragon', iconPath:'assets/wc3_reforged_used/BTNStampede-Reforged.png', text:'매턴 상대 잔여 HP의 10~20% 랜덤 데미지 (최대 40, 방어력 무시, 소환의식 불필요)', fx:{type:'dotPct',turns:10,pctMin:0.10,pctMax:0.20,max:40,dynamic:true,summon:true} },
   { id:'u06', name:'홀리라이트',     grade:'unique', icon:'lamb',   iconPath:'assets/wc3_reforged_used/holylight.jpg', text:'시전자 레벨 * 2.5 만큼 HP 회복', fx:{type:'healLevel',mult:2.5} },
   { id:'u07', name:'어둠의 오브',    grade:'unique', icon:'orb',    iconPath:'assets/wc3_reforged_used/BTNOrbOfDarkness-Reforged.png', text:'무기와 방어구 각각 +10 ~ +15 랜덤 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'randomBuff',stats:[{stat:'atk',min:10,max:15},{stat:'def',min:10,max:15}]} },
-  { id:'u08', name:'롱기누스의 검',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.3 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.3,turns:2,dynamic:true}]} },
+  { id:'u08', name:'롱기누스의 창',  grade:'unique', icon:'sword',  iconPath:'assets/wc3_reforged_used/BTNBloodRevenant.png', text:'시전자 STR% 확률로 2턴 간 기절 / 2턴 간 STR × 1.3 고정 데미지 (방어력 무시, 매턴 현재 STR 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'str'},{type:'dotStat',stats:['str'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u09', name:'테르시아의 빛',  grade:'unique', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNLightningRevenant.png', text:'시전자 INT% 확률로 2턴 간 기절 / 2턴 간 INT × 1.3 고정 데미지 (방어력 무시, 매턴 현재 INT 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'int'},{type:'dotStat',stats:['int'],mult:1.3,turns:2,dynamic:true}]} },
   { id:'u10', name:'크로노스의 혼',  grade:'unique', icon:'ice',    iconPath:'assets/wc3_reforged_used/BTNFrostRevenant.png', text:'시전자 DEX% 확률로 2턴 간 기절 / 2턴 간 DEX × 1.2 고정 데미지 (방어력 무시, 매턴 현재 DEX 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'dex'},{type:'dotStat',stats:['dex'],mult:1.2,turns:2,dynamic:true}]} },
 
@@ -4967,7 +4967,7 @@ function doGachaShop(shopId, n){
 const CARD_SELL_PRICE = { normal:10, rare:100, unique:1000, hero:10000, legend:100000 };
 
 // 가챠 풀에서 카드 1장 픽 — 등급별 가중 규칙 반영
-// - 최초 유니크 획득: 드렁큰브라우어(u01) 1.4x, 롱기누스의 검(u08) 1.4x 가중 (힘캐 유니크 편향)
+// - 최초 유니크 획득: 드렁큰브라우어(u01) 1.4x, 롱기누스의 창(u08) 1.4x 가중 (힘캐 유니크 편향)
 //   판정 기준: p.uniqueEverAcquired 플래그 OR 인벤토리에 유니크 카드 존재 여부 (마이그레이션 겸용)
 const _FIRST_UNIQUE_WEIGHTS = { u01: 1.4, u08: 1.4 };
 
@@ -10140,7 +10140,7 @@ function getGgomingEncounterRate(){
 }
 function makeGgomingMonster(playerLv){
   // 15턴 풀 덱: 부활증표 → 데우스 → 검거 → 벤전스 → 데몬변신 → 아바타 → 빅베드부두
-  //   → 개구리만들기 → 어둠의 오브 → 홀리라이트 → 로커스트스웜 → 롱기누스의 검 → 테르시아의 빛
+  //   → 개구리만들기 → 어둠의 오브 → 홀리라이트 → 로커스트스웜 → 롱기누스의 창 → 테르시아의 빛
   //   → 크로노스의 혼 → 돈 뿌리기
   const ids = ['l01','l02','arrest','h03','h02','h05','h04','h01','u07','u06','u02','u08','u09','u10','gold_throw'];
   const fullDeck = ids.map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK);
@@ -12844,7 +12844,7 @@ function processCombatTicks(kind){
       if (d.max != null) v = Math.min(d.max, v);
       return Math.max(1, v);
     }
-    // 시전자 스탯 기반 동적 도트 (롱기누스의 검·테르시아의 빛·크로노스의 혼 등)
+    // 시전자 스탯 기반 동적 도트 (롱기누스의 창·테르시아의 빛·크로노스의 혼 등)
     if (d.dynamicStat){
       const casterObj = d.dynamicSide === 'mon' ? opp : me;
       const casterBuffs = d.dynamicSide === 'mon' ? c.monBuffs : c.myBuffs;
