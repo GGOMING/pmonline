@@ -352,21 +352,30 @@
   body.layout-vertical table.stat colgroup col:nth-of-type(6) { width:18% !important; }
   body.layout-vertical table.stat td { padding:0 2px; }
   /* (avatar는 기본 사이즈 100×100 사용) */
-  /* 메인 카드 덱 (15슬롯) — 이미지는 셀 대비 상하좌우 1px 씩 작게 고정 (정사각) */
+  /* 메인 카드 덱 (15슬롯) — 셀 padding:1px 로 상하좌우 1px 여백, 이미지는 정사각 */
   body.layout-vertical .deck { table-layout:fixed; width:100%; font-size:10px; }
-  body.layout-vertical .deck tr.icons td { width:20%; height:auto; padding:0; vertical-align:top; }
+  body.layout-vertical .deck tr.icons td { width:20%; padding:1px; vertical-align:top; }
   body.layout-vertical .deck tr.icons td .card-ico {
     display:block;
-    margin:1px;
-    width:calc(100% - 2px);
-    height:auto;
+    width:100%;
     aspect-ratio:1/1;
+    height:auto;
   }
-  /* mini deck (전투/덱설정) */
+  /* iOS Safari 안전장치 — aspect-ratio 미계산 시 이미지가 원본 512px 로 스트레치되는 것 방지 */
+  body.layout-vertical .deck tr.icons td .card-ico img,
+  body.layout-vertical .deck tr.icons td .card-ico svg { max-height:100%; }
+  /* mini deck (전투/덱설정) — 동일 규칙 */
   body.layout-vertical table.deck.mini { table-layout:fixed; width:100%; }
-  body.layout-vertical table.deck.mini tr.icons td { width:20%; height:auto; padding:1px; }
+  body.layout-vertical table.deck.mini tr.icons td { width:20%; padding:1px; vertical-align:top; }
   body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; height:50px; }
-  body.layout-vertical table.deck.mini tr.icons td .card-ico { width:100%; height:auto; aspect-ratio:99/95; }
+  body.layout-vertical table.deck.mini tr.icons td .card-ico {
+    display:block;
+    width:100%;
+    aspect-ratio:1/1;
+    height:auto;
+  }
+  body.layout-vertical table.deck.mini tr.icons td .card-ico img,
+  body.layout-vertical table.deck.mini tr.icons td .card-ico svg { max-height:100%; }
   /* 메뉴/모달/로그인 */
   body.layout-vertical .menubar table { width:100%; }
   body.layout-vertical .menubar td { font-size:11px; padding:4px; }
