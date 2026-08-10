@@ -3637,6 +3637,13 @@ function _resetPlayerBattleState(){
   const p = GAME.player;
   if (!p) return false;
   const hadBonus = (p._hpMaxBonus|0) !== 0 || (p._mpMaxBonus|0) !== 0;
+  // 베어폼/크로우폼 등으로 전환된 공격 타입 원복 (원본 저장 있으면)
+  let hadAtkTypeSwap = false;
+  if (typeof p._origAtkType === 'string'){
+    if (p.atkType !== p._origAtkType) hadAtkTypeSwap = true;
+    p.atkType = p._origAtkType;
+    delete p._origAtkType;
+  }
   const prevHpMax = p.hpMax, prevMpMax = p.mpMax, prevHp = p.hp, prevMp = p.mp;
   try {
     p._hpMaxBonus = 0;
@@ -3645,7 +3652,7 @@ function _resetPlayerBattleState(){
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
   } catch(e){ console.warn('[_resetPlayerBattleState]', e); return false; }
-  return hadBonus || prevHpMax !== p.hpMax || prevMpMax !== p.mpMax || prevHp !== p.hp || prevMp !== p.mp;
+  return hadBonus || hadAtkTypeSwap || prevHpMax !== p.hpMax || prevMpMax !== p.mpMax || prevHp !== p.hp || prevMp !== p.mp;
 }
 
 // ─── 화면 전환 딜레이 (수행/공격대 입장·결과·회복샘물·메인 복귀) ───
@@ -8538,6 +8545,8 @@ async function raidEnd(result){
   // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
   try {
     p._hpMaxBonus = 0; p._mpMaxBonus = 0;
+    // 베어폼/크로우폼 등으로 전환된 공격 타입 원복
+    if (typeof p._origAtkType === 'string'){ p.atkType = p._origAtkType; delete p._origAtkType; }
     calcDerived(p);
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
@@ -12690,6 +12699,18 @@ function applyCardEffect(card, ctx){
       ctx.castBuffs[fx.from] = (ctx.castBuffs[fx.from]||0) - amt; // from을 0으로
       ctx.castBuffs[fx.to] = (ctx.castBuffs[fx.to]||0) + amt;
       ctx.log(`  + ${fx.from}→${fx.to} ${amt} 이동`, 'heal');
+      // 플레이어 시전자면 공격 타입도 to 스탯 기반으로 전환. 원본은 _origAtkType 에 저장 → 전투 종료 시 자동 복구
+      if (ctx.castObj === GAME.player){
+        const p = GAME.player;
+        const newType = fx.to === 'str' ? '근접' : (fx.to === 'dex' ? '사격' : (fx.to === 'int' ? '마법' : null));
+        if (newType && p.atkType !== newType){
+          if (typeof p._origAtkType === 'undefined') p._origAtkType = p.atkType;
+          p.atkType = newType;
+          try { calcDerived(p); } catch(e){}
+          try { renderSheet(); } catch(e){}
+          ctx.log(`  ⚔ 공격 타입 → ${newType} (전투 종료 시 원복)`, 'heal');
+        }
+      }
       return;
     }
     if (t === 'buffFromStat'){
@@ -13739,6 +13760,8 @@ function huntEnd(result){
   // 전투 중 발동된 최대 HP/MP 버프(라이프업 등) 및 CON/INT 스탯 sync 잔여물 정리
   try {
     p._hpMaxBonus = 0; p._mpMaxBonus = 0;
+    // 베어폼/크로우폼 등으로 전환된 공격 타입 원복
+    if (typeof p._origAtkType === 'string'){ p.atkType = p._origAtkType; delete p._origAtkType; }
     calcDerived(p);
     if (p.hp > p.hpMax) p.hp = p.hpMax;
     if (p.mp > p.mpMax) p.mp = p.mpMax;
