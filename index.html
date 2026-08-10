@@ -2574,6 +2574,36 @@
 </div>
 
 <!-- ═══════════════════════════════════════════════════════════
+     여신의 탑 — 도전 시작 시 30장 카드 풀 선발 (pg-tower-pool)
+       한 번의 도전 (1~50층) 동안 이 30장에서만 층별 덱 편성 가능
+     ═══════════════════════════════════════════════════════════ -->
+<div id="pg-tower-pool" class="page">
+  <div style="max-width:900px;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:16px;color:#fff;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:8px;margin-bottom:10px;">
+      <div style="font-size:18px;font-weight:bold;color:#ffd700;">🎴 도전용 카드 30장 선발</div>
+      <button onclick="exitTower(true)" style="padding:5px 12px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-size:11px;">도전 중단</button>
+    </div>
+    <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
+      한 번의 도전 (1층 ~ 50층) 동안 사용할 카드 <b style="color:#ffd700;">30장</b>을 선발하세요. 같은 카드는 <b>1장만</b> 선발 가능 (인벤에 여러 장이어도 종류당 1장).
+      <br>1~25층은 층당 <b>10장</b>, <b style="color:#ffd700;">26층부터는 15장</b> 편성. 직전 층 사용 카드는 재사용 불가 규칙 유지.
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
+        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">선발된 카드 (<span id="tower_pool_count">0</span>/30)</div>
+        <div id="tower_pool_selected" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-height:120px;max-height:340px;overflow-y:auto;"></div>
+      </div>
+      <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #a335ee;">
+        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">보유 카드 (클릭 → 선발)</div>
+        <div id="tower_pool_avail" style="max-height:340px;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;"></div>
+      </div>
+    </div>
+    <div style="text-align:center;margin-top:14px;">
+      <button id="towerPoolCommitBtn" onclick="commitTowerPool()" style="padding:12px 36px;background:linear-gradient(180deg,#ffd700 0%,#b8860b 100%);color:#1a1024;border:0;cursor:pointer;font-weight:bold;font-size:14px;border-radius:6px;">▶ 선발 완료 · 1층 진입</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
      여신의 탑 — 덱 편집 pg-tower-deck
      ═══════════════════════════════════════════════════════════ -->
 <div id="pg-tower-deck" class="page">
@@ -2583,13 +2613,13 @@
       <button onclick="exitTower(true)" style="padding:5px 12px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-size:11px;">도전 중단</button>
     </div>
     <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
-      <b style="color:#ffd700;">10장</b> 채워야 다음 층 도전 가능 · 회색 카드는 <b style="color:#ff6b6b;">직전 층 사용</b> (선택 불가) · 인벤 보유 카드만 선택 가능 (같은 카드 여러 장이어도 1회만 표시).
+      <b style="color:#ffd700;"><span id="tower_deck_target">10</span>장</b> 채워야 다음 층 도전 가능 · 회색 카드는 <b style="color:#ff6b6b;">직전 층 사용</b> (선택 불가) · 도전 시작 시 선발한 <b style="color:#ffd700;">30장 풀</b>에서만 선택 가능.
     </div>
     <!-- 다음 층 상대방 미리보기 + 내 스탯 -->
     <div id="tower_deck_preview" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
-        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">편성된 덱 (<span id="tower_deck_count">0</span>/10)</div>
+        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">편성된 덱 (<span id="tower_deck_count">0</span>/<span id="tower_deck_target2">10</span>)</div>
         <div id="tower_deck_selected" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-height:120px;"></div>
       </div>
       <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #a335ee;">
@@ -14080,26 +14110,140 @@ function startTowerRun(){
   GAME.tower.bestFloorThisSession = 0;
   GAME.tower.deckHistory = [];
   GAME.tower.currentDeck = [];
+  GAME.tower.runCardPool = [];   // 30장 도전용 카드 풀 (선발 화면에서 채움)
   GAME.tower.weekStart = _towerCurrentWeekStart();
   GAME.tower.monster = null;
+  GAME.tower.previewMonster = null;
   GAME.tower.lastBossRemainingHp = 0;
   // HP·MP 완전 회복 (도전 시작 서비스)
   try { calcDerived(p); } catch(e){}
   p.hp = p.hpMax; p.mp = p.mpMax;
   try { saveGame(); } catch(e){}
+  openTowerPoolEdit();   // 30장 선발 화면부터
+}
+
+// ── 층별 덱 크기 (1~25층: 10장, 26층+: 15장) ──
+function _towerDeckSize(floorN){ return (floorN|0) <= 25 ? 10 : 15; }
+
+// ── 도전 카드 풀 (30장) 선발 화면 ──
+const TOWER_POOL_SIZE = 30;
+let _towerPoolSelected = [];   // 카드 id 배열 (최대 30)
+
+function openTowerPoolEdit(){
+  const p = GAME.player;
+  if (!p || !GAME.tower.active) return;
+  // 기존 선발 상태 유지 (뒤로가기 대비). 없으면 빈 배열.
+  _towerPoolSelected = Array.isArray(GAME.tower.runCardPool) ? GAME.tower.runCardPool.slice() : [];
+  showPage('tower-pool');
+  renderTowerPoolEdit();
+}
+
+function renderTowerPoolEdit(){
+  const selEl = $('tower_pool_selected');
+  const avEl  = $('tower_pool_avail');
+  const cntEl = $('tower_pool_count');
+  const btn   = $('towerPoolCommitBtn');
+  if (!selEl || !avEl) return;
+  const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+
+  // 선발된 카드 렌더
+  const selCards = _towerPoolSelected.map(id => CARDS.find(c => c.id === id)).filter(Boolean);
+  let selHtml = '';
+  for (let i = 0; i < TOWER_POOL_SIZE; i++){
+    const card = selCards[i];
+    if (card){
+      const border = gradeColor[card.grade] || '#bbb';
+      const iconTxt = (typeof cardIcon === 'function') ? cardIcon(card) : (card.icon || '?');
+      selHtml += `<div title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}" onclick="_towerPoolRemove(${i})" style="cursor:pointer;background:#1a0a2a;border:2px solid ${border};border-radius:4px;padding:3px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:56px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+        <div style="font-size:14px;">${iconTxt}</div>
+        <div style="color:${card.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:1px;">${card.name}</div>
+      </div>`;
+    } else {
+      selHtml += `<div style="background:#1a0a2a;border:2px dashed #555;border-radius:4px;padding:3px;text-align:center;min-height:56px;display:flex;align-items:center;justify-content:center;color:#666;font-size:18px;">＋</div>`;
+    }
+  }
+  selEl.innerHTML = selHtml;
+
+  // 보유 카드 풀 (인벤 · basic_atk·monsterOnly 제외 · 중복 id 제거)
+  const seen = new Set();
+  const available = [];
+  for (const c of (GAME.inventory || [])){
+    if (!c || c.id === 'basic_atk' || c.monsterOnly) continue;
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    available.push(c);
+  }
+  const gradeOrder = { legend:0, hero:1, unique:2, rare:3, normal:4 };
+  available.sort((a,b) => {
+    const ga = gradeOrder[a.grade] ?? 9, gb = gradeOrder[b.grade] ?? 9;
+    if (ga !== gb) return ga - gb;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  });
+  const chosenSet = new Set(_towerPoolSelected);
+  let avHtml = '';
+  if (!available.length){
+    avHtml = `<div style="grid-column:span 4;color:#888;text-align:center;padding:20px;">보유 카드 없음 — 인벤에서 카드를 획득해야 합니다.</div>`;
+  } else {
+    for (const card of available){
+      const isSel = chosenSet.has(card.id);
+      const border = gradeColor[card.grade] || '#bbb';
+      let click = `onclick="_towerPoolAdd('${card.id}')"`;
+      let extra = '', opacity = '1';
+      if (isSel){ extra = '<div style="font-size:9px;color:#7eff7e;">선발됨</div>'; click = `onclick="toast('이미 선발됨.')"`; opacity = '0.5'; }
+      const iconTxt = (typeof cardIcon === 'function') ? cardIcon(card) : (card.icon || '?');
+      avHtml += `<div ${click} title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}" style="cursor:pointer;background:#0a0518;border:2px solid ${border};border-radius:4px;padding:4px;text-align:center;font-size:10px;color:#fff;line-height:1.2;min-height:60px;display:flex;flex-direction:column;justify-content:center;align-items:center;opacity:${opacity};">
+        <div style="font-size:13px;">${iconTxt}</div>
+        <div style="color:${card.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:2px;">${card.name}</div>
+        ${extra}
+      </div>`;
+    }
+  }
+  avEl.innerHTML = avHtml;
+  if (cntEl) cntEl.textContent = _towerPoolSelected.length;
+  if (btn){
+    const ok = _towerPoolSelected.length === TOWER_POOL_SIZE;
+    btn.disabled = !ok;
+    btn.style.opacity = ok ? '1' : '0.45';
+    btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
+  }
+}
+
+function _towerPoolAdd(id){
+  if (_towerPoolSelected.length >= TOWER_POOL_SIZE){ toast(`최대 ${TOWER_POOL_SIZE}장까지 선발 가능.`); return; }
+  if (_towerPoolSelected.includes(id)){ toast('이미 선발됨.'); return; }
+  _towerPoolSelected.push(id);
+  renderTowerPoolEdit();
+}
+function _towerPoolRemove(idx){
+  _towerPoolSelected.splice(idx, 1);
+  renderTowerPoolEdit();
+}
+function commitTowerPool(){
+  if (_towerPoolSelected.length !== TOWER_POOL_SIZE){
+    toast(`${TOWER_POOL_SIZE}장을 채워야 진입 가능.`);
+    return;
+  }
+  GAME.tower.runCardPool = _towerPoolSelected.slice();
   openTowerDeckEdit();
 }
 
-// ── 덱 편집 화면 ──
-let _towerDeckSelected = [];   // 카드 id 배열 (최대 10)
+// ── 층별 덱 편집 화면 ──
+let _towerDeckSelected = [];   // 카드 id 배열 (층별 편성)
 function openTowerDeckEdit(){
   const p = GAME.player;
   if (!p || !GAME.tower.active) return;
+  // 30장 선발 안 됐으면 풀 선발 화면으로 (안전장치)
+  if (!Array.isArray(GAME.tower.runCardPool) || GAME.tower.runCardPool.length !== TOWER_POOL_SIZE){
+    openTowerPoolEdit(); return;
+  }
   _towerDeckSelected = [];
   showPage('tower-deck');
-  if ($('tower_deck_floor_label')) $('tower_deck_floor_label').textContent = GAME.tower.currentFloor;
-  // 다음 층 몹 미리 생성 (한 번만 · floor 바뀌면 재생성). 실전에서 다시 랜덤 굴리지 않도록 캐시.
   const curFloor = GAME.tower.currentFloor;
+  if ($('tower_deck_floor_label')) $('tower_deck_floor_label').textContent = curFloor;
+  // 층별 목표 편성 수 (10 or 15) UI 업데이트
+  const tgt = _towerDeckSize(curFloor);
+  const tgtEl = $('tower_deck_target'); if (tgtEl) tgtEl.textContent = tgt;
+  // 다음 층 몹 미리 생성 (한 번만 · floor 바뀌면 재생성). 실전에서 다시 랜덤 굴리지 않도록 캐시.
   if (!GAME.tower.previewMonster || GAME.tower.previewMonster._floor !== curFloor){
     const mon = generateTowerMonster(curFloor);
     mon._floor = curFloor;
@@ -14108,16 +14252,19 @@ function openTowerDeckEdit(){
   renderTowerDeckEdit();
 }
 
-// 인벤에서 사용 가능한 유니크 카드 목록 (basic_atk·monsterOnly 제외, 직전 층 사용 카드 제외 로직은 렌더 단계에서 disabled)
+// 층별 편집에서 사용 가능한 카드 = runCardPool 중 인벤에 여전히 존재하는 것 (예방 · 인벤 삭제 대비)
 function _towerGetAvailableCards(){
-  const seen = new Set();
+  const pool = Array.isArray(GAME.tower.runCardPool) ? GAME.tower.runCardPool : [];
+  const invIds = new Set((GAME.inventory || []).filter(Boolean).map(c => c.id));
   const list = [];
-  for (const c of (GAME.inventory || [])){
+  const seen = new Set();
+  for (const id of pool){
+    if (seen.has(id)) continue;
+    seen.add(id);
+    if (!invIds.has(id)) continue;   // 도중에 인벤에서 사라진 카드는 제외
+    const c = CARDS.find(cc => cc.id === id);
     if (!c) continue;
-    if (c.id === 'basic_atk') continue;
-    if (c.monsterOnly) continue;
-    if (seen.has(c.id)) continue;
-    seen.add(c.id);
+    if (c.id === 'basic_atk' || c.monsterOnly) continue;
     list.push(c);
   }
   // 등급 · 이름 순 정렬
@@ -14205,6 +14352,10 @@ function renderTowerDeckEdit(){
   if (!selectedEl || !poolEl) return;
   const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
   const prevSet = _towerPrevFloorDeckSet();
+  const deckTarget = _towerDeckSize(GAME.tower.currentFloor);
+  // 목표 편성 수 라벨 두 곳 갱신
+  const tgtEl1 = $('tower_deck_target');  if (tgtEl1) tgtEl1.textContent = deckTarget;
+  const tgtEl2 = $('tower_deck_target2'); if (tgtEl2) tgtEl2.textContent = deckTarget;
 
   // ── 상대방 · 내 미리보기 패널 ──
   try { _renderTowerPreview(gradeColor); } catch(e){ console.warn('[towerPreview]', e); }
@@ -14212,7 +14363,7 @@ function renderTowerDeckEdit(){
   // ── 편성된 덱 ──
   const selCards = _towerDeckSelected.map(id => CARDS.find(c => c.id === id)).filter(Boolean);
   let selHtml = '';
-  for (let i = 0; i < 10; i++){
+  for (let i = 0; i < deckTarget; i++){
     const card = selCards[i];
     if (card){
       const border = gradeColor[card.grade] || '#bbb';
@@ -14255,7 +14406,7 @@ function renderTowerDeckEdit(){
   poolEl.innerHTML = poolHtml;
   if (cntEl) cntEl.textContent = _towerDeckSelected.length;
   if (commitBtn){
-    const ok = _towerDeckSelected.length === 10;
+    const ok = _towerDeckSelected.length === deckTarget;
     commitBtn.disabled = !ok;
     commitBtn.style.opacity = ok ? '1' : '0.45';
     commitBtn.style.cursor = ok ? 'pointer' : 'not-allowed';
@@ -14263,7 +14414,8 @@ function renderTowerDeckEdit(){
 }
 
 function _towerAddCard(id){
-  if (_towerDeckSelected.length >= 10){ toast('10장까지만 편성할 수 있습니다.'); return; }
+  const deckTarget = _towerDeckSize(GAME.tower.currentFloor);
+  if (_towerDeckSelected.length >= deckTarget){ toast(`${deckTarget}장까지만 편성할 수 있습니다.`); return; }
   if (_towerDeckSelected.includes(id)){ toast('이미 편성됨.'); return; }
   const prev = _towerPrevFloorDeckSet();
   if (prev.has(id)){ toast('직전 층에 사용한 카드는 재사용 불가.'); return; }
@@ -14278,7 +14430,8 @@ function _towerRemoveCard(idx){
 
 // ── 덱 확정 → 층 전투 개시 ──
 function commitTowerDeck(){
-  if (_towerDeckSelected.length !== 10){ toast('덱은 10장을 채워야 합니다.'); return; }
+  const deckTarget = _towerDeckSize(GAME.tower.currentFloor);
+  if (_towerDeckSelected.length !== deckTarget){ toast(`덱은 ${deckTarget}장을 채워야 합니다.`); return; }
   GAME.tower.currentDeck = _towerDeckSelected.slice();
   startTowerFloor(GAME.tower.currentFloor);
 }
@@ -14293,8 +14446,9 @@ function startTowerFloor(floorN){
   if (!GAME._towerSavedMyDeck){
     GAME._towerSavedMyDeck = GAME.myDeck.slice();
   }
+  const deckSize = _towerDeckSize(floorN);   // 1~25층 10, 26층+ 15
   const newDeck = Array(15).fill(BASIC_ATTACK);
-  for (let i = 0; i < 10 && i < GAME.tower.currentDeck.length; i++){
+  for (let i = 0; i < deckSize && i < GAME.tower.currentDeck.length; i++){
     const c = CARDS.find(cc => cc.id === GAME.tower.currentDeck[i]);
     newDeck[i] = c || BASIC_ATTACK;
   }
@@ -14348,6 +14502,9 @@ function startTowerFloor(floorN){
 const _TOWER_STAT_TO_RACE = { STR:'orc', DEX:'nightelf', INT:'undead', CON:'beast' };
 const _TOWER_STATS = ['STR','DEX','INT','CON'];
 function generateTowerMonster(N){
+  // 난이도 조정 배율 — 전반 10% 하향 (테스트 결과 반영). 재조정 시 이 상수만 변경.
+  const DIFF_MUL = 0.9;
+
   // 주스탯 랜덤 → 종족
   const primaryStat = _TOWER_STATS[Math.floor(Math.random() * 4)];
   const race = _TOWER_STAT_TO_RACE[primaryStat];
@@ -14377,6 +14534,14 @@ function generateTowerMonster(N){
   // 무기 보너스 반영
   atk = [atk[0] + wBonus, atk[1] + wBonus];
   def = def + aBonus;
+  // 난이도 10% 하향 (모든 층·보스 포함) — 최종 출력값에 일괄 적용
+  hpMax = Math.max(1, Math.floor(hpMax * DIFF_MUL));
+  atk   = [Math.max(1, Math.floor(atk[0] * DIFF_MUL)), Math.max(2, Math.floor(atk[1] * DIFF_MUL))];
+  def   = Math.max(0, Math.floor(def * DIFF_MUL));
+  str   = Math.max(1, Math.floor(str * DIFF_MUL));
+  dex   = Math.max(1, Math.floor(dex * DIFF_MUL));
+  intl  = Math.max(1, Math.floor(intl * DIFF_MUL));
+  con   = Math.max(1, Math.floor(con * DIFF_MUL));
 
   const deck = buildTowerMonsterDeck(N, primaryStat);
   const name = `${N}층 ${raceKr(race)}${TOWER_BOSS_FLOORS.has(N) ? ' 수호자' : ''}`;
@@ -14391,16 +14556,17 @@ function generateTowerMonster(N){
   };
 }
 
-// ── 몹 덱 구성 (10장) ──
+// ── 몹 덱 구성 (1~25층: 10장, 26층+: 15장) ──
 function buildTowerMonsterDeck(N, primaryStat){
-  // 층 범위별 등급 배분
+  const deckSize = _towerDeckSize(N);   // 10 or 15
+  // 층 범위별 등급 배분 (합계 = deckSize)
   function comp(N){
-    if (N <= 10)  return { normal:8, rare:2, unique:0, hero:0 };
-    if (N <= 25)  return { normal:6, rare:4, unique:0, hero:0 };
-    if (N <= 35)  return { normal:4, rare:5, unique:1, hero:0 };
-    if (N <= 45)  return { normal:3, rare:5, unique:2, hero:0 };
-    if (N <= 49)  return { normal:2, rare:5, unique:3, hero:0 };
-    return { normal:3, rare:4, unique:2, hero:1 };  // 50층
+    if (N <= 10)  return { normal:8, rare:2, unique:0, hero:0 };   // 10장
+    if (N <= 25)  return { normal:6, rare:4, unique:0, hero:0 };   // 10장
+    if (N <= 35)  return { normal:6, rare:7, unique:2, hero:0 };   // 15장
+    if (N <= 45)  return { normal:5, rare:7, unique:3, hero:0 };   // 15장
+    if (N <= 49)  return { normal:4, rare:7, unique:4, hero:0 };   // 15장
+    return          { normal:4, rare:6, unique:4, hero:1 };        // 15장 (50층)
   }
   const cnt = comp(N);
   const filterOk = c => c && c.id !== 'basic_atk' && !c.monsterOnly && !(MONSTER_BANNED && MONSTER_BANNED.has(c.id));
@@ -14443,9 +14609,9 @@ function buildTowerMonsterDeck(N, primaryStat){
   pickFrom(poolByGrade.unique, cnt.unique);
   pickFrom(poolByGrade.rare,   cnt.rare);
   pickFrom(poolByGrade.normal, cnt.normal);
-  // 총 10장 부족 시 basic_atk 로 채움 (안전망)
-  while (chosen.length < 10) chosen.push(BASIC_ATTACK);
-  return chosen.slice(0, 10);
+  // deckSize 부족 시 basic_atk 로 채움 (안전망)
+  while (chosen.length < deckSize) chosen.push(BASIC_ATTACK);
+  return chosen.slice(0, deckSize);
 }
 
 // ── 전투 UI 렌더 ──
