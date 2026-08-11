@@ -655,6 +655,46 @@
   .chat-users { background:#f8f8f8; padding:2px 4px; font-size:11px; max-height:120px; overflow-y:auto; border-bottom:1px solid #aaa; }
   .chat-users .u { display:block; color:#0066cc; padding:1px 0; }
   .chat-notice { background:#fff3cd; color:#7c4a03; border-bottom:1px solid #d4a83a; padding:5px 6px; font-size:11px; font-weight:bold; line-height:1.35; flex-shrink:0; }
+  /* 운영자 [공지사항] 티커로 발송된 메시지 — 상단 고정 (5분 후 자동 소멸) */
+  .chat-pinned-notices {
+    background:linear-gradient(180deg,#3a1a24 0%,#1a0a10 100%);
+    border-bottom:2px solid #ffbb2a;
+    padding:0;
+    flex-shrink:0;
+    max-height:140px;
+    overflow-y:auto;
+  }
+  .chat-pinned-notice-item {
+    padding:6px 8px;
+    color:#fff;
+    font-size:11.5px;
+    line-height:1.45;
+    border-bottom:1px solid rgba(255,187,42,0.35);
+    animation:pinnedNoticeGlow 2.4s ease-in-out infinite alternate;
+  }
+  .chat-pinned-notice-item:last-child { border-bottom:0; }
+  .chat-pinned-notice-item .pn-tag {
+    display:inline-block;
+    background:#ffbb2a;
+    color:#1a0a10;
+    padding:1px 6px;
+    border-radius:3px;
+    font-weight:bold;
+    font-size:10px;
+    margin-right:4px;
+    letter-spacing:0.5px;
+  }
+  .chat-pinned-notice-item .pn-remain {
+    float:right;
+    font-size:10px;
+    color:#ffbb2a;
+    opacity:0.8;
+    margin-left:4px;
+  }
+  @keyframes pinnedNoticeGlow {
+    from { box-shadow:inset 0 0 8px rgba(255,187,42,0.15); }
+    to   { box-shadow:inset 0 0 16px rgba(255,187,42,0.35); }
+  }
   .chat-notice b { color:#c62828; }
   .chat-msgs { flex:1; padding:4px; font-size:11px; overflow-y:auto; line-height:1.4; min-height:300px; }
   .chat-msgs .nick { color:#cc0000; font-weight:bold; }
@@ -2552,7 +2592,16 @@
     <div class="chat-head">접속자: <span id="chatUsers">8</span>명</div>
     <div class="chat-users" id="chatUserList"></div>
     <div class="chat-notice" id="chatNotice">⚠ 게임 종료 시 반드시 <b>[로그아웃]</b> 버튼을 눌러주세요. 저장되지 않은 게임 데이터에 대해서는 책임질 수 없습니다.</div>
+    <!-- 운영자 [공지사항] 티커로 발송한 메시지가 5분간 상단 고정 -->
+    <div class="chat-pinned-notices" id="chatPinnedNotices" style="display:none;"></div>
     <div class="chat-msgs" id="chatMsgs"></div>
+    <!-- 운영자 전용 [공지사항] 티커 (일반 유저에겐 숨김) -->
+    <div id="chatOpNoticeBar" style="display:none;padding:4px 6px;background:#3a1a24;border-top:1px solid #a02050;font-size:11px;color:#ffbb2a;">
+      <label style="cursor:pointer;user-select:none;">
+        <input type="checkbox" id="chatOpNoticeCheck" style="vertical-align:middle;margin-right:4px;">
+        <b>📢 [공지사항]</b> 티커 (체크 후 전송 시 5분간 상단 고정)
+      </label>
+    </div>
     <div class="chat-input">
       <span class="nick-prefix" id="chatNick">-</span>
       <input id="chatInput" placeholder="메시지를 입력하시길 바랍니다." onkeydown="if(event.key==='Enter')sendChat()">
@@ -14811,7 +14860,18 @@ function towerBattleEnd(result){
     const floor = GAME.tower.currentFloor;
     GAME.tower.bestFloorThisSession = Math.max(GAME.tower.bestFloorThisSession, floor);
     towerLog(`🏆 ${floor}층 클리어!`, 'sys');
-    // HP + (hpMax-hp)*0.5 · MP 완전 회복
+    // 전투 중 발동된 flat 보너스 (지능책 maxMpBuff · 라이프업 maxHpBuff 등) 리셋
+    // + 베어폼/크로우폼 등으로 전환된 공격 타입 원복
+    // → HP/MP 회복은 리셋 후의 base 값 기준으로 계산 (층마다 mpMax 누적 방지)
+    try {
+      p._hpMaxBonus = 0;
+      p._mpMaxBonus = 0;
+      if (typeof p._origAtkType === 'string'){ p.atkType = p._origAtkType; delete p._origAtkType; }
+      calcDerived(p);
+      if (p.hp > p.hpMax) p.hp = p.hpMax;
+      if (p.mp > p.mpMax) p.mp = p.mpMax;
+    } catch(e){ console.warn('[towerFloor stat reset]', e); }
+    // HP + (hpMax-hp)*0.5 · MP 완전 회복 (base 기준)
     const heal = Math.floor((p.hpMax - p.hp) * 0.5);
     p.hp = Math.min(p.hpMax, p.hp + heal);
     p.mp = p.mpMax;
@@ -16263,25 +16323,38 @@ function basicSwordSvg(){
 }
 
 // ─── 캐릭터 ───
-// 신규 유저 기본 초상화 풀 (assets/face/) — 몬스터 아이콘과 겹치는 Paladin/Sorceress 제외
+// 신규 유저 기본 초상화 풀 (assets/face/) — 신규 아트 30장
 const DEFAULT_FACE_POOL = [
-  'BTNAlbatross-Reforged.png',
-  'BTNCritterRabbit-Reforged.png',
-  'BTNDagrenTheOrcslayer.png',
-  'BTNDragonHawkRiderV0.png',
-  'BTNDragonHawkRiderV1.png',
-  'BTNFemaleElfVillage.png',
-  'BTNFemaleElfVillager-Reforged.png',
-  'BTNHighElvenArcher v1.png',
-  'BTNHighElvenArcher-Reforged.png',
-  'BTNShade-Reforged.png',
-  'BTNSorceressV0.png',
-  'BTNSorceressV1.png',
-  'BTNUther.png',
-  'BTNVillageKid.png',
-  'BTNVillageKid2.png',
-  'BTNVillagerKid-Reforged.png',
-  'BTNVillagerKid2-Reforged.png',
+  '01_young_human_warrior.png',
+  '02_arcane_noblewoman.png',
+  '03_old_hooded_wizard.png',
+  '04_battle_hardened_ranger.png',
+  '05_red_haired_elf.png',
+  '06_helmeted_knight.png',
+  '07_orc_warrior.png',
+  '08_dark_elf.png',
+  '09_hooded_assassin.png',
+  '10_dragonkin.png',
+  '11_panda_adventurer.png',
+  '12_white_wolf.png',
+  '13_golden_dog.png',
+  '14_grey_cat.png',
+  '15_white_rabbit.png',
+  '16_frost_elemental.png',
+  '17_undead_sorcerer.png',
+  '18_human_noblewoman.png',
+  '19_dwarf_warrior.png',
+  '20_young_human_adventurer.png',
+  'r_crimson_noblewoman.png',
+  'r_ember_warrior.png',
+  'r_frost_guardian.png',
+  'r_golden_priestess.png',
+  'r_hooded_arcane_mage.png',
+  'r_ice_palace_elf.png',
+  'r_moonlit_elf.png',
+  'r_night_knight.png',
+  'r_sunlit_high_elf.png',
+  'r_violet_enchantress.png',
 ];
 function _pickDefaultFace(){
   const f = DEFAULT_FACE_POOL[Math.floor(Math.random() * DEFAULT_FACE_POOL.length)];
@@ -18021,14 +18094,58 @@ function _autoHideSysMsg(el, msFromNow){
 // sticky 시스템 메시지 마커 — kind 컬럼이 소실돼도 메시지 본문에서 sticky 판정 가능하도록 이중화
 // (Supabase kind 컬럼에 CHECK 제약이 걸려있어 'system_sticky'가 저장 안 되는 경우 대비)
 const CHAT_STICKY_MARKER = '​';   // Zero-Width Space (화면에 안 보임)
+// 운영자 [공지사항] 티커 메시지 마커 — Zero-Width Joiner (kind='system_notice' 이중화)
+const CHAT_NOTICE_MARKER = '‍';   // U+200D
+const CHAT_NOTICE_TTL_MS = 5 * 60 * 1000;   // 5분 상단 고정
 function _isStickyChatRow(row){
   if (!row) return false;
   if (row.kind === 'system_sticky') return true;
   if (typeof row.message === 'string' && row.message.charCodeAt(0) === 0x200B) return true;
   return false;
 }
+function _isNoticeChatRow(row){
+  if (!row) return false;
+  if (row.kind === 'system_notice') return true;
+  if (typeof row.message === 'string' && row.message.charCodeAt(0) === 0x200D) return true;
+  return false;
+}
 function _stripStickyMarker(msg){
   return (typeof msg === 'string' && msg.charCodeAt(0) === 0x200B) ? msg.slice(1) : msg;
+}
+function _stripNoticeMarker(msg){
+  return (typeof msg === 'string' && msg.charCodeAt(0) === 0x200D) ? msg.slice(1) : msg;
+}
+
+// 운영자 공지사항 — 상단 고정 컨테이너에 렌더 (5분 후 자동 소멸)
+function _renderPinnedNotice(row){
+  const container = document.getElementById('chatPinnedNotices');
+  if (!container) return;
+  const createdAt = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+  const remain = CHAT_NOTICE_TTL_MS - (Date.now() - createdAt);
+  if (remain <= 0) return;   // 이미 만료된 공지는 표시 안 함
+  // 중복 방지
+  if (row.id && container.querySelector(`[data-notice-id="${row.id}"]`)) return;
+  const cleanMsg = _stripNoticeMarker(row.message || '');
+  const item = document.createElement('div');
+  item.className = 'chat-pinned-notice-item';
+  if (row.id) item.setAttribute('data-notice-id', row.id);
+  const remainMin = Math.max(1, Math.ceil(remain / 60000));
+  item.innerHTML = `<span class="pn-tag">📢 공지사항</span><span class="pn-remain">${remainMin}분</span>${escapeHtml(cleanMsg)}`;
+  container.appendChild(item);
+  container.style.display = 'block';
+  // 5분 후 자동 소멸 + 남은 시간 업데이트 (30초 간격)
+  const updateRemain = () => {
+    const left = CHAT_NOTICE_TTL_MS - (Date.now() - createdAt);
+    if (left <= 0){
+      try { item.remove(); } catch(e){}
+      if (!container.querySelector('.chat-pinned-notice-item')) container.style.display = 'none';
+      return;
+    }
+    const rem = item.querySelector('.pn-remain');
+    if (rem) rem.textContent = Math.max(1, Math.ceil(left / 60000)) + '분';
+    setTimeout(updateRemain, 30000);
+  };
+  setTimeout(updateRemain, 30000);
 }
 
 function _renderChatRow(row){
@@ -18036,6 +18153,11 @@ function _renderChatRow(row){
   if (!msgsEl) return;
   if (row.id && _chatRendered.has(row.id)) return;
   if (row.id) _chatRendered.add(row.id);
+  // 운영자 [공지사항] — 상단 고정 컨테이너로 라우팅 (일반 채팅창엔 안 뜸)
+  if (_isNoticeChatRow(row)){
+    _renderPinnedNotice(row);
+    return;
+  }
   const d = document.createElement('div');
   // sticky 시스템 메시지 — 유저 메시지처럼 영구 유지 (유니크+ 획득, 합성·교환, 매크로 적발 등 중요 이벤트)
   //   kind='system_sticky' 또는 message가 ZWSP(​)로 시작 → sticky 처리
@@ -18174,6 +18296,28 @@ function sendChat(){
   // 운영자 계정은 이름을 감추고 SYSTEM 메시지로 브로드캐스트 — '[GM] 메시지' 형식
   //   상시 공지가 필요하면 별도 [📢 공지] 기능 사용 (admin 페이지)
   if (GAME.player && GAME.player.isOperator){
+    // 운영자 [공지사항] 티커 체크 시: system_notice 로 브로드캐스트 (수신 측이 5분 상단 고정 렌더)
+    const noticeCheck = $('chatOpNoticeCheck');
+    const isNotice = !!(noticeCheck && noticeCheck.checked);
+    if (isNotice){
+      const wireMsg = CHAT_NOTICE_MARKER + msg;   // 마커 삽입 → kind 소실 대비 이중화
+      if (sb){
+        sb.from('chat_messages').insert({ nickname:'SYSTEM', message: wireMsg, kind:'system_notice' })
+          .then(({ error }) => {
+            if (error){
+              console.warn('[sendChat notice]', error);
+              // kind CHECK 실패 대비 kind 없이 재시도
+              sb.from('chat_messages').insert({ nickname:'SYSTEM', message: wireMsg })
+                .then(({ error: e2 }) => { if (e2) console.warn('[sendChat notice retry]', e2); });
+            }
+          });
+      } else {
+        // 오프라인 fallback — 로컬 상단 고정만
+        _renderPinnedNotice({ message: wireMsg, created_at: new Date().toISOString(), id: 'local_' + Date.now() });
+      }
+      noticeCheck.checked = false;   // 자동 해제 (한 번 공지 후 다시 켜야 다음 공지)
+      return;
+    }
     const gmMsg = '[GM] ' + msg;
     if (sb){
       sb.from('chat_messages').insert({ nickname:'SYSTEM', message: gmMsg, kind:'system' })
@@ -18212,6 +18356,14 @@ async function initChat(){
   $('chatUsers').textContent = (myName && !isOp) ? 1 : 0;
   $('chatMsgs').innerHTML = '';
   _chatRendered.clear();
+  // 운영자 [공지사항] 티커 바 노출 · 일반 유저는 숨김
+  const opBar = document.getElementById('chatOpNoticeBar');
+  if (opBar) opBar.style.display = isOp ? 'block' : 'none';
+  const opChk = document.getElementById('chatOpNoticeCheck');
+  if (opChk) opChk.checked = false;
+  // 상단 고정 공지 컨테이너 초기화 (재접속·페이지 재진입 대비)
+  const pin = document.getElementById('chatPinnedNotices');
+  if (pin){ pin.innerHTML = ''; pin.style.display = 'none'; }
 
   if (!sb){
     $('chatMsgs').innerHTML = '<div class="sys">★ 오프라인 모드 — 채팅은 로컬에만 표시됩니다.</div>';
