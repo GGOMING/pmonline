@@ -360,7 +360,7 @@
   body.layout-vertical table.stat colgroup col:nth-of-type(6) { width:18% !important; }
   body.layout-vertical table.stat td { padding:0 2px; }
   /* (avatar는 기본 사이즈 100×100 사용) */
-  /* 메인 카드 덱 (15슬롯) — padding·border 완전 제거하여 이미지가 셀 100% 꽉 참 */
+  /* 메인 카드 덱 (15슬롯) — padding-bottom 트릭으로 정사각 강제 (iOS Safari aspect-ratio 버그 회피) */
   body.layout-vertical .deck { table-layout:fixed; width:100%; font-size:10px; }
   body.layout-vertical .deck tr.icons td {
     width:20%;
@@ -368,15 +368,24 @@
     border:0;
     vertical-align:top;
   }
+  /* card-ico 를 폭 100% + height:0 + padding-bottom:100% 로 정사각 컨테이너 확보 */
   body.layout-vertical .deck tr.icons td .card-ico {
     display:block;
+    position:relative;
     width:100%;
-    aspect-ratio:1/1;
-    height:auto;
+    height:0;
+    padding-bottom:100%;
+    overflow:hidden;
   }
-  /* iOS Safari 안전장치 — aspect-ratio 미계산 시 이미지가 원본 512px 로 스트레치되는 것 방지 */
-  body.layout-vertical .deck tr.icons td .card-ico img,
-  body.layout-vertical .deck tr.icons td .card-ico svg { max-height:100%; }
+  /* 이미지·SVG·폴백 div 는 절대 위치로 컨테이너 100% 채움 */
+  body.layout-vertical .deck tr.icons td .card-ico > img,
+  body.layout-vertical .deck tr.icons td .card-ico > svg,
+  body.layout-vertical .deck tr.icons td .card-ico > div {
+    position:absolute !important;
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
+  }
   /* mini deck (전투/덱설정) — 동일 규칙 */
   body.layout-vertical table.deck.mini { table-layout:fixed; width:100%; }
   body.layout-vertical table.deck.mini tr.icons td {
@@ -388,12 +397,20 @@
   body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; height:50px; }
   body.layout-vertical table.deck.mini tr.icons td .card-ico {
     display:block;
+    position:relative;
     width:100%;
-    aspect-ratio:1/1;
-    height:auto;
+    height:0;
+    padding-bottom:100%;
+    overflow:hidden;
   }
-  body.layout-vertical table.deck.mini tr.icons td .card-ico img,
-  body.layout-vertical table.deck.mini tr.icons td .card-ico svg { max-height:100%; }
+  body.layout-vertical table.deck.mini tr.icons td .card-ico > img,
+  body.layout-vertical table.deck.mini tr.icons td .card-ico > svg,
+  body.layout-vertical table.deck.mini tr.icons td .card-ico > div {
+    position:absolute !important;
+    inset:0 !important;
+    width:100% !important;
+    height:100% !important;
+  }
   /* 메뉴/모달/로그인 */
   body.layout-vertical .menubar table { width:100%; }
   body.layout-vertical .menubar td { font-size:11px; padding:4px; }
@@ -16357,7 +16374,12 @@ const DEFAULT_FACE_POOL = [
   'r_violet_enchantress.png',
 ];
 function _pickDefaultFace(){
-  const f = DEFAULT_FACE_POOL[Math.floor(Math.random() * DEFAULT_FACE_POOL.length)];
+  // r_*.png 10장은 히든 일러스트 — 계정 생성 시 10% 확률로 등장
+  // 나머지 20장 (01_ ~ 20_) 은 90% 확률로 등장
+  const hidden = DEFAULT_FACE_POOL.filter(f => f.startsWith('r_'));
+  const normal = DEFAULT_FACE_POOL.filter(f => !f.startsWith('r_'));
+  const pool = (Math.random() < 0.10 && hidden.length) ? hidden : normal;
+  const f = pool[Math.floor(Math.random() * pool.length)];
   return 'assets/face/' + encodeURI(f);
 }
 
