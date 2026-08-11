@@ -360,56 +360,100 @@
   body.layout-vertical table.stat colgroup col:nth-of-type(6) { width:18% !important; }
   body.layout-vertical table.stat td { padding:0 2px; }
   /* (avatar는 기본 사이즈 100×100 사용) */
-  /* 메인 카드 덱 (15슬롯) — padding-bottom 트릭으로 정사각 강제 (iOS Safari aspect-ratio 버그 회피) */
-  body.layout-vertical .deck { table-layout:fixed; width:100%; font-size:10px; }
-  body.layout-vertical .deck tr.icons td {
-    width:20%;
-    padding:0;
-    border:0;
-    vertical-align:top;
+  /* 메인 카드 덱 (15슬롯) — table → block 레이아웃 강제 변환으로 iOS Safari td 특수성 회피 */
+  body.layout-vertical .deck {
+    display:block !important;
+    width:100%;
+    font-size:10px;
+    background:transparent;
   }
-  /* card-ico 를 폭 100% + height:0 + padding-bottom:100% 로 정사각 컨테이너 확보 */
+  body.layout-vertical .deck > tbody { display:block !important; width:100%; }
+  body.layout-vertical .deck > tbody > tr.icons {
+    display:grid !important;
+    grid-template-columns:repeat(5, 1fr);
+    gap:0;
+    width:100%;
+  }
+  body.layout-vertical .deck > tbody > tr.labels {
+    display:grid !important;
+    grid-template-columns:repeat(5, 1fr);
+    gap:0;
+    width:100%;
+  }
+  body.layout-vertical .deck tr.icons td {
+    display:block !important;
+    width:100%;
+    aspect-ratio:1/1;
+    padding:0 !important;
+    border:0 !important;
+    background:#000;
+    position:relative;
+    overflow:hidden;
+    line-height:0;
+    font-size:0;
+  }
   body.layout-vertical .deck tr.icons td .card-ico {
     display:block;
-    position:relative;
+    position:absolute;
+    inset:0;
     width:100%;
-    height:0;
-    padding-bottom:100%;
-    overflow:hidden;
+    height:100%;
   }
-  /* 이미지·SVG·폴백 div 는 절대 위치로 컨테이너 100% 채움 */
   body.layout-vertical .deck tr.icons td .card-ico > img,
   body.layout-vertical .deck tr.icons td .card-ico > svg,
   body.layout-vertical .deck tr.icons td .card-ico > div {
-    position:absolute !important;
-    inset:0 !important;
-    width:100% !important;
-    height:100% !important;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+  }
+  body.layout-vertical .deck tr.labels td {
+    display:block !important;
+    width:100%;
+    padding:2px 1px !important;
+    text-align:center;
+    font-size:10px;
   }
   /* mini deck (전투/덱설정) — 동일 규칙 */
-  body.layout-vertical table.deck.mini { table-layout:fixed; width:100%; }
-  body.layout-vertical table.deck.mini tr.icons td {
-    width:20%;
-    padding:0;
-    border:0;
-    vertical-align:top;
+  body.layout-vertical table.deck.mini {
+    display:block !important;
+    width:100%;
+    background:transparent;
   }
-  body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; height:50px; }
+  body.layout-vertical table.deck.mini > tbody { display:block !important; width:100%; }
+  body.layout-vertical table.deck.mini > tbody > tr.icons {
+    display:grid !important;
+    grid-template-columns:repeat(5, 1fr);
+    gap:0;
+    width:100%;
+  }
+  body.layout-vertical table.deck.mini tr.icons td {
+    display:block !important;
+    width:100%;
+    aspect-ratio:1/1;
+    padding:0 !important;
+    border:0 !important;
+    background:#000;
+    position:relative;
+    overflow:hidden;
+    line-height:0;
+    font-size:0;
+  }
+  body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; }
   body.layout-vertical table.deck.mini tr.icons td .card-ico {
     display:block;
-    position:relative;
+    position:absolute;
+    inset:0;
     width:100%;
-    height:0;
-    padding-bottom:100%;
-    overflow:hidden;
+    height:100%;
   }
   body.layout-vertical table.deck.mini tr.icons td .card-ico > img,
   body.layout-vertical table.deck.mini tr.icons td .card-ico > svg,
   body.layout-vertical table.deck.mini tr.icons td .card-ico > div {
-    position:absolute !important;
-    inset:0 !important;
-    width:100% !important;
-    height:100% !important;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
   }
   /* 메뉴/모달/로그인 */
   body.layout-vertical .menubar table { width:100%; }
