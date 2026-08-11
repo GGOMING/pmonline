@@ -8291,7 +8291,8 @@ async function raidEnd(result){
           dawnMistXp = m.xp + 15;
         }
       }
-      const xp = isAbyssMob ? (m.xp * 4 + 250) * eliteMul : dawnMistXp;
+      // 잊혀진 성좌 몹 XP 1/3 축소 (잡몹) — 원 공식: (m.xp × 4 + 250) × eliteMul
+      const xp = isAbyssMob ? Math.floor((m.xp * 4 + 250) * eliteMul / 3) : dawnMistXp;
       p.gold += gold; p.xp += xp;
       try {
         _bumpDailyCounter('goldGained', gold, 'dq_gold_5k');
@@ -8427,9 +8428,9 @@ async function raidEnd(result){
       // 보상 지급 시점부터 이 raidKey 5분 재입장 쿨다운 시작 (dawn/mist/abyss 각각 독립)
       try { startRaidBossCooldown(c.raidKey); } catch(e){}
       if (isAbyssBoss){
-        // 3차 공격대 막타 특별 보상: 축복 +5, XP +30k, 골드 +5k, 영웅 뽑기 1뽑, 5% 전설 장비 드롭
+        // 3차 공격대 막타 특별 보상: 축복 +5, XP 30k+누적×0.1 → 1/3 축소, 골드 +5k, 영웅 뽑기 1뽑
         const abyssGold = 5000 + goldReward;
-        const abyssXp   = 30000 + xpReward;
+        const abyssXp   = Math.floor((30000 + xpReward) / 3);   // 잊혀진 성좌 보스 XP 1/3 축소
         p.gold += abyssGold;
         p.xp += abyssXp;
         p.blessing = (p.blessing||0) + 3;
