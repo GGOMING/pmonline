@@ -19281,11 +19281,36 @@ async function adminSaveUser(){
       raid:      undefined,
       savedAt:   Date.now(),
     };
-    const update = { nickname: newName, data: payloadData };
-    const { error } = await sb.from('saves').update(update).eq('user_id', u.user_id);
-    if (error){
-      alert('클라우드 저장 실패: ' + (error.message || error));
-      return;
+    // RLS 우회 SECURITY DEFINER RPC 로 저장 (admin 이 남의 saves 를 update 못하는 문제 회피)
+    // 닉네임까지 갱신해야 하는 경우 대비 · nickname 이 바뀌면 별도 update 로 처리
+    let updateOk = false;
+    let updateErr = null;
+    try {
+      const { error: rpcErr } = await sb.rpc('admin_replace_user_data', {
+        p_nickname: oldName,
+        p_data: payloadData,
+      });
+      if (rpcErr){ updateErr = rpcErr; } else { updateOk = true; }
+    } catch(e){ updateErr = e; }
+    // RPC 실패 시 (미배포 등) plain update 폴백
+    if (!updateOk){
+      console.warn('[admin RPC fail, fallback to plain update]', updateErr);
+      const update = { nickname: newName, data: payloadData };
+      const { error } = await sb.from('saves').update(update).eq('user_id', u.user_id);
+      if (error){
+        alert('클라우드 저장 실패: ' + (error.message || error) + '\n(admin_replace_user_data RPC 미배포 시 admin_update_user_data.sql 을 Supabase 에 배포하세요)');
+        return;
+      }
+    } else if (newName !== oldName){
+      // RPC 는 data 만 갱신 · 닉네임 변경은 별도 update 필요
+      const { error: nickErr } = await sb.from('saves').update({ nickname: newName }).eq('user_id', u.user_id);
+      if (nickErr) console.warn('[admin nickname update]', nickErr);
+    }
+    // 온라인 대상 유저의 auto-save 가 옛 메모리로 admin 변경분을 덮어쓰지 않도록 브로드캐스트
+    // → 온라인이면 즉시 클라우드에서 새 data 재로드 · 오프라인이면 다음 로그인 시 자동 반영
+    try { if (typeof opBroadcastAdminUpdate === 'function') opBroadcastAdminUpdate(newName); } catch(e){}
+    if (oldName !== newName){
+      try { if (typeof opBroadcastAdminUpdate === 'function') opBroadcastAdminUpdate(oldName); } catch(e){}
     }
     // 비밀번호 변경 시 auth.users 도 갱신 (SECURITY DEFINER RPC)
     const pwInputC = document.getElementById('ed_pw');
@@ -20438,6 +20463,10 @@ function _setupOpBanChannel(){
         if (!payload) return;
         try { _applyIncomingUnban(payload.nickname); } catch(e){}
       })
+      .on('broadcast', { event: 'admin_update' }, ({ payload }) => {
+        if (!payload) return;
+        try { _applyIncomingAdminUpdate(payload.nickname); } catch(e){}
+      })
       .subscribe();
   } catch(e){ console.warn('[opBanChannel]', e); }
 }
@@ -20460,6 +20489,38 @@ async function opBroadcastUnban(nickname){
       payload: { nickname },
     });
   } catch(e){ console.warn('[opBroadcastUnban]', e); }
+}
+// admin 이 유저 데이터 변경 후 브로드캐스트 → 온라인 대상은 진행 중 auto-save 로 덮어쓰지 않도록 즉시 클라우드에서 리로드
+async function opBroadcastAdminUpdate(nickname){
+  if (!sb) return;
+  _setupOpBanChannel();
+  try {
+    await _opBanChannel.send({
+      type: 'broadcast', event: 'admin_update',
+      payload: { nickname },
+    });
+  } catch(e){ console.warn('[opBroadcastAdminUpdate]', e); }
+}
+// 온라인 유저 측 수신 핸들러 — 본인 계정이면 auto-save 잠금 + 클라우드에서 최신 data 재로드
+async function _applyIncomingAdminUpdate(nickname){
+  const p = GAME.player;
+  if (!p || p.name !== nickname) return;
+  if (!sb) return;
+  try {
+    // 진행 중 debounced cloudSave 취소 (내 옛 메모리 상태로 admin 변경분을 덮어쓰지 않도록)
+    if (typeof _cloudSaveTimer !== 'undefined' && _cloudSaveTimer){
+      try { clearTimeout(_cloudSaveTimer); _cloudSaveTimer = null; } catch(e){}
+    }
+    const { data: ud } = await sb.auth.getUser();
+    if (!ud || !ud.user) return;
+    const { data: row, error } = await sb.from('saves').select('data').eq('user_id', ud.user.id).maybeSingle();
+    if (error || !row || !row.data) return;
+    // 관리자가 변경한 최신 data 로 메모리 강제 갱신
+    try { applySavePayload(row.data); } catch(e){ console.warn('[adminUpdate applySave]', e); }
+    try { renderSheet(); } catch(e){}
+    try { renderDeck(); } catch(e){}
+    try { toast('👤 프로필 정보가 운영자에 의해 갱신되었습니다.'); } catch(e){}
+  } catch(e){ console.warn('[_applyIncomingAdminUpdate]', e); }
 }
 async function opBanUser(){
   const nick = ($('opBanNick') && $('opBanNick').value || '').trim();
