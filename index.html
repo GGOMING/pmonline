@@ -7314,22 +7314,21 @@ let _raidChannel = null;
 
 async function loadRaidFromCloud(){
   if (!sb) return false;
-  // dawn / mist / abyss 각자 앵커로 세션 리셋 시도 (신규 raid_check_reset_key RPC 있으면 그것 우선)
-  // 폴백: 구 raid_check_reset_all 은 모든 raid 를 동일 앵커로 리셋 (dawn 앵커 사용)
+  // dawn / mist / abyss 각자 앵커로 세션 리셋 판정 (raid_check_reset_key RPC · SECURITY DEFINER)
+  //   - 구 raid_check_reset_all 은 하나의 앵커로 3개 raid 전부 비교 → mist 3시간 조기 리셋 버그
+  //   - RPC 미배포 시 폴백 없음 (조기 리셋 위험보다 리셋 지연이 안전) · raid_check_reset_key.sql 배포 필요
   try {
     const dawnStart  = getSessionStartFor('dawn');
     const mistStart  = getSessionStartFor('mist');
     const abyssStart = getSessionStartFor('abyss');
-    let usedNewRpc = false;
-    try {
-      const r1 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'dawn',  p_session_start: dawnStart });
-      const r2 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'mist',  p_session_start: mistStart });
-      const r3 = await sb.rpc('raid_check_reset_key', { p_raid_key: 'abyss', p_session_start: abyssStart });
-      usedNewRpc = !(r1.error || r2.error || r3.error);
-    } catch(e){ usedNewRpc = false; }
-    if (!usedNewRpc){
-      // 구 RPC 폴백 — dawn 앵커로 통일 (mist offset 은 SQL 배포 후 정상 반영됨)
-      await sb.rpc('raid_check_reset_all', { p_session_start: dawnStart });
+    const results = await Promise.all([
+      sb.rpc('raid_check_reset_key', { p_raid_key: 'dawn',  p_session_start: dawnStart }),
+      sb.rpc('raid_check_reset_key', { p_raid_key: 'mist',  p_session_start: mistStart }),
+      sb.rpc('raid_check_reset_key', { p_raid_key: 'abyss', p_session_start: abyssStart }),
+    ]);
+    const errs = results.map(r => r && r.error).filter(Boolean);
+    if (errs.length){
+      console.warn('[raid_check_reset_key] RPC 오류 · raid_check_reset_key.sql 을 Supabase 에 배포하세요', errs);
     }
   } catch(e){ console.warn('[raid_check_reset]', e); }
   try {
