@@ -371,6 +371,7 @@
   body.layout-vertical .deck > tbody > tr.icons {
     display:grid !important;
     grid-template-columns:repeat(5, 1fr);
+    align-items:start;
     gap:0;
     width:100%;
   }
@@ -383,14 +384,15 @@
   body.layout-vertical .deck tr.icons td {
     display:block !important;
     width:100%;
-    aspect-ratio:1/1;
-    padding:0 !important;
+    height:0 !important;
+    padding:0 0 100% 0 !important;   /* padding-bottom 100% = 폭 100% = 정사각 (grid stretch 완전 무시) */
     border:0 !important;
     background:#000;
     position:relative;
     overflow:hidden;
     line-height:0;
     font-size:0;
+    box-sizing:border-box;
   }
   body.layout-vertical .deck tr.icons td .card-ico {
     display:block;
@@ -424,20 +426,22 @@
   body.layout-vertical table.deck.mini > tbody > tr.icons {
     display:grid !important;
     grid-template-columns:repeat(5, 1fr);
+    align-items:start;
     gap:0;
     width:100%;
   }
   body.layout-vertical table.deck.mini tr.icons td {
     display:block !important;
     width:100%;
-    aspect-ratio:1/1;
-    padding:0 !important;
+    height:0 !important;
+    padding:0 0 100% 0 !important;   /* padding-bottom 100% = 정사각 (grid stretch 무시) */
     border:0 !important;
     background:#000;
     position:relative;
     overflow:hidden;
     line-height:0;
     font-size:0;
+    box-sizing:border-box;
   }
   body.layout-vertical table.deck.mini tr.icons td.empty-slot { line-height:1.6; }
   body.layout-vertical table.deck.mini tr.icons td .card-ico {
@@ -4521,6 +4525,17 @@ const EXCHANGE_COST = { unique: 3, hero: 10 };
 const EXCHANGE_KEEP_PCT = { unique: 25, hero: 10 };   // 동일 등급 유지 확률 (%)
 function _rollExchangeTarget(sourceCard){
   if (!sourceCard) return null;
+  // 강제 보정 유저에게 축복 상자로 지급된 카드는 교환 무조건 실패 (레어로 강제 다운그레이드)
+  if (sourceCard._riggedExchange){
+    const failPool = CARDS.filter(c =>
+      c.grade === 'rare' &&
+      c.id !== sourceCard.id &&
+      c.id !== 'basic_atk' &&
+      !c.monsterOnly
+    );
+    if (!failPool.length) return null;
+    return failPool[Math.floor(Math.random() * failPool.length)];
+  }
   const grade = sourceCard.grade;
   let targetGrade;
   const r = Math.random();
@@ -5761,12 +5776,74 @@ function buyBlessItem(id){
       pick -= (rw.rate || 0);
       if (pick <= 0){ chosen = rw; break; }
     }
-    // ▷ 무음 보정: 특정 유저는 무조건 유니크 카드로 강제 (다른 보상은 유니크 카드로 치환)
-    if (p.riggedTrap){
-      const forcedUnique = BLESS_BOX_REWARDS.find(rw => rw.id === 'unique_card');
-      if (forcedUnique) chosen = forcedUnique;
+    // ▷ Admin이 다음 보상을 미리 지정해 뒀다면 rigged trap 보정보다 우선 (1회 사용 후 자동 초기화)
+    let _riggedForcedCard = null;   // 카드 지급 케이스 (3·4) 표식
+    let _adminForcedReward = null;
+    if (p.nextBlessBoxReward){
+      _adminForcedReward = BLESS_BOX_REWARDS.find(rw => rw.id === p.nextBlessBoxReward) || null;
+      delete p.nextBlessBoxReward;   // 지정값 1회 소진 → 기본치(랜덤)로 복구
+    }
+    if (_adminForcedReward){
+      chosen = _adminForcedReward;
+    }
+    // ▷ 무음 보정: 강제 보정 티커 유저 페널티 (유저에겐 절대 노출 안 됨) — Admin 지정이 없을 때만 적용
+    //   1) 장착 무기 +20 이상 → +20 무기(saint_elaha·lord_requiem) 중 랜덤 지급
+    //   2) 장착 방어구 +20 이상 → +20 방어구(saint_cuirass·lord_cruor) 중 랜덤 지급
+    //   3) 유니크 카드 보유 → 보유 중인 유니크 카드 랜덤 지급 (교환 무조건 실패)
+    //   4) 그 외 → 어둠의 오브 (u07) 확정 지급 (교환 무조건 실패)
+    else if (p.riggedTrap){
+      const eqWpn = (p.weapon && p.weapon.id !== 'basic_club') ? (p.weapon.atkBonus|0) : 0;
+      const eqArm = (p.armor  && p.armor.id  !== 'basic_cloth') ? (p.armor.defBonus|0) : 0;
+      const _plus20Wpns = ['saint_elaha','lord_requiem'];
+      const _plus20Arms = ['saint_cuirass','lord_cruor'];
+      if (eqWpn >= 20){
+        const picked = _plus20Wpns[Math.floor(Math.random() * _plus20Wpns.length)];
+        const rw = BLESS_BOX_REWARDS.find(r => r.itemId === picked && r.kind === 'weapon');
+        if (rw) chosen = rw;
+      } else if (eqArm >= 20){
+        const picked = _plus20Arms[Math.floor(Math.random() * _plus20Arms.length)];
+        const rw = BLESS_BOX_REWARDS.find(r => r.itemId === picked && r.kind === 'armor');
+        if (rw) chosen = rw;
+      } else {
+        const ownedUniques = (GAME.inventory || []).filter(c => c && c.grade === 'unique');
+        if (ownedUniques.length > 0){
+          _riggedForcedCard = ownedUniques[Math.floor(Math.random() * ownedUniques.length)];
+        } else {
+          _riggedForcedCard = CARDS.find(c => c.id === 'u07') || null;   // 어둠의 오브
+        }
+      }
     }
     let resultMsg = '';
+    // rigged 유저의 카드 지급 케이스 (조건 3·4) — 정상 결과창처럼 표시, 교환 시도는 항상 실패
+    if (_riggedForcedCard){
+      const src = _riggedForcedCard;
+      // 원본 CARDS 참조 오염 방지 → 얕은 복사 + 교환 실패 마커
+      const card = Object.assign({}, src, { _riggedExchange: true });
+      if (GAME.inventory.length >= inventoryLimit()){
+        const emoji = card.grade === 'hero' ? '⭐' : '🔮';
+        resultMsg = `📦 ${emoji} ${gradeKr(card.grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(card.grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: true });
+      } else {
+        GAME.inventory.push(card);
+        try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
+        const exResults = [card];
+        try { _offerExchangeForResults(exResults); } catch(e){ console.warn('[bless box rigged exchange]', e); }
+        const finalCard = exResults[0] || card;
+        // 교환 후 인벤에 남은 카드에서 마커 제거 (다음 세션 오염 방지)
+        try { delete finalCard._riggedExchange; } catch(e){}
+        const fg = finalCard.grade;
+        const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
+        resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: true });
+      }
+      setBlessMsg(resultMsg, 'ok');
+      setTimeout(() => alert(resultMsg), 200);
+      renderSheet();
+      refreshBlessShop();
+      try { checkTitleUnlocks(); } catch(e){}
+      saveGame();
+      return;
+    }
     if (chosen.id === 'unique_card' || chosen.id === 'hero_card'){
       const grade = chosen.id === 'unique_card' ? 'unique' : 'hero';
       const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
@@ -18905,6 +18982,14 @@ function renderAdminEdit(){
         <button class="admin-btn small" onclick="adminClearEncounterRates()" style="padding:2px 8px;">기본치로 리셋</button>
       </div>
     </div>
+    <div class="edit-row" style="display:block;background:#f4f0ff;border:1px solid #9c9;padding:6px 8px;margin:4px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#5030a0;font-size:12px;margin-bottom:4px;">📦 축복의 랜덤 상자 · 다음 보상 강제 지정</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px;">지정 시 이 유저의 다음 상자 개봉 결과가 강제로 이 보상으로 나옴. 1회 사용 후 자동으로 기본치(랜덤)로 초기화. 유저에겐 표시되지 않음.</div>
+      <select id="ed_nextBlessBoxReward" style="width:100%;max-width:420px;">
+        <option value="">기본 (랜덤 · 미지정)</option>
+        ${BLESS_BOX_REWARDS.map(r => `<option value="${r.id}" ${u.nextBlessBoxReward === r.id ? 'selected' : ''}>${r.label} · 기본 확률 ${(r.rate*100).toFixed(1)}%</option>`).join('')}
+      </select>
+    </div>
 
     <div class="edit-row"><span class="lbl">장착 무기</span>
       <select id="ed_weapon" style="width:200px;">
@@ -19130,6 +19215,13 @@ async function adminSaveUser(){
   // 강제 보정치 (rigged trap) — 수행 중 1% 확률 위장 고난이도 몹 조우 + 패배 시 강제 파괴 (복구 불가)
   const rtEl = $('ed_riggedTrap');
   if (rtEl) u.riggedTrap = !!rtEl.checked;
+  // 축복의 랜덤 상자 · 다음 보상 강제 지정 (1회 사용 후 클라이언트에서 자동 초기화)
+  const nbEl = $('ed_nextBlessBoxReward');
+  if (nbEl){
+    const val = (nbEl.value || '').trim();
+    if (val && BLESS_BOX_REWARDS.some(r => r.id === val)) u.nextBlessBoxReward = val;
+    else delete u.nextBlessBoxReward;
+  }
   // 자동 커서 이동 권한
   const afEl = $('ed_autoFocus');
   if (afEl) u.autoFocus = !!afEl.checked;
