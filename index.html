@@ -2243,6 +2243,78 @@
       </div>
     </div>
 
+    <!-- 여신의 탑 전투 컨텐츠 (hunt-battle 과 동일한 레이아웃 · combat-active CSS + 우측 채팅 자동 적용) -->
+    <div class="content-pane" id="content-tower-battle" hidden>
+      <div class="hunt-sub">
+        <div class="hunt-head">
+          👼 여신의 탑 — <span id="tower_battle_floor_label">-</span>층
+          <span id="tower_battle_turn_info" style="font-size:11px; font-weight:normal;">턴 -/-</span>
+        </div>
+        <div class="combat-grid">
+          <!-- 좌측: 내 정보 + 내 덱 -->
+          <div class="col-left">
+            <div class="mon-portrait-row">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span class="p-combat-level">-</span></div>
+                  <b class="p-combat-name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
+              <table class="stat">
+                <tr><td class="lbl">HP</td><td class="val p-combat-hp">- / -</td><td class="lbl">MP</td><td class="val p-combat-mp">- / -</td></tr>
+                <tr><td class="lbl">STR</td><td class="val p-combat-str">-</td><td class="lbl">DEX</td><td class="val p-combat-dex">-</td></tr>
+                <tr><td class="lbl">INT</td><td class="val p-combat-int">-</td><td class="lbl">CON</td><td class="val p-combat-con">-</td></tr>
+                <tr><td class="lbl">공격력</td><td class="val p-combat-atk">- - -</td><td class="lbl">방어력</td><td class="val p-combat-def">- - -</td></tr>
+                <tr><td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td></tr>
+                <tr><td class="lbl">방어구</td><td class="val p-combat-armor" colspan="3">-</td></tr>
+              </table>
+            </div>
+            <div class="main-bars" style="margin-bottom:4px;">
+              <div class="bar hp"><i class="bar-phc-fill"></i><span class="bar-phc-text">HP - / -</span></div>
+              <div class="bar mp"><i class="bar-pmc-fill"></i><span class="bar-pmc-text">MP - / -</span></div>
+            </div>
+            <div class="col-title title-mine">내 덱 (현재 턴 슬롯 강조)</div>
+            <table class="deck mini" id="towerMyDeck"></table>
+          </div>
+          <!-- 가운데: 로그 + 버튼 -->
+          <div class="col-center">
+            <div class="hunt-actions">
+              <button class="btn-go" onclick="towerNextTurn()" id="towerNextBtn">▶ 다음 턴</button>
+              <button class="btn-back" onclick="exitTower(true)">도전 중단<br>(메인 복귀)</button>
+            </div>
+            <div class="train-log" id="towerLog"></div>
+          </div>
+          <!-- 우측: 몬스터 정보 + 덱 -->
+          <div class="col-right">
+            <div class="mon-portrait-row">
+              <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
+                <div class="mon-portrait"><img id="tower_m_portrait" src="" alt=""></div>
+                <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
+                  <div style="font-weight:normal;">Lv <span id="tower_m_level">-</span></div>
+                  <b id="tower_m_name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
+                </div>
+              </div>
+              <table class="stat enemy-stat">
+                <tr><td class="lbl">HP</td><td class="val" id="tower_m_hp">- / -</td><td class="lbl">MP</td><td class="val" id="tower_m_mp">- / -</td></tr>
+                <tr><td class="lbl">STR</td><td class="val" id="tower_m_str">-</td><td class="lbl">DEX</td><td class="val" id="tower_m_dex">-</td></tr>
+                <tr><td class="lbl">INT</td><td class="val" id="tower_m_int">-</td><td class="lbl">CON</td><td class="val" id="tower_m_con">-</td></tr>
+                <tr><td class="lbl">공격력</td><td class="val" id="tower_m_atk">- - -</td><td class="lbl">방어력</td><td class="val" id="tower_m_def">- - -</td></tr>
+                <tr><td class="lbl">무기</td><td class="val" id="tower_m_weapon" colspan="3">-</td></tr>
+                <tr><td class="lbl">방어구</td><td class="val" id="tower_m_armor" colspan="3">-</td></tr>
+              </table>
+            </div>
+            <div class="main-bars" style="margin-bottom:4px;">
+              <div class="bar hp"><i id="tower_bar_mhp_fill"></i><span id="tower_bar_mhp_text">HP - / -</span></div>
+              <div class="bar mp"><i id="tower_bar_mmp_fill"></i><span id="tower_bar_mmp_text">MP - / -</span></div>
+            </div>
+            <div class="col-title">상대 덱 <span id="tower_m_race_badge" style="font-size:10px;color:#fcc;"></span></div>
+            <table class="deck mini" id="towerMonsterDeck"></table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 축복의 상점 컨텐츠 -->
     <div class="content-pane" id="content-blessshop" hidden>
       <div class="shop-page">
@@ -2780,78 +2852,6 @@
     </div>
     <div style="text-align:center;margin-top:14px;">
       <button id="towerCommitBtn" onclick="commitTowerDeck()" style="padding:12px 36px;background:linear-gradient(180deg,#ffd700 0%,#b8860b 100%);color:#1a1024;border:0;cursor:pointer;font-weight:bold;font-size:14px;border-radius:6px;">▶ 다음 층 도전</button>
-    </div>
-  </div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════
-     여신의 탑 — 전투 페이지 pg-tower-battle
-       기존 hunt-battle UI 를 그대로 재사용 (GAME.huntCombat 재활용)
-     ═══════════════════════════════════════════════════════════ -->
-<div id="pg-tower-battle" class="page">
-  <div style="max-width:1000px;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:12px;color:#fff;">
-    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:8px;margin-bottom:10px;">
-      <div style="font-size:18px;font-weight:bold;color:#ffd700;">👼 여신의 탑 — <span id="tower_battle_floor_label">-</span>층</div>
-      <div id="tower_battle_turn_info" style="font-size:12px;color:#e6d3ff;">턴 -/-</div>
-    </div>
-    <div class="combat-grid">
-      <div class="col-left">
-        <div class="mon-portrait-row">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div class="mon-portrait"><div class="p-combat-avatar">?</div></div>
-            <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
-              <div style="font-weight:normal;">Lv <span class="p-combat-level">-</span></div>
-              <b class="p-combat-name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
-            </div>
-          </div>
-          <table class="stat">
-            <tr><td class="lbl">HP</td><td class="val p-combat-hp">- / -</td><td class="lbl">MP</td><td class="val p-combat-mp">- / -</td></tr>
-            <tr><td class="lbl">STR</td><td class="val p-combat-str">-</td><td class="lbl">DEX</td><td class="val p-combat-dex">-</td></tr>
-            <tr><td class="lbl">INT</td><td class="val p-combat-int">-</td><td class="lbl">CON</td><td class="val p-combat-con">-</td></tr>
-            <tr><td class="lbl">공격력</td><td class="val p-combat-atk">- - -</td><td class="lbl">방어력</td><td class="val p-combat-def">- - -</td></tr>
-            <tr><td class="lbl">무기</td><td class="val p-combat-weapon" colspan="3">-</td></tr>
-            <tr><td class="lbl">방어구</td><td class="val p-combat-armor" colspan="3">-</td></tr>
-          </table>
-        </div>
-        <div class="main-bars" style="margin-bottom:4px;">
-          <div class="bar hp"><i class="bar-phc-fill"></i><span class="bar-phc-text">HP - / -</span></div>
-          <div class="bar mp"><i class="bar-pmc-fill"></i><span class="bar-pmc-text">MP - / -</span></div>
-        </div>
-        <div class="col-title title-mine">내 덱 (현재 턴 슬롯 강조)</div>
-        <table class="deck mini" id="towerMyDeck"></table>
-      </div>
-      <div class="col-center">
-        <div class="hunt-actions">
-          <button class="btn-go" onclick="towerNextTurn()" id="towerNextBtn">▶ 다음 턴</button>
-          <button class="btn-back" onclick="exitTower(true)">도전 중단<br>(메인 복귀)</button>
-        </div>
-        <div class="train-log" id="towerLog"></div>
-      </div>
-      <div class="col-right">
-        <div class="mon-portrait-row">
-          <div style="display:flex;flex-direction:column;align-items:center;gap:4px;">
-            <div class="mon-portrait"><img id="tower_m_portrait" src="" alt=""></div>
-            <div style="width:84px;box-sizing:border-box;font-size:11px;text-align:center;line-height:1.25;background:#fff3b0;color:#3a2a00;padding:3px 4px;border-radius:3px;">
-              <div style="font-weight:normal;">Lv <span id="tower_m_level">-</span></div>
-              <b id="tower_m_name" style="display:block;word-break:keep-all;overflow-wrap:anywhere;margin:0 auto;">-</b>
-            </div>
-          </div>
-          <table class="stat enemy-stat">
-            <tr><td class="lbl">HP</td><td class="val" id="tower_m_hp">- / -</td><td class="lbl">MP</td><td class="val" id="tower_m_mp">- / -</td></tr>
-            <tr><td class="lbl">STR</td><td class="val" id="tower_m_str">-</td><td class="lbl">DEX</td><td class="val" id="tower_m_dex">-</td></tr>
-            <tr><td class="lbl">INT</td><td class="val" id="tower_m_int">-</td><td class="lbl">CON</td><td class="val" id="tower_m_con">-</td></tr>
-            <tr><td class="lbl">공격력</td><td class="val" id="tower_m_atk">- - -</td><td class="lbl">방어력</td><td class="val" id="tower_m_def">- - -</td></tr>
-            <tr><td class="lbl">무기</td><td class="val" id="tower_m_weapon" colspan="3">-</td></tr>
-            <tr><td class="lbl">방어구</td><td class="val" id="tower_m_armor" colspan="3">-</td></tr>
-          </table>
-        </div>
-        <div class="main-bars" style="margin-bottom:4px;">
-          <div class="bar hp"><i id="tower_bar_mhp_fill"></i><span id="tower_bar_mhp_text">HP - / -</span></div>
-          <div class="bar mp"><i id="tower_bar_mmp_fill"></i><span id="tower_bar_mmp_text">MP - / -</span></div>
-        </div>
-        <div class="col-title">상대 덱 <span id="tower_m_race_badge" style="font-size:10px;color:#fcc;"></span></div>
-        <table class="deck mini" id="towerMonsterDeck"></table>
-      </div>
     </div>
   </div>
 </div>
@@ -14723,7 +14723,9 @@ function startTowerFloor(floorN){
   };
   try { calcDerived(p); } catch(e){}
   setCombatMode(true);
-  showPage('tower-battle');
+  // 여신의 탑 전투를 #pg-main > #game 안의 content-pane 으로 표시 → hunt 와 동일 wide 레이아웃 + 우측 채팅 획득
+  showPage('main');
+  showContent('tower-battle');
   if ($('tower_battle_floor_label')) $('tower_battle_floor_label').textContent = floorN;
   if ($('towerLog')) $('towerLog').innerHTML = '';
   renderTowerBattle();
@@ -14882,12 +14884,12 @@ function renderTowerBattle(){
   try { renderHuntDeck($('towerMonsterDeck'), m.deck, m.deck.length, c.turn); } catch(e){}
   const myDeckTrim = GAME.myDeck.slice(0, m.deck.length);
   try { renderHuntDeck($('towerMyDeck'), myDeckTrim, m.deck.length, c.turn); } catch(e){}
-  // 좌측(내) 정보 — hunt-battle 과 동일 클래스명 사용
-  const setTxt = (sel, val) => document.querySelectorAll('#pg-tower-battle ' + sel).forEach(el => el.textContent = val);
+  // 좌측(내) 정보 — hunt-battle 과 동일 클래스명 사용 (content-pane 안의 것만 대상)
+  const setTxt = (sel, val) => document.querySelectorAll('#content-tower-battle ' + sel).forEach(el => el.textContent = val);
   const setBar = (fillSel, textSel, cur, max) => {
     const pct = Math.max(0, Math.min(100, (cur/max)*100));
-    document.querySelectorAll('#pg-tower-battle ' + fillSel).forEach(el => el.style.width = pct + '%');
-    document.querySelectorAll('#pg-tower-battle ' + textSel).forEach(el => el.textContent = (fillSel.includes('phc')?'HP ':'MP ') + Math.max(0,cur) + ' / ' + max);
+    document.querySelectorAll('#content-tower-battle ' + fillSel).forEach(el => el.style.width = pct + '%');
+    document.querySelectorAll('#content-tower-battle ' + textSel).forEach(el => el.textContent = (fillSel.includes('phc')?'HP ':'MP ') + Math.max(0,cur) + ' / ' + max);
   };
   setTxt('.p-combat-avatar', (p.name||'?').slice(0,2));
   setTxt('.p-combat-name',  p.name || '-');
@@ -15111,6 +15113,7 @@ function _endTowerRun(_isVictory){
   GAME.huntCombat = null;
   setCombatMode(false);
   showPage('main');
+  try { showContent('main'); } catch(e){}   // 탑 전투 content-pane 정리 → 메인 컨텐츠 복귀
   try { renderSheet(); } catch(e){}
   try { renderDeck(); } catch(e){}
 }
