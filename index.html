@@ -14891,7 +14891,7 @@ function renderTowerBattle(){
     document.querySelectorAll('#content-tower-battle ' + fillSel).forEach(el => el.style.width = pct + '%');
     document.querySelectorAll('#content-tower-battle ' + textSel).forEach(el => el.textContent = (fillSel.includes('phc')?'HP ':'MP ') + Math.max(0,cur) + ' / ' + max);
   };
-  setTxt('.p-combat-avatar', (p.name||'?').slice(0,2));
+  // 아바타(.p-combat-avatar) 는 renderSheet 가 이미지·변신·이니셜 우선순위로 innerHTML 처리하므로 여기서 건드리지 않음
   setTxt('.p-combat-name',  p.name || '-');
   setTxt('.p-combat-level', p.level);
   setTxt('.p-combat-hp',    Math.max(0,p.hp) + ' / ' + p.hpMax);
