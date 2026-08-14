@@ -3079,7 +3079,7 @@ const CARDS = [
   { id:'n14', name:'디토네이트',     grade:'normal', icon:'spark',  text:'상대방 MP 50% 감소', fx:{type:'mpDebuff',pct:0.5} },
   { id:'n15', name:'라이즈데드',     grade:'normal', icon:'undead', text:'매턴 5 ~ 10 랜덤 데미지 / [소환의식] 선행 필요', fx:{type:'dot',turns:15,min:5,max:10,summon:true}, requires:'n41' },
   { id:'n16', name:'라이트닝쉴드',   grade:'normal', icon:'spark',  text:'방어구 +4 증가, 3턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'buff',def:4},{type:'dot',turns:3,dmg:5}]} },
-  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수', fx:{type:'lifestealStat',stats:['con'],source:'target'} },
+  { id:'n17', name:'라이프드레인',   grade:'normal', icon:'heart',  text:'상대방의 CON 수치 만큼 타격 및 HP 흡수 (방어력 무시)', fx:{type:'lifestealStat',stats:['con'],source:'target',ignoreDef:true} },
   { id:'n18', name:'라이프업',       grade:'normal', icon:'heart',  text:'최대 HP 30% 증가', fx:{type:'maxHpBuff',pct:0.3} },
   { id:'n19', name:'로어',           grade:'normal', icon:'roar',   text:'STR +4 증가, 무기 +3 증가', fx:{type:'buff',str:4,atk:3} },
   { id:'n20', name:'리쥬베네이션',   grade:'normal', icon:'leaf',   text:'4턴 동안 HP 10씩 회복', fx:{type:'hot',turns:4,heal:10} },
@@ -12268,7 +12268,11 @@ function applyCardEffect(card, ctx){
       }
       if (fx.bonus) base += fx.bonus;
       const dmg = Math.floor(base * (fx.mult||1));
-      doDmg(dmg);
+      if (fx.ignoreDef){
+        _dealIgnoreDef(ctx, dmg, { silent: !!fx.silentIgnoreDef });
+      } else {
+        doDmg(dmg);
+      }
       const isPlayerCastLS = ctx.castObj === GAME.player;
       const beforeLS = ctx.castObj.hp;
       ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + Math.floor(dmg * (fx.healMult||1)));
