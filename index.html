@@ -7382,7 +7382,7 @@ async function loadRaidFromCloud(){
 
 async function subscribeRaid(){
   if (!sb) return;
-  if (_raidChannel){ try { await sb.removeChannel(_raidChannel); } catch(e){} _raidChannel = null; }
+  if (_raidChannel) return;   // 이미 구독 중이면 재구독 비용 회피 (Realtime msg quota 절감)
   _raidChannel = sb.channel('raid-state')
     .on('postgres_changes',
       { event: 'UPDATE', schema: 'public', table: 'raid_state' },
@@ -8862,6 +8862,8 @@ function exitRaid(){
   if ($('raid-lobby'))  $('raid-lobby').hidden  = false;
   if ($('raid-battle')) $('raid-battle').hidden = true;
   if ($('raid-result')) $('raid-result').hidden = true;
+  // Realtime raid_state 구독 해제 (quota 절감 · 재진입 시 subscribeRaid 재호출됨)
+  try { _teardownRaid(); } catch(e){}
   showContent('main');
   try { renderSheet(); } catch(e){}
   try { renderDeck(); } catch(e){}
@@ -8898,6 +8900,7 @@ function exitRaidToHeal(){
   if ($('raid-lobby'))  $('raid-lobby').hidden  = false;
   if ($('raid-battle')) $('raid-battle').hidden = true;
   if ($('raid-result')) $('raid-result').hidden = true;
+  try { _teardownRaid(); } catch(e){}
   openHeal();
 }
 
@@ -9097,11 +9100,12 @@ async function _rankExitCleanup(){
 
 async function subscribeRanking(){
   if (!sb) return;
-  // 이미 구독 중이면 재구독 비용 회피
+  // 이미 구독 중이면 재구독 비용 회피 (Realtime msg quota 절감)
   if (_rankChannel) return;
+  // UPDATE 만 구독 (INSERT/DELETE 는 순위 리스트 렌더에 불필요 · quota 절감)
   _rankChannel = sb.channel('ranking-global')
     .on('postgres_changes',
-      { event: '*', schema: 'public', table: 'ranking_global' },
+      { event: 'UPDATE', schema: 'public', table: 'ranking_global' },
       async () => {
         await loadRankingFromCloud();
         if ($('content-rank') && !$('content-rank').hidden) renderRankList();
@@ -9961,6 +9965,8 @@ function exitRank(){
   }
   GAME.rankCombat = null;
   setCombatMode(false);
+  // Realtime ranking_global 구독 해제 (quota 절감 · 재진입 시 subscribeRanking 재호출됨)
+  try { _teardownRanking(); } catch(e){}
   showContent('main');
 }
 
@@ -18179,14 +18185,15 @@ function enterMain(){
   // 여신의 탑 지난 주 랭킹 시상은 로비의 수령 버튼으로 수동 수령 (자동 지급 폐지)
   // 세션 타이머 시작 (탭이 보이는 동안만 카운트)
   try { _startDailyQuestSessionTimer(); } catch(e){}
-  // 클라우드 랭킹·공격대 초기 로드 + Realtime 구독 + 미수령 보상 수령
+  // 클라우드 랭킹·공격대 초기 로드 + 미수령 보상 수령
+  // Realtime 구독은 실제 페이지 진입 시(openRank / raidOpen)로 지연 → Realtime message quota 절감
+  //   - 로그인 상시 구독 시 raid_state / ranking_global UPDATE 가 전체 접속자에게 fan-out → 월 수백만 msg 소모
+  //   - 메인 페이지 ticker 는 로그인 시 스냅샷으로 표시. 실시간 동기화가 필요한 유저는 해당 페이지 진입 시 구독됨
   if (sb){
     (async () => {
       try {
         await loadRankingFromCloud();
-        await subscribeRanking();
         await loadRaidFromCloud();
-        await subscribeRaid();
         await claimRaidRewards();
         await fetchOverallRank();
         renderSheet();
