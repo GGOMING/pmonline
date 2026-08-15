@@ -17,6 +17,8 @@
   /* ===== 페이지 시스템 ===== */
   .page { display:none; max-width:1000px; margin:0 auto; }
   .page.active { display:block; }
+  /* 여신의 탑 30장 카드 선발 화면 — 넓은 wrap (1400px) 이 1000px .page 에 갇혀 우측으로 밀리는 현상 방지 */
+  #pg-tower-pool { max-width:1440px; }
 
   /* 전반 1.1배 확대 (PC 만 적용) — 모바일에선 zoom 이 뷰포트 오버플로우 유발해 우측 슬롯 터치 실패 원인 */
   body:not(.layout-vertical) { zoom: 1.1; }
@@ -14342,13 +14344,11 @@ const TOWER_DAILY_SPIRIT_FLOORS = new Set([10,20,30,40,50]);
 const TOWER_DAILY_SPIRIT_PER_BOSS = 1;
 const TOWER_BOSS_FLOORS = new Set([5,10,15,20,25,30,35,40,45,50]);
 const TOWER_MAX_FLOOR = 50;
-// 주간 랭킹 시상 테이블
+// 주간 랭킹 시상 테이블 — TOP 3 만 시상 (정령의 축복 + 골드)
 const TOWER_WEEKLY_RANK_REWARDS = [
-  { min:1,   max:1,   bless:20, gold:20000 },
-  { min:2,   max:3,   bless:10, gold:10000 },
-  { min:4,   max:10,  bless:5,  gold:5000 },
-  { min:11,  max:30,  bless:3,  gold:3000 },
-  { min:31,  max:100, bless:1,  gold:1000 },
+  { min:1, max:1, spirit:5, gold:30000 },
+  { min:2, max:2, spirit:3, gold:20000 },
+  { min:3, max:3, spirit:1, gold:10000 },
 ];
 
 // ── 주간 앵커 (월요일 06:00 KST · Unix ms) ──
@@ -15429,7 +15429,7 @@ async function checkWeeklyRankingClaimStatus(){
     banner.style.display = 'block';
     if (label){
       label.innerHTML = `🏆 지난 주 랭킹 <b>${rank}위</b> 시상 대기 중<br>` +
-        `<span style="color:#e6d3ff;font-weight:normal;font-size:12px;">보상: ✨${tier.bless} · ${tier.gold.toLocaleString()}G</span>`;
+        `<span style="color:#e6d3ff;font-weight:normal;font-size:12px;">보상: 🌿 정령의 축복 ${tier.spirit}개 · ${tier.gold.toLocaleString()}G</span>`;
     }
   } catch(e){ console.warn('[tower checkWeekly]', e); }
 }
@@ -15474,15 +15474,14 @@ async function claimWeeklyRankingReward(){
       return;
     }
     p.gold = (p.gold|0) + tier.gold;
-    p.blessing = (p.blessing|0) + tier.bless;
+    p.spiritBlessing = (p.spiritBlessing|0) + (tier.spirit|0);
     p.dojo.lastWeeklyRewardPaid = prevWs;
     try { bumpTitleCounter('total_gold_earned', tier.gold|0); } catch(e){}
-    try { bumpTitleCounter('total_blessing_earned', tier.bless|0); } catch(e){}
     try { saveGame(); } catch(e){}
     cloudSaveNow().catch(()=>{});
     try { renderSheet(); } catch(e){}
     try {
-      alert(`🏆 여신의 탑 지난 주 랭킹 시상\n\n순위: ${rank}위\n보상: ✨${tier.bless} · +${tier.gold.toLocaleString()}G\n\n수령 완료!`);
+      alert(`🏆 여신의 탑 지난 주 랭킹 시상\n\n순위: ${rank}위\n보상: 🌿 정령의 축복 ${tier.spirit}개 · +${tier.gold.toLocaleString()}G\n\n수령 완료!`);
     } catch(e){}
     const banner = $('towerWeeklyClaimBanner'); if (banner) banner.style.display = 'none';
   } catch(e){
