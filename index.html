@@ -2775,7 +2775,8 @@
       매 층 시작 전 <b style="color:#ffd700;">10장 덱</b> (26층 이후 <b>15장</b>)을 새로 편성해야 하며, <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b>.<br>
       층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복.<br>
       <b style="color:#7eff7e;">🌿 정령의 축복</b> — <b>10 · 20 · 30 · 40 · 50층 보스 클리어 시 매일 최초 1회에 한해 1개씩 지급</b> (재도전 클리어는 미지급).<br>
-      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.
+      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.<br>
+      <b style="color:#ff9966;">⚠ 테스트 기간 — 층 첫 도달 보상·주간 랭킹 시상은 정식 오픈 시 지급됩니다.</b> 지금 획득 가능한 재화는 <b style="color:#7eff7e;">🌿 정령의 축복 (10층 단위 보스 하루 1회)</b> 뿐입니다.
     </div>
     <div id="towerWeeklyClaimBanner" style="display:none;background:linear-gradient(135deg,#3a2a0a,#5a4a1a);border:2px solid #ffd700;border-radius:6px;padding:12px;margin-bottom:14px;text-align:center;color:#fff;">
       <div id="towerWeeklyClaimText" style="font-size:13px;color:#ffd700;font-weight:bold;margin-bottom:8px;">지난 주 랭킹 시상을 수령할 수 있습니다.</div>
@@ -2804,8 +2805,9 @@
       </div>
     </div>
     <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;">
-      <b style="color:#ffd700;">📜 층 첫 도달 보상 (주간 리셋 · 이번 주 최초 도달 시 지급)</b>
-      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;"></div>
+      <b style="color:#ffd700;">📜 층 첫 도달 보상 (정식 오픈 시 지급 · 주간 리셋)</b>
+      <div style="color:#ff9966;font-size:11px;margin-top:4px;">⚠ 테스트 기간 · 아래 보상은 지급 안 됨 (일일 정령의 축복은 정상 지급)</div>
+      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;opacity:0.55;"></div>
     </div>
   </div>
 </div>
@@ -6092,6 +6094,7 @@ async function _loadHonorRankers(){
             armor:  p.armor  || null,
             avatar: p.avatar || null,
             blessing: p.blessing || 0,
+            spiritBlessing: p.spiritBlessing || 0,
             comment: p.comment || '',
             equippedTitle: p.equippedTitle || null,
             sponsorAmount: p.sponsorAmount || 0,
@@ -6120,7 +6123,7 @@ async function _loadHonorRankers(){
         str: p.str||5, dex: p.dex||5, int: p.int||5, con: p.con||5,
         atk: p.atk||[0,0], def: p.def||0,
         weapon: p.weapon||null, armor: p.armor||null,
-        avatar: p.avatar||null, blessing: p.blessing||0,
+        avatar: p.avatar||null, blessing: p.blessing||0, spiritBlessing: p.spiritBlessing||0,
         comment: p.comment||'',
         equippedTitle: p.equippedTitle||null,
         sponsorAmount: p.sponsorAmount || 0,
@@ -6290,7 +6293,7 @@ function renderHonorDetail(idx){
           HP <b>${r.hpMax||0}</b> · MP <b>${r.mpMax||0}</b> · 공격 <b>${atkAvg}</b> · 방어 <b>${r.def||0}</b>
         </div>
         <div style="font-size:12px;color:#a02050;margin-top:2px;">
-          ✨ 여신의 축복 <b>${(r.blessing||0).toLocaleString()}</b>
+          ✨ 여신의 축복 <b>${(r.blessing||0).toLocaleString()}</b> · <span style="color:#2e7d32;">🌿 정령의 축복 <b>${(r.spiritBlessing||0).toLocaleString()}</b></span>
         </div>
         ${r.comment ? `<div style="margin-top:6px;padding:6px 10px;background:#fffbe0;border-left:3px solid #c9a26b;font-size:12px;color:#5a4020;font-weight:bold;line-height:1.4;word-break:keep-all;overflow-wrap:anywhere;">💬 "${r.comment.replace(/</g,'&lt;')}"</div>` : ''}
       </div>
@@ -14413,23 +14416,10 @@ function _ensureDojoState(p){
 }
 
 // ── 진입 (로비) ──
-// 오픈 준비 중 — 비밀번호 게이트 (0304). 정식 오픈 시 이 블록 제거.
-const TOWER_UNLOCK_PW = '0304';
 function openTower(){
   const p = GAME.player;
   if (!p) return;
   if (_isBanned && _isBanned(p)){ try { _blockedByBanToast(p); } catch(e){} return; }
-  // 준비 중 게이트 — 운영자 계정은 우회, 그 외엔 비밀번호 확인
-  if (!(p && p.isOperator)){
-    try { alert('오픈 준비 중인 컨텐츠입니다.'); } catch(e){}
-    let pw = null;
-    try { pw = prompt('오픈 준비 중입니다.\n\n미리 체험하시려면 관리자에게 부여받은 비밀번호를 입력하세요.'); } catch(e){ pw = null; }
-    if (pw == null) return;                      // 취소
-    if (String(pw).trim() !== TOWER_UNLOCK_PW){
-      try { alert('비밀번호가 일치하지 않습니다.'); } catch(e){}
-      return;
-    }
-  }
   if ((p.level|0) < 26){
     toast('여신의 탑은 Lv 26 이상만 입장할 수 있습니다.');
     return;
@@ -15247,7 +15237,9 @@ function towerBattleEnd(result){
 }
 
 // ── 층 첫 도달 보상 (주간) ──
-const TOWER_REWARDS_ENABLED = true;
+// 테스트 기간 중엔 false — 첫 도달 보상 + 주간 랭킹 시상 지급 중단.
+// 일일 10층 단위 보스 정령 축복(grantDailySpiritBoss)은 이 플래그와 무관하게 계속 지급됨.
+const TOWER_REWARDS_ENABLED = false;
 function checkTowerReward(floor){
   const p = GAME.player;
   if (!p) return;
@@ -15259,7 +15251,7 @@ function checkTowerReward(floor){
   done.add(floor);
   p.dojo.clearedFloorsThisWeek = Array.from(done);
   if (!TOWER_REWARDS_ENABLED){
-    towerLog(`🎁 <b>${floor}층 첫 도달</b> — 보상 지급 없음`, 'sys');
+    towerLog(`🎁 <b>${floor}층 첫 도달</b> — 테스트 기간 · 첫 도달 보상 지급 없음 (정식 오픈 시 지급)`, 'sys');
     return;
   }
   p.gold = (p.gold|0) + (r.gold|0);
@@ -15425,8 +15417,10 @@ async function checkWeeklyRankingClaimStatus(){
       try { saveGame(); } catch(e){}
       return;
     }
-    // 미수령 시상 존재 → 배너 노출
+    // 미수령 시상 존재 → 배너 노출 · 버튼 상태 초기화 (이전 세션의 '수령 중...' 잔재 방지)
     banner.style.display = 'block';
+    const _btn = $('towerWeeklyClaimBtn');
+    if (_btn){ _btn.disabled = false; _btn.style.opacity = '1'; _btn.textContent = '🏆 지난 주 랭킹 보상 수령'; }
     if (label){
       label.innerHTML = `🏆 지난 주 랭킹 <b>${rank}위</b> 시상 대기 중<br>` +
         `<span style="color:#e6d3ff;font-weight:normal;font-size:12px;">보상: 🌿 정령의 축복 ${tier.spirit}개 · ${tier.gold.toLocaleString()}G</span>`;
@@ -15451,6 +15445,7 @@ async function claimWeeklyRankingReward(){
     return;
   }
   const btn = $('towerWeeklyClaimBtn');
+  const _resetBtn = () => { if (btn){ btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '🏆 지난 주 랭킹 보상 수령'; } };
   if (btn){ btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = '수령 중...'; }
   try {
     const { data: ud } = await sb.auth.getUser();
@@ -15487,7 +15482,9 @@ async function claimWeeklyRankingReward(){
   } catch(e){
     console.warn('[tower claimWeekly]', e);
     try { alert('수령 실패: ' + (e && e.message ? e.message : e) + '\n\n잠시 후 다시 시도해주세요.'); } catch(_){}
-    if (btn){ btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '🏆 지난 주 랭킹 보상 수령'; }
+  } finally {
+    // 성공·실패 무관하게 버튼 상태 복원 (배너가 숨겨진 경우 화면상 영향 없음)
+    _resetBtn();
   }
 }
 
