@@ -1499,6 +1499,15 @@
       </div>
 
       <div class="sys-group">
+        <h4>👼 여신의 탑</h4>
+        <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
+          <b>이번 주 랭킹 초기화:</b>
+          <button class="admin-btn small danger" onclick="adminResetTowerWeeklyRanking()">🗑 이번 주 dojo_weekly_records 전체 삭제</button>
+          <span style="font-size:11px;color:#666;">— 이번 주(월 06:00 KST 앵커) 랭킹 기록 서버측 전체 삭제. 유저 개인 상태(bestFloor 등)는 로컬에 남음</span>
+        </div>
+      </div>
+
+      <div class="sys-group">
         <h4>🔑 관리자 비밀번호 변경</h4>
         <label>새 비밀번호: <input type="password" id="adminNewPw1" maxlength="30" style="width:140px;font-size:11px;" placeholder="6자 이상"></label>
         <label style="margin-left:6px;">확인: <input type="password" id="adminNewPw2" maxlength="30" style="width:140px;font-size:11px;"></label>
@@ -20349,6 +20358,33 @@ async function adminBossPhase(key){
     refreshAdminSystem();
     alert(`✔ ${_raidKr(key)} 보스 단계 진입`);
   } catch(e){ alert('보스 단계 진입 실패: ' + (e.message||e)); }
+}
+
+// 여신의 탑 이번 주 랭킹 초기화 — dojo_weekly_records 전체 삭제 (이번 주 앵커 기준)
+async function adminResetTowerWeeklyRanking(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  if (typeof _towerCurrentWeekStart !== 'function'){ alert('여신의 탑 모듈 미로드'); return; }
+  const ws = _towerCurrentWeekStart();
+  const wsDate = new Date(ws).toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+  if (!confirm(`⚠ 이번 주 여신의 탑 랭킹을 전체 삭제할까요?\n\n주간 앵커: ${wsDate}\n대상 테이블: dojo_weekly_records (week_start = ${ws})\n\n· 이번 주 모든 유저의 서버 기록 삭제\n· 유저 개인 상태(bestFloor 등)는 로컬에 남음 · 재도전 시 자동 재등록`)) return;
+  try {
+    // SECURITY DEFINER RPC 우선 시도 (admin_dojo_reset_week.sql 배포 필요)
+    const { data, error } = await sb.rpc('admin_dojo_reset_week', { p_week_start: ws });
+    if (!error){
+      alert(`✔ 이번 주 랭킹 초기화 완료 · ${data|0}개 row 삭제`);
+      try { loadTowerRanking && loadTowerRanking(10); } catch(e){}
+      return;
+    }
+    // RPC 미배포 시 direct delete 폴백 (RLS 로 실패할 가능성 있음)
+    console.warn('[adminResetTowerWeeklyRanking RPC fail, fallback direct delete]', error);
+    const { error: delErr, count } = await sb.from('dojo_weekly_records').delete({ count: 'exact' }).eq('week_start', ws);
+    if (delErr){
+      alert('초기화 실패: ' + (delErr.message||delErr) + '\n\n(admin_dojo_reset_week.sql 을 Supabase 에 배포하세요)');
+      return;
+    }
+    alert(`✔ 이번 주 랭킹 초기화 완료 · ${count|0}개 row 삭제 (RLS 폴백 경로)`);
+    try { loadTowerRanking && loadTowerRanking(10); } catch(e){}
+  } catch(e){ alert('초기화 실패: ' + (e.message||e)); }
 }
 
 // 잔여 몬스터 수 직접 설정
