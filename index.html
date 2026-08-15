@@ -2801,9 +2801,11 @@
         <div style="font-size:32px;font-weight:bold;color:#ffd700;text-shadow:1px 1px 0 #000;"><span id="tower_attempts">0</span></div>
       </div>
     </div>
-    <div style="text-align:center;margin:16px 0;">
-      <button id="towerStartBtn" onclick="startTowerRun()" style="padding:14px 40px;background:linear-gradient(180deg,#ffd700 0%,#b8860b 100%);color:#1a1024;border:0;cursor:pointer;font-weight:bold;font-size:16px;border-radius:6px;box-shadow:0 0 12px rgba(255,215,0,0.7);">⚔ 도전 시작</button>
+    <div style="text-align:center;margin:16px 0;display:flex;gap:10px;justify-content:center;flex-wrap:wrap;">
+      <button id="towerStartBtn" onclick="startTowerRun(1)" style="padding:14px 40px;background:linear-gradient(180deg,#ffd700 0%,#b8860b 100%);color:#1a1024;border:0;cursor:pointer;font-weight:bold;font-size:16px;border-radius:6px;box-shadow:0 0 12px rgba(255,215,0,0.7);">⚔ 도전 시작 (1층부터)</button>
+      <button id="towerSkipStartBtn" onclick="startTowerRunFromSkip()" style="display:none;padding:14px 30px;background:linear-gradient(180deg,#7ee08a 0%,#2e7d32 100%);color:#0a1a10;border:0;cursor:pointer;font-weight:bold;font-size:15px;border-radius:6px;box-shadow:0 0 12px rgba(126,224,138,0.6);">⏭ 구간 건너뛰기 (<span id="towerSkipFloorLabel">-</span>층부터 도전)</button>
     </div>
+    <div id="towerSkipHint" style="display:none;text-align:center;font-size:11px;color:#ff9966;margin:-8px 0 12px;">⚠ 구간 건너뛰기 시 스킵된 10층 단위 보스는 직접 처치한 것으로 인정되지 않아 <b>정령의 축복 미지급</b></div>
     <div style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;margin-bottom:12px;">
       <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
         <b style="color:#ffd700;">🏆 이번 주 랭킹 TOP 10</b>
@@ -11892,6 +11894,23 @@ function _playerEffectiveDef(p, buffs){
   const strDef = Math.max(0, Math.round((strEff - 5) * 0.2));
   return armorEff + strDef;
 }
+// 플레이어 전투 공격력 range (calcDerived 공식에 combat buffs 반영)
+// - 근접: (STR+buff) × 1.0 + weapon eff
+// - 사격: (DEX+buff) × 0.6 + weapon eff
+// - 마법: (INT+buff) × 0.6 + weapon eff
+// - atk range = [max(2, round(wBase*0.6)), max(5, round(wBase))]
+function _playerEffectiveAtkRange(p, buffs){
+  if (!p) return [0, 0];
+  const strEff = (p.str || 0) + ((buffs && buffs.str) || 0);
+  const dexEff = (p.dex || 0) + ((buffs && buffs.dex) || 0);
+  const intEff = (p.int || 0) + ((buffs && buffs.int) || 0);
+  const wEff   = _effWeapon(p, buffs);
+  let wBase;
+  if (p.atkType === '사격')      wBase = dexEff * 0.6 + wEff;
+  else if (p.atkType === '마법')   wBase = intEff * 0.6 + wEff;
+  else                              wBase = strEff * 1.0 + wEff;
+  return [Math.max(2, Math.round(wBase * 0.6)), Math.max(5, Math.round(wBase * 1.0))];
+}
 
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return false;
@@ -12763,6 +12782,8 @@ function applyCardEffect(card, ctx){
       }
       // 시전자가 본인에게 건 자해 도트(언홀리프렌지·이몰레이션 등)도 제거
       if (sd) sd.length = 0;
+      // zeroStat(팬오브나이프 r40 / 버서커 n32 등)로 세팅된 방어력 강제-0 플래그 해제 → STR 유래 방어력 복원
+      if (cb) delete cb._defZeroed;
       // HP/MP 회복
       if (fx.hp){ ctx.castObj.hp = Math.min(ctx.castObj.hpMax, ctx.castObj.hp + fx.hp); }
       if (fx.mp){ ctx.castObj.mp = Math.min(ctx.castObj.mpMax, ctx.castObj.mp + fx.mp); }
@@ -14454,6 +14475,21 @@ function renderTowerLobby(){
   const at = p.dojo.attempts|0;
   if ($('tower_best_floor')) $('tower_best_floor').textContent = bf;
   if ($('tower_attempts'))   $('tower_attempts').textContent   = at;
+  // 구간 건너뛰기 버튼 — best floor 로 unlock 된 시작 층이 2 이상일 때만 노출
+  {
+    const skipBtn = $('towerSkipStartBtn');
+    const skipHint = $('towerSkipHint');
+    const skipLabel = $('towerSkipFloorLabel');
+    const sf = _towerSkipStartFloor(bf);
+    if (skipBtn && sf > 1){
+      skipBtn.style.display = 'inline-block';
+      if (skipLabel) skipLabel.textContent = sf;
+      if (skipHint)  skipHint.style.display = 'block';
+    } else if (skipBtn){
+      skipBtn.style.display = 'none';
+      if (skipHint) skipHint.style.display = 'none';
+    }
+  }
   // 보상 표
   const rl = $('towerRewardList');
   if (rl){
@@ -14473,8 +14509,19 @@ function renderTowerLobby(){
   }
 }
 
+// ── 최고 층 기반 구간 건너뛰기 시작 층 산출 ──
+// 공식: max(1, floor(bestFloor / 10) * 10 - 9)
+//   best 0~19  → 1  (스킵 불가)
+//   best 20~29 → 11 (10 boss 완주 · 11부터)
+//   best 30~39 → 21 (20 boss 완주 · 21부터)
+//   best 40~49 → 31 (30 boss 완주 · 31부터)
+//   best 50    → 41 (40 boss 완주 · 41부터)
+function _towerSkipStartFloor(bestFloor){
+  return Math.max(1, Math.floor((bestFloor|0) / 10) * 10 - 9);
+}
+
 // ── 도전 시작 (첫 층 진입 = 덱 편집 화면 표시) ──
-function startTowerRun(){
+function startTowerRun(startFloor){
   const p = GAME.player;
   if (!p) return;
   if ((p.level|0) < 26){ toast('Lv 26+ 전용'); return; }
@@ -14486,11 +14533,16 @@ function startTowerRun(){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     return;
   }
-  try { _incHourlyActivity(p); } catch(e){}
+  // 시작 층 검증 — 최고 층으로 unlock 된 구간 이내만 허용
   _ensureDojoState(p);
+  const sf = Math.max(1, parseInt(startFloor, 10) || 1);
+  const maxSkip = _towerSkipStartFloor(p.dojo.bestFloor|0);
+  if (sf > maxSkip){ toast(`아직 ${sf}층부터 시작할 수 없습니다. 최대 ${maxSkip}층부터 가능`); return; }
+  try { _incHourlyActivity(p); } catch(e){}
   p.dojo.attempts = (p.dojo.attempts|0) + 1;
   GAME.tower.active = true;
-  GAME.tower.currentFloor = 1;
+  GAME.tower.currentFloor = sf;
+  GAME.tower.startFloor = sf;   // 이번 도전의 시작 층 (스킵 여부 판정용 · 추후 참고)
   GAME.tower.bestFloorThisSession = 0;
   GAME.tower.deckHistory = [];
   GAME.tower.currentDeck = [];
@@ -14504,6 +14556,16 @@ function startTowerRun(){
   p.hp = p.hpMax; p.mp = p.mpMax;
   try { saveGame(); } catch(e){}
   openTowerPoolEdit();   // 30장 선발 화면부터
+}
+
+// 최고 층으로 unlock 된 스킵 시작 층부터 바로 도전
+function startTowerRunFromSkip(){
+  const p = GAME.player;
+  if (!p) return;
+  _ensureDojoState(p);
+  const sf = _towerSkipStartFloor(p.dojo.bestFloor|0);
+  if (sf <= 1){ toast('아직 구간 건너뛰기 조건이 아닙니다. 20층 이상 도달 시 열립니다.'); return; }
+  startTowerRun(sf);
 }
 
 // ── 층별 덱 크기 (1~25층: 10장, 26층+: 15장) ──
@@ -15024,21 +15086,32 @@ function renderTowerBattle(){
   const c = GAME.huntCombat;
   if (!c) return;
   const m = c.monster;
-  const p = GAME.player;
+  // 플레이어(좌측) 스탯·HP·MP 바·아바타 등은 renderSheet 가 .p-combat-*/.bar-p*-* 클래스 셀렉터로 일괄 처리
+  // (renderTowerBattle 직전에 renderSheet 가 호출됨 — hunt/raid/rank 와 동일 패턴)
   if ($('tower_battle_turn_info')) $('tower_battle_turn_info').textContent = `턴 ${c.turn} / ${c.maxTurns}`;
   if ($('tower_m_name')) $('tower_m_name').textContent = m.name;
   if ($('tower_m_portrait')) $('tower_m_portrait').src = (typeof monsterIconPath === 'function' ? monsterIconPath(m) : '');
   if ($('tower_m_level')) $('tower_m_level').textContent = m.level;
+  // 몬스터 스탯 + 버프 delta (hunt-battle 과 동일 포맷)
   if ($('tower_m_str')) $('tower_m_str').textContent = m.str + (c.monBuffs.str?` (${c.monBuffs.str>0?'+':''}${c.monBuffs.str})`:'');
   if ($('tower_m_dex')) $('tower_m_dex').textContent = m.dex + (c.monBuffs.dex?` (${c.monBuffs.dex>0?'+':''}${c.monBuffs.dex})`:'');
   if ($('tower_m_int')) $('tower_m_int').textContent = m.int + (c.monBuffs.int?` (${c.monBuffs.int>0?'+':''}${c.monBuffs.int})`:'');
-  if ($('tower_m_con')) $('tower_m_con').textContent = m.con;
+  if ($('tower_m_con')) $('tower_m_con').textContent = m.con + (c.monBuffs.con?` (${c.monBuffs.con>0?'+':''}${c.monBuffs.con})`:'');
   if ($('tower_m_hp'))  $('tower_m_hp').textContent  = Math.max(0,m.hp) + ' / ' + m.hpMax;
   if ($('tower_m_mp'))  $('tower_m_mp').textContent  = Math.max(0,m.mp) + ' / ' + m.mpMax;
   if ($('tower_m_atk')) $('tower_m_atk').textContent = Math.round((m.atk[0] + m.atk[1]) / 2);
   if ($('tower_m_def')) $('tower_m_def').textContent = (m.def || 0);
-  if ($('tower_m_weapon')) $('tower_m_weapon').textContent = (m.weapon ? `${m.weapon.name||'-'} (+${m.weapon.atkBonus||0})` : '-');
-  if ($('tower_m_armor'))  $('tower_m_armor').textContent  = (m.armor  ? `${m.armor.name||'-'} (+${m.armor.defBonus||0})`   : '-');
+  // 몬스터 무기·방어구 buff/debuff delta 표시 (hunt-battle 과 동일)
+  {
+    const mb = (c && c.monBuffs) || {};
+    const wBase = (m.weapon && m.weapon.atkBonus) || 0;
+    const aBase = (m.armor  && m.armor.defBonus)  || 0;
+    const wEff  = Math.max(-wBase, mb.atk|0);
+    const aEff  = Math.max(-aBase, mb.def|0);
+    const span  = (d) => d ? ` <span style="font-size:10px;color:${d>0?'#7eff7e':'#ff7e7e'};">(${d>0?'+':''}${d})</span>` : '';
+    if ($('tower_m_weapon')) $('tower_m_weapon').innerHTML = (m.weapon ? `${m.weapon.name||'-'} (+${wBase})` : '-') + span(wEff);
+    if ($('tower_m_armor'))  $('tower_m_armor').innerHTML  = (m.armor  ? `${m.armor.name||'-'} (+${aBase})`   : '-') + span(aEff);
+  }
   if ($('tower_m_race_badge')) $('tower_m_race_badge').textContent = `(${raceKr(m.race)})`;
   const mhpPct = Math.max(0, Math.min(100, m.hp/m.hpMax*100));
   const mmpPct = Math.max(0, Math.min(100, m.mp/m.mpMax*100));
@@ -15052,28 +15125,6 @@ function renderTowerBattle(){
   try { renderHuntDeck($('towerMonsterDeck'), m.deck, m.deck.length, c.turn); } catch(e){}
   const myDeckTrim = GAME.myDeck.slice(0, m.deck.length);
   try { renderHuntDeck($('towerMyDeck'), myDeckTrim, m.deck.length, c.turn); } catch(e){}
-  // 좌측(내) 정보 — hunt-battle 과 동일 클래스명 사용 (content-pane 안의 것만 대상)
-  const setTxt = (sel, val) => document.querySelectorAll('#content-tower-battle ' + sel).forEach(el => el.textContent = val);
-  const setBar = (fillSel, textSel, cur, max) => {
-    const pct = Math.max(0, Math.min(100, (cur/max)*100));
-    document.querySelectorAll('#content-tower-battle ' + fillSel).forEach(el => el.style.width = pct + '%');
-    document.querySelectorAll('#content-tower-battle ' + textSel).forEach(el => el.textContent = (fillSel.includes('phc')?'HP ':'MP ') + Math.max(0,cur) + ' / ' + max);
-  };
-  // 아바타(.p-combat-avatar) 는 renderSheet 가 이미지·변신·이니셜 우선순위로 innerHTML 처리하므로 여기서 건드리지 않음
-  setTxt('.p-combat-name',  p.name || '-');
-  setTxt('.p-combat-level', p.level);
-  setTxt('.p-combat-hp',    Math.max(0,p.hp) + ' / ' + p.hpMax);
-  setTxt('.p-combat-mp',    Math.max(0,p.mp) + ' / ' + p.mpMax);
-  setTxt('.p-combat-str',   p.str + (c.myBuffs.str?` (${c.myBuffs.str>0?'+':''}${c.myBuffs.str})`:''));
-  setTxt('.p-combat-dex',   p.dex + (c.myBuffs.dex?` (${c.myBuffs.dex>0?'+':''}${c.myBuffs.dex})`:''));
-  setTxt('.p-combat-int',   p.int + (c.myBuffs.int?` (${c.myBuffs.int>0?'+':''}${c.myBuffs.int})`:''));
-  setTxt('.p-combat-con',   p.con);
-  setTxt('.p-combat-atk',   (p.atk && p.atk[0] != null ? `${p.atk[0]}-${p.atk[1]}` : (p.atk || '-')));
-  setTxt('.p-combat-def',   _playerEffectiveDef(p, c.myBuffs) || 0);
-  setTxt('.p-combat-weapon', (p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-'));
-  setTxt('.p-combat-armor',  (p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-'));
-  setBar('.bar-phc-fill', '.bar-phc-text', p.hp, p.hpMax);
-  setBar('.bar-pmc-fill', '.bar-pmc-text', p.mp, p.mpMax);
 }
 
 // ── 다음 턴 (hunt 로직 재사용) ──
@@ -17597,8 +17648,9 @@ function renderSheet(){
   setHtml('s_dex', p.dex + buffSpan(dexDelta));
   setHtml('s_int', p.int + buffSpan(intDelta));
   setHtml('s_con', p.con + buffSpan(conDelta));
-  const atkAvg = Math.round((p.atk[0] + p.atk[1]) / 2);
-  // 공격력/방어력 — base 값만 (delta 표시 안 함, 무기/방어구 칸으로 이동)
+  // 공격력 — 전투 중이면 combat buffs(STR/DEX/INT + 무기 buff)까지 반영해 실시간 표시
+  const _atkRange = cb ? _playerEffectiveAtkRange(p, cb) : [p.atk[0]|0, p.atk[1]|0];
+  const atkAvg = Math.round((_atkRange[0] + _atkRange[1]) / 2);
   setHtml('s_atk', atkAvg);
   {
     // 무기/방어구 delta는 본체 합산이 0 미만이 되지 않도록 클램프
@@ -17644,7 +17696,7 @@ function renderSheet(){
   setClsHtml('p-combat-dex', p.dex + buffSpan(dexDelta));
   setClsHtml('p-combat-int', p.int + buffSpan(intDelta));
   setClsHtml('p-combat-con', p.con + buffSpan(conDelta));
-  // 공격력/방어력 칸 — base 값만 (delta 표시 안 함)
+  // 공격력·방어력 — combat buffs 실시간 반영 (atkAvg = _playerEffectiveAtkRange 산출값, def = _playerEffectiveDef)
   setCls('p-combat-atk', atkAvg);
   setCls('p-combat-def', _playerEffectiveDef(p, cb));
   // 무기/방어구 칸에 buff/debuff delta 표시 (장비 본체 합산이 0 미만이 되지 않도록 클램프)
