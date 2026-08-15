@@ -3219,7 +3219,7 @@ const CARDS = [
   { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
   { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전 시점 MP × 0.2 만큼 방어력 무시 고정 데미지 (상대방) / 시전자 MP 20% 소모', fx:{type:'multi',effects:[{type:'dot',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2}]} },
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'pctDebuff',stats:{dex:-0.5},turns:3}]} },
-  { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 시전자 1턴 기절 50% 풀림 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cleanseCc',chance:0.5}]} },
+  { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 상대방 50% 확률로 1턴 기절 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cc',turns:1,chance:0.5}]} },
   { id:'r25', name:'지능책',         grade:'rare', icon:'curse',    text:'INT +10 증가 / 최대 MP +50 증가', fx:{type:'multi',effects:[{type:'buff',int:10},{type:'maxMpBuff',amount:50}]} },
   { id:'r26', name:'체인라이트닝',   grade:'rare', icon:'hammer',   text:'INT로 3회 타격 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:3},{type:'mpCost',stat:'int'}]} },
   { id:'r27', name:'캐리언비틀즈',   grade:'rare', icon:'paw',      text:'매턴 10 고정 데미지, 매 턴 데미지 +1씩 증가 (소환의식 불필요)', fx:{type:'dot',turns:15,dmg:10,growth:1,summon:true} },
