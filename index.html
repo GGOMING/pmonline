@@ -327,6 +327,16 @@
   body.layout-vertical #game { align-self:center !important; }
   body.layout-vertical #game { width:100%; max-width:480px; box-sizing:border-box; }
   body.layout-vertical #chat { width:100%; max-width:480px; max-height:520px; box-sizing:border-box; }
+  /* 모바일: 여신의 탑 30장 선발 화면 세로 스택 (보유 카드 상단, 선발된 카드 하단) */
+  body.layout-vertical .tower-pool-wrap { max-width:100% !important; width:100% !important; padding:8px !important; }
+  body.layout-vertical .tower-pool-grid { grid-template-columns:1fr !important; gap:8px !important; }
+  body.layout-vertical .tower-pool-col-avail    { order:1 !important; }
+  body.layout-vertical .tower-pool-col-selected { order:2 !important; }
+  body.layout-vertical #tower_pool_selected,
+  body.layout-vertical #tower_pool_avail {
+    grid-template-columns:repeat(4,1fr) !important;
+    max-height:44vh !important;
+  }
   /* 모바일: 접속자 명단 세로 확장 (기본 120px → 200px). 유저 많으면 여전히 내부 스크롤 */
   body.layout-vertical .chat-users { max-height:200px; }
   /* 모바일: 명예의 전당 세로 스택 + 덱 카드 축소 (기존 260px 리스트 + flex:1 detail 이 화면 밖으로 넘침) */
@@ -2320,15 +2330,18 @@
       <div class="shop-page">
         <div class="shop-head">✨ 축복의 상점</div>
         <div class="shop-desc">
-          여신의 축복은 <b>공격대 보스 최종 타격 시 1개씩 확정 드롭</b>됩니다.<br>
-          모은 축복으로 카드를 뽑거나 <b style="color:#ffd700;">축복의 랜덤 상자</b>를 구매하세요.
+          <b>✨ 여신의 축복</b>은 공격대 보스 최종 타격 시 1개씩 확정 드롭됩니다.<br>
+          <b style="color:#2e7d32;">🌿 정령의 축복</b>은 여신의 탑 10·20·30·40·50층 보스 최초 클리어 시 매일 1개씩 획득 (+ 층 첫 도달 보상).<br>
+          두 축복 모두 카드 뽑기·랜덤 상자 구매에 사용할 수 있습니다 <b style="color:#a02050;">(혼용 불가 · 한 번의 구매에 하나만 소모)</b>.
         </div>
         <table class="shop-rates" style="width:96%;">
           <tr>
             <td class="lbl">현재 골드</td>
             <td class="val"><b id="bshop_gold">-</b> G</td>
-            <td class="lbl">✨ 보유 축복</td>
+            <td class="lbl">✨ 여신의 축복</td>
             <td class="val"><b id="bshop_blessing" style="color:#ffd700;">0</b></td>
+            <td class="lbl">🌿 정령의 축복</td>
+            <td class="val"><b id="bshop_spirit" style="color:#7ee08a;">0</b></td>
           </tr>
         </table>
         <div id="blessShopList" style="padding:14px;"></div>
@@ -2757,10 +2770,10 @@
     </div>
     <div style="background:#2a1a3a;padding:12px;border-radius:6px;border:1px solid #a335ee;font-size:12px;line-height:1.7;color:#e6d3ff;margin-bottom:14px;">
       <b style="color:#ffd700;">진입 조건 Lv 26+</b> · 1층부터 최대 50층까지 순차 도전.<br>
-      매 층 시작 전 <b style="color:#ffd700;">10장 덱</b>을 새로 편성해야 하며, <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b>.<br>
+      매 층 시작 전 <b style="color:#ffd700;">10장 덱</b> (26층 이후 <b>15장</b>)을 새로 편성해야 하며, <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b>.<br>
       층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복.<br>
-      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.<br>
-      <b style="color:#ff9966;">⚠ 테스트 기간 · 층 도달 보상·주간 랭킹 시상은 정식 오픈 시 지급됩니다.</b>
+      <b style="color:#7eff7e;">🌿 정령의 축복</b> — <b>10 · 20 · 30 · 40 · 50층 보스 클리어 시 매일 최초 1회에 한해 1개씩 지급</b> (재도전 클리어는 미지급).<br>
+      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.
     </div>
     <div id="towerWeeklyClaimBanner" style="display:none;background:linear-gradient(135deg,#3a2a0a,#5a4a1a);border:2px solid #ffd700;border-radius:6px;padding:12px;margin-bottom:14px;text-align:center;color:#fff;">
       <div id="towerWeeklyClaimText" style="font-size:13px;color:#ffd700;font-weight:bold;margin-bottom:8px;">지난 주 랭킹 시상을 수령할 수 있습니다.</div>
@@ -2789,9 +2802,8 @@
       </div>
     </div>
     <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;">
-      <b style="color:#ffd700;">📜 층 첫 도달 보상 (정식 오픈 시 지급)</b>
-      <div style="color:#ff9966;font-size:11px;margin-top:4px;">⚠ 테스트 기간 · 아래 보상은 지급 안 됨</div>
-      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;opacity:0.55;"></div>
+      <b style="color:#ffd700;">📜 층 첫 도달 보상 (주간 리셋 · 이번 주 최초 도달 시 지급)</b>
+      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;"></div>
     </div>
   </div>
 </div>
@@ -2801,7 +2813,7 @@
        한 번의 도전 (1~50층) 동안 이 30장에서만 층별 덱 편성 가능
      ═══════════════════════════════════════════════════════════ -->
 <div id="pg-tower-pool" class="page">
-  <div style="max-width:900px;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:16px;color:#fff;">
+  <div class="tower-pool-wrap" style="max-width:1400px;width:96vw;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:16px;color:#fff;">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:8px;margin-bottom:10px;">
       <div style="font-size:18px;font-weight:bold;color:#ffd700;">🎴 도전용 카드 30장 선발</div>
       <button onclick="exitTower(true)" style="padding:5px 12px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-size:11px;">도전 중단</button>
@@ -2809,15 +2821,16 @@
     <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
       한 번의 도전 (1층 ~ 50층) 동안 사용할 카드 <b style="color:#ffd700;">30장</b>을 선발하세요. 같은 카드는 <b>1장만</b> 선발 가능 (인벤에 여러 장이어도 종류당 1장).
       <br>1~25층은 층당 <b>10장</b>, <b style="color:#ffd700;">26층부터는 15장</b> 편성. 직전 층 사용 카드는 재사용 불가 규칙 유지.
+      <br><b style="color:#7eff7e;">💡 보유 카드에서 이미 선발된 카드를 한 번 더 누르면 선발에서 제외됩니다.</b>
     </div>
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
-      <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
-        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">선발된 카드 (<span id="tower_pool_count">0</span>/30)</div>
-        <div id="tower_pool_selected" style="display:grid;grid-template-columns:repeat(5,1fr);gap:4px;min-height:120px;max-height:340px;overflow-y:auto;"></div>
+    <div class="tower-pool-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="tower-pool-col-selected" style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
+        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">선발된 카드 (<span id="tower_pool_count">0</span>/30) · 카드 클릭 → 즉시 제외</div>
+        <div id="tower_pool_selected" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:200px;max-height:65vh;overflow-y:auto;"></div>
       </div>
-      <div style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #a335ee;">
-        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">보유 카드 (클릭 → 선발)</div>
-        <div id="tower_pool_avail" style="max-height:340px;overflow-y:auto;display:grid;grid-template-columns:repeat(4,1fr);gap:4px;"></div>
+      <div class="tower-pool-col-avail" style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #a335ee;">
+        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">보유 카드 (클릭 → 선발 · 이미 선발된 카드 재클릭 → 제외)</div>
+        <div id="tower_pool_avail" style="max-height:65vh;overflow-y:auto;display:grid;grid-template-columns:repeat(5,1fr);gap:6px;"></div>
       </div>
     </div>
     <div style="text-align:center;margin-top:14px;">
@@ -2852,6 +2865,20 @@
     </div>
     <div style="text-align:center;margin-top:14px;">
       <button id="towerCommitBtn" onclick="commitTowerDeck()" style="padding:12px 36px;background:linear-gradient(180deg,#ffd700 0%,#b8860b 100%);color:#1a1024;border:0;cursor:pointer;font-weight:bold;font-size:14px;border-radius:6px;">▶ 다음 층 도전</button>
+    </div>
+  </div>
+</div>
+
+<!-- 정령의 축복 보전 모달 (수행 패배 시) -->
+<div class="modal-bg" id="spiritRestoreBg" onclick="if(event.target.id==='spiritRestoreBg')closeSpiritRestore()">
+  <div class="modal" style="width:420px;max-width:94vw;">
+    <div class="modal-head">🌿 정령의 축복으로 손실 보전</div>
+    <div style="padding:16px;background:#FFFFCC;color:#333;">
+      <div id="spiritRestoreInfo" style="font-size:13px;line-height:1.6;margin-bottom:10px;"></div>
+      <div id="spiritRestoreOptions" style="display:flex;flex-direction:column;gap:8px;"></div>
+      <div style="margin-top:12px;text-align:center;">
+        <button onclick="closeSpiritRestore()" style="padding:8px 18px;background:#888;color:#fff;border:0;cursor:pointer;font-size:12px;border-radius:4px;">✕ 사용 안 함</button>
+      </div>
     </div>
   </div>
 </div>
@@ -5617,23 +5644,31 @@ function refreshBlessShop(){
   if (!p) return;
   $('bshop_gold').textContent = (p.gold||0).toLocaleString();
   $('bshop_blessing').textContent = (p.blessing||0).toLocaleString();
+  const spEl = $('bshop_spirit'); if (spEl) spEl.textContent = (p.spiritBlessing||0).toLocaleString();
   $('bshop_msg').textContent = '';
   const list = BLESS_SHOP_ITEMS.map(it => {
-    const can = (p.blessing||0) >= it.cost;
-    const btnStyle = can
-      ? 'background:#a02050;color:#fff;cursor:pointer;'
-      : 'background:#777;color:#ccc;cursor:not-allowed;';
+    const canBless  = (p.blessing||0)       >= it.cost;
+    const canSpirit = (p.spiritBlessing||0) >= it.cost;
+    const btnBase = 'padding:9px 14px;font-size:13px;font-weight:bold;border:0;border-radius:4px;min-width:110px;';
+    const btnBless = canBless
+      ? btnBase + 'background:#a02050;color:#fff;cursor:pointer;'
+      : btnBase + 'background:#777;color:#ccc;cursor:not-allowed;';
+    const btnSpirit = canSpirit
+      ? btnBase + 'background:#2e7d32;color:#fff;cursor:pointer;'
+      : btnBase + 'background:#777;color:#ccc;cursor:not-allowed;';
     const iconEnc = it.icon.replace(/ /g, '%20');
-    // desc 는 하드코딩 BLESS_SHOP_ITEMS 에서만 옴 → HTML span 허용 (신뢰 가능)
     const desc = it.desc || '';
     return `<div style="display:flex;align-items:center;gap:14px;padding:12px;background:#fff;border:2px solid #c9a26b;border-radius:6px;margin-bottom:10px;box-shadow:0 2px 4px rgba(0,0,0,0.1);">
       <img src="${iconEnc}" style="width:72px;height:72px;object-fit:contain;background:#000;border:1px solid #888;flex:none;">
       <div style="flex:1;min-width:0;">
         <div style="font-size:16px;font-weight:bold;color:#7E181E;">${it.name}</div>
         <div style="font-size:12px;color:#444;margin-top:4px;line-height:1.5;">${desc}</div>
-        <div style="font-size:12px;color:#555;margin-top:6px;">필요: <b style="color:#a02050;">✨ 축복 ${it.cost}</b></div>
+        <div style="font-size:12px;color:#555;margin-top:6px;">필요: <b style="color:#a02050;">✨ 여신의 축복 ${it.cost}</b> <span style="color:#888;">또는</span> <b style="color:#2e7d32;">🌿 정령의 축복 ${it.cost}</b> <span style="color:#888;font-size:10px;">(혼용 불가)</span></div>
       </div>
-      <button onclick="buyBlessItem('${it.id}')" ${can?'':'disabled'} style="padding:10px 22px;font-size:14px;font-weight:bold;border:0;border-radius:4px;${btnStyle}">${can?'구매':'축복 부족'}</button>
+      <div style="display:flex;flex-direction:column;gap:6px;flex:none;">
+        <button onclick="buyBlessItem('${it.id}','blessing')" ${canBless ? '' : 'disabled'} style="${btnBless}">${canBless ? '✨ 구매' : '✨ 부족'}</button>
+        <button onclick="buyBlessItem('${it.id}','spirit')"  ${canSpirit ? '' : 'disabled'} style="${btnSpirit}">${canSpirit ? '🌿 구매' : '🌿 부족'}</button>
+      </div>
     </div>`;
   }).join('');
   $('blessShopList').innerHTML = list;
@@ -5689,12 +5724,16 @@ function closeBlessGachaResult(){
   if (bg) bg.classList.remove('on');
 }
 
-function buyBlessItem(id){
+function buyBlessItem(id, currency){
   const p = GAME.player;
   const it = BLESS_SHOP_ITEMS.find(x => x.id === id);
   if (!p || !it) return;
-  if ((p.blessing||0) < it.cost){
-    setBlessMsg(`⚠ 여신의 축복이 부족합니다. (필요: ${it.cost})`, 'err');
+  currency = (currency === 'spirit') ? 'spirit' : 'blessing';
+  const isSpirit = currency === 'spirit';
+  const curField = isSpirit ? 'spiritBlessing' : 'blessing';
+  const curLabel = isSpirit ? '🌿 정령의 축복' : '✨ 여신의 축복';
+  if ((p[curField]||0) < it.cost){
+    setBlessMsg(`⚠ ${curLabel} 부족합니다. (필요: ${it.cost})`, 'err');
     return;
   }
   if (id === 'card1' || id === 'card11'){
@@ -5705,9 +5744,9 @@ function buyBlessItem(id){
       setBlessMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${inventoryLimit()}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다.`, 'err');
       return;
     }
-    if (!confirm(`✨ 여신의 축복 ${it.cost}개로 ${it.name}을(를) 진행할까요?`)) return;
-    p.blessing -= it.cost;
-    try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){}
+    if (!confirm(`${curLabel} ${it.cost}개로 ${it.name}을(를) 진행할까요?`)) return;
+    p[curField] = (p[curField]||0) - it.cost;
+    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
     // 가챠 풀 — 축복 상점은 영웅 뽑기 확률표 그대로 사용
     const pool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
     const results = [];
@@ -5725,7 +5764,7 @@ function buyBlessItem(id){
     const legends = results.filter(c => c.grade === 'legend').length;
     const heroes  = results.filter(c => c.grade === 'hero').length;
     const uniques = results.filter(c => c.grade === 'unique').length;
-    let msg = `✔ ${it.name} 완료 (-✨ ${it.cost})`;
+    let msg = `✔ ${it.name} 완료 (-${isSpirit?'🌿':'✨'} ${it.cost})`;
     if (legends) msg += ` · 👑 전설 ${legends}장!`;
     if (heroes)  msg += ` · ⭐ 영웅 ${heroes}장!`;
     if (uniques) msg += ` · 🔮 유니크 ${uniques}장!`;
@@ -5733,14 +5772,15 @@ function buyBlessItem(id){
     const legendCards = results.filter(c => c.grade === 'legend');
     const heroCards   = results.filter(c => c.grade === 'hero');
     const uniqueCards = results.filter(c => c.grade === 'unique');
+    const _cLabel = isSpirit ? '정령의 축복' : '여신의 축복';
     if (legendCards.length){
-      chatSys(`✨👑 ${p.name}님이 여신의 축복으로 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`, { sticky: true });
+      chatSys(`✨👑 ${p.name}님이 ${_cLabel}(으)로 【전설】 카드 [${legendCards.map(c=>c.name).join(', ')}] 획득! 👑✨`, { sticky: true });
     }
     if (heroCards.length){
-      chatSys(`★ ${p.name}님이 여신의 축복으로 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
+      chatSys(`★ ${p.name}님이 ${_cLabel}(으)로 ⭐ 영웅 카드 [${heroCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
     if (uniqueCards.length){
-      chatSys(`★ ${p.name}님이 여신의 축복으로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
+      chatSys(`★ ${p.name}님이 ${_cLabel}(으)로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
     // 일일 퀘스트 진행 (축복 뽑기도 카드 획득으로 카운트)
     try {
@@ -5761,13 +5801,13 @@ function buyBlessItem(id){
     return;
   }
   if (id === 'box'){
-    if (!confirm(`✨ 여신의 축복 ${it.cost}개로 축복의 랜덤 상자를 구매할까요?`)) return;
+    if (!confirm(`${curLabel} ${it.cost}개로 축복의 랜덤 상자를 구매할까요?`)) return;
     // 카드 보상 가능성에 대비해 인벤토리 한도 사전 검사 (스탯 P 보상은 한도 무관)
     if (GAME.inventory.length >= inventoryLimit()){
       if (!confirm(`⚠ 보유 카드 한도(${inventoryLimit()}장)에 도달했습니다.\n상자 결과가 카드일 경우 지급이 누락될 수 있습니다. 그래도 진행할까요?`)) return;
     }
-    p.blessing -= it.cost;
-    try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){}
+    p[curField] = (p[curField]||0) - it.cost;
+    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
     // 가중 추첨 — BLESS_BOX_REWARDS (admin에서 조정 가능)
     const totalW = BLESS_BOX_REWARDS.reduce((s, x) => s + (x.rate || 0), 0) || 1;
     let pick = Math.random() * totalW;
@@ -6844,7 +6884,7 @@ const TITLE_POOL = [
   { id:'title_gold_1m',        name:'거상',              tier:'유니크', color:'#a335ee', desc:'누적 골드 획득 10,000,000G',      cond:{type:'total_gold_earned',        target:10000000} },
   { id:'title_gold_50m',       name:'고액자산가',        tier:'유니크', color:'#a335ee', desc:'누적 골드 획득 50,000,000G',      cond:{type:'total_gold_earned',        target:50000000} },
   { id:'title_card_unique_10', name:'유니크 콜렉터',     tier:'유니크', color:'#a335ee', desc:'유니크 카드 5종 소지',            cond:{type:'unique_cards_owned',       target:5} },
-  { id:'title_tower_master',   name:'탑의 정복자',       tier:'유니크', color:'#a335ee', desc:'여신의 탑 50층 클리어',            cond:{type:'tower_50_cleared',         target:1} },
+  { id:'title_tower_master',   name:'신의 탑',           tier:'전설', color:'#ffd700', desc:'여신의 탑 50층 클리어',            cond:{type:'tower_50_cleared',         target:1} },
   { id:'title_abyss_3',        name:'신의 암살자',       tier:'유니크', color:'#a335ee', desc:'잊혀진 성좌 보스 3명 이상 처치',   cond:{type:'abyss_boss_kills',         target:3} },
   { id:'title_defense_300',    name:'절대방어',          tier:'유니크', color:'#a335ee', desc:'랭킹 방어전 300회 승리',          cond:{type:'rank_defense_wins',        target:300} },
   { id:'title_daily_100',      name:'근면성실',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 연속 100일 완주',      cond:{type:'daily_full_days',          target:100} },
@@ -11827,6 +11867,17 @@ function _effArmor(obj, buffs){
   const delta = (buffs && buffs.def) || 0;
   return Math.max(0, base + delta);
 }
+// 플레이어 전용 방어력 산출 — 방어구 + 방어구 buff + STR 5 초과분 × 0.2 (반올림)
+// - 몬스터에겐 미적용 (수행·공격대·여신의 탑 등 모든 몹 스탯 계산은 기존 그대로)
+// - 버서커(n32) / 팬오브나이프(r40) 로 buffs._defZeroed 활성 시 0 강제
+function _playerEffectiveDef(p, buffs){
+  if (!p) return 0;
+  const armorEff = _effArmor(p, buffs);
+  if (buffs && buffs._defZeroed) return 0;
+  const strEff = (p.str || 0) + ((buffs && buffs.str) || 0);
+  const strDef = Math.max(0, Math.round((strEff - 5) * 0.2));
+  return armorEff + strDef;
+}
 
 function applyCardEffect(card, ctx){
   const fx = card.fx; if (!fx) return false;
@@ -11913,10 +11964,11 @@ function applyCardEffect(card, ctx){
         ctx.log(`  🌀 ${ctx.targName} 부두 → 데미지 ${heal} → 회복 +${got}`, 'heal');
         return;
       }
-      // 방어력 차감 — 방어구 본체 + buff를 0 하한으로 클램프한 뒤 con 기반 본체 def에 합산
-      const aBaseT = (ctx.targObj.armor && ctx.targObj.armor.defBonus) || 0;
-      const conBaseDefT = (ctx.targObj.def||0) - aBaseT;
-      let dmg = Math.max(1, Math.floor(raw - conBaseDefT - _effArmor(ctx.targObj, ctx.targBuffs)));
+      // 방어력 차감 — 방어구 본체 + buff 클램프. 플레이어가 대상이면 STR 유래 방어력 추가 (몬스터 미적용)
+      const totalDefT = (ctx.targObj === GAME.player)
+        ? _playerEffectiveDef(GAME.player, ctx.targBuffs)
+        : _effArmor(ctx.targObj, ctx.targBuffs);
+      let dmg = Math.max(1, Math.floor(raw - totalDefT));
       // 스피드스크롤 실드 — 시전한 그 턴에 받는 데미지 50% 감소
       const _sgTurn = ctx.targScrollGuard ? ctx.targScrollGuard() : 0;
       const _curTurn = (ctx.c && ctx.c.turn) || 0;
@@ -12477,6 +12529,8 @@ function applyCardEffect(card, ctx){
         else                  base = obj[k] || 0;
         const cur = base + (buffs[k]||0) - lockedVal;
         _addTurnBuff(buffs, tBuffs, k, -cur, fx.turns||0, obj, zsOpts);
+        // 'def' zeroStat 은 STR 유래 방어력도 함께 0 처리 (버서커 n32, 팬오브나이프 r40)
+        if (k === 'def') buffs._defZeroed = true;
       }
       ctx.log(`   - ${name} ${fx.stats.join(',')} 0${fx.turns?` (${fx.turns}턴)`:''}`, logCls);
       return;
@@ -13827,6 +13881,90 @@ function _offerBlessingToPreventDestroy(destroyed){
   try { cloudSaveNow().catch(function(e){ console.warn('[blessingFail cloudSave]', e); }); } catch(e){}
 }
 
+// 수행 패배 시 정령의 축복 보전 옵션 표시
+// - 골드 보전 🌿 1개, EXP 보전 🌿 2개, 둘 다 🌿 3개
+// - 손실 없거나 정령의 축복 부족 시 옵션 미노출 (기본 alert 만)
+function _offerSpiritLossRestore(loss){
+  const p = GAME.player;
+  if (!p) return;
+  const lostGold = loss && (loss.lostGold|0) || 0;
+  const lostXp   = loss && (loss.lostXp|0)   || 0;
+  const spirit   = p.spiritBlessing || 0;
+  // 손실도 없고 축복도 없으면 기본 알림만
+  if (lostGold <= 0 && lostXp <= 0){
+    const dInfo = loss && loss.destroyed;
+    let m = '💀 패배\n\n패널티가 적용되었습니다.\n\n• HP·MP: 0';
+    if (dInfo) m += '\n• ' + (dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구') + ' 파괴: ' + dInfo.name;
+    try { alert(m); } catch(e){}
+    return;
+  }
+  // 축복 없으면 기본 알림만
+  const canGold = spirit >= 1 && lostGold > 0;
+  const canXp   = spirit >= 2 && lostXp   > 0;
+  const canBoth = spirit >= 3 && lostGold > 0 && lostXp > 0;
+  if (!canGold && !canXp && !canBoth){
+    const dInfo = loss && loss.destroyed;
+    let m = '💀 패배\n\n패널티가 적용되었습니다.\n\n';
+    m += '• 골드: -' + lostGold.toLocaleString() + ' G\n';
+    m += '• 경험치: -' + lostXp.toLocaleString() + ' XP\n';
+    m += '• HP·MP: 0';
+    if (dInfo) m += '\n• ' + (dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구') + ' 파괴: ' + dInfo.name;
+    m += '\n\n※ 정령의 축복 보유 시 손실 보전 가능 (여신의 탑 보스에서 획득)';
+    try { alert(m); } catch(e){}
+    return;
+  }
+  // 모달 표시
+  const info = $('spiritRestoreInfo');
+  const opts = $('spiritRestoreOptions');
+  const bg   = $('spiritRestoreBg');
+  if (!info || !opts || !bg) return;
+  const dInfo = loss.destroyed;
+  info.innerHTML =
+    `💀 <b>수행 패배</b> — 손실 확정<br>` +
+    `<div style="background:#3a0000;color:#ffaaaa;padding:6px 10px;border-radius:4px;margin:6px 0;font-size:12px;">` +
+    `• 골드 <b style="color:#ff6666;">-${lostGold.toLocaleString()} G</b><br>` +
+    `• 경험치 <b style="color:#ff6666;">-${lostXp.toLocaleString()} XP</b><br>` +
+    `• HP·MP <b style="color:#ff6666;">0</b>` +
+    (dInfo ? `<br>• ${dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구'} 파괴: <b>${dInfo.name}</b>` : '') +
+    `</div>` +
+    `<b>🌿 정령의 축복 보유:</b> <b style="color:#2e7d32;">${spirit}개</b><br>` +
+    `<span style="font-size:11px;color:#666;">보전할 항목을 선택하세요. (사용 안 함 → 손실 확정)</span>`;
+  const optBtnStyle = 'padding:10px 14px;border:2px solid #2e7d32;background:#e8f5e9;color:#1b5e20;cursor:pointer;font-size:12px;font-weight:bold;border-radius:4px;text-align:left;';
+  const disabledStyle = 'padding:10px 14px;border:2px solid #ccc;background:#eee;color:#999;cursor:not-allowed;font-size:12px;border-radius:4px;text-align:left;';
+  let html = '';
+  html += `<button ${canGold ? '' : 'disabled'} onclick="_applySpiritRestore('gold', ${lostGold}, ${lostXp})" style="${canGold ? optBtnStyle : disabledStyle}">🌿 1개 → 골드 보전 (+${lostGold.toLocaleString()} G 복구)${canGold ? '' : ' <span style="color:#c00;">[축복 부족]</span>'}</button>`;
+  html += `<button ${canXp ? '' : 'disabled'} onclick="_applySpiritRestore('xp', ${lostGold}, ${lostXp})" style="${canXp ? optBtnStyle : disabledStyle}">🌿 2개 → 경험치 보전 (+${lostXp.toLocaleString()} XP 복구)${canXp ? '' : ' <span style="color:#c00;">[축복 부족]</span>'}</button>`;
+  html += `<button ${canBoth ? '' : 'disabled'} onclick="_applySpiritRestore('both', ${lostGold}, ${lostXp})" style="${canBoth ? optBtnStyle : disabledStyle}">🌿 3개 → 둘 다 보전 (+${lostGold.toLocaleString()} G · +${lostXp.toLocaleString()} XP 복구)${canBoth ? '' : ' <span style="color:#c00;">[축복 부족]</span>'}</button>`;
+  opts.innerHTML = html;
+  bg.classList.add('on');
+}
+function closeSpiritRestore(){
+  const bg = $('spiritRestoreBg');
+  if (bg) bg.classList.remove('on');
+}
+function _applySpiritRestore(kind, lostGold, lostXp){
+  const p = GAME.player;
+  if (!p) return;
+  const cost = kind === 'gold' ? 1 : kind === 'xp' ? 2 : 3;
+  if ((p.spiritBlessing||0) < cost){ toast('정령의 축복 부족'); return; }
+  p.spiritBlessing = (p.spiritBlessing|0) - cost;
+  let msg = '🌿 정령의 축복 -' + cost + '개 소모 · ';
+  if (kind === 'gold' || kind === 'both'){
+    p.gold = (p.gold|0) + lostGold;
+    msg += `골드 +${lostGold.toLocaleString()} G 복구`;
+  }
+  if (kind === 'xp' || kind === 'both'){
+    if (kind === 'both') msg += ' · ';
+    p.xp = (p.xp|0) + lostXp;
+    msg += `경험치 +${lostXp.toLocaleString()} XP 복구`;
+  }
+  closeSpiritRestore();
+  try { renderSheet(); } catch(e){}
+  try { saveGame(); } catch(e){}
+  try { cloudSaveNow().catch(e => console.warn('[spiritRestore cloudSave]', e)); } catch(e){}
+  try { alert('✔ 손실 보전 완료\n\n' + msg + '\n\n(남은 정령의 축복: ' + (p.spiritBlessing|0) + '개)'); } catch(e){}
+}
+
 function huntEnd(result){
   const c = GAME.huntCombat;
   if (!c || c.finished) return;
@@ -14101,18 +14239,8 @@ function showHuntResult(outcome, info){
         <div style="margin-top:10px;font-size:10px;color:#ffcc88;">※ 패배 시 낮은 확률로 보유 카드 혹은 장비가 파괴될 수 있습니다.</div>
       </div>
       <p style="font-size:11px;color:#666;">팁: 회복의 샘물에 들러 회복 후 재도전하세요.</p>`;
-    // 패널티 팝업 (결과창 렌더 직후)
-    setTimeout(() => {
-      let msg = '💀 패배\n\n패널티가 적용되었습니다.\n\n';
-      msg += '• 골드: -' + loss.lostGold.toLocaleString() + ' G\n';
-      msg += '• 경험치: -' + loss.lostXp.toLocaleString() + ' XP\n';
-      msg += '• HP·MP: 0\n';
-      if (dInfo){
-        msg += '• ' + (dInfo.kind==='card'?'카드':dInfo.kind==='weapon'?'무기':'방어구') + ' 파괴: ' + dInfo.name + '\n';
-      }
-      msg += '\n※ 패배 시 낮은 확률로 보유 카드 혹은 장비가 파괴될 수 있습니다.';
-      alert(msg);
-    }, 200);
+    // 패널티 팝업 (결과창 렌더 직후) — 정령의 축복 보전 옵션 노출
+    setTimeout(() => { try { _offerSpiritLossRestore(loss); } catch(e){ console.warn('[spiritRestore]', e); } }, 200);
   } else {
     body += `<p style="color:#888;">도주 완료. 보상 없음.</p>`;
   }
@@ -14199,18 +14327,19 @@ function exitHunt(){
 //  · 주간 랭킹 (월요일 06:00 KST) — 순위별 자동 시상 지급 (로그인 시 체크)
 
 // ── 보상 테이블 ──
+// 층 첫 도달 보상 — 정령의 축복(spirit) + 골드. 주간 리셋 (clearedFloorsThisWeek 기반)
 const TOWER_FLOOR_REWARDS = {
-  5:  { bless:1,  gold:1000 },
-  10: { bless:2,  gold:2000 },
-  15: { bless:3,  gold:3000 },
-  20: { bless:5,  gold:5000 },
-  25: { bless:7,  gold:7000 },
-  30: { bless:10, gold:10000 },
-  35: { bless:12, gold:15000 },
-  40: { bless:15, gold:20000 },
-  45: { bless:20, gold:30000 },
-  50: { bless:30, gold:50000, title:'title_tower_master' },
+  5:  { spirit:1,   gold:10000 },
+  10: { spirit:2,   gold:20000 },
+  15: { spirit:3,   gold:30000 },
+  20: { spirit:5,   gold:50000 },
+  30: { spirit:10,  gold:50000 },
+  40: { spirit:20,  gold:100000 },
+  50: { spirit:100, gold:1000000, title:'title_tower_master' },
 };
+// 매일 10층 단위 보스 클리어 시 지급되는 정령의 축복 (하루 최초 클리어만)
+const TOWER_DAILY_SPIRIT_FLOORS = new Set([10,20,30,40,50]);
+const TOWER_DAILY_SPIRIT_PER_BOSS = 1;
 const TOWER_BOSS_FLOORS = new Set([5,10,15,20,25,30,35,40,45,50]);
 const TOWER_MAX_FLOOR = 50;
 // 주간 랭킹 시상 테이블
@@ -14246,6 +14375,10 @@ function _towerPrevWeekStart(){
 }
 
 // ── p.dojo 초기화 (마이그레이션 대응) ──
+function _todayKey(){
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
 function _ensureDojoState(p){
   if (!p) return;
   if (!p.dojo){
@@ -14256,6 +14389,8 @@ function _ensureDojoState(p){
       attempts: 0,
       clearedFloorsThisWeek: [],
       lastWeeklyRewardPaid: 0,
+      spiritClearedDate: '',
+      spiritClearedFloors: [],
     };
   }
   const cur = _towerCurrentWeekStart();
@@ -14268,6 +14403,13 @@ function _ensureDojoState(p){
     p.dojo.clearedFloorsThisWeek = [];
   }
   if (!Array.isArray(p.dojo.clearedFloorsThisWeek)) p.dojo.clearedFloorsThisWeek = [];
+  // 일일 정령의 축복 클리어 트래킹 (10/20/30/40/50층 하루 1회)
+  const today = _todayKey();
+  if (p.dojo.spiritClearedDate !== today){
+    p.dojo.spiritClearedDate = today;
+    p.dojo.spiritClearedFloors = [];
+  }
+  if (!Array.isArray(p.dojo.spiritClearedFloors)) p.dojo.spiritClearedFloors = [];
 }
 
 // ── 진입 (로비) ──
@@ -14322,8 +14464,8 @@ function renderTowerLobby(){
       const r = TOWER_FLOOR_REWARDS[f];
       const got = cleared.has(f);
       const style = got ? 'color:#7eff7e;text-decoration:line-through;' : 'color:#e6d3ff;';
-      let line = `<span style="${style}">▸ ${f}층: ✨${r.bless} · ${r.gold.toLocaleString()}G`;
-      if (r.title) line += ` · <b style="color:#ffd700;">칭호 「탑의 정복자」</b>`;
+      let line = `<span style="${style}">▸ ${f}층: 🌿${r.spirit} · ${r.gold.toLocaleString()}G`;
+      if (r.title) line += ` · <b style="color:#ffd700;">전설 칭호 「신의 탑」</b>`;
       if (got) line += ' ✅';
       line += '</span>';
       html += line + '<br>';
@@ -14430,11 +14572,12 @@ function renderTowerPoolEdit(){
     for (const card of available){
       const isSel = chosenSet.has(card.id);
       const border = gradeColor[card.grade] || '#bbb';
-      let click = `onclick="_towerPoolAdd('${card.id}')"`;
-      let extra = '', opacity = '1';
-      if (isSel){ extra = '<div style="font-size:9px;color:#7eff7e;">선발됨</div>'; click = `onclick="toast('이미 선발됨.')"`; opacity = '0.5'; }
       const iconTxt = (typeof cardIcon === 'function') ? cardIcon(card) : (card.icon || '?');
-      avHtml += `<div ${click} title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}" style="cursor:pointer;background:#0a0518;border:2px solid ${border};border-radius:4px;padding:4px;text-align:center;font-size:10px;color:#fff;line-height:1.2;min-height:60px;display:flex;flex-direction:column;justify-content:center;align-items:center;opacity:${opacity};">
+      // 선발됨 상태: 시각적으로 구분 (초록 라벨 + 배경 highlight) · 클릭 시 토글로 제외
+      const extra   = isSel ? '<div style="font-size:9px;color:#7eff7e;font-weight:bold;margin-top:1px;">✓ 선발됨</div>' : '';
+      const bg      = isSel ? '#0e2a12' : '#0a0518';
+      const tipHint = isSel ? ' [다시 클릭 → 선발 제외]' : ' [클릭 → 선발]';
+      avHtml += `<div onclick="_towerPoolAdd('${card.id}')" title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}${tipHint}" style="cursor:pointer;background:${bg};border:2px solid ${border};border-radius:4px;padding:4px;text-align:center;font-size:10px;color:#fff;line-height:1.2;min-height:60px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
         <div style="font-size:13px;">${iconTxt}</div>
         <div style="color:${card.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:2px;">${card.name}</div>
         ${extra}
@@ -14452,8 +14595,14 @@ function renderTowerPoolEdit(){
 }
 
 function _towerPoolAdd(id){
+  // 토글: 이미 선발된 카드를 다시 누르면 선발에서 제외
+  const idx = _towerPoolSelected.indexOf(id);
+  if (idx >= 0){
+    _towerPoolSelected.splice(idx, 1);
+    renderTowerPoolEdit();
+    return;
+  }
   if (_towerPoolSelected.length >= TOWER_POOL_SIZE){ toast(`최대 ${TOWER_POOL_SIZE}장까지 선발 가능.`); return; }
-  if (_towerPoolSelected.includes(id)){ toast('이미 선발됨.'); return; }
   _towerPoolSelected.push(id);
   renderTowerPoolEdit();
 }
@@ -14555,6 +14704,10 @@ function _renderTowerPreview(gradeColor){
         <div>🧠 INT <b>${m.int}</b></div>
         <div>❤‍🩹 CON <b>${m.con}</b></div>
       </div>
+      <div style="font-size:10px;color:#ffcccc;margin-top:8px;line-height:1.5;">
+        ⚔ 무기: <b>${(m.weapon&&m.weapon.name)||'-'}</b> <span style="color:#888;">(+${monWpn})</span><br>
+        🛡 방어구: <b>${(m.armor&&m.armor.name)||'-'}</b> <span style="color:#888;">(+${monArm})</span>
+      </div>
       <div style="font-size:10px;color:#ffcccc;margin-top:6px;margin-bottom:3px;">🃏 상대 덱 (${(m.deck||[]).length}장)</div>
       <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:3px;">${monDeckHtml}</div>
     </div>
@@ -14567,7 +14720,7 @@ function _renderTowerPreview(gradeColor){
         <div>❤ HP <b style="color:#99ff99;">${p.hp}/${p.hpMax}</b></div>
         <div>💧 MP <b style="color:#99bbff;">${p.mp}/${p.mpMax}</b></div>
         <div>⚔ ATK <b>${p.atk[0]}-${p.atk[1]}</b> <span style="color:#888;font-size:10px;">(+${(p.weapon&&p.weapon.atkBonus)||0})</span></div>
-        <div>🛡 DEF <b>${p.def}</b> <span style="color:#888;font-size:10px;">(+${(p.armor&&p.armor.defBonus)||0})</span></div>
+        <div>🛡 DEF <b>${_playerEffectiveDef(p, null)}</b> <span style="color:#888;font-size:10px;">(+${(p.armor&&p.armor.defBonus)||0})</span></div>
         <div>💪 STR <b>${p.str}</b></div>
         <div>🏃 DEX <b>${p.dex}</b></div>
         <div>🧠 INT <b>${p.int}</b></div>
@@ -14753,36 +14906,36 @@ const _TOWER_STATS = ['STR','DEX','INT','CON'];
 //   atk = [wBase*0.6, wBase] (근접: wBase = STR + wpn / 사격·마법: 스탯*0.6 + wpn)
 //   def = 방어구 보너스 (CON은 HP에만 기여)
 const TOWER_MONSTER_TABLE = [
-  {floor:1,lv:21,primary:'STR',atkType:'근접',str:26,dex:5,int:5,con:5,hp:108,mp:45,atkMin:22,atkMax:37,def:11,wpn:11,arm:11,cards:['r16','r10','n76','n12','n82','n19','n74','n85','n22','n86']},
-  {floor:2,lv:21,primary:'DEX',atkType:'사격',str:5,dex:26,int:5,con:5,hp:108,mp:45,atkMin:16,atkMax:27,def:11,wpn:11,arm:11,cards:['r23','r19','n22','n12','n55','n20','n80','n09','n74','n47']},
-  {floor:3,lv:22,primary:'INT',atkType:'마법',str:5,dex:5,int:27,con:5,hp:112,mp:211,atkMin:16,atkMax:27,def:11,wpn:11,arm:11,cards:['r42','r41','n66','n23','n80','n79','n26','n75','n14','n09']},
-  {floor:4,lv:22,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:27,hp:178,mp:46,atkMin:10,atkMax:16,def:11,wpn:11,arm:11,cards:['r37','r19','n68','n12','n76','n38','n58','n75','n04','n36']},
-  {floor:5,lv:23,primary:'CON',atkType:'근접',str:10,dex:10,int:10,con:20,hp:175,mp:84,atkMin:13,atkMax:22,def:12,wpn:12,arm:12,cards:['r22','r14','n47','n12','n31','n44','n25','n03','n20','n63']},
-  {floor:6,lv:24,primary:'DEX',atkType:'사격',str:5,dex:29,int:5,con:5,hp:120,mp:48,atkMin:18,atkMax:30,def:13,wpn:13,arm:13,cards:['r19','r24','n34','n12','n50','n80','n77','n27','n05','n76']},
-  {floor:7,lv:24,primary:'INT',atkType:'마법',str:5,dex:5,int:29,con:5,hp:120,mp:228,atkMin:18,atkMax:30,def:13,wpn:13,arm:13,cards:['r39','r28','n60','n40','n57','n75','n79','n71','n66','n50']},
+  {floor:1,lv:21,primary:'STR',atkType:'근접',str:26,dex:5,int:5,con:5,hp:108,mp:45,atkMin:22,atkMax:37,def:11,wpn:11,arm:11,cards:['r10','n76','r16','n12','n86','n19','n74','n85','n22','n86']},
+  {floor:2,lv:21,primary:'DEX',atkType:'사격',str:5,dex:26,int:5,con:5,hp:108,mp:45,atkMin:16,atkMax:27,def:11,wpn:11,arm:11,cards:['n13','r19','r23','n28','n55','n20','n80','n09','n34','n47']},
+  {floor:3,lv:22,primary:'INT',atkType:'마법',str:5,dex:5,int:27,con:5,hp:112,mp:211,atkMin:16,atkMax:27,def:11,wpn:11,arm:11,cards:['r25','r41','n79','n23','n80','n09','n26','n75','n14','n29']},
+  {floor:4,lv:22,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:27,hp:178,mp:46,atkMin:10,atkMax:16,def:11,wpn:11,arm:11,cards:['r37','r19','n68','n12','n76','n38','n80','n75','n36','n58']},
+  {floor:5,lv:23,primary:'CON',atkType:'근접',str:10,dex:10,int:10,con:20,hp:175,mp:84,atkMin:13,atkMax:22,def:12,wpn:12,arm:12,cards:['r14','n47','r22','n31','n12','n25','n63','n03','n20','n44']},
+  {floor:6,lv:24,primary:'DEX',atkType:'사격',str:5,dex:29,int:5,con:5,hp:120,mp:48,atkMin:18,atkMax:30,def:13,wpn:13,arm:13,cards:['r24','r19','n34','n12','n50','n80','n55','n22','n05','n76']},
+  {floor:7,lv:24,primary:'INT',atkType:'마법',str:5,dex:5,int:29,con:5,hp:120,mp:228,atkMin:18,atkMax:30,def:13,wpn:13,arm:13,cards:['n60','r39','n79','r30','n57','n75','n40','n71','n65','n50']},
   {floor:8,lv:25,primary:'STR',atkType:'근접',str:30,dex:5,int:5,con:5,hp:124,mp:49,atkMin:26,atkMax:43,def:13,wpn:13,arm:13,cards:['r36','r37','n43','n75','n17','n50','n13','n31','n38','n26']},
-  {floor:9,lv:25,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:30,hp:199,mp:49,atkMin:11,atkMax:18,def:13,wpn:13,arm:13,cards:['r16','r45','n87','n37','n22','n81','n12','n11','n19','n20']},
-  {floor:10,lv:26,primary:'CON',atkType:'근접',str:12,dex:12,int:12,con:22,hp:203,mp:102,atkMin:16,atkMax:26,def:14,wpn:14,arm:14,cards:['r35','r28','n49','n71','n83','n10','n64','n82','n01','n31']},
-  {floor:11,lv:27,primary:'INT',atkType:'마법',str:5,dex:5,int:32,con:5,hp:132,mp:253,atkMin:21,atkMax:34,def:15,wpn:15,arm:15,cards:['r26','r32','r31','r30','n50','n75','n66','n78','n17','n57']},
-  {floor:12,lv:27,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:32,hp:213,mp:51,atkMin:12,atkMax:20,def:15,wpn:15,arm:15,cards:['r05','r27','r07','r12','n53','n80','n03','n56','n24','n63']},
-  {floor:13,lv:28,primary:'STR',atkType:'근접',str:33,dex:5,int:5,con:5,hp:136,mp:52,atkMin:29,atkMax:48,def:15,wpn:15,arm:15,cards:['r09','r10','r19','r47','n20','n80','n59','n12','n85','n50']},
-  {floor:14,lv:28,primary:'DEX',atkType:'사격',str:5,dex:33,int:5,con:5,hp:136,mp:52,atkMin:21,atkMax:35,def:15,wpn:15,arm:15,cards:['r40','r18','r19','r32','n27','n55','n48','n07','n20','n64']},
-  {floor:15,lv:29,primary:'CON',atkType:'근접',str:14,dex:14,int:14,con:24,hp:231,mp:120,atkMin:18,atkMax:30,def:16,wpn:16,arm:16,cards:['r19','r01','r26','r07','n45','n32','n58','n67','n52','n10']},
-  {floor:16,lv:30,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:35,hp:234,mp:54,atkMin:13,atkMax:22,def:17,wpn:17,arm:17,cards:['r06','r15','r31','r19','n22','n43','n31','n09','n46','n18']},
-  {floor:17,lv:30,primary:'STR',atkType:'근접',str:35,dex:5,int:5,con:5,hp:144,mp:54,atkMin:31,atkMax:52,def:17,wpn:17,arm:17,cards:['r19','r11','r16','r31','n44','n50','n75','n52','n84','n59']},
-  {floor:18,lv:31,primary:'DEX',atkType:'사격',str:5,dex:36,int:5,con:5,hp:148,mp:55,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r40','r23','r32','r21','n50','n47','n08','n20','n76','n22']},
-  {floor:19,lv:31,primary:'INT',atkType:'마법',str:5,dex:5,int:36,con:5,hp:148,mp:287,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r32','r05','r13','r31','n74','n67','n12','n65','n80','n71']},
-  {floor:20,lv:32,primary:'CON',atkType:'근접',str:16,dex:16,int:16,con:26,hp:259,mp:138,atkMin:20,atkMax:34,def:18,wpn:18,arm:18,cards:['r13','r33','r22','r14','n49','n23','n86','n08','n78','n70']},
-  {floor:21,lv:33,primary:'STR',atkType:'근접',str:38,dex:5,int:5,con:5,hp:156,mp:57,atkMin:34,atkMax:57,def:19,wpn:19,arm:19,cards:['r47','r10','r09','r32','n87','n19','n32','n10','n59','n20']},
-  {floor:22,lv:33,primary:'DEX',atkType:'사격',str:5,dex:38,int:5,con:5,hp:156,mp:57,atkMin:25,atkMax:42,def:19,wpn:19,arm:19,cards:['r40','r24','r31','r23','n47','n76','n20','n26','n08','n28']},
-  {floor:23,lv:34,primary:'INT',atkType:'마법',str:5,dex:5,int:39,con:5,hp:160,mp:313,atkMin:25,atkMax:42,def:19,wpn:19,arm:19,cards:['r41','r39','r42','r05','n35','n76','n40','n57','n29','n74']},
-  {floor:24,lv:34,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:39,hp:262,mp:58,atkMin:14,atkMax:24,def:19,wpn:19,arm:19,cards:['r06','r08','r35','r27','n50','n04','n18','n61','n76','n15']},
-  {floor:25,lv:35,primary:'CON',atkType:'근접',str:18,dex:18,int:18,con:28,hp:287,mp:156,atkMin:23,atkMax:38,def:20,wpn:20,arm:20,cards:['r29','r33','r10','r17','n68','n85','n72','n38','n26','n83']},
-  {floor:26,lv:36,primary:'DEX',atkType:'사격',str:5,dex:41,int:5,con:5,hp:168,mp:60,atkMin:27,atkMax:46,def:21,wpn:21,arm:21,cards:['u10','u04','r23','r05','r24','r31','r32','r18','r40','n64','n47','n55','n77','n80','n75']},
-  {floor:27,lv:36,primary:'INT',atkType:'마법',str:5,dex:5,int:41,con:5,hp:168,mp:330,atkMin:27,atkMax:46,def:21,wpn:21,arm:21,cards:['u06','r34','r39','r28','r14','r30','r29','r13','r42','n20','n26','n54','n17','n49','n22']},
-  {floor:28,lv:37,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:42,hp:283,mp:61,atkMin:16,atkMax:26,def:21,wpn:21,arm:21,cards:['u02','r34','r11','r07','r20','r36','r05','r15','r06','n75','n24','n22','n16','n01','n50']},
-  {floor:29,lv:37,primary:'STR',atkType:'근접',str:42,dex:5,int:5,con:5,hp:172,mp:61,atkMin:38,atkMax:63,def:21,wpn:21,arm:21,cards:['u01','u02','r47','r43','r09','r44','r31','r46','r11','n11','n80','n19','n09','n50','n37']},
-  {floor:30,lv:38,primary:'CON',atkType:'근접',str:20,dex:20,int:20,con:30,hp:315,mp:174,atkMin:25,atkMax:42,def:22,wpn:22,arm:22,cards:['u03','u05','r07','r46','r03','r17','r45','r41','r35','n01','n85','n63','n80','n51','n58']},
+  {floor:9,lv:25,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:30,hp:199,mp:49,atkMin:11,atkMax:18,def:13,wpn:13,arm:13,cards:['r16','n87','r45','n22','n11','n81','n12','n37','n19','n20']},
+  {floor:10,lv:26,primary:'CON',atkType:'근접',str:12,dex:12,int:12,con:22,hp:203,mp:102,atkMin:16,atkMax:26,def:14,wpn:14,arm:14,cards:['r35','r28','n71','n83','n10','n64','n78','n17','n01','n31']},
+  {floor:11,lv:27,primary:'INT',atkType:'마법',str:5,dex:5,int:32,con:5,hp:132,mp:253,atkMin:21,atkMax:34,def:15,wpn:15,arm:15,cards:['r26','r32','r30','r31','n50','n75','n66','n78','n17','n57']},
+  {floor:12,lv:27,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:32,hp:213,mp:51,atkMin:12,atkMax:20,def:15,wpn:15,arm:15,cards:['r13','r27','r07','r12','n53','n80','n03','n56','n24','n63']},
+  {floor:13,lv:28,primary:'STR',atkType:'근접',str:33,dex:5,int:5,con:5,hp:136,mp:52,atkMin:29,atkMax:48,def:15,wpn:15,arm:15,cards:['r19','r10','r09','r47','n20','n80','n59','n12','n85','n50']},
+  {floor:14,lv:28,primary:'DEX',atkType:'사격',str:5,dex:33,int:5,con:5,hp:136,mp:52,atkMin:21,atkMax:35,def:15,wpn:15,arm:15,cards:['n48','r18','r19','r40','r32','n55','n64','n07','n20','n58']},
+  {floor:15,lv:29,primary:'CON',atkType:'근접',str:14,dex:14,int:14,con:24,hp:231,mp:120,atkMin:18,atkMax:30,def:16,wpn:16,arm:16,cards:['r42','r07','r26','r15','n45','n32','n31','n67','n52','n10']},
+  {floor:16,lv:30,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:35,hp:234,mp:54,atkMin:13,atkMax:22,def:17,wpn:17,arm:17,cards:['r06','r19','r31','n43','r21','n08','n31','n09','n46','n58']},
+  {floor:17,lv:30,primary:'STR',atkType:'근접',str:35,dex:5,int:5,con:5,hp:144,mp:54,atkMin:31,atkMax:52,def:17,wpn:17,arm:17,cards:['r19','r11','n58','n44','n75','r16','r31','n52','n84','n50']},
+  {floor:18,lv:31,primary:'DEX',atkType:'사격',str:5,dex:36,int:5,con:5,hp:148,mp:55,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r21','n08','r32','r23','n50','n47','r40','n20','n76','n22']},
+  {floor:19,lv:31,primary:'INT',atkType:'마법',str:5,dex:5,int:36,con:5,hp:148,mp:287,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r13','r20','n67','r31','n74','n06','n12','r32','n80','n71']},
+  {floor:20,lv:32,primary:'CON',atkType:'근접',str:16,dex:16,int:16,con:26,hp:259,mp:138,atkMin:20,atkMax:34,def:18,wpn:18,arm:18,cards:['r42','r20','r33','r14','n86','n23','n06','n19','n78','n70']},
+  {floor:21,lv:33,primary:'STR',atkType:'근접',str:38,dex:5,int:5,con:5,hp:156,mp:57,atkMin:34,atkMax:57,def:19,wpn:19,arm:19,cards:['r47','r10','r09','n87','r32','n19','n32','n10','n59','n20']},
+  {floor:22,lv:33,primary:'DEX',atkType:'사격',str:5,dex:38,int:5,con:5,hp:156,mp:57,atkMin:25,atkMax:42,def:19,wpn:19,arm:19,cards:['r24','r23','r31','r40','n47','n76','n20','n26','n08','n28']},
+  {floor:23,lv:34,primary:'INT',atkType:'마법',str:5,dex:5,int:39,con:5,hp:160,mp:313,atkMin:25,atkMax:42,def:19,wpn:19,arm:19,cards:['r25','r39','r41','r05','n35','n76','n10','n75','n80','n58']},
+  {floor:24,lv:34,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:39,hp:262,mp:58,atkMin:14,atkMax:24,def:19,wpn:19,arm:19,cards:['n41','n04','n18','r08','r31','n86','n76','n75','r01','r46']},
+  {floor:25,lv:35,primary:'CON',atkType:'근접',str:18,dex:18,int:18,con:28,hp:287,mp:156,atkMin:23,atkMax:38,def:20,wpn:20,arm:20,cards:['r17','r10','r33','r29','n68','n72','n10','n17','n28','n58']},
+  {floor:26,lv:36,primary:'DEX',atkType:'사격',str:5,dex:41,int:5,con:5,hp:168,mp:60,atkMin:27,atkMax:46,def:21,wpn:21,arm:21,cards:['u10','r24','r23','r05','u04','r31','r32','r18','r40','n64','n47','n55','n77','n80','n75']},
+  {floor:27,lv:36,primary:'INT',atkType:'마법',str:5,dex:5,int:41,con:5,hp:168,mp:330,atkMin:27,atkMax:46,def:21,wpn:21,arm:21,cards:['r34','r39','r14','r28','u06','r30','r29','r13','r42','n20','n26','n54','n17','n49','n22']},
+  {floor:28,lv:37,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:42,hp:283,mp:61,atkMin:16,atkMax:26,def:21,wpn:21,arm:21,cards:['r07','r20','r36','r34','r33','r06','r35','r32','r46','n75','n24','n22','n16','n01','n50']},
+  {floor:29,lv:37,primary:'STR',atkType:'근접',str:42,dex:5,int:5,con:5,hp:172,mp:61,atkMin:38,atkMax:63,def:21,wpn:21,arm:21,cards:['r47','r11','n11','r43','u01','r44','r31','r46','u02','r09','n80','n19','n09','n50','n37']},
+  {floor:30,lv:38,primary:'CON',atkType:'근접',str:20,dex:20,int:20,con:30,hp:315,mp:174,atkMin:25,atkMax:42,def:22,wpn:22,arm:22,cards:['u05','r07','r17','r31','u02','r35','r45','r41','r46','n01','n85','n63','n80','n51','n58']},
   {floor:31,lv:39,primary:'INT',atkType:'마법',str:5,dex:5,int:44,con:5,hp:180,mp:355,atkMin:30,atkMax:49,def:23,wpn:23,arm:23,cards:['u03','u02','r13','r29','r42','r22','r30','r38','r31','n54','n40','n65','n14','n78','n80']},
   {floor:32,lv:39,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:44,hp:297,mp:63,atkMin:17,atkMax:28,def:23,wpn:23,arm:23,cards:['u02','u06','r03','r32','r17','r20','r02','r33','r04','n01','n74','n69','n26','n24','n80']},
   {floor:33,lv:40,primary:'STR',atkType:'근접',str:45,dex:5,int:5,con:5,hp:184,mp:64,atkMin:41,atkMax:68,def:23,wpn:23,arm:23,cards:['u01','u02','r47','r46','r43','r10','r44','r11','r45','n33','n84','n76','n19','n32','n75']},
@@ -14806,6 +14959,12 @@ const TOWER_MONSTER_TABLE = [
 ];
 const TOWER_MONSTER_BY_FLOOR = Object.fromEntries(TOWER_MONSTER_TABLE.map(m => [m.floor, m]));
 
+// 보스 층별 고정 이름 (그리스 신화 여신)
+const TOWER_BOSS_NAMES = {
+  5:'에오스', 10:'아테나', 15:'헤스티아', 20:'셀레네', 25:'이리스',
+  30:'아르테미스', 35:'아프로디테', 40:'헤카테', 45:'스틱스', 50:'페르세포네',
+};
+
 function generateTowerMonster(N){
   const spec = TOWER_MONSTER_BY_FLOOR[N];
   if (!spec){
@@ -14817,9 +14976,13 @@ function generateTowerMonster(N){
   const deckSize = _towerDeckSize(N);
   const deck = spec.cards.map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK);
   while (deck.length < deckSize) deck.push(BASIC_ATTACK);
-  const name = `${N}층 ${raceKr(race)}${TOWER_BOSS_FLOORS.has(N) ? ' 수호자' : ''}`;
+  // 보스층은 고정 신화 이름, 일반층은 종족 라벨
+  const isBoss = TOWER_BOSS_FLOORS.has(N);
+  const name = isBoss
+    ? `${N}층 ${TOWER_BOSS_NAMES[N] || '수호자'}`
+    : `${N}층 ${raceKr(race)}`;
   // 보스층 초상화 (assets/renew/towerboss/{N}.png)
-  const bossIcon = TOWER_BOSS_FLOORS.has(N) ? `assets/renew/towerboss/${N}.png` : undefined;
+  const bossIcon = isBoss ? `assets/renew/towerboss/${N}.png` : undefined;
   return {
     id: 'tower_' + N, name, race, level: spec.lv,
     str: spec.str, dex: spec.dex, int: spec.int, con: spec.con,
@@ -14907,7 +15070,7 @@ function renderTowerBattle(){
   setTxt('.p-combat-int',   p.int + (c.myBuffs.int?` (${c.myBuffs.int>0?'+':''}${c.myBuffs.int})`:''));
   setTxt('.p-combat-con',   p.con);
   setTxt('.p-combat-atk',   (p.atk && p.atk[0] != null ? `${p.atk[0]}-${p.atk[1]}` : (p.atk || '-')));
-  setTxt('.p-combat-def',   p.def || 0);
+  setTxt('.p-combat-def',   _playerEffectiveDef(p, c.myBuffs) || 0);
   setTxt('.p-combat-weapon', (p.weapon ? `${p.weapon.name||'-'} (+${p.weapon.atkBonus||0})` : '-'));
   setTxt('.p-combat-armor',  (p.armor  ? `${p.armor.name||'-'} (+${p.armor.defBonus||0})`   : '-'));
   setBar('.bar-phc-fill', '.bar-phc-text', p.hp, p.hpMax);
@@ -15019,8 +15182,10 @@ function towerBattleEnd(result){
     p.hp = Math.min(p.hpMax, p.hp + heal);
     p.mp = p.mpMax;
     towerLog(`💧 HP +${heal} 회복 · MP 완전 회복`, 'heal');
-    // 층 첫 도달 보상 지급
+    // 층 첫 도달 보상 지급 (주간)
     checkTowerReward(floor);
+    // 매일 10층 단위 보스 클리어 시 정령의 축복 1개 (하루 최초만)
+    try { grantDailySpiritBoss(floor); } catch(e){ console.warn('[grantDailySpiritBoss]', e); }
     // 덱 히스토리 저장 (직전 층 판정용)
     GAME.tower.deckHistory.push(GAME.tower.currentDeck.slice());
     // 개인 기록 갱신 (bestFloor)
@@ -15039,7 +15204,7 @@ function towerBattleEnd(result){
       } catch(e){ console.warn('[tower title]', e); }
       towerLog(`🎉🎉🎉 <b>여신의 탑 정복 완료!</b> 🎉🎉🎉`, 'sys');
       setTimeout(() => {
-        alert('🏆🎉 여신의 탑 50층 완전 정복!\n\n★ 칭호 「탑의 정복자」 획득!\n\n(테스트 기간 · 골드·축복 보상은 정식 오픈 시 지급 예정)\n\n메인으로 복귀합니다.');
+        alert('🏆🎉 여신의 탑 50층 완전 정복!\n\n★ 전설 칭호 「신의 탑」 획득!\n\n메인으로 복귀합니다.');
         _endTowerRun(true);
       }, 700);
       _saveTowerRecordSafe();
@@ -15081,10 +15246,8 @@ function towerBattleEnd(result){
   }, 500);
 }
 
-// ── 층 첫 도달 보상 ──
-// 테스트 기간 — 층 첫 도달 보상 전면 지급 중단. 기록만 남기고 골드/축복 지급 없음.
-// (정식 오픈 시 이 flag 를 false 로 바꾸면 원래 로직 복귀)
-const TOWER_REWARDS_ENABLED = false;
+// ── 층 첫 도달 보상 (주간) ──
+const TOWER_REWARDS_ENABLED = true;
 function checkTowerReward(floor){
   const p = GAME.player;
   if (!p) return;
@@ -15096,15 +15259,28 @@ function checkTowerReward(floor){
   done.add(floor);
   p.dojo.clearedFloorsThisWeek = Array.from(done);
   if (!TOWER_REWARDS_ENABLED){
-    towerLog(`🎁 <b>${floor}층 첫 도달</b> — 테스트 기간 · 보상 지급 없음`, 'sys');
+    towerLog(`🎁 <b>${floor}층 첫 도달</b> — 보상 지급 없음`, 'sys');
     return;
   }
   p.gold = (p.gold|0) + (r.gold|0);
-  p.blessing = (p.blessing|0) + (r.bless|0);
+  p.spiritBlessing = (p.spiritBlessing|0) + (r.spirit|0);
   try { bumpTitleCounter('total_gold_earned', r.gold|0); } catch(e){}
-  try { bumpTitleCounter('total_blessing_earned', r.bless|0); } catch(e){}
-  towerLog(`🎁 <b>${floor}층 첫 도달 보상</b> — ✨${r.bless} · +${(r.gold|0).toLocaleString()}G`, 'sys');
-  try { chatSys(`👼 ${p.name}님이 여신의 탑 ${floor}층 첫 도달! (+✨${r.bless} · +${(r.gold|0).toLocaleString()}G)`, { local: true }); } catch(e){}
+  towerLog(`🎁 <b>${floor}층 첫 도달 보상</b> — 🌿${r.spirit} · +${(r.gold|0).toLocaleString()}G`, 'sys');
+  try { chatSys(`👼 ${p.name}님이 여신의 탑 ${floor}층 첫 도달! (+🌿${r.spirit} · +${(r.gold|0).toLocaleString()}G)`, { local: true }); } catch(e){}
+}
+
+// ── 매일 10층 단위 보스 클리어 시 정령의 축복 1개 지급 (하루 최초만) ──
+function grantDailySpiritBoss(floor){
+  const p = GAME.player;
+  if (!p) return;
+  if (!TOWER_DAILY_SPIRIT_FLOORS.has(floor)) return;
+  _ensureDojoState(p);
+  const done = new Set(p.dojo.spiritClearedFloors || []);
+  if (done.has(floor)) return;   // 오늘 이미 지급됨
+  done.add(floor);
+  p.dojo.spiritClearedFloors = Array.from(done);
+  p.spiritBlessing = (p.spiritBlessing|0) + TOWER_DAILY_SPIRIT_PER_BOSS;
+  towerLog(`🌿 <b>일일 보스 클리어 보상</b> — 정령의 축복 +${TOWER_DAILY_SPIRIT_PER_BOSS} (오늘 최초)`, 'sys');
 }
 
 // ── 도전 종료 정리 ──
@@ -16526,6 +16702,7 @@ function newCharacter(name, comment, pw){
     autoFocus:false,  // 운영자 부여 시 다음턴·한번더 버튼이 자동 focus되어 스페이스바 연타 가능
     tutorialDone:false,  // 첫 입장 시 튜토리얼 자동 실행 트리거
     blessing: 0,  // 여신의 축복 (공격대 막타 +1 확정 드롭. 축복 상점에서 카드/상자 구매)
+    spiritBlessing: 0,  // 정령의 축복 (여신의 탑 10·20·30·40·50층 보스 하루 1회 클리어 +1. 수행 패배 손실 보전 · 축복 상점 대체 재화)
     deckPresets: [null, null, null],  // 카드 덱 프리셋 3개 (각 슬롯은 카드 id 배열 또는 null)
     huntHistory: [],  // 최근 10전투 결과 ('win'/'lose'/'flee')
     huntGraceRemain: 0,  // 남은 grace 전투 수 (해당 기간 동안 몬스터 레벨 -5)
@@ -16557,10 +16734,10 @@ const TUTORIAL_STEPS = [
   {
     icon:'📊', title:'스탯 (STR · DEX · INT · CON)',
     body:`<p>레벨업 시 받는 스탯 포인트의 분배가 전략의 핵심입니다.</p>
-      <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력 ↑. 배쉬·슬램·도려내기 등 묵직한 근접 카드와 시너지. <i>정면 돌파형</i> 빌드의 기반.<br>
+      <p>• <b style="color:#ffaa66;">STR (힘)</b> — 기본공격력 ↑ · <b>STR 1당 방어력 +0.2</b> (5 초과분만, 반올림 — 예: STR 10 → +1, 15 → +2). 배쉬·슬램·도려내기 등 묵직한 근접 카드와 시너지. <i>정면 돌파형</i> 빌드의 기반.<br>
          • <b style="color:#aaffaa;">DEX (민첩)</b> — 선공 결정·기본공격력 보조. 시어링애로우·임페일·블랙애로우 등 DEX 스케일 사격 카드와 잘 맞는 <i>속공형</i> 빌드.<br>
          • <b style="color:#aaccff;">INT (지능)</b> — 최대 MP·마법 데미지 ↑. 체인라이트닝·파이어볼트처럼 <b>MP를 소모해 강력한 데미지</b>를 주는 <i>마법사형</i> 빌드.<br>
-         • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP·방어력 ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
+         • <b style="color:#ffccaa;">CON (체력)</b> — 최대 HP ↑. 도트·디버프로 천천히 갉아먹으며 버티는 <i>탱커·지구전</i> 빌드.</p>
       <div class="tip">💡 한 스탯에 집중 투자해서 빌드를 잡아야 같은 카드라도 효율이 폭발합니다.<br>
         ♻ 스탯 분배가 마음에 들지 않으면 <b>「프로필 관리 → 스탯 초기화」</b>에서 STR/DEX/INT/CON을 리셋할 수 있어요. 최초 1회는 50,000G, 이후엔 200,000G + ✨ 축복 10개가 청구됩니다. 스탯 P는 그대로 돌려받습니다.</div>`,
     target:'#main-statbox', page:'main', position:'corner',
@@ -16914,8 +17091,11 @@ function calcDerived(p){
   else                              wBase = (p.str || 0) * 1.0 + wBonus;   // 근접
   p.atk = [Math.max(2, Math.round(wBase * 0.6)),
            Math.max(5, Math.round(wBase * 1.0))];
-  // 방어력 = 방어구 보너스만 반영 (CON은 HP에만 기여, 이중 수혜 제거)
-  p.def = (p.armor ? (p.armor.defBonus || 0) : 0);
+  // 방어력 = 방어구 보너스 + STR 유래 (5 초과분 × 0.2 반올림) · CON 은 HP 전용
+  // 전투 중 STR 버프 반영은 _playerEffectiveDef(p, buffs) 헬퍼가 담당 (display + 데미지 완화)
+  const armorBase = (p.armor ? (p.armor.defBonus || 0) : 0);
+  const strDefBase = Math.max(0, Math.round((p.str - 5) * 0.2));
+  p.def = armorBase + strDefBase;
 }
 
 // ─── 프로필 사진 업로드 ───
@@ -17433,7 +17613,8 @@ function renderSheet(){
       const as = $('s_armor');  if (as) as.innerHTML = wrap(aTxt) + buffSpan(aEff);
     }
   }
-  setHtml('s_def', p.def);
+  // 방어력 표시 — 방어구 + STR 유래 (5 초과분 × 0.2 반올림) 합산 · 전투 중이면 buff 반영
+  setHtml('s_def', _playerEffectiveDef(p, cb));
   if ($('myRank')){
     const r = (GAME.ranking && GAME.ranking.myRank) || 0;
     $('myRank').textContent = r === 0 ? '미등록' : (r + '위');
@@ -17460,7 +17641,7 @@ function renderSheet(){
   setClsHtml('p-combat-con', p.con + buffSpan(conDelta));
   // 공격력/방어력 칸 — base 값만 (delta 표시 안 함)
   setCls('p-combat-atk', atkAvg);
-  setCls('p-combat-def', p.def);
+  setCls('p-combat-def', _playerEffectiveDef(p, cb));
   // 무기/방어구 칸에 buff/debuff delta 표시 (장비 본체 합산이 0 미만이 되지 않도록 클램프)
   {
     const wBase = (p.weapon && p.weapon.atkBonus) || 0;
@@ -18764,6 +18945,7 @@ async function loadAdminUsers(){
             str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
             gold: p.gold || 0,
             blessing: p.blessing || 0,
+            spiritBlessing: p.spiritBlessing || 0,
             sponsorAmount: p.sponsorAmount || 0,
             weapon: p.weapon || { name:'훈련용 목검', atkBonus:1, id:'basic_club' },
             armor:  p.armor  || { name:'천 갑옷', defBonus:1, id:'basic_cloth' },
@@ -18927,6 +19109,7 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">스탯 P</span> <input type="number" id="ed_xpUp" value="${u.xpUp||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">골드</span> <input type="number" id="ed_gold" value="${u.gold||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">✨ 축복</span> <input type="number" id="ed_blessing" value="${u.blessing||0}" min="0"></div>
+    <div class="edit-row"><span class="lbl">🌿 정령축복</span> <input type="number" id="ed_spiritBlessing" value="${u.spiritBlessing||0}" min="0"> <span style="font-size:10px;color:#666;margin-left:6px;">여신의 탑 10·20·30·40·50층 보스 하루 1회 클리어 시 획득</span></div>
     <div class="edit-row" style="background:#fff3cd;border-left:3px solid #ffd700;padding:2px 4px;"><span class="lbl">💎 후원액</span> <input type="number" id="ed_sponsorAmount" value="${u.sponsorAmount||0}" min="0" placeholder="원 단위 수기 입력"> <span style="font-size:10px;color:#666;margin-left:6px;">Visionary Circle 순위 반영 (금액 비공개)</span></div>
     <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1" oninput="_adminRecalcHpMp()"></div>
     <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1" oninput="_adminRecalcHpMp()"></div>
@@ -19208,6 +19391,7 @@ async function adminSaveUser(){
   u.xpUp = parseInt($('ed_xpUp').value) || 0;
   u.gold = parseInt($('ed_gold').value) || 0;
   u.blessing = parseInt($('ed_blessing').value) || 0;
+  { const _sb = $('ed_spiritBlessing'); u.spiritBlessing = _sb ? Math.max(0, parseInt(_sb.value) || 0) : (u.spiritBlessing || 0); }
   { const _sp = $('ed_sponsorAmount'); u.sponsorAmount = _sp ? (parseInt(_sp.value) || 0) : (u.sponsorAmount || 0); }
   u.str = parseInt($('ed_str').value) || 5;
   u.dex = parseInt($('ed_dex').value) || 5;
@@ -19363,7 +19547,7 @@ async function adminSaveUser(){
       name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
       hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
       str:u.str, dex:u.dex, int:u.int, con:u.con,
-      gold:u.gold, blessing: u.blessing || 0, sponsorAmount: u.sponsorAmount || 0,
+      gold:u.gold, blessing: u.blessing || 0, spiritBlessing: u.spiritBlessing || 0, sponsorAmount: u.sponsorAmount || 0,
       weapon:u.weapon, armor:u.armor,
       weapons: u.weapons || [],
       armors: u.armors || [],
@@ -19443,7 +19627,7 @@ async function adminSaveUser(){
         name:u.name, level:u.level, xp:u.xp, xpUp:u.xpUp,
         hp:u.hp, hpMax:u.hpMax, mp:u.mp, mpMax:u.mpMax,
         str:u.str, dex:u.dex, int:u.int, con:u.con,
-        gold:u.gold, blessing: u.blessing || 0, sponsorAmount: u.sponsorAmount || 0,
+        gold:u.gold, blessing: u.blessing || 0, spiritBlessing: u.spiritBlessing || 0, sponsorAmount: u.sponsorAmount || 0,
         weapon:u.weapon, armor:u.armor,
         weapons: u.weapons || [],
         armors: u.armors || [],
