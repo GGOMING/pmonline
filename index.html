@@ -2753,6 +2753,7 @@
     <div class="chat-head">접속자: <span id="chatUsers">8</span>명</div>
     <div class="chat-users" id="chatUserList"></div>
     <div class="chat-notice" id="chatNotice">⚠ 게임 종료 시 반드시 <b>[로그아웃]</b> 버튼을 눌러주세요. 저장되지 않은 게임 데이터에 대해서는 책임질 수 없습니다.</div>
+    <div class="chat-notice" id="chatEventNotice" style="background:#e8f5e9;color:#1b5e20;border-bottom:1px solid #66bb6a;">🎉 <b>신규 유저 환영 이벤트</b>로 레벨 20 달성 시 <b style="color:#c62828;">100,000G</b> 지급 및 레벨 25까지 <b style="color:#7c4a03;">황금상자 사냥 확률 대폭 상승!!</b></div>
     <!-- 운영자 [공지사항] 티커로 발송한 메시지가 5분간 상단 고정 -->
     <div class="chat-pinned-notices" id="chatPinnedNotices" style="display:none;"></div>
     <div class="chat-msgs" id="chatMsgs"></div>
@@ -9789,6 +9790,8 @@ async function rankEnd(result){
         p.gold += 30000;
         chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`, { sticky: true });
       }
+      // Lv 20 신규 유저 환영 이벤트 보상 (1회)
+      try { _grantLv20Welcome(p); } catch(e){}
     }
     if (rankLvUp){
       calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax;
@@ -10369,14 +10372,14 @@ function generateMonsterFallback(playerLv, tier){
   };
 }
 
-// 황금상자 조우 확률 — Lv1 20% → Lv10 10% → Lv11~25 5% → Lv26+ 0%
+// 황금상자 조우 확률 — Lv1 20% → Lv10 10% → Lv11~25 15% (신규 유저 환영 이벤트) → Lv26+ 0%
 const GOLD_CHEST_RATES = {
   1:0.20, 2:0.18, 3:0.17, 4:0.16, 5:0.15,
   6:0.14, 7:0.13, 8:0.12, 9:0.11, 10:0.10,
 };
 function _goldChestEncounterRate(lv){
   if (lv < 1 || lv > 25) return 0;
-  if (lv >= 11) return 0.05;
+  if (lv >= 11) return 0.15;   // 신규 유저 환영 이벤트 — Lv 11~25 대폭 상승 (5% → 15%)
   return GOLD_CHEST_RATES[lv] || 0;
 }
 // 플레이어별 최종 조우 확률 (admin override 지원)
@@ -14067,6 +14070,8 @@ function huntEnd(result){
         p.gold += 30000;
         chatSys(`★ ${p.name}님이 Lv 26에 도달! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`, { sticky: true });
       }
+      // Lv 20 신규 유저 환영 이벤트 보상 (1회)
+      try { _grantLv20Welcome(p); } catch(e){}
     }
     if (lvUp){ calcDerived(p); p.hp = p.hpMax; p.mp = p.mpMax; try { checkTitleUnlocks(); } catch(e){} }
   } else if (outcome === 'lose'){
@@ -17089,6 +17094,21 @@ function xpForNextLevel(lv){
   return Math.round(avgXp * _attemptsToLevelUp(L));
 }
 
+// Lv 20 달성 시 신규 유저 환영 이벤트 보상 지급 (1회) — 100,000G + 팝업
+// - 레벨업 시점에도, 이미 Lv 20+ 유저가 로그인할 때도 lv20WelcomeClaimed 플래그로 1회 보장
+function _grantLv20Welcome(p){
+  if (!p) return false;
+  if ((p.level|0) < 20) return false;
+  if (p.lv20WelcomeClaimed) return false;
+  p.lv20WelcomeClaimed = true;
+  p.gold = (p.gold|0) + 100000;
+  try { bumpTitleCounter('total_gold_earned', 100000); } catch(e){}
+  try { chatSys(`🎉 ${p.name}님이 Lv 20 달성! 신규 유저 환영 이벤트 보상 +100,000G`, { sticky: true }); } catch(e){}
+  // 팝업은 UI 안정화 후 표시 (레벨업 알림과 겹치지 않도록 살짝 지연)
+  setTimeout(() => { try { alert('🎉 신규 유저 환영 이벤트 보상 100,000G를 수령하였습니다.'); } catch(e){} }, 400);
+  return true;
+}
+
 // 누적된 경험치가 레벨업 임계를 넘었으면 자동으로 레벨업 처리
 function checkLevelUp(){
   const p = GAME.player;
@@ -17106,6 +17126,8 @@ function checkLevelUp(){
       p.gold += 30000;
       chatSys(`★ Lv 26 달성! 카드 슬롯 11~15가 해금되었습니다. 🎁 축하금 +30,000G`);
     }
+    // Lv 20 신규 유저 환영 이벤트 보상 (1회)
+    try { _grantLv20Welcome(p); } catch(e){}
   }
   if (leveled){
     calcDerived(p);
@@ -18446,6 +18468,8 @@ function enterMain(){
   initChat();
   // 누적된 경험치로 레벨업이 안 된 경우 자동 처리
   checkLevelUp();
+  // Lv 20+ 기존 유저 소급 이벤트 보상 (checkLevelUp 이 안 태우는 경로 대비)
+  try { if (_grantLv20Welcome(GAME.player)){ try { saveGame(); } catch(e){} } } catch(e){}
   // 채팅창 닉네임 표시
   $('chatNick').textContent = GAME.player.name + ':';
   chatSys(`★ ${GAME.player.name}님이 게임에 입장하셨습니다.`, { local: true });
@@ -19203,7 +19227,7 @@ function renderAdminEdit(){
     </div>
     <div class="edit-row" style="display:block;background:#fff8f0;border:1px solid #fda;padding:6px 8px;margin:4px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#7E181E;font-size:12px;margin-bottom:4px;">🎲 조우 확률 override (%)</div>
-      <div style="font-size:11px;color:#666;margin-bottom:6px;">비워두면 기본치 사용. 황금상자 기본: Lv1~10 10~20% · Lv11~25 5% · Lv26+ 0%. 매크로 방지 기본: 0.5% (Lv26+). 꼬밍 기본: 0.1% (전 레벨).</div>
+      <div style="font-size:11px;color:#666;margin-bottom:6px;">비워두면 기본치 사용. 황금상자 기본: Lv1~10 10~20% · <b>Lv11~25 15% (신규 유저 환영 이벤트 · 5% → 15%)</b> · Lv26+ 0%. 매크로 방지 기본: 0.5% (Lv26+). 꼬밍 기본: 0.1% (전 레벨).</div>
       <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;">
         <label style="font-size:11px;">황금상자 %
           <input type="number" id="ed_encGoldChest" step="0.01" min="0" max="100" style="width:80px;"
