@@ -1499,6 +1499,20 @@
       </div>
 
       <div class="sys-group">
+        <h4>🎉 이벤트 관리</h4>
+        <div style="margin:6px 0;padding:6px;background:#e8f5e9;border:1px solid #66bb6a;">
+          <b>뉴비 환영 이벤트:</b>
+          <span id="adminNewbieEventStatus" style="color:#666;">-</span>
+          <button class="admin-btn small" onclick="adminToggleNewbieEvent()" id="adminNewbieEventBtn">-</button>
+          <div style="font-size:11px;color:#666;margin-top:4px;">
+            · 활성 시: 황금상자 Lv11~25 <b>15%</b> (기본 5%) · Lv 20 최초 달성 시 <b>100,000G</b> + 팝업<br>
+            · 비활성 시: 황금상자 5% 복귀 · Lv 20 보상 미지급 (기 수령자에게는 영향 없음)<br>
+            · 채팅 상단 이벤트 배너 자동 표시/숨김
+          </div>
+        </div>
+      </div>
+
+      <div class="sys-group">
         <h4>👼 여신의 탑</h4>
         <div style="margin:6px 0;padding:6px;background:#fff0e0;border:1px solid #faa;">
           <b>이번 주 랭킹 초기화:</b>
@@ -7366,6 +7380,45 @@ function generateAbyssMob(playerLv){
   };
 }
 
+// ─── 전역 게임 설정 (모든 유저 공유 · 관리자 토글) ───
+// - 기본값: 뉴비 환영 이벤트 활성. 서버 game_settings 테이블에서 초기 로드 + realtime 구독
+// - 서버 미배포/조회 실패 시 기본값 유지 (안전)
+const GAME_SETTINGS = { newbie_event_active: true };
+let _gameSettingsChannel = null;
+async function loadGameSettings(){
+  if (!sb) return false;
+  try {
+    const { data, error } = await sb.from('game_settings').select('key,value_bool');
+    if (error){ console.warn('[loadGameSettings]', error); return false; }
+    if (Array.isArray(data)){
+      for (const row of data){
+        if (row && row.key && typeof row.value_bool === 'boolean'){
+          GAME_SETTINGS[row.key] = row.value_bool;
+        }
+      }
+    }
+    return true;
+  } catch(e){ console.warn('[loadGameSettings]', e); return false; }
+}
+async function subscribeGameSettings(){
+  if (!sb) return;
+  if (_gameSettingsChannel) return;
+  _gameSettingsChannel = sb.channel('game-settings')
+    .on('postgres_changes',
+      { event: '*', schema: 'public', table: 'game_settings' },
+      async () => {
+        await loadGameSettings();
+        try { _refreshNewbieEventNotice(); } catch(e){}
+      })
+    .subscribe();
+}
+// 뉴비 이벤트 채팅 배너 표시 여부 동기화 — 이벤트 off 면 숨김
+function _refreshNewbieEventNotice(){
+  const el = document.getElementById('chatEventNotice');
+  if (!el) return;
+  el.style.display = GAME_SETTINGS.newbie_event_active ? '' : 'none';
+}
+
 // ─── 공격대 클라우드 (실시간 공유) ───
 let _raidChannel = null;
 
@@ -10379,7 +10432,10 @@ const GOLD_CHEST_RATES = {
 };
 function _goldChestEncounterRate(lv){
   if (lv < 1 || lv > 25) return 0;
-  if (lv >= 11) return 0.15;   // 신규 유저 환영 이벤트 — Lv 11~25 대폭 상승 (5% → 15%)
+  if (lv >= 11) {
+    // 신규 유저 환영 이벤트 활성 시 15%, 비활성 시 기본 5%
+    return (GAME_SETTINGS && GAME_SETTINGS.newbie_event_active) ? 0.15 : 0.05;
+  }
   return GOLD_CHEST_RATES[lv] || 0;
 }
 // 플레이어별 최종 조우 확률 (admin override 지원)
@@ -17099,6 +17155,7 @@ function xpForNextLevel(lv){
 // - 레벨업 while 루프의 각 iteration 마다 호출되므로 20 도달 iteration 에서만 발동
 function _grantLv20Welcome(p){
   if (!p) return false;
+  if (!GAME_SETTINGS || !GAME_SETTINGS.newbie_event_active) return false;   // 이벤트 비활성 시 미지급
   if ((p.level|0) !== 20) return false;   // 정확히 20 도달 순간만
   if (p.lv20WelcomeClaimed) return false;
   p.lv20WelcomeClaimed = true;
@@ -18453,6 +18510,9 @@ function enterMain(){
   if (sb){
     (async () => {
       try {
+        await loadGameSettings();
+        subscribeGameSettings();
+        _refreshNewbieEventNotice();
         await loadRankingFromCloud();
         await loadRaidFromCloud();
         await claimRaidRewards();
@@ -20055,6 +20115,8 @@ function adminQuickResetStats(){
 // 시스템 설정
 function refreshAdminSystem(){
   try { _adminUpdateOnlineCount(); } catch(e){}
+  // 이벤트 상태 라벨 갱신
+  try { refreshAdminEventStatus(); } catch(e){}
   // 4종 카드샵 + 축복 상자 렌더
   try { renderAdminGachaShops(); } catch(e){ console.warn('[adminGachaShops]', e); }
   try { renderAdminBlessBoxRates(); } catch(e){ console.warn('[adminBlessBoxRates]', e); }
@@ -20436,6 +20498,37 @@ async function adminBossPhase(key){
 }
 
 // 여신의 탑 이번 주 랭킹 초기화 — dojo_weekly_records 전체 삭제 (이번 주 앵커 기준)
+// 뉴비 환영 이벤트 on/off 토글 — game_settings.newbie_event_active
+async function adminToggleNewbieEvent(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  await loadGameSettings();   // 최신 상태 재조회 후 토글 (다른 관리자 세션 동시 조작 대비)
+  const cur = !!(GAME_SETTINGS && GAME_SETTINGS.newbie_event_active);
+  const next = !cur;
+  if (!confirm(`뉴비 환영 이벤트를 ${next ? '활성' : '비활성'}으로 전환할까요?\n\n· 황금상자 Lv11~25 확률: ${next ? '15% (이벤트)' : '5% (기본)'}\n· Lv 20 도달 100,000G 보상: ${next ? '지급' : '미지급'}\n· 채팅 상단 배너: ${next ? '표시' : '숨김'}\n\n모든 접속 유저에게 즉시 반영됩니다.`)) return;
+  try {
+    const { data, error } = await sb.rpc('admin_set_game_setting', { p_key: 'newbie_event_active', p_value_bool: next });
+    if (error){ alert('토글 실패: ' + (error.message||error) + '\n\n(game_settings.sql 을 Supabase 에 배포하세요)'); return; }
+    GAME_SETTINGS.newbie_event_active = next;
+    _refreshNewbieEventNotice();
+    refreshAdminEventStatus();
+    alert('✔ 뉴비 환영 이벤트 ' + (next ? '활성' : '비활성') + ' 처리 완료');
+  } catch(e){ alert('토글 실패: ' + (e.message||e)); }
+}
+// admin 페이지 이벤트 상태 라벨 갱신 (refreshAdminSystem 등에서 호출)
+function refreshAdminEventStatus(){
+  const st = document.getElementById('adminNewbieEventStatus');
+  const bt = document.getElementById('adminNewbieEventBtn');
+  const active = !!(GAME_SETTINGS && GAME_SETTINGS.newbie_event_active);
+  if (st){
+    st.textContent = active ? '✅ 활성 중' : '⛔ 비활성';
+    st.style.color = active ? '#2e7d32' : '#c00';
+    st.style.fontWeight = 'bold';
+  }
+  if (bt){
+    bt.textContent = active ? '⛔ 비활성으로 전환' : '✅ 활성으로 전환';
+  }
+}
+
 async function adminResetTowerWeeklyRanking(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   if (typeof _towerCurrentWeekStart !== 'function'){ alert('여신의 탑 모듈 미로드'); return; }
