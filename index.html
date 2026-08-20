@@ -15726,12 +15726,13 @@ function showTowerRanking(limit){
 
 // ── 주간 랭킹 시상 수령 상태 체크 (로비 렌더 시 호출) ──
 // 지난 주 미수령 시상 존재 여부를 확인해 배너 표시/숨김 결정
+let _weeklyClaimCheckInFlight = false;   // 동시 호출 방지 (로비 빠른 재방문 대비)
 async function checkWeeklyRankingClaimStatus(){
   const banner = $('towerWeeklyClaimBanner');
   const label  = $('towerWeeklyClaimText');
   if (!banner) return;
   banner.style.display = 'none';
-  // 테스트 기간 — 주간 랭킹 시상 지급 중단. 배너 표시 안 함.
+  if (_weeklyClaimCheckInFlight) return;
   if (!TOWER_REWARDS_ENABLED) return;
   if (!sb) return;
   const p = GAME.player;
@@ -15739,11 +15740,12 @@ async function checkWeeklyRankingClaimStatus(){
   _ensureDojoState(p);
   const prevWs = _towerPrevWeekStart();
   if ((p.dojo.lastWeeklyRewardPaid|0) >= prevWs) return; // 이미 수령/조회 완료
+  _weeklyClaimCheckInFlight = true;
   try {
     const { data: ud } = await sb.auth.getUser();
     if (!ud || !ud.user) return;
     const { data: rank, error } = await sb.rpc('dojo_my_rank', { p_week_start: prevWs, p_user_id: ud.user.id });
-    if (error) return;
+    if (error){ console.warn('[dojo_my_rank]', error); return; }
     if (!rank || rank < 1){
       // 지난 주 참여 안 함 → 조회 완료 마킹, 배너 숨김
       p.dojo.lastWeeklyRewardPaid = prevWs;
@@ -15753,8 +15755,10 @@ async function checkWeeklyRankingClaimStatus(){
     }
     const tier = TOWER_WEEKLY_RANK_REWARDS.find(t => rank >= t.min && rank <= t.max);
     if (!tier){
+      // 4위 이하 등 시상 대상 아님 → 조회 완료 마킹, 배너 숨김
       p.dojo.lastWeeklyRewardPaid = prevWs;
       try { saveGame(); } catch(e){}
+      cloudSaveNow().catch(()=>{});
       return;
     }
     // 미수령 시상 존재 → 배너 노출 · 버튼 상태 초기화 (이전 세션의 '수령 중...' 잔재 방지)
@@ -15766,66 +15770,68 @@ async function checkWeeklyRankingClaimStatus(){
         `<span style="color:#e6d3ff;font-weight:normal;font-size:12px;">보상: 🌿 정령의 축복 ${tier.spirit}개 · ${tier.gold.toLocaleString()}G</span>`;
     }
   } catch(e){ console.warn('[tower checkWeekly]', e); }
+  finally { _weeklyClaimCheckInFlight = false; }
 }
 
 // ── 주간 랭킹 시상 수령 (버튼 클릭 시 호출) ──
+let _weeklyClaimInFlight = false;   // 중복 클릭 방지
 async function claimWeeklyRankingReward(){
   if (!TOWER_REWARDS_ENABLED){
     try { alert('테스트 기간입니다.\n\n주간 랭킹 시상은 정식 오픈 시 지급됩니다.'); } catch(e){}
     return;
   }
   if (!sb){ try { alert('클라우드 모드에서만 수령 가능합니다.'); } catch(e){} return; }
+  if (_weeklyClaimInFlight) return;   // 이미 수령 처리 중
   const p = GAME.player;
   if (!p) return;
   _ensureDojoState(p);
   const prevWs = _towerPrevWeekStart();
+  const banner = $('towerWeeklyClaimBanner');
   if ((p.dojo.lastWeeklyRewardPaid|0) >= prevWs){
+    if (banner) banner.style.display = 'none';
     try { alert('이미 수령한 시상이거나 수령 가능한 시상이 없습니다.'); } catch(e){}
-    const banner = $('towerWeeklyClaimBanner'); if (banner) banner.style.display = 'none';
     return;
   }
   const btn = $('towerWeeklyClaimBtn');
   const _resetBtn = () => { if (btn){ btn.disabled = false; btn.style.opacity = '1'; btn.textContent = '🏆 지난 주 랭킹 보상 수령'; } };
   if (btn){ btn.disabled = true; btn.style.opacity = '0.5'; btn.textContent = '수령 중...'; }
+  _weeklyClaimInFlight = true;
+  // 결과 메시지 · 배너 즉시 숨김 (RPC 응답 대기 전에 미리 확정)
+  let resultMsg = null;
   try {
     const { data: ud } = await sb.auth.getUser();
     if (!ud || !ud.user){ throw new Error('세션 없음'); }
     const { data: rank, error } = await sb.rpc('dojo_my_rank', { p_week_start: prevWs, p_user_id: ud.user.id });
     if (error) throw error;
-    if (!rank || rank < 1){
-      p.dojo.lastWeeklyRewardPaid = prevWs;
-      try { saveGame(); } catch(e){}
-      cloudSaveNow().catch(()=>{});
-      try { alert('지난 주 랭킹에 등재된 기록이 없어 시상 대상이 아닙니다.'); } catch(e){}
-      const banner = $('towerWeeklyClaimBanner'); if (banner) banner.style.display = 'none';
-      return;
-    }
-    const tier = TOWER_WEEKLY_RANK_REWARDS.find(t => rank >= t.min && rank <= t.max);
-    if (!tier){
-      p.dojo.lastWeeklyRewardPaid = prevWs;
-      try { saveGame(); } catch(e){}
-      try { alert('시상 대상 순위가 아닙니다.'); } catch(e){}
-      const banner = $('towerWeeklyClaimBanner'); if (banner) banner.style.display = 'none';
-      return;
-    }
-    p.gold = (p.gold|0) + tier.gold;
-    p.spiritBlessing = (p.spiritBlessing|0) + (tier.spirit|0);
+    // 성공 여부 무관 · lastWeeklyRewardPaid=prevWs 마킹 (재조회 방지)
     p.dojo.lastWeeklyRewardPaid = prevWs;
-    try { bumpTitleCounter('total_gold_earned', tier.gold|0); } catch(e){}
+    if (banner) banner.style.display = 'none';
+    if (!rank || rank < 1){
+      resultMsg = '지난 주 랭킹에 등재된 기록이 없어 시상 대상이 아닙니다.';
+    } else {
+      const tier = TOWER_WEEKLY_RANK_REWARDS.find(t => rank >= t.min && rank <= t.max);
+      if (!tier){
+        resultMsg = `지난 주 순위 ${rank}위 — 시상 대상(TOP 3) 아님`;
+      } else {
+        p.gold = (p.gold|0) + tier.gold;
+        p.spiritBlessing = (p.spiritBlessing|0) + (tier.spirit|0);
+        try { bumpTitleCounter('total_gold_earned', tier.gold|0); } catch(e){}
+        try { renderSheet(); } catch(e){}
+        resultMsg = `🏆 여신의 탑 지난 주 랭킹 시상\n\n순위: ${rank}위\n보상: 🌿 정령의 축복 ${tier.spirit}개 · +${tier.gold.toLocaleString()}G\n\n수령 완료!`;
+      }
+    }
+    // 상태 즉시 영속화 (로컬 + 클라우드)
     try { saveGame(); } catch(e){}
-    cloudSaveNow().catch(()=>{});
-    try { renderSheet(); } catch(e){}
-    try {
-      alert(`🏆 여신의 탑 지난 주 랭킹 시상\n\n순위: ${rank}위\n보상: 🌿 정령의 축복 ${tier.spirit}개 · +${tier.gold.toLocaleString()}G\n\n수령 완료!`);
-    } catch(e){}
-    const banner = $('towerWeeklyClaimBanner'); if (banner) banner.style.display = 'none';
+    try { await cloudSaveNow(); } catch(e){ console.warn('[claimWeekly cloudSave]', e); }
   } catch(e){
     console.warn('[tower claimWeekly]', e);
-    try { alert('수령 실패: ' + (e && e.message ? e.message : e) + '\n\n잠시 후 다시 시도해주세요.'); } catch(_){}
+    resultMsg = '수령 실패: ' + (e && e.message ? e.message : e) + '\n\n잠시 후 다시 시도해주세요.';
+    // 실패 시 배너 유지 (재시도 가능하도록)
   } finally {
-    // 성공·실패 무관하게 버튼 상태 복원 (배너가 숨겨진 경우 화면상 영향 없음)
+    _weeklyClaimInFlight = false;
     _resetBtn();
   }
+  if (resultMsg){ try { alert(resultMsg); } catch(e){} }
 }
 
 // ============================================================
