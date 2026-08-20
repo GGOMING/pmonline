@@ -14749,6 +14749,9 @@ const TOWER_POOL_INITIAL  = 20;   // 1단계 목표
 const TOWER_POOL_EXPANDED = 30;   // 2단계 목표
 const TOWER_POOL_SIZE     = TOWER_POOL_EXPANDED;   // 하위 호환 · 최대치
 function _towerPoolTarget(){
+  // 확장 모드 진입(25층 클리어 직후) 시 GAME.tower.poolExpanded 는 아직 false 지만
+  // 편집 화면에서는 30장 목표로 렌더/판정해야 하므로 _towerPoolExpandMode 도 함께 확인.
+  if (_towerPoolExpandMode) return TOWER_POOL_EXPANDED;
   return (GAME.tower && GAME.tower.poolExpanded) ? TOWER_POOL_EXPANDED : TOWER_POOL_INITIAL;
 }
 let _towerPoolSelected  = [];    // 카드 id 배열 (최대 30)
