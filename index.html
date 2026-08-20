@@ -15756,12 +15756,14 @@ async function checkWeeklyRankingClaimStatus(){
   if ((p.dojo.lastWeeklyRewardPaid|0) >= prevWs) return; // 이미 수령/조회 완료
   _weeklyClaimCheckInFlight = true;
   try {
-    const { data: ud } = await sb.auth.getUser();
-    if (!ud || !ud.user) return;
-    const { data: rank, error } = await sb.rpc('dojo_my_rank', { p_week_start: prevWs, p_user_id: ud.user.id });
-    if (error){ console.warn('[dojo_my_rank]', error); return; }
-    if (!rank || rank < 1){
-      // 지난 주 참여 안 함 → 조회 완료 마킹, 배너 숨김
+    // 서버 진실 소스 조회 — 이미 수령했는지 + 랭크 (dojo_weekly_claims 테이블 확인 포함)
+    const { data, error } = await sb.rpc('dojo_weekly_claim_status', { p_week_start: prevWs });
+    if (error){ console.warn('[dojo_weekly_claim_status]', error); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    const rank = row ? (row.rank|0) : 0;
+    const alreadyClaimed = !!(row && row.already_claimed);
+    if (alreadyClaimed || rank < 1){
+      // 이미 수령 or 랭킹 등재 없음 → 로컬 캐시 갱신, 배너 숨김
       p.dojo.lastWeeklyRewardPaid = prevWs;
       try { saveGame(); } catch(e){}
       cloudSaveNow().catch(()=>{});
@@ -15769,7 +15771,7 @@ async function checkWeeklyRankingClaimStatus(){
     }
     const tier = TOWER_WEEKLY_RANK_REWARDS.find(t => rank >= t.min && rank <= t.max);
     if (!tier){
-      // 4위 이하 등 시상 대상 아님 → 조회 완료 마킹, 배너 숨김
+      // 시상 대상 순위 아님 (TOP 3 밖) → 로컬 캐시 갱신, 배너 숨김
       p.dojo.lastWeeklyRewardPaid = prevWs;
       try { saveGame(); } catch(e){}
       cloudSaveNow().catch(()=>{});
@@ -15813,14 +15815,18 @@ async function claimWeeklyRankingReward(){
   // 결과 메시지 · 배너 즉시 숨김 (RPC 응답 대기 전에 미리 확정)
   let resultMsg = null;
   try {
-    const { data: ud } = await sb.auth.getUser();
-    if (!ud || !ud.user){ throw new Error('세션 없음'); }
-    const { data: rank, error } = await sb.rpc('dojo_my_rank', { p_week_start: prevWs, p_user_id: ud.user.id });
+    // 원자적 서버측 수령 RPC — INSERT ... ON CONFLICT DO NOTHING 으로 중복 수령 원천 차단
+    const { data, error } = await sb.rpc('dojo_claim_weekly_reward', { p_week_start: prevWs });
     if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    const rank = row ? (row.rank|0) : 0;
+    const wasAlreadyClaimed = !!(row && row.was_already_claimed);
     // 성공 여부 무관 · lastWeeklyRewardPaid=prevWs 마킹 (재조회 방지)
     p.dojo.lastWeeklyRewardPaid = prevWs;
     if (banner) banner.style.display = 'none';
-    if (!rank || rank < 1){
+    if (wasAlreadyClaimed){
+      resultMsg = '이미 수령한 시상입니다.';
+    } else if (rank < 1){
       resultMsg = '지난 주 랭킹에 등재된 기록이 없어 시상 대상이 아닙니다.';
     } else {
       const tier = TOWER_WEEKLY_RANK_REWARDS.find(t => rank >= t.min && rank <= t.max);
