@@ -2796,11 +2796,12 @@
     </div>
     <div style="background:#2a1a3a;padding:12px;border-radius:6px;border:1px solid #a335ee;font-size:12px;line-height:1.7;color:#e6d3ff;margin-bottom:14px;">
       <b style="color:#ffd700;">진입 조건 Lv 26+</b> · 1층부터 최대 50층까지 순차 도전.<br>
-      매 층 시작 전 <b style="color:#ffd700;">10장 덱</b> (26층 이후 <b>15장</b>)을 새로 편성해야 하며, <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b>.<br>
+      도전 시작 시 <b style="color:#ffd700;">20장 카드 풀</b> 선발 → 1~25층 각 <b>10장 덱</b> 편성. <b style="color:#7eff7e;">25층 클리어 시 10장 추가 선발 (총 30장)</b> → 26~50층 각 <b>15장 덱</b> 편성.<br>
+      <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b> · 추가 선발된 10장만 재편집 가능 (기존 20장은 잠금).<br>
       층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복.<br>
-      <b style="color:#7eff7e;">🌿 정령의 축복</b> — <b>10 · 20 · 30 · 40 · 50층 보스 클리어 시 매일 최초 1회에 한해 1개씩 지급</b> (재도전 클리어는 미지급).<br>
-      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹 리셋.<br>
-      <b style="color:#ff9966;">⚠ 테스트 기간 — 층 첫 도달 보상·주간 랭킹 시상은 정식 오픈 시 지급됩니다.</b> 지금 획득 가능한 재화는 <b style="color:#7eff7e;">🌿 정령의 축복 (10층 단위 보스 하루 1회)</b> 뿐입니다.
+      <b style="color:#7eff7e;">🌿 정령의 축복</b> — <b>10 · 20 · 30 · 40 · 50층 보스 클리어 시 매일 최초 1회에 한해 1개씩 지급</b> (재도전 클리어·구간 건너뛰기 미지급).<br>
+      <b style="color:#ffd700;">🗼 수행 골드 보너스</b> — 이번 주 최고 층에 따라 <b>모든 수행 승리 시 골드 +N%</b> 자동 적용 (아래 표 참고).<br>
+      매주 <b style="color:#ffd700;">월요일 06:00 KST</b> 랭킹·최고 층·수행 골드 보너스 모두 리셋.
     </div>
     <div id="towerWeeklyClaimBanner" style="display:none;background:linear-gradient(135deg,#3a2a0a,#5a4a1a);border:2px solid #ffd700;border-radius:6px;padding:12px;margin-bottom:14px;text-align:center;color:#fff;">
       <div id="towerWeeklyClaimText" style="font-size:13px;color:#ffd700;font-weight:bold;margin-bottom:8px;">지난 주 랭킹 시상을 수령할 수 있습니다.</div>
@@ -2830,10 +2831,13 @@
         <div style="text-align:center;color:#888;padding:16px;">불러오는 중…</div>
       </div>
     </div>
-    <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;">
-      <b style="color:#ffd700;">📜 층 첫 도달 보상 (정식 오픈 시 지급 · 주간 리셋)</b>
-      <div style="color:#ff9966;font-size:11px;margin-top:4px;">⚠ 테스트 기간 · 아래 보상은 지급 안 됨 (일일 정령의 축복은 정상 지급)</div>
-      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;opacity:0.55;"></div>
+    <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;margin-bottom:10px;">
+      <b style="color:#ffd700;">📜 층 첫 도달 보상 (이번 주 최초 1회 지급 · 매주 월 06:00 KST 리셋)</b>
+      <div id="towerRewardList" style="margin-top:6px;line-height:1.9;"></div>
+    </div>
+    <div style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #ffd700;font-size:11px;color:#e6d3ff;">
+      <b style="color:#ffd700;">🗼 수행 골드 보너스 (이번 주 최고 층 기준 · 상시 적용)</b>
+      <div id="towerGoldBonusList" style="margin-top:6px;line-height:1.7;"></div>
     </div>
   </div>
 </div>
@@ -2845,17 +2849,13 @@
 <div id="pg-tower-pool" class="page">
   <div class="tower-pool-wrap" style="max-width:1400px;width:96vw;margin:0 auto;background:#1a1024;border:3px solid #ffd700;border-radius:8px;padding:16px;color:#fff;">
     <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #ffd700;padding-bottom:8px;margin-bottom:10px;">
-      <div style="font-size:18px;font-weight:bold;color:#ffd700;">🎴 도전용 카드 30장 선발</div>
+      <div id="tower_pool_title" style="font-size:18px;font-weight:bold;color:#ffd700;">🎴 도전용 카드 20장 선발</div>
       <button onclick="exitTower(true)" style="padding:5px 12px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-size:11px;">도전 중단</button>
     </div>
-    <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
-      한 번의 도전 (1층 ~ 50층) 동안 사용할 카드 <b style="color:#ffd700;">30장</b>을 선발하세요. 같은 카드는 <b>1장만</b> 선발 가능 (인벤에 여러 장이어도 종류당 1장).
-      <br>1~25층은 층당 <b>10장</b>, <b style="color:#ffd700;">26층부터는 15장</b> 편성. 직전 층 사용 카드는 재사용 불가 규칙 유지.
-      <br><b style="color:#7eff7e;">💡 보유 카드에서 이미 선발된 카드를 한 번 더 누르면 선발에서 제외됩니다.</b>
-    </div>
+    <div id="tower_pool_desc" style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;"></div>
     <div class="tower-pool-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
       <div class="tower-pool-col-selected" style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #ffd700;">
-        <div style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">선발된 카드 (<span id="tower_pool_count">0</span>/30) · 카드 클릭 → 즉시 제외</div>
+        <div id="tower_pool_count_label" style="font-size:12px;color:#ffd700;font-weight:bold;margin-bottom:6px;">선발된 카드 (<span id="tower_pool_count">0</span>/20) · 카드 클릭 → 즉시 제외</div>
         <div id="tower_pool_selected" style="display:grid;grid-template-columns:repeat(5,1fr);gap:6px;min-height:200px;max-height:65vh;overflow-y:auto;"></div>
       </div>
       <div class="tower-pool-col-avail" style="background:#0a0518;padding:8px;border-radius:6px;border:1px solid #a335ee;">
@@ -2879,7 +2879,7 @@
       <button onclick="exitTower(true)" style="padding:5px 12px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-size:11px;">도전 중단</button>
     </div>
     <div style="background:#2a1a3a;padding:8px 12px;border-radius:4px;font-size:11px;color:#e6d3ff;margin-bottom:10px;line-height:1.6;">
-      <b style="color:#ffd700;"><span id="tower_deck_target">10</span>장</b> 채워야 다음 층 도전 가능 · 회색 카드는 <b style="color:#ff6b6b;">직전 층 사용</b> (선택 불가) · 도전 시작 시 선발한 <b style="color:#ffd700;">30장 풀</b>에서만 선택 가능.
+      <b style="color:#ffd700;"><span id="tower_deck_target">10</span>장</b> 채워야 다음 층 도전 가능 · 회색 카드는 <b style="color:#ff6b6b;">직전 층 사용</b> (선택 불가) · 도전 시작 시 선발한 <b style="color:#ffd700;"><span id="tower_deck_pool_size">20</span>장 풀</b>에서만 선택 가능.
     </div>
     <!-- 다음 층 상대방 미리보기 + 내 스탯 -->
     <div id="tower_deck_preview" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;"></div>
@@ -3172,7 +3172,7 @@ const CARDS = [
   { id:'n50', name:'썬더크랩',       grade:'normal', icon:'thunder',text:'상대방 올스탯 -30% 감소', fx:{type:'pctDebuff',stats:{str:-0.3,dex:-0.3,int:-0.3,con:-0.3}} },
   { id:'n51', name:'애볼리쉬매직',   grade:'normal', icon:'spark',  text:'상대방 버프 해제 / 시전자 INT만큼 MP소모', fx:{type:'multi',effects:[{type:'dispel'},{type:'mpCost',stat:'int'}]} },
   { id:'n52', name:'언홀리프렌지',   grade:'normal', icon:'rage',   text:'시전자 STR +50% 증가 / 4턴 동안 HP -5%씩 감소', fx:{type:'multi',effects:[{type:'pctBuff',stats:{str:0.5}},{type:'dotSelf',turns:4,pct:0.05}]} },
-  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어구 +3 증가', fx:{type:'buff',def:3,turns:5} },
+  { id:'n53', name:'엘룬스그레이스', grade:'normal', icon:'holy',   text:'5턴 동안 시전자 방어구 +3 증가', fx:{type:'buff',def:3,turns:6} },
   { id:'n54', name:'영혼흡수',       grade:'normal', icon:'soul',   text:'상대방 INT 50% 흡수', fx:{type:'statSteal',stats:['int'],pct:0.5} },
   { id:'n55', name:'오토캐논',       grade:'normal', icon:'arrow',  text:'(DEX + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['dex'],mult:2,weaponBonus:true} },
   { id:'n56', name:'워드럼오라',     grade:'normal', icon:'aura',   text:'무기 +40% 증가 / [STR 10 or DEX 10 이상일 경우 시전 가능]', statReqAny:[{str:10},{dex:10}], fx:{type:'pctBuff',equipBase:true,stats:{atk:0.4}} },
@@ -3204,11 +3204,11 @@ const CARDS = [
   // ───── 힘캐 확장 일반 카드 7종 ─────
   { id:'n81', name:'투사의 심장',    grade:'normal', icon:'heart',  iconPath:'assets/wc3_reforged_used/BTNReincarnation-Reforged.png', text:'STR +5, CON +2', fx:{type:'buff',str:5,con:2} },
   { id:'n82', name:'광폭화',         grade:'normal', icon:'rage',   iconPath:'assets/wc3_reforged_used/BTNAmuletOftheWild-Reforged.png', text:'전체 HP의 10% 소모, STR +7', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.10},{type:'buff',str:7}]} },
-  { id:'n83', name:'무투',           grade:'normal', icon:'crack',  iconPath:'assets/wc3_reforged_used/BTNFireGauntlets.png', text:'3턴 동안 시전자 방어구 -5 · 상대방 방어구 -10', fx:{type:'multi',effects:[{type:'buff',def:-5,turns:3},{type:'debuff',def:-10,turns:3}]} },
+  { id:'n83', name:'무투',           grade:'normal', icon:'crack',  iconPath:'assets/wc3_reforged_used/BTNFireGauntlets.png', text:'3턴 동안 시전자 방어구 -5 · 상대방 방어구 -10', fx:{type:'multi',effects:[{type:'buff',def:-5,turns:4},{type:'debuff',def:-10,turns:4}]} },
   { id:'n84', name:'분노의 함성',    grade:'normal', icon:'roar',   iconPath:'assets/wc3_reforged_used/BTNRexxar.png', text:'STR +5, 상대 DEX -2', fx:{type:'multi',effects:[{type:'buff',str:5},{type:'debuff',dex:-2}]} },
-  { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:3} },
+  { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:4} },
   { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 매턴 STR +1 누적', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buffOverTime',stats:{str:1},turns:10}]} },
-  { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 이번 턴 STR +20, 방어구 +20', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'buff',str:20,def:20,turns:1}]} },
+  { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 다음 공격까지 STR +20, 방어구 +20 (기본공격 포함)', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'nextAttackBuff',str:20,def:20}]} },
 
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'소환수 흡수 후 HP 60 회복 (소환수 없으면 발동 실패)', requireSummon:true, fx:{type:'heal',hp:60} },
@@ -3231,7 +3231,7 @@ const CARDS = [
   { id:'r18', name:'시어링애로우',   grade:'rare', icon:'sword',    text:'[DEX + 35] 데미지', fx:{type:'dmgStat',stats:['dex'],bonus:35} },
   { id:'r19', name:'시체먹기',       grade:'rare', icon:'pike',     text:'3턴 동안 시전자 HP 20씩 회복', fx:{type:'hot',turns:3,heal:20} },
   { id:'r20', name:'애스드밤',       grade:'rare', icon:'dagger',   text:'3턴 동안 상대방 잔여 HP 20% 고정 데미지 (최대 60)', fx:{type:'dotPct',turns:3,pct:0.2,max:60,dynamic:true} },
-  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:3},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:3}]} },
+  { id:'r21', name:'은신',           grade:'rare', icon:'spark',    text:'3턴 동안 DEX +10 증가, 상대방 공격 50% 확률로 회피, 기습·맹독 사용 가능', fx:{type:'multi',effects:[{type:'buff',dex:10,turns:4},{type:'evadeBuff',turns:3,pct:0.5},{type:'stealth',turns:4}]} },
   { id:'r22', name:'이몰레이션',     grade:'rare', icon:'cloak',    text:'2턴 동안 시전 시점 MP × 0.2 만큼 방어력 무시 고정 데미지 (상대방) / 시전자 MP 20% 소모', fx:{type:'multi',effects:[{type:'dot',turns:2,mpPct:0.2},{type:'mpCost',pct:0.2}]} },
   { id:'r23', name:'이베이션',       grade:'rare', icon:'mirror',   text:'3턴 동안 상대방 DEX -50% 및 상대방 버프 전부 제거', fx:{type:'multi',effects:[{type:'dispel'},{type:'pctDebuff',stats:{dex:-0.5},turns:3}]} },
   { id:'r24', name:'임페일',         grade:'rare', icon:'holy2',    text:'[무기+DEX] 데미지로 타격 / 상대방 50% 확률로 1턴 기절 / [시전자 DEX 10 이상일 때만 발동]', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'dmgStat',stats:['dex'],weaponBonus:true},{type:'cc',turns:1,chance:0.5}]} },
@@ -3259,7 +3259,7 @@ const CARDS = [
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/renew/h02.jpg', text:'STR·DEX·INT 를 40으로 고정 (데몬 변신)', fx:{type:'setStat',target:'self',stats:{str:40,dex:40,int:40}} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/renew/h03.jpg', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 턴부터 3턴간 방어구 +20 증가, CON +20 증가 / 3턴 후 시전자 레벨 × 2.5 만큼 HP·MP 회복', fx:{type:'multi',effects:[{type:'buff',def:20,con:20,turns:3},{type:'delayedRestore',after:3,hpFromLevel:2.5,mpFromLevel:2.5}]} },
-  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/renew/h05.jpg', text:'올스탯 +10 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:10,dex:10,int:10,con:10,atk:10,def:10} },
+  { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/renew/h05.jpg', text:'올스탯 +15 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:15,dex:15,int:15,con:15,atk:10,def:10} },
   { id:'l01', name:'부활의 증표',    grade:'legend', icon:'star',   iconPath:'assets/wc3_reforged_used/BTNResurrection-Reforged.png', text:'10턴 내에 HP가 0이 될 경우 HP·MP를 모두 회복한 상태로 부활 / 부활 시 모든 버프·디버프 초기화 (전투 개시 상태)', fx:{type:'rebirth',turns:10} },
   { id:'l02', name:'데우스엑스마키나', grade:'legend', icon:'demon',  iconPath:'assets/wc3_reforged_used/BTNEssenceOfAszune.png', text:'시전 시점에 적의 모든 버프 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
@@ -6906,6 +6906,10 @@ const TITLE_POOL = [
   { id:'title_bulhok',         name:'불혹',              tier:'레어', color:'#3366cc', desc:'유니크 이상 카드 획득 없이 Lv 40 달성', cond:{type:'level_no_unique_plus_history', target:40} },
   { id:'title_knight_set',     name:'기사단',            tier:'레어', color:'#3366cc', desc:'기사단의 의전검 및 기사단의 갑옷 착용', cond:{type:'equipped_full_set', weaponId:'knight_sword', armorId:'knight_armor', target:1} },
   { id:'title_gladius_set',    name:'성스러운 투사',     tier:'레어', color:'#3366cc', desc:'글라디우스 및 로리카 세그멘타타 착용',    cond:{type:'equipped_full_set', weaponId:'gladius', armorId:'lorica_segment', target:1} },
+  { id:'title_tower_5',        name:'탑의 이방인',       tier:'레어', color:'#3366cc', desc:'여신의 탑 5층 도달',               cond:{type:'tower_best_floor',         target:5} },
+  { id:'title_tower_10',       name:'여명의 도전자',     tier:'레어', color:'#3366cc', desc:'여신의 탑 10층 도달',              cond:{type:'tower_best_floor',         target:10} },
+  { id:'title_tower_15',       name:'월광의 방랑자',     tier:'레어', color:'#3366cc', desc:'여신의 탑 15층 도달',              cond:{type:'tower_best_floor',         target:15} },
+  { id:'title_tower_20',       name:'성화의 계승자',     tier:'레어', color:'#3366cc', desc:'여신의 탑 20층 도달',              cond:{type:'tower_best_floor',         target:20} },
   // ── 유니크 (보라색) — Lv 26 게이트 ──
   { id:'title_lv40',           name:'별자리 여행자',     tier:'유니크', color:'#a335ee', desc:'Lv 40 도달',                     cond:{type:'level',                    target:40} },
   { id:'title_lv60',           name:'정복자',            tier:'유니크', color:'#a335ee', desc:'Lv 50 도달',                     cond:{type:'level',                    target:50} },
@@ -6915,7 +6919,17 @@ const TITLE_POOL = [
   { id:'title_gold_1m',        name:'거상',              tier:'유니크', color:'#a335ee', desc:'누적 골드 획득 10,000,000G',      cond:{type:'total_gold_earned',        target:10000000} },
   { id:'title_gold_50m',       name:'고액자산가',        tier:'유니크', color:'#a335ee', desc:'누적 골드 획득 50,000,000G',      cond:{type:'total_gold_earned',        target:50000000} },
   { id:'title_card_unique_10', name:'유니크 콜렉터',     tier:'유니크', color:'#a335ee', desc:'유니크 카드 5종 소지',            cond:{type:'unique_cards_owned',       target:5} },
+  { id:'title_tower_25',       name:'달빛의 순례자',     tier:'유니크', color:'#a335ee', desc:'여신의 탑 25층 도달',              cond:{type:'tower_best_floor',         target:25} },
+  { id:'title_tower_30',       name:'중층의 지배자',     tier:'유니크', color:'#a335ee', desc:'여신의 탑 30층 도달',              cond:{type:'tower_best_floor',         target:30} },
+  { id:'title_tower_35',       name:'신전의 수호자',     tier:'유니크', color:'#a335ee', desc:'여신의 탑 35층 도달',              cond:{type:'tower_best_floor',         target:35} },
+  { id:'title_tower_try_500',  name:'태산이 높다하되',   tier:'유니크', color:'#a335ee', desc:'여신의 탑 500회 도전',             cond:{type:'tower_attempts_total',     target:500} },
   { id:'title_tower_master',   name:'신의 탑',           tier:'전설', color:'#ffd700', desc:'여신의 탑 50층 클리어',            cond:{type:'tower_50_cleared',         target:1} },
+  { id:'title_tower_beta',     name:'비선별인원',        tier:'영웅', color:'#FFBB2A', desc:'여신의 탑 베타 테스터를 위한 한정 칭호 (관리자 지급 전용)', cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_tower_gateopen', name:'탑의 문을 연 자',   tier:'영웅', color:'#FFBB2A', desc:'여신의 탑 베타 테스터를 위한 한정 칭호 (관리자 지급 전용)', cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  { id:'title_tower_attempt1', name:'선별인원',          tier:'일반', color:'#bbbbbb', desc:'여신의 탑 1회 도전',               cond:{type:'tower_attempted',          target:1} },
+  { id:'title_tower_40',       name:'명계의 문지기',     tier:'영웅', color:'#FFBB2A', desc:'여신의 탑 40층 도달',              cond:{type:'tower_best_floor',         target:40} },
+  { id:'title_tower_45',       name:'탑의 지배자',       tier:'영웅', color:'#FFBB2A', desc:'여신의 탑 45층 도달',              cond:{type:'tower_best_floor',         target:45} },
+  { id:'title_tower_try_1000', name:'하늘 아래 뫼이로다',tier:'영웅', color:'#FFBB2A', desc:'여신의 탑 1,000회 도전',           cond:{type:'tower_attempts_total',     target:1000} },
   { id:'title_abyss_3',        name:'신의 암살자',       tier:'유니크', color:'#a335ee', desc:'잊혀진 성좌 보스 3명 이상 처치',   cond:{type:'abyss_boss_kills',         target:3} },
   { id:'title_defense_300',    name:'절대방어',          tier:'유니크', color:'#a335ee', desc:'랭킹 방어전 300회 승리',          cond:{type:'rank_defense_wins',        target:300} },
   { id:'title_daily_100',      name:'근면성실',          tier:'유니크', color:'#a335ee', desc:'일일퀘스트 연속 100일 완주',      cond:{type:'daily_full_days',          target:100} },
@@ -6969,8 +6983,12 @@ function _ensureTitleState(p){
     total_heal_from_fountain:0,
     total_gold_spent:0, total_blessing_spent:0,
     tower_50_cleared:false,
+    tower_attempted:false, tower_best_floor:0, tower_attempts_total:0,
   };
   if (typeof p.titleCounters.tower_50_cleared === 'undefined') p.titleCounters.tower_50_cleared = false;
+  if (typeof p.titleCounters.tower_attempted  === 'undefined') p.titleCounters.tower_attempted  = false;
+  if (typeof p.titleCounters.tower_best_floor !== 'number')   p.titleCounters.tower_best_floor  = 0;
+  if (typeof p.titleCounters.tower_attempts_total !== 'number') p.titleCounters.tower_attempts_total = 0;
   // 신규 필드 마이그레이션 (기존 유저용)
   if (typeof p.titleCounters.total_heal_from_fountain !== 'number') p.titleCounters.total_heal_from_fountain = 0;
   if (typeof p.titleCounters.total_gold_spent      !== 'number') p.titleCounters.total_gold_spent      = 0;
@@ -7072,6 +7090,9 @@ function _getTitleCurrentValue(p, cond, useCurrent){
     }
     case 'admin_only': return 0;   // 조건 자동 충족 없음 — 관리자 지급 전용
     case 'tower_50_cleared': return p.titleCounters.tower_50_cleared ? 1 : 0;
+    case 'tower_attempted':  return p.titleCounters.tower_attempted  ? 1 : 0;
+    case 'tower_best_floor': return (p.titleCounters.tower_best_floor|0);
+    case 'tower_attempts_total': return (p.titleCounters.tower_attempts_total|0);
     case 'weapon_enchant_max': {
       // 보관함 + 장착 중인 무기 중 최대 atkBonus
       let mx = 0;
@@ -8415,6 +8436,7 @@ function raidNextTurn(){
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
+  c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   raidLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'보스 선공'}) ━━━`, 'sys');
 
   c._currentTurnCards = { playerCard, monsterCard: monCard };
@@ -9680,6 +9702,7 @@ function rankNextTurn(){
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
+  c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   rankLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
 
   c._currentTurnCards = { playerCard, monsterCard: monCard };
@@ -10864,7 +10887,8 @@ function _goldDropFor(playerLv){
 //
 // ⏸ 테스트 기간 임시 중단 (2026-08-09) — 재개하려면 아래 early-return 라인 삭제
 function _towerFloorGoldBonusPct(p){
-  return 0;   // ← 테스트 기간 임시 비활성. 재개 시 이 줄 삭제.
+  // 이번 주 최고 층(p.dojo.bestFloor) 기준 — 매주 월 06:00 KST 리셋 시 bestFloor=0 → 보너스도 초기화
+  // 재도전으로 최고 층 갱신 시 즉시 보너스 적용
   const bf = (p && p.dojo && p.dojo.bestFloor|0) || 0;
   if (bf >= 50) return 30;
   if (bf >= 45) return 25;
@@ -11436,6 +11460,7 @@ function huntNextTurn(){
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
+  c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
 
   huntLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
 
@@ -11604,6 +11629,7 @@ function _ensureCombatExt(c){
   c.myDelayedRestores ||= []; c.monDelayedRestores ||= [];   // 지연 회복 — [{turnsLeft, hp, mp}]. tick에서 카운트다운 → 0 시 발동
   c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 쉴드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
   c.myStatGrowth ||= []; c.monStatGrowth ||= [];       // 매턴 스탯 누적 buff (메디테이션 n86) — [{stats:{str,dex,int,con,atk,def}, turnsLeft, grade}]
+  c.myNextAtkBuff ||= null; c.monNextAtkBuff ||= null; // 다음 공격까지 유지 buff (인시너레이트 n87) — {stats:{...}}. 시전자가 공격 카드 시전 시 소비
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -11795,6 +11821,12 @@ function _castCardWithDoubleCheck(card, ctx){
     ctx.log(`  ✦ ${card.name} — 이번 턴 받는 데미지 50% 감소 · 다음 턴 카드를 2회 발동합니다`, 'info');
     return true; // 스피드스크롤 자체는 정상 시전
   }
+  // 인시너레이트류 nextAttackBuff 소비 여부 판정 — 시전 전에 marker 존재 여부 캡처
+  //   (marker 를 세팅하는 카드 자체는 소비 대상 아님 → 시전 전 시점 기준)
+  const _consumeKey = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myNextAtkBuff' : 'monNextAtkBuff';
+  const _hadConsumeMarker = !!(ctx.c && ctx.c[_consumeKey]);
+  const _isAttackCard    = _isOffensiveCard(card);
+
   // 일반 카드 발동 — 시전 성공 여부 획득
   const ok = applyCardEffect(card, ctx);
   // 소환 카드(소환의식 선행 필요)는 doubleCast 비대상 → ready 유지하고 통과
@@ -11804,6 +11836,22 @@ function _castCardWithDoubleCheck(card, ctx){
     ctx.log(`  ✦ 스피드스크롤 효과 — ${card.name}을(를) 한 번 더 발동!`, 'info');
     applyCardEffect(card, ctx);
   }
+
+  // 소비 처리 — 시전 전에 marker 있었고 이번 카드가 공격 카드였다면 소진
+  if (ok && _hadConsumeMarker && _isAttackCard && ctx.c[_consumeKey]){
+    const consume = ctx.c[_consumeKey];
+    if (consume && consume.stats){
+      for (const k of Object.keys(consume.stats)){
+        ctx.castBuffs[k] = (ctx.castBuffs[k]||0) - consume.stats[k];
+        if (k === 'con' || k === 'int'){
+          try { _syncPoolOnStatChange(ctx.castObj, k, -consume.stats[k]); } catch(e){}
+        }
+      }
+    }
+    ctx.c[_consumeKey] = null;
+    ctx.log(`  ✱ ${ctx.castName} 다음 공격 강화 소진`, 'info');
+  }
+
   return !!ok;
 }
 function _computeMpCost(fx, castObj){
@@ -12040,8 +12088,9 @@ function applyCardEffect(card, ctx){
         return;
       }
       // 회피 (r21 은신 등) — 대상이 evade 상태면 pct 확률로 완전 회피
+      // pending=true (후공 시전 직후 · 같은 턴 판정 스킵)
       const ev = ctx.targEvade && ctx.targEvade();
-      if (ev && ev.turns > 0 && Math.random() < (ev.pct||0)){
+      if (ev && ev.turns > 0 && !ev.pending && Math.random() < (ev.pct||0)){
         ctx.log(`  ✗ ${ctx.targName} 회피!`, 'heal');
         return;
       }
@@ -12147,8 +12196,36 @@ function applyCardEffect(card, ctx){
 
     if (t === 'multi'){ for (const sub of fx.effects) dispatch(sub); return; }
     if (t === 'evadeBuff'){
-      ctx.setCastEvade && ctx.setCastEvade({ turns: fx.turns, pct: fx.pct });
-      ctx.log(`  ✓ ${ctx.castName} ${fx.turns}턴 회피 ${Math.floor((fx.pct||0)*100)}% 부여`, 'heal');
+      // 선공/후공 대칭 처리 — 후공 시전 시 pending+turns+1 로 다음 턴부터 활성
+      // (선공은 즉시 활성 · 같은 턴 상대 후공 카드부터 회피 시도 카운트)
+      const isPlayer  = (ctx.caster === 'player' || ctx.caster === 'me');
+      const pfirst    = !!(ctx.c && ctx.c._playerFirstThisTurn);
+      const isSecond  = isPlayer ? !pfirst : pfirst;
+      const baseTurns = fx.turns|0;
+      const evade = isSecond
+        ? { turns: baseTurns + 1, pct: fx.pct, pending: true }
+        : { turns: baseTurns,     pct: fx.pct };
+      ctx.setCastEvade && ctx.setCastEvade(evade);
+      ctx.log(`  ✓ ${ctx.castName} ${baseTurns}턴 회피 ${Math.floor((fx.pct||0)*100)}% 부여${isSecond?' (다음 턴부터 활성)':''}`, 'heal');
+      return;
+    }
+    if (t === 'nextAttackBuff'){
+      // 다음 공격까지 유지 (인시너레이트 n87) — 시전 즉시 stat buff 적용,
+      // 시전자가 데미지 카드(기본공격 포함)를 발동하면 소비 (_castCardWithDoubleCheck 에서 처리)
+      const stats = {};
+      const msgs = [];
+      for (const k of Object.keys(fx)){
+        if (k === 'type') continue;
+        stats[k] = fx[k];
+        ctx.castBuffs[k] = (ctx.castBuffs[k]||0) + fx[k];
+        if (k === 'con' || k === 'int'){
+          try { _syncPoolOnStatChange(ctx.castObj, k, fx[k]); } catch(e){}
+        }
+        msgs.push(`${_korStatKey(k)} ${fx[k]>=0?'+':''}${fx[k]}`);
+      }
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myNextAtkBuff' : 'monNextAtkBuff';
+      ctx.c[key] = { stats };
+      ctx.log(`  + ${ctx.castName} 다음 공격까지 ${msgs.join(', ')}`, 'heal');
       return;
     }
     if (t === 'lifeleech'){
@@ -13344,8 +13421,8 @@ function processCombatTicks(kind){
   if (c.myReflect && c.myReflect.turns != null){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (c.monReflect && c.monReflect.turns != null){ c.monReflect.turns--; if (c.monReflect.turns<=0) c.monReflect = null; }
   // 회피 / 부두 카운터 감소
-  if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; log(`  · 회피 종료`, 'info'); } }
-  if (c.monEvade){ c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
+  if (c.myEvade){ if (c.myEvade.pending) c.myEvade.pending = false; c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; log(`  · 회피 종료`, 'info'); } }
+  if (c.monEvade){ if (c.monEvade.pending) c.monEvade.pending = false; c.monEvade.turns--; if (c.monEvade.turns<=0){ c.monEvade = null; log(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; log(`  · 부두 종료`, 'info'); } }
   if (c.monVoodoo){ if (c.monVoodoo.pending) c.monVoodoo.pending = false; c.monVoodoo.turns--; if (c.monVoodoo.turns<=0){ c.monVoodoo = null; log(`  · ${opp.name} 부두 종료`, 'info'); } }
   if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; _removeTransformById(c.myTransforms, 'h03'); log(`  · 벤전스 종료`, 'info'); } }
@@ -13621,8 +13698,8 @@ function processTrainTicks(){
   if (c.myReflect){ c.myReflect.turns--; if (c.myReflect.turns<=0) c.myReflect = null; }
   if (opp.reflect){ opp.reflect.turns--; if (opp.reflect.turns<=0) opp.reflect = null; }
   // 회피 / 부두 카운터 감소 (train 모드)
-  if (c.myEvade){ c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; trainLog(`  · 회피 종료`, 'info'); } }
-  if (opp.evade){ opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
+  if (c.myEvade){ if (c.myEvade.pending) c.myEvade.pending = false; c.myEvade.turns--; if (c.myEvade.turns<=0){ c.myEvade = null; trainLog(`  · 회피 종료`, 'info'); } }
+  if (opp.evade){ if (opp.evade.pending) opp.evade.pending = false; opp.evade.turns--; if (opp.evade.turns<=0){ opp.evade = null; trainLog(`  · ${opp.name} 회피 종료`, 'info'); } }
   if (c.myVoodoo){ if (c.myVoodoo.pending) c.myVoodoo.pending = false; c.myVoodoo.turns--; if (c.myVoodoo.turns<=0){ c.myVoodoo = null; trainLog(`  · 부두 종료`, 'info'); } }
   if (opp.voodoo){ if (opp.voodoo.pending) opp.voodoo.pending = false; opp.voodoo.turns--; if (opp.voodoo.turns<=0){ opp.voodoo = null; trainLog(`  · ${opp.name} 부두 종료`, 'info'); } }
   if (c.myVengeance){ if (c.myVengeance.pending) c.myVengeance.pending = false; c.myVengeance.turns--; if (c.myVengeance.turns<=0){ c.myVengeance = null; _removeTransformById(c.myTransforms, 'h03'); trainLog(`  · 벤전스 종료`, 'info'); } }
@@ -14429,8 +14506,8 @@ const TOWER_FLOOR_REWARDS = {
   10: { spirit:2,   gold:20000 },
   15: { spirit:3,   gold:30000 },
   20: { spirit:5,   gold:50000 },
-  30: { spirit:10,  gold:50000 },
-  40: { spirit:20,  gold:100000 },
+  30: { spirit:10,  gold:100000 },
+  40: { spirit:20,  gold:300000 },
   50: { spirit:100, gold:1000000, title:'title_tower_master' },
 };
 // 매일 10층 단위 보스 클리어 시 지급되는 정령의 축복 (하루 최초 클리어만)
@@ -14568,6 +14645,35 @@ function renderTowerLobby(){
     });
     rl.innerHTML = html;
   }
+  // 수행 골드 보너스 티어 표 (이번 주 최고 층 기준)
+  const gb = $('towerGoldBonusList');
+  if (gb){
+    const tiers = [
+      { min:5,  max:9,  pct:1 },
+      { min:10, max:14, pct:2 },
+      { min:15, max:19, pct:3 },
+      { min:20, max:24, pct:5 },
+      { min:25, max:29, pct:7 },
+      { min:30, max:34, pct:10 },
+      { min:35, max:39, pct:15 },
+      { min:40, max:44, pct:20 },
+      { min:45, max:49, pct:25 },
+      { min:50, max:50, pct:30 },
+    ];
+    const curPct = _towerFloorGoldBonusPct(p);
+    let html = '';
+    tiers.forEach(t => {
+      const active = (bf >= t.min && bf <= t.max);
+      const style = active
+        ? 'color:#ffd700;font-weight:bold;background:#3a2a0a;padding:1px 6px;border-radius:3px;'
+        : (bf > t.max ? 'color:#7eff7e;' : 'color:#888;');
+      const range = t.min === t.max ? `${t.min}층` : `${t.min}~${t.max}층`;
+      const mark = active ? ' ⬅ 현재' : (bf > t.max ? ' ✅' : '');
+      html += `<span style="${style}">▸ ${range}: 수행 골드 <b>+${t.pct}%</b>${mark}</span><br>`;
+    });
+    html += `<div style="margin-top:4px;font-size:10px;color:#aaa;">현재 이번 주 최고 층 <b style="color:#ffd700;">${bf}</b> → 골드 보너스 <b style="color:#ffd700;">+${curPct}%</b> 적용 중</div>`;
+    gb.innerHTML = html;
+  }
 }
 
 // ── 최고 층 기반 구간 건너뛰기 시작 층 산출 ──
@@ -14600,14 +14706,17 @@ function startTowerRun(startFloor){
   const maxSkip = _towerSkipStartFloor(p.dojo.bestFloor|0);
   if (sf > maxSkip){ toast(`아직 ${sf}층부터 시작할 수 없습니다. 최대 ${maxSkip}층부터 가능`); return; }
   try { _incHourlyActivity(p); } catch(e){}
-  p.dojo.attempts = (p.dojo.attempts|0) + 1;
+  // 도전 카운터(attempts / tower_attempted / tower_attempts_total) 는 첫 전투 완료 시 증가 (towerBattleEnd)
   GAME.tower.active = true;
   GAME.tower.currentFloor = sf;
   GAME.tower.startFloor = sf;   // 이번 도전의 시작 층 (스킵 여부 판정용 · 추후 참고)
+  GAME.tower.attemptCounted = false;   // 첫 전투 완료 여부 (attempts 카운터 중복 방지)
   GAME.tower.bestFloorThisSession = 0;
   GAME.tower.deckHistory = [];
   GAME.tower.currentDeck = [];
-  GAME.tower.runCardPool = [];   // 30장 도전용 카드 풀 (선발 화면에서 채움)
+  GAME.tower.runCardPool = [];   // 도전용 카드 풀 (선발 화면에서 채움 · 20장 → 25층 클리어 후 30장)
+  // 시작 층이 26 이상 (구간 건너뛰기로 25층 이상 스킵) 시 곧바로 30장 풀 활성
+  GAME.tower.poolExpanded = (sf > 25);
   GAME.tower.weekStart = _towerCurrentWeekStart();
   GAME.tower.monster = null;
   GAME.tower.previewMonster = null;
@@ -14626,21 +14735,45 @@ function startTowerRunFromSkip(){
   _ensureDojoState(p);
   const sf = _towerSkipStartFloor(p.dojo.bestFloor|0);
   if (sf <= 1){ toast('아직 구간 건너뛰기 조건이 아닙니다. 20층 이상 도달 시 열립니다.'); return; }
+  if (!confirm('⚠ 구간 건너뛰기 활용 시 매 10층마다 지급되는 일일 보상 획득이 불가능합니다.\n\n그래도 도전하시겠습니까?')) return;
   startTowerRun(sf);
 }
 
 // ── 층별 덱 크기 (1~25층: 10장, 26층+: 15장) ──
 function _towerDeckSize(floorN){ return (floorN|0) <= 25 ? 10 : 15; }
 
-// ── 도전 카드 풀 (30장) 선발 화면 ──
-const TOWER_POOL_SIZE = 30;
-let _towerPoolSelected = [];   // 카드 id 배열 (최대 30)
+// ── 도전 카드 풀 선발 화면 ──
+// 1단계(도전 시작): 20장 선발 → 1~25층 각 10장씩 편성
+// 2단계(25층 클리어 후): 기존 20장 잠금 + 10장 추가 선발 → 26~50층 각 15장씩 편성
+const TOWER_POOL_INITIAL  = 20;   // 1단계 목표
+const TOWER_POOL_EXPANDED = 30;   // 2단계 목표
+const TOWER_POOL_SIZE     = TOWER_POOL_EXPANDED;   // 하위 호환 · 최대치
+function _towerPoolTarget(){
+  return (GAME.tower && GAME.tower.poolExpanded) ? TOWER_POOL_EXPANDED : TOWER_POOL_INITIAL;
+}
+let _towerPoolSelected  = [];    // 카드 id 배열 (최대 30)
+let _towerPoolExpandMode = false; // 확장 모드 (기존 20장 잠금 · 10장 추가만 가능)
+let _towerPoolLocked     = new Set();   // 확장 모드에서 편집 불가한 카드 id 집합
 
 function openTowerPoolEdit(){
   const p = GAME.player;
   if (!p || !GAME.tower.active) return;
   // 기존 선발 상태 유지 (뒤로가기 대비). 없으면 빈 배열.
   _towerPoolSelected = Array.isArray(GAME.tower.runCardPool) ? GAME.tower.runCardPool.slice() : [];
+  _towerPoolExpandMode = false;
+  _towerPoolLocked = new Set();
+  showPage('tower-pool');
+  renderTowerPoolEdit();
+}
+
+// 25층 클리어 후 카드 풀 확장 화면 — 기존 20장 잠금, 추가 10장 선발
+function openTowerPoolExpand(){
+  const p = GAME.player;
+  if (!p || !GAME.tower.active) return;
+  const cur = Array.isArray(GAME.tower.runCardPool) ? GAME.tower.runCardPool.slice() : [];
+  _towerPoolSelected = cur.slice();
+  _towerPoolExpandMode = true;
+  _towerPoolLocked = new Set(cur);   // 기존 20장은 편집 불가
   showPage('tower-pool');
   renderTowerPoolEdit();
 }
@@ -14652,18 +14785,49 @@ function renderTowerPoolEdit(){
   const btn   = $('towerPoolCommitBtn');
   if (!selEl || !avEl) return;
   const gradeColor = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+  const target = _towerPoolTarget();
+
+  // 헤더 · 안내 · 버튼 텍스트 동적 갱신 (모드에 따라)
+  const titleEl = $('tower_pool_title');
+  const descEl  = $('tower_pool_desc');
+  const countLabelEl = $('tower_pool_count_label');
+  if (_towerPoolExpandMode){
+    if (titleEl) titleEl.textContent = `🎴 카드 풀 확장 · 추가 10장 선발 (총 30장)`;
+    if (descEl)  descEl.innerHTML = `<b style="color:#ffd700;">25층 클리어!</b> 26층부터는 층당 <b>15장 덱</b>이 필요합니다. 기존 20장은 그대로 유지되고 <b style="color:#7eff7e;">10장 추가 선발</b>이 가능합니다.<br>기존 20장은 <b style="color:#ffa500;">🔒 잠금</b> 상태로 편집/삭제 불가. 추가 선발된 10장만 재클릭으로 취소 가능.`;
+    if (countLabelEl) countLabelEl.textContent = `선발된 카드 (${_towerPoolSelected.length}/${target}) · 잠금 카드는 편집 불가 · 추가 카드만 재클릭 → 제외`;
+    if (btn) btn.textContent = '▶ 추가 선발 완료 · 26층 진입';
+  } else if (GAME.tower && GAME.tower.poolExpanded){
+    // 자동 확장 케이스 — 구간 건너뛰기로 26층 이상 시작 시 처음부터 30장 풀
+    const startFl = (GAME.tower.currentFloor|0) || 26;
+    if (titleEl) titleEl.textContent = `🎴 도전용 카드 30장 선발 (${startFl}층부터 시작)`;
+    if (descEl)  descEl.innerHTML = `구간 건너뛰기로 <b style="color:#ffd700;">${startFl}층</b>부터 시작 · 26층 이상은 층당 <b>15장 덱</b>이 필요하므로 처음부터 <b style="color:#ffd700;">30장 풀</b>을 선발합니다.<br>같은 카드는 <b>1장만</b> · 직전 층 사용 카드 재사용 불가.<br><b style="color:#7eff7e;">💡 이미 선발된 카드를 한 번 더 누르면 선발 제외.</b>`;
+    if (countLabelEl) countLabelEl.textContent = `선발된 카드 (${_towerPoolSelected.length}/${target}) · 카드 클릭 → 즉시 제외`;
+    if (btn) btn.textContent = `▶ 선발 완료 · ${startFl}층 진입`;
+  } else {
+    if (titleEl) titleEl.textContent = `🎴 도전용 카드 20장 선발`;
+    if (descEl)  descEl.innerHTML = `한 번의 도전 (1층 ~ 25층) 동안 사용할 카드 <b style="color:#ffd700;">20장</b>을 먼저 선발하세요. 같은 카드는 <b>1장만</b> 선발 가능 (인벤에 여러 장이어도 종류당 1장).<br>1~25층은 층당 <b>10장</b> 편성. 직전 층 사용 카드는 재사용 불가.<br><b style="color:#7eff7e;">25층 클리어 시 10장 추가 선발 기회</b>가 주어져 26~50층은 총 30장 풀에서 <b>15장</b>씩 편성합니다.<br><b style="color:#7eff7e;">💡 보유 카드에서 이미 선발된 카드를 한 번 더 누르면 선발에서 제외됩니다.</b>`;
+    if (countLabelEl) countLabelEl.textContent = `선발된 카드 (${_towerPoolSelected.length}/${target}) · 카드 클릭 → 즉시 제외`;
+    if (btn) btn.textContent = '▶ 선발 완료 · 1층 진입';
+  }
 
   // 선발된 카드 렌더
   const selCards = _towerPoolSelected.map(id => CARDS.find(c => c.id === id)).filter(Boolean);
   let selHtml = '';
-  for (let i = 0; i < TOWER_POOL_SIZE; i++){
+  for (let i = 0; i < target; i++){
     const card = selCards[i];
     if (card){
       const border = gradeColor[card.grade] || '#bbb';
       const iconTxt = (typeof cardIcon === 'function') ? cardIcon(card) : (card.icon || '?');
-      selHtml += `<div title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}" onclick="_towerPoolRemove(${i})" style="cursor:pointer;background:#1a0a2a;border:2px solid ${border};border-radius:4px;padding:3px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:56px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      const isLocked = _towerPoolExpandMode && _towerPoolLocked.has(card.id);
+      const clickAttr = isLocked
+        ? `onclick="toast('🔒 기존 20장 카드는 편집 불가')"`
+        : `onclick="_towerPoolRemove(${i})"`;
+      const lockBadge = isLocked ? '<div style="font-size:9px;color:#ffa500;font-weight:bold;">🔒 잠금</div>' : '';
+      const bg = isLocked ? '#2a1a08' : '#1a0a2a';
+      selHtml += `<div title="${(card.name||'').replace(/"/g,'&quot;')} — ${(card.text||'').replace(/"/g,'&quot;')}${isLocked?' [잠금]':''}" ${clickAttr} style="cursor:${isLocked?'not-allowed':'pointer'};background:${bg};border:2px solid ${border};border-radius:4px;padding:3px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:56px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
         <div style="font-size:14px;">${iconTxt}</div>
         <div style="color:${card.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:1px;">${card.name}</div>
+        ${lockBadge}
       </div>`;
     } else {
       selHtml += `<div style="background:#1a0a2a;border:2px dashed #555;border-radius:4px;padding:3px;text-align:center;min-height:56px;display:flex;align-items:center;justify-content:center;color:#666;font-size:18px;">＋</div>`;
@@ -14709,7 +14873,7 @@ function renderTowerPoolEdit(){
   avEl.innerHTML = avHtml;
   if (cntEl) cntEl.textContent = _towerPoolSelected.length;
   if (btn){
-    const ok = _towerPoolSelected.length === TOWER_POOL_SIZE;
+    const ok = _towerPoolSelected.length === target;
     btn.disabled = !ok;
     btn.style.opacity = ok ? '1' : '0.45';
     btn.style.cursor  = ok ? 'pointer' : 'not-allowed';
@@ -14717,6 +14881,12 @@ function renderTowerPoolEdit(){
 }
 
 function _towerPoolAdd(id){
+  const target = _towerPoolTarget();
+  // 확장 모드: 잠금 카드는 재클릭으로 취소 불가
+  if (_towerPoolExpandMode && _towerPoolLocked.has(id)){
+    toast('🔒 기존 20장 카드는 편집 불가');
+    return;
+  }
   // 토글: 이미 선발된 카드를 다시 누르면 선발에서 제외
   const idx = _towerPoolSelected.indexOf(id);
   if (idx >= 0){
@@ -14724,20 +14894,36 @@ function _towerPoolAdd(id){
     renderTowerPoolEdit();
     return;
   }
-  if (_towerPoolSelected.length >= TOWER_POOL_SIZE){ toast(`최대 ${TOWER_POOL_SIZE}장까지 선발 가능.`); return; }
+  if (_towerPoolSelected.length >= target){ toast(`최대 ${target}장까지 선발 가능.`); return; }
   _towerPoolSelected.push(id);
   renderTowerPoolEdit();
 }
 function _towerPoolRemove(idx){
+  // 확장 모드 잠금 카드 편집 방지
+  if (_towerPoolExpandMode){
+    const id = _towerPoolSelected[idx];
+    if (id && _towerPoolLocked.has(id)){
+      toast('🔒 기존 20장 카드는 편집 불가');
+      return;
+    }
+  }
   _towerPoolSelected.splice(idx, 1);
   renderTowerPoolEdit();
 }
 function commitTowerPool(){
-  if (_towerPoolSelected.length !== TOWER_POOL_SIZE){
-    toast(`${TOWER_POOL_SIZE}장을 채워야 진입 가능.`);
+  const target = _towerPoolTarget();
+  if (_towerPoolSelected.length !== target){
+    toast(`${target}장을 채워야 진입 가능.`);
     return;
   }
   GAME.tower.runCardPool = _towerPoolSelected.slice();
+  if (_towerPoolExpandMode){
+    // 확장 완료 → poolExpanded=true 로 26층부터 15장 덱 편성 활성
+    GAME.tower.poolExpanded = true;
+    _towerPoolExpandMode = false;
+    _towerPoolLocked = new Set();
+    try { saveGame(); } catch(e){}
+  }
   openTowerDeckEdit();
 }
 
@@ -14746,8 +14932,9 @@ let _towerDeckSelected = [];   // 카드 id 배열 (층별 편성)
 function openTowerDeckEdit(){
   const p = GAME.player;
   if (!p || !GAME.tower.active) return;
-  // 30장 선발 안 됐으면 풀 선발 화면으로 (안전장치)
-  if (!Array.isArray(GAME.tower.runCardPool) || GAME.tower.runCardPool.length !== TOWER_POOL_SIZE){
+  // 풀 미선발 시 안전장치 — 현재 목표(20 또는 30)와 다르면 선발 화면으로
+  const target = _towerPoolTarget();
+  if (!Array.isArray(GAME.tower.runCardPool) || GAME.tower.runCardPool.length !== target){
     openTowerPoolEdit(); return;
   }
   _towerDeckSelected = [];
@@ -14757,6 +14944,8 @@ function openTowerDeckEdit(){
   // 층별 목표 편성 수 (10 or 15) UI 업데이트
   const tgt = _towerDeckSize(curFloor);
   const tgtEl = $('tower_deck_target'); if (tgtEl) tgtEl.textContent = tgt;
+  // 도전 풀 크기 표시 (20 또는 30)
+  const psEl = $('tower_deck_pool_size'); if (psEl) psEl.textContent = _towerPoolTarget();
   // 다음 층 몹 미리 생성 (한 번만 · floor 바뀌면 재생성). 실전에서 다시 랜덤 굴리지 않도록 캐시.
   if (!GAME.tower.previewMonster || GAME.tower.previewMonster._floor !== curFloor){
     const mon = generateTowerMonster(curFloor);
@@ -15045,7 +15234,7 @@ const TOWER_MONSTER_TABLE = [
   {floor:15,lv:29,primary:'CON',atkType:'근접',str:14,dex:14,int:14,con:24,hp:231,mp:120,atkMin:18,atkMax:30,def:16,wpn:16,arm:16,cards:['r42','r07','r26','r15','n45','n32','n31','n67','n52','n10']},
   {floor:16,lv:30,primary:'CON',atkType:'근접',str:5,dex:5,int:5,con:35,hp:234,mp:54,atkMin:13,atkMax:22,def:17,wpn:17,arm:17,cards:['r06','r19','r31','n43','r21','n08','n31','n09','n46','n58']},
   {floor:17,lv:30,primary:'STR',atkType:'근접',str:35,dex:5,int:5,con:5,hp:144,mp:54,atkMin:31,atkMax:52,def:17,wpn:17,arm:17,cards:['r19','r11','n58','n44','n75','r16','r31','n52','n84','n50']},
-  {floor:18,lv:31,primary:'DEX',atkType:'사격',str:5,dex:36,int:5,con:5,hp:148,mp:55,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r21','n08','r32','r23','n50','n47','r40','n20','n76','n22']},
+  {floor:18,lv:31,primary:'DEX',atkType:'사격',str:5,dex:36,int:5,con:5,hp:148,mp:55,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['n50','r32','r21','n08','r23','n47','r40','n20','n76','n22']},
   {floor:19,lv:31,primary:'INT',atkType:'마법',str:5,dex:5,int:36,con:5,hp:148,mp:287,atkMin:23,atkMax:39,def:17,wpn:17,arm:17,cards:['r13','r20','n67','r31','n74','n06','n12','r32','n80','n71']},
   {floor:20,lv:32,primary:'CON',atkType:'근접',str:16,dex:16,int:16,con:26,hp:259,mp:138,atkMin:20,atkMax:34,def:18,wpn:18,arm:18,cards:['r42','r20','r33','r14','n86','n23','n06','n19','n78','n70']},
   {floor:21,lv:33,primary:'STR',atkType:'근접',str:38,dex:5,int:5,con:5,hp:156,mp:57,atkMin:34,atkMax:57,def:19,wpn:19,arm:19,cards:['r47','r10','r09','n87','r32','n19','n32','n10','n59','n20']},
@@ -15207,6 +15396,7 @@ function towerNextTurn(){
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
   const playerFirst = pDex >= mDex;
+  c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   towerLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
   c._currentTurnCards = { playerCard, monsterCard };
   // hunt 의 huntCast/checkAlive 를 재사용하려면 GAME.huntCombat 이 세팅되어 있어야 함 (이미 세팅됨).
@@ -15273,6 +15463,22 @@ function towerBattleEnd(result){
   // 몹 잔여 HP 기록 (패배·시간초과 시 tiebreaker 갱신)
   GAME.tower.lastBossRemainingHp = Math.max(0, m.hp|0);
 
+  // 첫 전투 완료 시 도전 카운터 증가 (승·패·시간초과 무관 · 도전 1회로 인정)
+  // - p.dojo.attempts (주간 표시용)
+  // - p.titleCounters.tower_attempted (선별인원 칭호)
+  // - p.titleCounters.tower_attempts_total (500·1000회 도전 칭호)
+  if (!GAME.tower.attemptCounted){
+    GAME.tower.attemptCounted = true;
+    try {
+      _ensureDojoState(p);
+      p.dojo.attempts = (p.dojo.attempts|0) + 1;
+      _ensureTitleState(p);
+      p.titleCounters.tower_attempts_total = (p.titleCounters.tower_attempts_total|0) + 1;
+      if (!p.titleCounters.tower_attempted) p.titleCounters.tower_attempted = true;
+      checkTitleUnlocks();
+    } catch(e){ console.warn('[tower_attempt counters]', e); }
+  }
+
   if (outcome === 'win'){
     const floor = GAME.tower.currentFloor;
     GAME.tower.bestFloorThisSession = Math.max(GAME.tower.bestFloorThisSession, floor);
@@ -15305,6 +15511,14 @@ function towerBattleEnd(result){
       p.dojo.bestFloor = floor;
       p.dojo.bestBossRemainingHp = 0;  // 새 best_floor 진입 시 tiebreaker 리셋 (다음 층 패배 시 갱신)
     }
+    // 평생 최고 층 카운터 갱신 (주간 리셋 무관 · 5층 단위 칭호 조건용)
+    try {
+      _ensureTitleState(p);
+      if (floor > (p.titleCounters.tower_best_floor|0)){
+        p.titleCounters.tower_best_floor = floor;
+        checkTitleUnlocks();
+      }
+    } catch(e){ console.warn('[tower_best_floor]', e); }
     // 50층 클리어 = 최종
     if (floor >= TOWER_MAX_FLOOR){
       // 칭호 카운터 세팅 → checkTitleUnlocks 자동 발동
@@ -15329,7 +15543,12 @@ function towerBattleEnd(result){
     cloudSaveNow().catch(()=>{});
     setTimeout(() => {
       GAME.tower.currentFloor = floor + 1;
-      openTowerDeckEdit();
+      // 25층 클리어 직후 → 카드 풀 확장 화면 (기존 20장 잠금 + 10장 추가 선발)
+      if (floor === 25 && !GAME.tower.poolExpanded){
+        openTowerPoolExpand();
+      } else {
+        openTowerDeckEdit();
+      }
     }, 900);
     return;
   }
@@ -15358,9 +15577,9 @@ function towerBattleEnd(result){
 }
 
 // ── 층 첫 도달 보상 (주간) ──
-// 테스트 기간 중엔 false — 첫 도달 보상 + 주간 랭킹 시상 지급 중단.
-// 일일 10층 단위 보스 정령 축복(grantDailySpiritBoss)은 이 플래그와 무관하게 계속 지급됨.
-const TOWER_REWARDS_ENABLED = false;
+// 정식 오픈 · 첫 도달 보상 + 주간 랭킹 시상 활성.
+// 일일 10층 단위 보스 정령 축복(grantDailySpiritBoss)은 이 플래그와 무관하게 항상 지급됨.
+const TOWER_REWARDS_ENABLED = true;
 function checkTowerReward(floor){
   const p = GAME.player;
   if (!p) return;
@@ -16039,6 +16258,7 @@ function trainNextTurn(){
   const myDex = me.dex + c.myBuffs.dex;
   const oppDex = opp.dex + opp.buffs.dex;
   const playerFirst = myDex >= oppDex;
+  c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   trainLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
   function castMe(){ if (isTrainStunned('me')) trainLog('  ✱ 나 행동불능', 'sys'); else { trainLog(`🃏 <b>${myCard.name}</b> 발동`, 'info'); trainApplyCard(myCard, 'me'); c.statsMyCards++; } }
   function castOpp(){ if (isTrainStunned('opp')) trainLog('  ✱ 상대 행동불능', 'sys'); else { trainLog(`🃏 [상대] <b>${oppCard.name}</b> 발동`, 'opp'); trainApplyCard(oppCard, 'opp'); } }
@@ -18529,6 +18749,19 @@ function enterMain(){
   initChat();
   // 누적된 경험치로 레벨업이 안 된 경우 자동 처리
   checkLevelUp();
+  // 여신의 탑 정식 오픈 마이그레이션 (1회) — 테스트 기간 중 clearedFloorsThisWeek 에 쌓인
+  //   층 기록을 초기화해 오픈 후 이번 주 첫 도달 보상 재수령 가능하게 함.
+  //   _towerLaunchResetDone=true 플래그로 유저당 1회만 실행 (다음 로그인부터는 no-op).
+  try {
+    if (GAME.player && !GAME.player._towerLaunchResetDone){
+      GAME.player._towerLaunchResetDone = true;
+      if (GAME.player.dojo){
+        GAME.player.dojo.clearedFloorsThisWeek = [];
+      }
+      saveGame();
+      cloudSaveNow().catch(e => console.warn('[towerLaunchReset cloudSave]', e));
+    }
+  } catch(e){ console.warn('[towerLaunchReset]', e); }
   // 채팅창 닉네임 표시
   $('chatNick').textContent = GAME.player.name + ':';
   chatSys(`★ ${GAME.player.name}님이 게임에 입장하셨습니다.`, { local: true });
