@@ -14584,10 +14584,24 @@ function _ensureDojoState(p){
 }
 
 // ── 진입 (로비) ──
+// 임시 잠금 — 주간 보상 수령 이슈 점검 중. 관리자 비밀번호(0304) 입력 시 우회 가능.
+// 이슈 해결 후 이 블록 제거.
+const TOWER_UNLOCK_PW = '0304';
 function openTower(){
   const p = GAME.player;
   if (!p) return;
   if (_isBanned && _isBanned(p)){ try { _blockedByBanToast(p); } catch(e){} return; }
+  // 잠금 게이트 — 운영자 계정은 우회, 그 외엔 비밀번호 확인
+  if (!(p && p.isOperator)){
+    try { alert('⚠ 여신의 탑 컨텐츠 일시 잠금 중\n\n주간 보상 수령 이슈 점검을 위해 잠시 접근이 제한됩니다.\n조속히 조치 후 재오픈하겠습니다.'); } catch(e){}
+    let pw = null;
+    try { pw = prompt('관리자에게 부여받은 비밀번호를 입력하세요.'); } catch(e){ pw = null; }
+    if (pw == null) return;                      // 취소
+    if (String(pw).trim() !== TOWER_UNLOCK_PW){
+      try { alert('비밀번호가 일치하지 않습니다.'); } catch(e){}
+      return;
+    }
+  }
   if ((p.level|0) < 26){
     toast('여신의 탑은 Lv 26 이상만 입장할 수 있습니다.');
     return;
