@@ -14702,7 +14702,7 @@ function _towerSkipStartFloor(bestFloor){
 function startTowerRun(startFloor){
   const p = GAME.player;
   if (!p) return;
-  if ((p.level|0) < 26){ toast('Lv 26+ 전용'); return; }
+  if ((p.level|0) < 21){ toast('Lv 21+ 전용'); return; }
   if (typeof _canDoHourlyActivity === 'function' && !_canDoHourlyActivity(p)){
     try { _hourlyBlockToast(); refreshHourlyLimitUI(); } catch(e){}
     return;
