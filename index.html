@@ -1697,7 +1697,7 @@
         <table><tr>
           <td id="m-heal" onclick="openHeal()">💧 회복의 샘물</td>
           <td id="m-cardshop" onclick="openCardShop()">🃏 카드샵</td>
-          <td id="m-tower" onclick="openTower()" style="background:#ffffff;color:#5a6a7a;font-weight:bold;">👼 여신의 탑 (Lv. 26)</td>
+          <td id="m-tower" onclick="openTower()" style="background:#ffffff;color:#5a6a7a;font-weight:bold;">👼 여신의 탑 (Lv. 21)</td>
           <td id="m-wshop" onclick="openWeaponShop()">⚔ 무기상점</td>
           <td id="m-ashop" onclick="openArmorShop()">🛡 방어구상점</td>
         </tr></table>
@@ -2795,7 +2795,7 @@
       <button onclick="exitTowerLobby()" style="padding:6px 16px;background:#888;color:#fff;border:0;cursor:pointer;border-radius:4px;font-weight:bold;">← 메인으로</button>
     </div>
     <div style="background:#2a1a3a;padding:12px;border-radius:6px;border:1px solid #a335ee;font-size:12px;line-height:1.7;color:#e6d3ff;margin-bottom:14px;">
-      <b style="color:#ffd700;">진입 조건 Lv 26+</b> · 1층부터 최대 50층까지 순차 도전.<br>
+      <b style="color:#ffd700;">진입 조건 Lv 21+</b> · 1층부터 최대 50층까지 순차 도전.<br>
       도전 시작 시 <b style="color:#ffd700;">20장 카드 풀</b> 선발 → 1~25층 각 <b>10장 덱</b> 편성. <b style="color:#7eff7e;">25층 클리어 시 10장 추가 선발 (총 30장)</b> → 26~50층 각 <b>15장 덱</b> 편성.<br>
       <b style="color:#ff6b6b;">직전 층 사용 카드는 재사용 불가</b> · 추가 선발된 10장만 재편집 가능 (기존 20장은 잠금).<br>
       층 클리어 시 HP는 부족분의 절반 회복 · MP 완전 회복.<br>
@@ -14498,7 +14498,7 @@ function exitHunt(){
 //   여신의 탑 (Divine Tower) — 주간 대회형 도장 컨텐츠
 // ============================================================
 // 규칙 요약:
-//  · Lv 26+ 진입, 1~50층 순차 도전
+//  · Lv 21+ 진입, 1~50층 순차 도전
 //  · 매 층 시작 전 10장 덱을 새로 편성 (직전 층 사용 카드 재사용 불가)
 //  · 몹 스탯: hpMax=80+N*15, base 스탯=5+floor(N*0.5), 주스탯 +5, 보스층 부스트
 //  · 층 클리어 시 HP+=(hpMax-hp)*0.5, MP=hpMax(완전 회복)
@@ -14599,8 +14599,8 @@ function openTower(){
   const p = GAME.player;
   if (!p) return;
   if (_isBanned && _isBanned(p)){ try { _blockedByBanToast(p); } catch(e){} return; }
-  if ((p.level|0) < 26){
-    toast('여신의 탑은 Lv 26 이상만 입장할 수 있습니다.');
+  if ((p.level|0) < 21){
+    toast('여신의 탑은 Lv 21 이상만 입장할 수 있습니다.');
     return;
   }
   _ensureDojoState(p);
