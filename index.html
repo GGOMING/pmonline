@@ -2832,7 +2832,7 @@
       </div>
     </div>
     <div id="tower_reward_table" style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #a335ee;font-size:11px;color:#e6d3ff;margin-bottom:10px;">
-      <b style="color:#ffd700;">📜 층 첫 도달 보상 (이번 주 최초 1회 지급 · 매주 월 06:00 KST 리셋)</b>
+      <b style="color:#ffd700;">📜 층 첫 도달 보상 (계정당 최초 1회 지급 · 라이프타임)</b>
       <div id="towerRewardList" style="margin-top:6px;line-height:1.9;"></div>
     </div>
     <div style="background:#0a0518;padding:10px;border-radius:6px;border:1px solid #ffd700;font-size:11px;color:#e6d3ff;">
@@ -13204,7 +13204,13 @@ function applyCardEffect(card, ctx){
         if (newType && p.atkType !== newType){
           if (typeof p._origAtkType === 'undefined') p._origAtkType = p.atkType;
           p.atkType = newType;
+          // calcDerived 는 base 스탯 기준으로 hpMax/mpMax/hp/mp 를 재계산해서
+          // 활성 CON/INT 전투 버프의 hpMax/mpMax 증분을 날려버림 → 버프 만료 시 이중 감소 버그
+          // (예: 빅베드부두 CON+20 후 베어폼 → 만료 시 -100 이 아닌 -200 감소).
+          // → atkType 전환 목적으로만 재계산하고 hpMax/mpMax/hp/mp 는 보존.
+          const prevHpMax = p.hpMax, prevMpMax = p.mpMax, prevHp = p.hp, prevMp = p.mp;
           try { calcDerived(p); } catch(e){}
+          p.hpMax = prevHpMax; p.mpMax = prevMpMax; p.hp = prevHp; p.mp = prevMp;
           try { renderSheet(); } catch(e){}
           ctx.log(`  ⚔ 공격 타입 → ${newType} (전투 종료 시 원복)`, 'heal');
         }
@@ -14500,7 +14506,7 @@ function exitHunt(){
 //  · 주간 랭킹 (월요일 06:00 KST) — 순위별 자동 시상 지급 (로그인 시 체크)
 
 // ── 보상 테이블 ──
-// 층 첫 도달 보상 — 정령의 축복(spirit) + 골드. 주간 리셋 (clearedFloorsThisWeek 기반)
+// 층 첫 도달 보상 — 정령의 축복(spirit) + 골드. 유저당 라이프타임 1회 (clearedFloorsEver 기반, 주간 리셋 X)
 const TOWER_FLOOR_REWARDS = {
   5:  { spirit:1,   gold:10000 },
   10: { spirit:2,   gold:20000 },
@@ -14558,22 +14564,27 @@ function _ensureDojoState(p){
       bestFloor: 0,
       bestBossRemainingHp: 0,
       attempts: 0,
-      clearedFloorsThisWeek: [],
+      clearedFloorsEver: [],   // 라이프타임 1회 지급 기록 (주간 리셋 X)
       lastWeeklyRewardPaid: 0,
       spiritClearedDate: '',
       spiritClearedFloors: [],
     };
   }
   const cur = _towerCurrentWeekStart();
-  // 새 주 진입 시 주간 데이터 리셋 (lastWeekStart 갱신)
+  // 새 주 진입 시 주간 데이터 리셋 (lastWeekStart 갱신) — clearedFloorsEver 는 라이프타임이므로 제외
   if ((p.dojo.lastWeekStart || 0) < cur){
     p.dojo.lastWeekStart = cur;
     p.dojo.bestFloor = 0;
     p.dojo.bestBossRemainingHp = 0;
     p.dojo.attempts = 0;
-    p.dojo.clearedFloorsThisWeek = [];
   }
-  if (!Array.isArray(p.dojo.clearedFloorsThisWeek)) p.dojo.clearedFloorsThisWeek = [];
+  // 라이프타임 전환 마이그레이션: clearedFloorsEver 없으면 기존 clearedFloorsThisWeek 로 seed
+  //   → 이번 주 이미 받은 층 재수령 방지. 이후 구 필드는 제거해 저장 페이로드 슬림.
+  if (!Array.isArray(p.dojo.clearedFloorsEver)){
+    const seed = Array.isArray(p.dojo.clearedFloorsThisWeek) ? p.dojo.clearedFloorsThisWeek : [];
+    p.dojo.clearedFloorsEver = seed.slice();
+  }
+  if ('clearedFloorsThisWeek' in p.dojo) delete p.dojo.clearedFloorsThisWeek;
   // 일일 정령의 축복 클리어 트래킹 (10/20/30/40/50층 하루 1회)
   const today = _todayKey();
   if (p.dojo.spiritClearedDate !== today){
@@ -14631,7 +14642,7 @@ function renderTowerLobby(){
   // 보상 표
   const rl = $('towerRewardList');
   if (rl){
-    const cleared = new Set(p.dojo.clearedFloorsThisWeek || []);
+    const cleared = new Set(p.dojo.clearedFloorsEver || []);
     let html = '';
     Object.keys(TOWER_FLOOR_REWARDS).map(k => parseInt(k, 10)).sort((a,b)=>a-b).forEach(f => {
       const r = TOWER_FLOOR_REWARDS[f];
@@ -15502,7 +15513,7 @@ function towerBattleEnd(result){
     p.hp = Math.min(p.hpMax, p.hp + heal);
     p.mp = p.mpMax;
     towerLog(`💧 HP +${heal} 회복 · MP 완전 회복`, 'heal');
-    // 층 첫 도달 보상 지급 (주간)
+    // 층 첫 도달 보상 지급 (라이프타임 1회)
     checkTowerReward(floor);
     // 매일 10층 단위 보스 클리어 시 정령의 축복 1개 (하루 최초만)
     try { grantDailySpiritBoss(floor); } catch(e){ console.warn('[grantDailySpiritBoss]', e); }
@@ -15579,7 +15590,7 @@ function towerBattleEnd(result){
   }, 500);
 }
 
-// ── 층 첫 도달 보상 (주간) ──
+// ── 층 첫 도달 보상 (라이프타임 1회) ──
 // 정식 오픈 · 첫 도달 보상 + 주간 랭킹 시상 활성.
 // 일일 10층 단위 보스 정령 축복(grantDailySpiritBoss)은 이 플래그와 무관하게 항상 지급됨.
 const TOWER_REWARDS_ENABLED = true;
@@ -15589,10 +15600,10 @@ function checkTowerReward(floor){
   const r = TOWER_FLOOR_REWARDS[floor];
   if (!r) return;
   _ensureDojoState(p);
-  const done = new Set(p.dojo.clearedFloorsThisWeek || []);
+  const done = new Set(p.dojo.clearedFloorsEver || []);
   if (done.has(floor)) return;
   done.add(floor);
-  p.dojo.clearedFloorsThisWeek = Array.from(done);
+  p.dojo.clearedFloorsEver = Array.from(done);
   if (!TOWER_REWARDS_ENABLED){
     towerLog(`🎁 <b>${floor}층 첫 도달</b> — 테스트 기간 · 첫 도달 보상 지급 없음 (정식 오픈 시 지급)`, 'sys');
     return;
@@ -15678,7 +15689,7 @@ async function saveTowerRecord(){
       best_floor: p.dojo.bestFloor|0,
       best_boss_remaining_hp: p.dojo.bestBossRemainingHp|0,
       attempts: p.dojo.attempts|0,
-      cleared_floors_this_week: p.dojo.clearedFloorsThisWeek || [],
+      cleared_floors_this_week: [],   // 라이프타임 전환 후 미사용 · 스키마 호환 위해 빈 배열
       updated_at: new Date().toISOString(),
     };
     const { error } = await sb.from('dojo_weekly_records').upsert(payload, { onConflict: 'user_id,week_start' });
@@ -18765,13 +18776,15 @@ function enterMain(){
   // 누적된 경험치로 레벨업이 안 된 경우 자동 처리
   checkLevelUp();
   // 여신의 탑 정식 오픈 마이그레이션 (1회) — 테스트 기간 중 clearedFloorsThisWeek 에 쌓인
-  //   층 기록을 초기화해 오픈 후 이번 주 첫 도달 보상 재수령 가능하게 함.
-  //   _towerLaunchResetDone=true 플래그로 유저당 1회만 실행 (다음 로그인부터는 no-op).
+  //   층 기록을 초기화. 라이프타임 전환 후에도 dormant 유저의 pre-launch 오염 데이터가
+  //   clearedFloorsEver 로 seed 되는 것을 방지 (구 필드 clear → _ensureDojoState seed 시 빈 배열).
+  //   _towerLaunchResetDone=true 플래그로 유저당 1회만 실행.
   try {
     if (GAME.player && !GAME.player._towerLaunchResetDone){
       GAME.player._towerLaunchResetDone = true;
       if (GAME.player.dojo){
         GAME.player.dojo.clearedFloorsThisWeek = [];
+        GAME.player.dojo.clearedFloorsEver = [];   // 라이프타임 필드도 함께 초기화
       }
       saveGame();
       cloudSaveNow().catch(e => console.warn('[towerLaunchReset cloudSave]', e));
