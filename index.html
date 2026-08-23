@@ -19361,6 +19361,8 @@ async function loadAdminUsers(){
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
             riggedTrap: !!p.riggedTrap,
+            nextBlessBoxReward: p.nextBlessBoxReward || undefined,
+            nextBlessBoxCardId: p.nextBlessBoxCardId || undefined,
             bannedUntil: Number(p.bannedUntil) || 0,
             captchaPending: !!p.captchaPending,
             captchaFailCount: Number(p.captchaFailCount) || 0,
