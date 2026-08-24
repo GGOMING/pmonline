@@ -4574,6 +4574,51 @@ function refreshShopUI(){
   } catch(e){}
 }
 
+// 교환 확인 커스텀 모달 — 브라우저 confirm() 은 OK/Cancel 만 지원하므로 '교환'/'유지' 라벨 명시용
+//   · Promise<boolean> 반환 (교환=true, 유지=false)
+//   · Enter=교환, Escape=유지, 배경 클릭 무시 (실수로 유지 선택 방지)
+function _confirmExchange(message){
+  return new Promise((resolve) => {
+    const bg = document.createElement('div');
+    bg.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:100000;display:flex;justify-content:center;align-items:center;';
+    const box = document.createElement('div');
+    box.style.cssText = 'background:#fff;color:#111;border:2px solid #7E181E;border-radius:6px;max-width:520px;width:92vw;padding:0;box-shadow:0 4px 20px rgba(0,0,0,0.5);';
+    const head = document.createElement('div');
+    head.style.cssText = 'background:#7E181E;color:#fff;padding:8px 14px;font-weight:bold;font-size:13px;';
+    head.textContent = '🔄 카드 교환 확인';
+    const body = document.createElement('div');
+    body.style.cssText = 'padding:14px 18px;font-size:12.5px;line-height:1.6;white-space:pre-line;max-height:60vh;overflow-y:auto;';
+    body.textContent = message;
+    const btns = document.createElement('div');
+    btns.style.cssText = 'display:flex;gap:8px;padding:10px 14px 14px;justify-content:flex-end;border-top:1px solid #eee;';
+    const btnKeep = document.createElement('button');
+    btnKeep.textContent = '유지';
+    btnKeep.style.cssText = 'padding:8px 22px;background:#999;color:#fff;border:0;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;min-width:88px;';
+    const btnSwap = document.createElement('button');
+    btnSwap.textContent = '교환';
+    btnSwap.style.cssText = 'padding:8px 22px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;min-width:88px;box-shadow:0 0 8px rgba(255,215,0,0.6);';
+    btns.appendChild(btnKeep);
+    btns.appendChild(btnSwap);
+    box.appendChild(head); box.appendChild(body); box.appendChild(btns);
+    bg.appendChild(box);
+    document.body.appendChild(bg);
+    const cleanup = (choice) => {
+      try { document.removeEventListener('keydown', onKey); } catch(e){}
+      try { bg.remove(); } catch(e){}
+      resolve(choice);
+    };
+    const onKey = (e) => {
+      if (e.key === 'Enter'){ e.preventDefault(); cleanup(true); }
+      else if (e.key === 'Escape'){ e.preventDefault(); cleanup(false); }
+    };
+    document.addEventListener('keydown', onKey);
+    btnSwap.onclick = () => cleanup(true);
+    btnKeep.onclick = () => cleanup(false);
+    // 기본 포커스는 '유지' (실수 방지) — 사용자가 명시적으로 '교환' 클릭 or Enter 눌러야 진행
+    setTimeout(() => { try { btnKeep.focus(); } catch(e){} }, 0);
+  });
+}
+
 // ─── 유니크/영웅 카드 교환 로직 (가챠 결과창 즉시 결정, 카드당 1회, 거절 시 소멸) ───
 // 유니크: 25% 다른 유니크 · 75% 레어 · 비용 ✨ 3
 // 영웅:  10% 다른 영웅 · 40% 유니크 · 50% 레어 · 비용 ✨ 10
@@ -4614,7 +4659,7 @@ function _rollExchangeTarget(sourceCard){
   if (!pool.length) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
-function _offerExchangeForResults(results){
+async function _offerExchangeForResults(results){
   if (!Array.isArray(results) || !results.length) return;
   const p = GAME.player;
   if (!p) return;
@@ -4645,7 +4690,7 @@ function _offerExchangeForResults(results){
       msg += `━━━━━━━━━━\n`;
     }
     msg += `\n보유 축복: ✨ ${held}개 (필요 ✨ ${cost}개)\n`;
-    msg += `\n그래도 도전하시겠습니까?\n(1회 한정 · 거절 시 교환 기회 소멸)`;
+    msg += `\n[교환] : 축복을 소모하여 재추첨\n[유지] : 원본 카드 그대로 보관 (교환 기회 소멸)`;
 
     // 축복 부족 시 안내만 하고 넘어감
     if (held < cost){
@@ -4653,7 +4698,7 @@ function _offerExchangeForResults(results){
       continue;
     }
     let doExchange = false;
-    try { doExchange = confirm(msg); } catch(e){}
+    try { doExchange = await _confirmExchange(msg); } catch(e){}
     if (!doExchange) continue;   // 유지 → 다음 카드
     // 교환 실행 — 축복 차감 후 재추첨
     const newCard = _rollExchangeTarget(c);
@@ -5124,7 +5169,7 @@ function doGachaShop(shopId, n){
   }
   _markGradeAcquired(results);
   // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
-  try { _offerExchangeForResults(results); } catch(e){ console.warn('[exchange]', e); }
+  _offerExchangeForResults(results).catch(e => console.warn('[exchange]', e));
   // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
   $('gachaResult').hidden = false;
   $('gachaResultGrid').innerHTML = results.map(c => `
@@ -5900,7 +5945,7 @@ function buyBlessItem(id, currency){
         GAME.inventory.push(card);
         try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
         const exResults = [card];
-        try { _offerExchangeForResults(exResults); } catch(e){ console.warn('[bless box rigged exchange]', e); }
+        _offerExchangeForResults(exResults).catch(e => console.warn('[bless box rigged exchange]', e));
         const finalCard = exResults[0] || card;
         // 교환 후 인벤에 남은 카드에서 마커 제거 (다음 세션 오염 방지)
         try { delete finalCard._riggedExchange; } catch(e){}
@@ -5937,7 +5982,7 @@ function buyBlessItem(id, currency){
           try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
           // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
           const exResults = [card];
-          try { _offerExchangeForResults(exResults); } catch(e){ console.warn('[bless box exchange]', e); }
+          _offerExchangeForResults(exResults).catch(e => console.warn('[bless box exchange]', e));
           const finalCard = exResults[0] || card;
           // 교환으로 카드가 바뀐 경우 최종 카드도 로그 (교환 결과)
           if (finalCard && finalCard.id !== card.id){
@@ -7693,7 +7738,7 @@ function _updateRaidSummaryLine(raidKey, prefix, elId){
   else if (r.monsterCount === 0){
     const pct = r.bossHpMax > 0 ? Math.floor(r.bossHp / r.bossHpMax * 100) : 100;
     monStr = `<span style="color:#a02050;font-weight:bold;">보스 HP ${r.bossHp.toLocaleString()}/${r.bossHpMax.toLocaleString()} (${pct}%)</span>`;
-  } else monStr = `잔여 몬스터 <b>${r.monsterCount}</b>`;
+  } else monStr = `잔여 몬스터 <b>${r.monsterCount}</b>/${_raidMobTotal(raidKey)}`;
   el.innerHTML = `${prefix} — ${monStr}`;
 }
 // 메인 화면 노출 중 매초 갱신
@@ -13808,7 +13853,8 @@ function _handleMacroGuardHunt(result){
   if (isFlee){
     reward = _macroGuardReward(p);
     huntLog(`🏃 회피 성공 +1,000G`, 'sys');
-    chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
+    // 운영자 전용 감사 로그 — 일반 유저에겐 미노출 (매크로 사용자에게 탐지 사실을 숨기기 위함)
+    chatSys(`🏃 [수행] ${p.name} (Lv ${p.level}) — 매크로 방지 몹 회피 (+1,000G)`, { operatorOnly: true });
   } else {
     penalty = _macroGuardPenalty(p);
     huntLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
@@ -13883,7 +13929,9 @@ async function _handleMacroGuardRaid(result){
   if (isFlee){
     reward = _macroGuardReward(p);
     raidLog(`🏃 회피 성공 +1,000G`, 'sys');
-    chatSys(`🏃 ${p.name}님이 매크로 방지 몬스터를 회피하셨습니다. (+1,000G)`);
+    // 운영자 전용 감사 로그 — 일반 유저에겐 미노출 (매크로 사용자에게 탐지 사실을 숨기기 위함)
+    const raidKrName = c.raidKey === 'dawn' ? '새벽의 언덕' : (c.raidKey === 'mist' ? '안개의 숲' : '잊혀진 성좌');
+    chatSys(`🏃 [${raidKrName}] ${p.name} (Lv ${p.level}) — 매크로 방지 몹 회피 (+1,000G)`, { operatorOnly: true });
   } else {
     penalty = _macroGuardPenalty(p);
     raidLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
@@ -18838,6 +18886,9 @@ const CHAT_STICKY_MARKER = '​';   // Zero-Width Space (화면에 안 보임)
 // 운영자 [공지사항] 티커 메시지 마커 — Zero-Width Joiner (kind='system_notice' 이중화)
 const CHAT_NOTICE_MARKER = '‍';   // U+200D
 const CHAT_NOTICE_TTL_MS = 5 * 60 * 1000;   // 5분 상단 고정
+// 운영자 전용 알림 마커 — U+2063 INVISIBLE SEPARATOR (매크로 회피 등 감사 로그 · 일반 유저에게 미노출)
+const CHAT_OPONLY_MARKER = '⁣';   // U+2063
+const CHAT_OPONLY_TTL_MS = 60 * 60 * 1000;   // 1시간 유지 후 로컬 자동 제거
 function _isStickyChatRow(row){
   if (!row) return false;
   if (row.kind === 'system_sticky') return true;
@@ -18850,11 +18901,19 @@ function _isNoticeChatRow(row){
   if (typeof row.message === 'string' && row.message.charCodeAt(0) === 0x200D) return true;
   return false;
 }
+function _isOperatorOnlyChatRow(row){
+  if (!row) return false;
+  if (typeof row.message === 'string' && row.message.charCodeAt(0) === 0x2063) return true;
+  return false;
+}
 function _stripStickyMarker(msg){
   return (typeof msg === 'string' && msg.charCodeAt(0) === 0x200B) ? msg.slice(1) : msg;
 }
 function _stripNoticeMarker(msg){
   return (typeof msg === 'string' && msg.charCodeAt(0) === 0x200D) ? msg.slice(1) : msg;
+}
+function _stripOperatorOnlyMarker(msg){
+  return (typeof msg === 'string' && msg.charCodeAt(0) === 0x2063) ? msg.slice(1) : msg;
 }
 
 // 운영자 공지사항 — 상단 고정 컨테이너에 렌더 (5분 후 자동 소멸)
@@ -18894,6 +18953,24 @@ function _renderChatRow(row){
   if (!msgsEl) return;
   if (row.id && _chatRendered.has(row.id)) return;
   if (row.id) _chatRendered.add(row.id);
+  // 운영자 전용 알림 — 운영자 계정만 렌더, 그 외 즉시 폐기 (일반 유저 로그 노출 방지 · 매크로 회피 감사 등)
+  //   · 1시간 sticky (createdAt 기준 remain 계산 → 이미 지난 알림은 skip · setTimeout 으로 만료 시 로컬 제거)
+  //   · Realtime INSERT 로 전파되지만 클라이언트 필터가 담당 → 서버 부하는 INSERT 1건뿐
+  if (_isOperatorOnlyChatRow(row)){
+    if (!(GAME.player && GAME.player.isOperator)) return;
+    const createdAt = row.created_at ? new Date(row.created_at).getTime() : Date.now();
+    const remain = CHAT_OPONLY_TTL_MS - (Date.now() - createdAt);
+    if (remain <= 0) return;
+    const d = document.createElement('div');
+    d.className = 'sys';
+    d.style.color = '#ff9b3a';
+    d.style.fontWeight = 'bold';
+    d.textContent = '[운영자 전용] ' + _stripOperatorOnlyMarker(row.message || '');
+    msgsEl.appendChild(d);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    setTimeout(() => { try { d.remove(); } catch(e){} }, remain);
+    return;
+  }
   // 운영자 [공지사항] — 상단 고정 컨테이너로 라우팅 (일반 채팅창엔 안 뜸)
   if (_isNoticeChatRow(row)){
     _renderPinnedNotice(row);
@@ -18967,12 +19044,14 @@ function _renderLocalSysMsg(msg, sticky){
 function chatSys(msg, opts){
   const sticky = !!(opts && opts.sticky);
   const local  = !!(opts && opts.local);
-  // sticky 메시지에는 ZWSP 마커 삽입 → Realtime 수신 측에서 kind 컬럼 소실 시에도 sticky 판정 가능
-  const wireMsg = sticky ? (CHAT_STICKY_MARKER + msg) : msg;
-  // 로컬 전용 → broadcast 스킵 (개인 이벤트: 상점·회복·로그인 등)
-  if (local){ _renderLocalSysMsg(msg, sticky); return; }
-  // Rate limit (sticky 예외 — 중요 이벤트는 무조건 전송)
-  if (!sticky && sb && GAME.player){
+  const operatorOnly = !!(opts && opts.operatorOnly);
+  // 마커 우선순위: operatorOnly > sticky. operatorOnly 는 일반 유저에게 아예 안 보이므로 sticky 병용 무의미
+  const wireMsg = operatorOnly ? (CHAT_OPONLY_MARKER + msg)
+                : sticky ? (CHAT_STICKY_MARKER + msg) : msg;
+  // 로컬 전용 → broadcast 스킵 (개인 이벤트). operatorOnly 는 감사 로그 성격이라 broadcast 필수 → local 무시
+  if (local && !operatorOnly){ _renderLocalSysMsg(msg, sticky); return; }
+  // Rate limit — sticky·operatorOnly 예외 (중요 이벤트·감사 로그는 무조건 전송)
+  if (!sticky && !operatorOnly && sb && GAME.player){
     const now = Date.now();
     if (now - _chatSysLastAt < CHATSYS_MIN_INTERVAL_MS){
       _renderLocalSysMsg(msg, false);
