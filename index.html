@@ -1473,7 +1473,7 @@
           <button class="admin-btn small" onclick="adminKillBoss('dawn')">보스 즉시 처치</button>
           <select id="adminRaidDawnBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('dawn')">보스 교체</button>
-          <input type="number" id="adminRaidDawnMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+          <input type="number" id="adminRaidDawnMonInput" min="0" max="100" style="width:60px;font-size:11px;" placeholder="몹수">
           <button class="admin-btn small" onclick="adminSetMonsterCount('dawn')">몹수 설정</button>
         </div>
         <div style="margin:4px 0;">
@@ -1483,7 +1483,7 @@
           <button class="admin-btn small" onclick="adminKillBoss('mist')">보스 즉시 처치</button>
           <select id="adminRaidMistBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('mist')">보스 교체</button>
-          <input type="number" id="adminRaidMistMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+          <input type="number" id="adminRaidMistMonInput" min="0" max="150" style="width:60px;font-size:11px;" placeholder="몹수">
           <button class="admin-btn small" onclick="adminSetMonsterCount('mist')">몹수 설정</button>
         </div>
         <div style="margin:4px 0;">
@@ -1493,7 +1493,7 @@
           <button class="admin-btn small" onclick="adminKillBoss('abyss')">보스 즉시 처치</button>
           <select id="adminRaidAbyssBossSel" style="font-size:11px;"></select>
           <button class="admin-btn small" onclick="adminSetBoss('abyss')">보스 교체</button>
-          <input type="number" id="adminRaidAbyssMonInput" min="0" max="199" style="width:60px;font-size:11px;" placeholder="몹수">
+          <input type="number" id="adminRaidAbyssMonInput" min="0" max="200" style="width:60px;font-size:11px;" placeholder="몹수">
           <button class="admin-btn small" onclick="adminSetMonsterCount('abyss')">몹수 설정</button>
         </div>
       </div>
@@ -1901,7 +1901,7 @@
         <div class="raid-info" style="display:flex;align-items:center;gap:12px;">
           <div style="flex:1;">
             <div class="raid-info-row"><span class="lbl">세션 종료까지</span> <b id="raid_remaining">-</b></div>
-            <div class="raid-info-row"><span class="lbl">남은 몬스터</span> <b id="raid_mon_count">-</b> / <span id="raid_mon_total">99</span></div>
+            <div class="raid-info-row"><span class="lbl">남은 몬스터</span> <b id="raid_mon_count">-</b> / <span id="raid_mon_total">100</span></div>
             <div class="raid-info-row" id="raid_boss_row" hidden>
               <span class="lbl">보스</span> <b id="raid_boss_name">-</b>
               <div class="boss-hpbar"><i id="raid_boss_hp_fill"></i><span id="raid_boss_hp_text">- / -</span></div>
@@ -1913,7 +1913,7 @@
             ✨2 공격대 초기화
           </button>
         </div>
-        <div class="raid-tip" id="raid_tip">몬스터 99마리를 처치하면 보스가 등장합니다.</div>
+        <div class="raid-tip" id="raid_tip">몬스터를 모두 처치하면 보스가 등장합니다.</div>
         <div class="hunt-actions">
           <button class="btn-go" id="raid_challenge_btn" onclick="raidChallenge()">▶ 도전</button>
           <button class="btn-back" onclick="exitRaid()">돌아가기</button>
@@ -3293,10 +3293,10 @@ const GAME = {
   chatUsers: [],  // 서버 연동 시 라이브 반영 예정
   // 공격대 (4시간 세션, 0/4/8/12/16/20시 정각 리셋)
   raid: {
-    dawn:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
-    mist:  { sessionStart:null, monsterCount:99, bossId:null, bossHpMax:8000, bossHp:8000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    dawn:  { sessionStart:null, monsterCount:100, bossId:null, bossHpMax:5000, bossHp:5000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    mist:  { sessionStart:null, monsterCount:150, bossId:null, bossHpMax:11000, bossHp:11000, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
     // 3차 공격대 잊혀진 성좌 — Lv 35+, 6시간 세션 (0/6/12/18시 리셋)
-    abyss: { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
+    abyss: { sessionStart:null, monsterCount:200, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null },
   },
   raidCombat: null,
   // 훈련소 상태
@@ -3505,7 +3505,7 @@ function applySavePayload(d){
   if (d.raid) GAME.raid = d.raid;
   // 3차 공격대 마이그레이션 — 옛 저장엔 abyss 필드 없음
   if (!GAME.raid.abyss){
-    GAME.raid.abyss = { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
+    GAME.raid.abyss = { sessionStart:null, monsterCount:200, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
   }
   if (!GAME.player.weapons) GAME.player.weapons = [];
   if (!GAME.player.armors)  GAME.player.armors  = [];
@@ -3773,7 +3773,7 @@ function loadGame(name){
     if (d.raid) GAME.raid = d.raid;
   // 3차 공격대 마이그레이션 — 옛 저장엔 abyss 필드 없음
   if (!GAME.raid.abyss){
-    GAME.raid.abyss = { sessionStart:null, monsterCount:199, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
+    GAME.raid.abyss = { sessionStart:null, monsterCount:200, bossId:null, bossHpMax:0, bossHp:0, bossDefeated:false, lastKiller:null, lastNpcUpdate:null };
   }
     // 마이그레이션: 장비 인벤토리 없으면 초기화
     if (!GAME.player.weapons) GAME.player.weapons = [];
@@ -7237,11 +7237,11 @@ const RAID_BOSSES = {
     { id:'warden',       name:'워든',         hpMax:10000, str:25, dex:40, int:20, con:20, atk:[45,85], icon:'assets/wc3_icons/darkranger.gif' },
   ],
   mist: [
-    // Lv 30+ 게이트 · dawn 대비 HP +50%, 스탯 +5, 공격력 상단 +10~15
-    { id:'demonhunter',  name:'데몬헌터',     hpMax:15000, str:35, dex:40, int:35, con:30, atk:[70,125], icon:'assets/wc3_icons/pitlord.gif' },
-    { id:'deathknight',  name:'데스나이트',   hpMax:15000, str:40, dex:30, int:35, con:35, atk:[75,130], icon:'assets/wc3_icons/shadowhunter.gif' },
-    { id:'beastmaster',  name:'비스트마스터', hpMax:15000, str:35, dex:35, int:25, con:40, atk:[65,115], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
-    { id:'darkranger',   name:'다크 레인저',  hpMax:15000, str:30, dex:50, int:30, con:25, atk:[80,135], icon:'assets/wc3_icons/darkranger.gif' },
+    // Lv 30+ 게이트 · HP 10,000~12,000 (스탯·카드 유지)
+    { id:'demonhunter',  name:'데몬헌터',     hpMax:10500, str:35, dex:40, int:35, con:30, atk:[70,125], icon:'assets/wc3_icons/pitlord.gif' },
+    { id:'deathknight',  name:'데스나이트',   hpMax:12000, str:40, dex:30, int:35, con:35, atk:[75,130], icon:'assets/wc3_icons/shadowhunter.gif' },
+    { id:'beastmaster',  name:'비스트마스터', hpMax:11500, str:35, dex:35, int:25, con:40, atk:[65,115], icon:'assets/wc3_icons/pandarenbrewmaster.gif' },
+    { id:'darkranger',   name:'다크 레인저',  hpMax:10000, str:30, dex:50, int:30, con:25, atk:[80,135], icon:'assets/wc3_icons/darkranger.gif' },
   ],
   // 3차 공격대 「잊혀진 성좌」 — Lv 35+
   abyss: [
@@ -7286,7 +7286,13 @@ const MONSTERS_ABYSS = [
   { id:'ab_satyr_shadowdancer',name:'사티로스 그림자춤꾼', race:'nightelf', lvRange:[55,60], baseHp:65, baseAtk:[55,95],  stats:{str:14,dex:28,int:16,con:12}, weight:6,  elite:true,  icon:'assets/The%20Forgotten%20Zodiac/abyss_satyr_shadowdancer.jpg' },
   { id:'ab_satyr_soulstealer', name:'사티로스 영혼도둑',  race:'undead',   lvRange:[55,60], baseHp:70, baseAtk:[45,80],  stats:{str:16,dex:12,int:28,con:16}, weight:7,  elite:true,  icon:'assets/The%20Forgotten%20Zodiac/abyss_satyr_soulstealer.jpg' },
 ];
-const ABYSS_MOB_TOTAL = 199;   // 세션당 몹 수
+const DAWN_MOB_TOTAL  = 100;   // 새벽의 언덕 세션당 몹 수
+const MIST_MOB_TOTAL  = 150;   // 안개의 숲 세션당 몹 수
+const ABYSS_MOB_TOTAL = 200;   // 잊혀진 성좌 세션당 몹 수
+function _raidMobTotal(raidKey){
+  return raidKey === 'abyss' ? ABYSS_MOB_TOTAL
+       : (raidKey === 'mist' ? MIST_MOB_TOTAL : DAWN_MOB_TOTAL);
+}
 const ABYSS_MIN_LEVEL = 35;    // 입장 최소 레벨
 const ABYSS_SESSION_HOURS = 6; // 세션 리셋 주기 (시간)
 const ABYSS_ADMIN_PW = 'ekfru2';
@@ -7372,8 +7378,9 @@ function generateAbyssMob(playerLv){
   let mLv = Math.max(tpl.lvRange[0], Math.min(tpl.lvRange[1], playerLv));
   mLv = Math.max(ABYSS_MIN_LEVEL, mLv);
   const s = tpl.stats;
-  // 일반(비-엘리트) 몹은 스탯·HP 1.1배 상향 (엘리트는 이미 무기·방어구 보너스 크게 받아 그대로 유지)
-  const buffMul = tpl.elite ? 1.0 : 1.1;
+  // 공격대 난이도 조정 — 기존(비-엘리트 1.1 / 엘리트 1.0) 대비 전체 1.1배 상향
+  //   비-엘리트: 1.1 × 1.1 = 1.21  |  엘리트: 1.0 × 1.1 = 1.10
+  const buffMul = tpl.elite ? 1.10 : 1.21;
   const bStr = Math.floor(s.str * buffMul);
   const bDex = Math.floor(s.dex * buffMul);
   const bInt = Math.floor(s.int * buffMul);
@@ -7599,7 +7606,7 @@ async function checkRaidReset(raidKey){
     const bossList = RAID_BOSSES[raidKey];
     const boss = bossList[Math.floor(Math.random() * bossList.length)];
     r.sessionStart = currentSession;
-    r.monsterCount = raidKey === 'abyss' ? ABYSS_MOB_TOTAL : 99;
+    r.monsterCount = _raidMobTotal(raidKey);
     r.bossId = boss.id;
     r.bossHpMax = boss.hpMax;
     r.bossHp = boss.hpMax;
@@ -7636,7 +7643,7 @@ function _forceLocalRaidReset(raidKey){
   if (!bossList || !bossList.length) return;
   const boss = bossList[Math.floor(Math.random() * bossList.length)];
   r.sessionStart = currentSession;
-  r.monsterCount = raidKey === 'abyss' ? ABYSS_MOB_TOTAL : 99;
+  r.monsterCount = _raidMobTotal(raidKey);
   r.bossId = boss.id;
   r.bossHpMax = boss.hpMax;
   r.bossHp = boss.hpMax;
@@ -7839,7 +7846,7 @@ function renderRaidLobby(){
   const s = remainSec % 60;
   $('raid_remaining').textContent = `${h}시간 ${m}분 ${s}초`;
   $('raid_mon_count').textContent = r.monsterCount;
-  const monTotalEl = $('raid_mon_total'); if (monTotalEl) monTotalEl.textContent = isAbyss ? ABYSS_MOB_TOTAL : 99;
+  const monTotalEl = $('raid_mon_total'); if (monTotalEl) monTotalEl.textContent = _raidMobTotal(raidKey);
 
   const bossRow = $('raid_boss_row');
   if (r.monsterCount === 0){
@@ -7870,13 +7877,13 @@ function renderRaidLobby(){
     btn.disabled = false;
     $('raid_tip').innerHTML = `<b style="color:#a02050;">보스 단계!</b> 보스 HP는 누적으로 깎입니다. 마지막 최종 타격를 친 유저가 보상을 받습니다.`;
   } else {
-    const cap = isAbyss ? ABYSS_MOB_TOTAL : 99;
+    const cap = _raidMobTotal(raidKey);
     btn.textContent = `▶ 공격대 입장 (남은 몬스터 ${r.monsterCount}/${cap})`;
     btn.disabled = false;
     if (isAbyss){
       $('raid_tip').innerHTML = `<b style="color:#c47eff;">🌌 잊혀진 성좌 (Lv 35+)</b> — 몬스터 ${ABYSS_MOB_TOTAL}마리를 모두 처치하면 올림포스 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.`;
     } else {
-      $('raid_tip').textContent = '몬스터 99마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.';
+      $('raid_tip').textContent = `몬스터 ${cap}마리를 모두 처치하면 보스가 등장합니다. 몬스터 수는 모든 유저 공유로 줄어듭니다.`;
     }
   }
   // 공격대 초기화 버튼 — 보스 처치 후에만 활성화
@@ -7938,7 +7945,7 @@ async function requestRaidManualReset(){
     toast(`오늘은 이미 ${kr}을(를) 초기화했습니다. 내일 다시 시도해주세요.`);
     return;
   }
-  const mobCount = isAbyss ? ABYSS_MOB_TOTAL : 99;
+  const mobCount = _raidMobTotal(raidKey);
   if (!confirm(`✨ 여신의 축복 ${cost}개를 소모하여\n현재 공격대를 전체 초기화하시겠습니까?\n\n· 몬스터 ${mobCount}마리·보스가 다시 등장합니다\n· 보스를 처치한 유저도 다시 입장 가능\n· 6시간 자동 리셋엔 영향 없음\n· ⚠ 각 공격대별 하루 1회만 초기화 가능`)) return;
   // 새 보스 선정 (클라이언트에서 랜덤 — RPC에 전달)
   const bossList = RAID_BOSSES[raidKey];
@@ -7980,7 +7987,7 @@ async function requestRaidManualReset(){
 }
 
 // 공격대 몬스터 생성 — Lv 25~40 분포 (25~30 40%, 30~35 50%, 35~40 10%)
-function generateRaidMob(){
+function generateRaidMob(raidKey){
   // 매크로 방지 몬스터 (플레이어별 override 가능)
   if (Math.random() < getMacroGuardEncounterRate()){
     return makeMacroGuardMonster();
@@ -8002,7 +8009,9 @@ function generateRaidMob(){
   if (tpl.race === 'nightelf') { dex += 3; }
   if (tpl.race === 'undead')   { intl += 2; }
   if (tpl.race === 'beast')    { str += 1; dex += 1; con += 1; }
-  const DIFF = 1.05;
+  // 공격대별 난이도 배수 — dawn(기존 1.05) 대비 mist 는 +10% 강화
+  //   dawn: 1.05 × 1.05 ≈ 1.10  |  mist: 1.05 × 1.10 ≈ 1.155
+  const DIFF = raidKey === 'mist' ? 1.155 : 1.10;
   // 공격대 일반 몬스터 기본 장비 (+5~+10) — 패널티 없으므로 본체 약화 없음
   const wBonus = 5 + Math.floor(Math.random() * 6);
   const aBonus = 5 + Math.floor(Math.random() * 6);
@@ -8066,7 +8075,7 @@ function startRaidMobBattle(){
     monster._mpMaxBonus = 0;
     raidLog && true;  // 이어서 도전 안내는 아래에서
   } else {
-    monster = raidKey === 'abyss' ? generateAbyssMob(p.level) : generateRaidMob();
+    monster = raidKey === 'abyss' ? generateAbyssMob(p.level) : generateRaidMob(raidKey);
     p.pendingRaidMob = null;
   }
   GAME.raidCombat = {
@@ -8580,7 +8589,7 @@ async function raidEnd(result){
       // 몬스터 처치 — pendingRaidMob 제거 (다음 도전 시 새 몬스터)
       p.pendingRaidMob = null;
       const isAbyssMob = c.raidKey === 'abyss';
-      const monTotalCap = isAbyssMob ? ABYSS_MOB_TOTAL : 99;
+      const monTotalCap = _raidMobTotal(c.raidKey);
       // 몬스터 카운트 차감 — abyss는 로컬만, 나머지는 클라우드 RPC
       let remain = r.monsterCount;
       if (sb){
@@ -17152,7 +17161,7 @@ const TUTORIAL_STEPS = [
   {
     icon:'🐉', title:'공격대 — 함께 보스 사냥',
     body:`<p>강조된 <b>공격대</b>는 4시간마다 갱신되는 공동 콘텐츠 (<b style="color:#ffd700;">Lv 25부터</b>).</p>
-      <p>몬스터 99마리 + 보스를 다른 유저들과 함께 처치하면 보상이 분배됩니다.</p>
+      <p>세션당 정해진 몬스터 수 + 보스를 다른 유저들과 함께 처치하면 보상이 분배됩니다.</p>
       <div class="tip">🎁 참여자 전원에게 보스 처치 시 카드 1뽑 자동 지급. <b>최종 타격(막타)은 여러 유저가 동시에 칠 수 있으니</b>, 채팅으로 서로 소통하며 다 같이 막타를 쳐 보세요!</div>`,
     target:'#m-raid', page:'main', position:'corner',
   },
@@ -20701,13 +20710,13 @@ function _raidKr(key){
 // 운영자: 3개 공격대 (dawn/mist/abyss) 즉시 리셋 — 각각 새 보스 + 몬스터 리필
 async function adminForceRaidReset(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (!confirm('3개 공격대 모두 즉시 리셋하시겠습니까?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn/mist 99, abyss 199)\n• session_start 갱신')) return;
+  if (!confirm(`3개 공격대 모두 즉시 리셋하시겠습니까?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn ${DAWN_MOB_TOTAL}, mist ${MIST_MOB_TOTAL}, abyss ${ABYSS_MOB_TOTAL})\n• session_start 갱신`)) return;
   try {
     for (const key of ['dawn','mist','abyss']){
       const bossList = RAID_BOSSES[key];
       if (!bossList || !bossList.length) continue;
       const boss = bossList[Math.floor(Math.random() * bossList.length)];
-      const mobCount = key === 'abyss' ? 199 : 99;
+      const mobCount = _raidMobTotal(key);
       const { error } = await sb.from('raid_state').update({
         session_start: getSessionStartFor(key),
         monster_count: mobCount,
@@ -20727,7 +20736,7 @@ async function adminForceRaidReset(){
 
 async function adminResetRaid(key){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  const mobCount = key === 'abyss' ? 199 : 99;
+  const mobCount = _raidMobTotal(key);
   if (!confirm(`${_raidKr(key)} 세션을 강제로 리셋할까요?\n• 보스 무작위 재선정\n• 몬스터 ${mobCount}마리\n• session_start 갱신`)) return;
   const bossList = RAID_BOSSES[key];
   if (!bossList || !bossList.length){ alert('보스 목록이 비어있습니다.'); return; }
@@ -20827,7 +20836,7 @@ async function adminSetMonsterCount(key){
   const raw = ($(inpId) && $(inpId).value.trim());
   if (raw === ''){ alert('몬스터 수를 입력하세요.'); return; }
   const val = parseInt(raw, 10);
-  const cap = key === 'abyss' ? 199 : 99;
+  const cap = _raidMobTotal(key);
   if (isNaN(val) || val < 0 || val > cap){
     alert(`0~${cap} 사이 정수를 입력하세요.`);
     return;
@@ -21110,7 +21119,7 @@ setInterval(()=>{
       <button class="admin-btn small" onclick="opSetBoss('dawn')">보스교체</button>
     </div>
     <div style="margin-top:4px;">
-      <input type="number" id="opDawnMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+      <input type="number" id="opDawnMonInput" min="0" max="100" style="width:60px;font-size:11px;" placeholder="몹수">
       <button class="admin-btn small" onclick="opSetMonsterCount('dawn')">몹수 설정</button>
     </div>
   </div>
@@ -21127,7 +21136,7 @@ setInterval(()=>{
       <button class="admin-btn small" onclick="opSetBoss('mist')">보스교체</button>
     </div>
     <div style="margin-top:4px;">
-      <input type="number" id="opMistMonInput" min="0" max="99" style="width:60px;font-size:11px;" placeholder="몹수">
+      <input type="number" id="opMistMonInput" min="0" max="150" style="width:60px;font-size:11px;" placeholder="몹수">
       <button class="admin-btn small" onclick="opSetMonsterCount('mist')">몹수 설정</button>
     </div>
   </div>
@@ -21144,7 +21153,7 @@ setInterval(()=>{
       <button class="admin-btn small" onclick="opSetBoss('abyss')">보스교체</button>
     </div>
     <div style="margin-top:4px;">
-      <input type="number" id="opAbyssMonInput" min="0" max="199" style="width:60px;font-size:11px;" placeholder="몹수">
+      <input type="number" id="opAbyssMonInput" min="0" max="200" style="width:60px;font-size:11px;" placeholder="몹수">
       <button class="admin-btn small" onclick="opSetMonsterCount('abyss')">몹수 설정</button>
     </div>
   </div>
@@ -21556,7 +21565,7 @@ if (typeof sb !== 'undefined' && sb){ try { subscribeAdminBroadcast(); } catch(e
 // admin*() 함수는 raid_state 테이블 직접 update → 일반 세션 RLS에 막힘. RPC 우회로 in-game 리셋 가능.
 async function opForceRaidReset(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
-  if (!confirm('3개 공격대 전체를 즉시 리셋할까요?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn/mist 99, abyss 199)')) return;
+  if (!confirm(`3개 공격대 전체를 즉시 리셋할까요?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn ${DAWN_MOB_TOTAL}, mist ${MIST_MOB_TOTAL}, abyss ${ABYSS_MOB_TOTAL})`)) return;
   let failed = [];
   try {
     for (const key of ['dawn','mist','abyss']){
@@ -21621,7 +21630,7 @@ async function opSetMonsterCount(k){
   const raw = inp && inp.value.trim();
   if (!raw){ alert('몬스터 수를 입력하세요.'); return; }
   const val = parseInt(raw, 10);
-  const cap = k === 'abyss' ? 199 : 99;
+  const cap = _raidMobTotal(k);
   if (isNaN(val) || val < 0 || val > cap){ alert(`0~${cap} 사이 정수를 입력하세요.`); return; }
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   try {
