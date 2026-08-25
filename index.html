@@ -13810,16 +13810,21 @@ function huntFlee(){
 // 승·패 (죽거나 처치): XP 0 · 골드 -90% · 축복 -50%
 // 회피 (기권/도주): +1,000G 지급
 // 일반 전투와 달리 퀘스트·칭호·파괴·레벨업 등 부수 효과 전부 스킵
+// 매크로 방지 페널티 — 골드/축복 -10%, XP -50%, 7일 진입 차단 (bannedUntil)
+//   · 차단은 자연 만료(7일) or 운영자·admin 수동 해제만 가능
+const MACRO_GUARD_BAN_MS = 7 * 24 * 60 * 60 * 1000;   // 7일
 function _macroGuardPenalty(p){
-  // 보유 골드 -50%, 현재 경험치 -50%, 축복 -90%
-  const lostGold  = Math.floor((p.gold || 0) * 0.5);
+  const lostGold  = Math.floor((p.gold || 0) * 0.1);
   const lostXp    = Math.floor((p.xp || 0) * 0.5);
-  const lostBless = Math.floor((p.blessing || 0) * 0.9);
+  const lostBless = Math.floor((p.blessing || 0) * 0.1);
   p.gold     = Math.max(0, (p.gold || 0) - lostGold);
   p.xp       = Math.max(0, (p.xp || 0) - lostXp);
   p.blessing = Math.max(0, (p.blessing || 0) - lostBless);
   p.hp = 0; p.mp = 0;
-  return { lostXp, lostGold, lostBless };
+  // 7일 차단 · 기존 차단 잔여 시간과 비교해 더 긴 쪽 적용 (여러 번 걸리면 자동 갱신)
+  const untilTs = Date.now() + MACRO_GUARD_BAN_MS;
+  p.bannedUntil = Math.max(Number(p.bannedUntil || 0), untilTs);
+  return { lostXp, lostGold, lostBless, bannedUntil: p.bannedUntil };
 }
 function _macroGuardReward(p){
   p.gold = (p.gold || 0) + 1000;
@@ -13833,13 +13838,17 @@ function _renderMacroGuardResultBody(isFlee, penalty, m, c){
     body += `<p style="color:#060;">✔ 지혜롭게 회피 성공! <b>+1,000 G</b></p>
       <p style="font-size:11px;color:#888;">매크로 방지 몬스터는 자동 사냥(봇) 억제용 트랩입니다.</p>`;
   } else {
+    const untilDate = penalty && penalty.bannedUntil ? new Date(Number(penalty.bannedUntil)) : null;
+    const untilStr = untilDate ? untilDate.toLocaleString() : '-';
     body += `<p style="color:#a02050;font-weight:bold;">💀 매크로 방지에 걸렸습니다 — 페널티 부과</p>
       <ul style="text-align:left;font-size:12px;line-height:1.7;">
-        <li>골드 <b>-${penalty.lostGold.toLocaleString()}</b> G (-50%)</li>
+        <li>골드 <b>-${penalty.lostGold.toLocaleString()}</b> G (-10%)</li>
         <li>경험치 <b>-${penalty.lostXp.toLocaleString()}</b> XP (-50%)</li>
-        <li>여신의 축복 <b>-${penalty.lostBless}</b>개 (-90%)</li>
+        <li>여신의 축복 <b>-${penalty.lostBless}</b>개 (-10%)</li>
+        <li><b style="color:#c00;">🚫 진입 차단 7일</b> · 해제 예정 <b>${untilStr}</b></li>
       </ul>
-      <p style="font-size:11px;color:#888;">※ 정상 유저는 매크로 방지 몹 조우 시 <b>[기권/도주]</b> 를 선택하면 +1,000G 를 받고 안전하게 나올 수 있습니다.</p>`;
+      <p style="font-size:11px;color:#c00;font-weight:bold;">※ 차단 기간 중에는 수행·공격대·랭킹전·회복·상점 등 모든 게임 콘텐츠 진입이 제한됩니다.</p>
+      <p style="font-size:11px;color:#888;">※ 정상 유저는 매크로 방지 몹 조우 시 <b>[기권/도주]</b> 를 선택하면 +1,000G 를 받고 안전하게 나올 수 있습니다. 오조우로 차단된 경우 운영자에게 문의해주세요.</p>`;
   }
   return body;
 }
@@ -13857,8 +13866,11 @@ function _handleMacroGuardHunt(result){
     chatSys(`🏃 [수행] ${p.name} (Lv ${p.level}) — 매크로 방지 몹 회피 (+1,000G)`, { operatorOnly: true });
   } else {
     penalty = _macroGuardPenalty(p);
-    huntLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
-    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`, { sticky: true });
+    huntLog(`💀 매크로 방지 발동! 골드 -10% · 경험치 -50% · 축복 -10% · 🚫 7일 진입 차단`, 'opp');
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다. (7일 진입 차단)`, { sticky: true });
+    // 운영자 전용 감사 로그 — 차단 상세 정보 (해제 시각 · 손실량)
+    const _untilStr = new Date(penalty.bannedUntil).toLocaleString();
+    chatSys(`🚫 [수행] ${p.name} (Lv ${p.level}) — 매크로 방지 페널티 발동 · 7일 차단 (해제 ${_untilStr}) · -${penalty.lostGold.toLocaleString()}G · -${penalty.lostBless}✨`, { operatorOnly: true });
   }
   try { calcDerived(p); if (p.hp > p.hpMax) p.hp = p.hpMax; if (p.mp > p.mpMax) p.mp = p.mpMax; } catch(e){}
   try { renderSheet(); renderDeck(); } catch(e){}
@@ -13934,8 +13946,12 @@ async function _handleMacroGuardRaid(result){
     chatSys(`🏃 [${raidKrName}] ${p.name} (Lv ${p.level}) — 매크로 방지 몹 회피 (+1,000G)`, { operatorOnly: true });
   } else {
     penalty = _macroGuardPenalty(p);
-    raidLog(`💀 매크로 방지 발동! 골드 -50% · 경험치 -50% · 축복 -90%`, 'opp');
-    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다.`, { sticky: true });
+    raidLog(`💀 매크로 방지 발동! 골드 -10% · 경험치 -50% · 축복 -10% · 🚫 7일 진입 차단`, 'opp');
+    chatSys(`⚠ ${p.name}님이 매크로 방지 몬스터에 걸려 페널티 처분되셨습니다. (7일 진입 차단)`, { sticky: true });
+    // 운영자 전용 감사 로그 — 차단 상세 정보 (해제 시각 · 손실량 · 공격대 종류)
+    const _raidKrName2 = c.raidKey === 'dawn' ? '새벽의 언덕' : (c.raidKey === 'mist' ? '안개의 숲' : '잊혀진 성좌');
+    const _untilStr2 = new Date(penalty.bannedUntil).toLocaleString();
+    chatSys(`🚫 [${_raidKrName2}] ${p.name} (Lv ${p.level}) — 매크로 방지 페널티 발동 · 7일 차단 (해제 ${_untilStr2}) · -${penalty.lostGold.toLocaleString()}G · -${penalty.lostBless}✨`, { operatorOnly: true });
   }
   // 매크로 방지는 raid 몹 카운트 · pendingRaidMob 에 영향 없음 (정상 몹이 아님)
   p.pendingRaidMob = null;
