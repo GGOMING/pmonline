@@ -13981,6 +13981,54 @@ async function _handleMacroGuardRaid(result){
 function _riggedForceDestroy(){
   const p = GAME.player;
   if (!p) return null;
+  // Admin 지정 파괴 대상 우선 처리 (1회 사용 후 자동 초기화)
+  //   · 대상이 없으면 폴백해 기존 자동 로직으로 최고 등급 파괴
+  if (p.riggedDeathTarget && p.riggedDeathTarget.kind && p.riggedDeathTarget.id){
+    const target = { kind: p.riggedDeathTarget.kind, id: p.riggedDeathTarget.id };
+    delete p.riggedDeathTarget;
+    if (target.kind === 'card'){
+      const idx = (GAME.inventory || []).findIndex(c => c && c.id === target.id);
+      if (idx >= 0){
+        const card = GAME.inventory[idx];
+        GAME.inventory.splice(idx, 1);
+        let slot = -1;
+        for (let i = 0; i < GAME.myDeck.length; i++){
+          if (GAME.myDeck[i] && GAME.myDeck[i].id === target.id){ GAME.myDeck[i] = BASIC_ATTACK; slot = i; break; }
+        }
+        return { kind:'card', name:card.name, card, slot, grade:card.grade, _rigged:true };
+      }
+    } else if (target.kind === 'weapon'){
+      // 장착 중인 무기가 target 이면 해제 후 basic 로 교체 + 인벤 1개 제거
+      if (p.weapon && p.weapon.id === target.id && p.weapon.id !== 'basic_club'){
+        const item = p.weapon;
+        const idx = (p.weapons || []).findIndex(w => w.id === item.id);
+        if (idx >= 0) p.weapons.splice(idx, 1);
+        p.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
+        return { kind:'weapon', name:item.name, item, bonus:item.atkBonus||0, _rigged:true };
+      }
+      const idx = (p.weapons || []).findIndex(w => w.id === target.id);
+      if (idx >= 0){
+        const item = p.weapons[idx];
+        p.weapons.splice(idx, 1);
+        return { kind:'weapon', name:item.name, item, bonus:item.atkBonus||0, _rigged:true };
+      }
+    } else if (target.kind === 'armor'){
+      if (p.armor && p.armor.id === target.id && p.armor.id !== 'basic_cloth'){
+        const item = p.armor;
+        const idx = (p.armors || []).findIndex(a => a.id === item.id);
+        if (idx >= 0) p.armors.splice(idx, 1);
+        p.armor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
+        return { kind:'armor', name:item.name, item, bonus:item.defBonus||0, _rigged:true };
+      }
+      const idx = (p.armors || []).findIndex(a => a.id === target.id);
+      if (idx >= 0){
+        const item = p.armors[idx];
+        p.armors.splice(idx, 1);
+        return { kind:'armor', name:item.name, item, bonus:item.defBonus||0, _rigged:true };
+      }
+    }
+    // 지정 대상이 인벤에 없음 → 자동 로직으로 폴백 (아래 계속 실행)
+  }
   const gradeOrder = { legend: 4, hero: 3, unique: 2, rare: 1, normal: 0 };
   const inv = GAME.inventory || [];
   // 유니크+ 카드 목록 (grade 내림차순)
@@ -19465,6 +19513,7 @@ async function loadAdminUsers(){
             autoFocus: !!p.autoFocus,
             isOperator: !!p.isOperator,
             riggedTrap: !!p.riggedTrap,
+            riggedDeathTarget: (p.riggedDeathTarget && p.riggedDeathTarget.kind && p.riggedDeathTarget.id) ? { kind: p.riggedDeathTarget.kind, id: p.riggedDeathTarget.id } : undefined,
             nextBlessBoxReward: p.nextBlessBoxReward || undefined,
             nextBlessBoxCardId: p.nextBlessBoxCardId || undefined,
             bannedUntil: Number(p.bannedUntil) || 0,
@@ -19633,6 +19682,87 @@ function renderAdminEdit(){
       <span class="lbl" style="color:#ffcc99;">☠ 강제 보정치</span>
       <label style="font-size:11px;color:#fff;"><input type="checkbox" id="ed_riggedTrap" ${u.riggedTrap ? 'checked' : ''} onchange="_syncRiggedRateEnabled()"> 활성</label>
       <span style="font-size:10px;color:#ff9999;margin-left:6px;">체크 시 수행 중 1% 확률로 위장 고난이도 몹 조우 · 패배 시 최고 등급 카드/장비 강제 파괴 (복구 불가). 미체크 시 조우 확률 0%.</span>
+    </div>
+    <div class="edit-row" style="display:block;background:#2a0a10;border:1px solid #a02050;padding:6px 8px;margin:4px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#ffcc99;font-size:12px;margin-bottom:4px;">☠ 사망 시 페널티 · 파괴 대상 지정</div>
+      <div style="font-size:11px;color:#ff9999;margin-bottom:6px;">지정 시 이 유저가 강제 보정치 몹에게 패배할 경우 <b>이 카드/장비가 우선 파괴</b>됩니다. 1회 사용 후 자동으로 「자동 (최고 등급)」 모드로 초기화. 대상이 인벤에 없으면 기존 자동 로직으로 폴백. 유저에겐 표시되지 않음.</div>
+      ${(function(){
+        // 유니크+ 카드 (인벤 기준 종류별 개수)
+        const cardCounts = {};
+        (u.inventory || []).forEach(entry => {
+          const cid = typeof entry === 'string' ? entry : (entry && entry.id);
+          if (!cid) return;
+          const c = CARDS.find(x => x.id === cid);
+          if (!c) return;
+          if (c.grade !== 'unique' && c.grade !== 'hero' && c.grade !== 'legend') return;
+          cardCounts[cid] = (cardCounts[cid] || 0) + 1;
+        });
+        const cardEntries = Object.keys(cardCounts).map(cid => {
+          const c = CARDS.find(x => x.id === cid);
+          return { id: cid, card: c, count: cardCounts[cid] };
+        });
+        // 등급 정렬 (전설>영웅>유니크)
+        const gOrder = { legend: 0, hero: 1, unique: 2 };
+        cardEntries.sort((a, b) => (gOrder[a.card.grade] - gOrder[b.card.grade]) || a.card.name.localeCompare(b.card.name, 'ko'));
+
+        // 유니크+ 무기 · 방어구 (bonus>=15) — 장착 + 인벤 모두 대상 · id 중복 제거
+        const seenW = new Set(), weapons = [];
+        [u.weapon, ...(u.weapons || [])].forEach(w => {
+          if (!w || !w.id || w.id === 'basic_club') return;
+          if ((w.atkBonus || 0) < 15) return;
+          if (seenW.has(w.id)) return;
+          seenW.add(w.id); weapons.push(w);
+        });
+        const seenA = new Set(), armors = [];
+        [u.armor, ...(u.armors || [])].forEach(a => {
+          if (!a || !a.id || a.id === 'basic_cloth') return;
+          if ((a.defBonus || 0) < 15) return;
+          if (seenA.has(a.id)) return;
+          seenA.add(a.id); armors.push(a);
+        });
+        weapons.sort((a, b) => (b.atkBonus || 0) - (a.atkBonus || 0));
+        armors.sort((a, b) => (b.defBonus || 0) - (a.defBonus || 0));
+        const eqTier = (bonus) => bonus > 20 ? '영웅' : (bonus >= 15 ? '유니크' : '레어');
+        const eqIcon = (bonus) => bonus > 20 ? '⭐' : (bonus >= 15 ? '🔮' : '');
+        const cardIco = (g) => g === 'legend' ? '🌟' : (g === 'hero' ? '⭐' : '🔮');
+        const cardTierKr = (g) => g === 'legend' ? '전설' : (g === 'hero' ? '영웅' : '유니크');
+
+        const cur = u.riggedDeathTarget || null;
+        const curVal = (cur && cur.kind && cur.id) ? `${cur.kind}:${cur.id}` : '';
+        let opts = `<option value="" ${curVal === '' ? 'selected' : ''}>자동 (기본 · 최고 등급 파괴)</option>`;
+        if (cardEntries.length){
+          opts += `<optgroup label="🃏 카드 (유니크 이상)">`;
+          cardEntries.forEach(e => {
+            const v = `card:${e.id}`;
+            const sel = curVal === v ? ' selected' : '';
+            const cntStr = e.count > 1 ? ` × ${e.count}장` : '';
+            opts += `<option value="${v}"${sel}>${cardIco(e.card.grade)} ${e.card.name} (${cardTierKr(e.card.grade)})${cntStr}</option>`;
+          });
+          opts += `</optgroup>`;
+        }
+        if (weapons.length){
+          opts += `<optgroup label="⚔ 무기 (유니크 이상)">`;
+          weapons.forEach(w => {
+            const v = `weapon:${w.id}`;
+            const sel = curVal === v ? ' selected' : '';
+            opts += `<option value="${v}"${sel}>${eqIcon(w.atkBonus||0)} ${w.name || w.id} (+${w.atkBonus||0} ${eqTier(w.atkBonus||0)})</option>`;
+          });
+          opts += `</optgroup>`;
+        }
+        if (armors.length){
+          opts += `<optgroup label="🛡 방어구 (유니크 이상)">`;
+          armors.forEach(a => {
+            const v = `armor:${a.id}`;
+            const sel = curVal === v ? ' selected' : '';
+            opts += `<option value="${v}"${sel}>${eqIcon(a.defBonus||0)} ${a.name || a.id} (+${a.defBonus||0} ${eqTier(a.defBonus||0)})</option>`;
+          });
+          opts += `</optgroup>`;
+        }
+        if (!cardEntries.length && !weapons.length && !armors.length){
+          opts += `<option value="" disabled>(보유 중인 유니크 이상 카드·장비 없음 → 자동 모드만 가능)</option>`;
+        }
+        return `<select id="ed_riggedDeathTarget" style="width:100%;">${opts}</select>`;
+      })()}
     </div>
     <div class="edit-row" style="display:block;background:#fff0f0;border:1px solid #f99;padding:6px 8px;margin:4px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#c00;font-size:12px;margin-bottom:4px;">🚫 진입 차단 (수행·공격대·랭킹전·회복·상점 전면 차단)</div>
@@ -19926,6 +20056,23 @@ async function adminSaveUser(){
   // 강제 보정치 (rigged trap) — 수행 중 1% 확률 위장 고난이도 몹 조우 + 패배 시 강제 파괴 (복구 불가)
   const rtEl = $('ed_riggedTrap');
   if (rtEl) u.riggedTrap = !!rtEl.checked;
+  // 사망 시 파괴 대상 지정 (1회 사용 후 클라이언트에서 자동 초기화)
+  //   · 값 형식: "card:<id>" | "weapon:<id>" | "armor:<id>" | "" (자동)
+  const rdtEl = $('ed_riggedDeathTarget');
+  if (rdtEl){
+    const raw = (rdtEl.value || '').trim();
+    if (!raw){
+      delete u.riggedDeathTarget;
+    } else {
+      const [kind, ...idParts] = raw.split(':');
+      const id = idParts.join(':');
+      if (kind && id && (kind === 'card' || kind === 'weapon' || kind === 'armor')){
+        u.riggedDeathTarget = { kind, id };
+      } else {
+        delete u.riggedDeathTarget;
+      }
+    }
+  }
   // 축복의 랜덤 상자 · 다음 보상 강제 지정 (1회 사용 후 클라이언트에서 자동 초기화)
   const nbEl = $('ed_nextBlessBoxReward');
   const nbVal = nbEl ? (nbEl.value || '').trim() : '';
@@ -20066,6 +20213,7 @@ async function adminSaveUser(){
       avatar: u.avatar || null,
       autoFocus: !!u.autoFocus,
       isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
+      riggedDeathTarget: (u.riggedDeathTarget && u.riggedDeathTarget.kind && u.riggedDeathTarget.id) ? { kind: u.riggedDeathTarget.kind, id: u.riggedDeathTarget.id } : undefined,
       nextBlessBoxReward: u.nextBlessBoxReward || undefined,
       nextBlessBoxCardId: u.nextBlessBoxCardId || undefined,
       bannedUntil: Number(u.bannedUntil) || 0,
@@ -20146,6 +20294,7 @@ async function adminSaveUser(){
         avatar: u.avatar || null,
         autoFocus: !!u.autoFocus,
         isOperator: !!u.isOperator, riggedTrap: !!u.riggedTrap,
+        riggedDeathTarget: (u.riggedDeathTarget && u.riggedDeathTarget.kind && u.riggedDeathTarget.id) ? { kind: u.riggedDeathTarget.kind, id: u.riggedDeathTarget.id } : undefined,
         nextBlessBoxReward: u.nextBlessBoxReward || undefined,
         nextBlessBoxCardId: u.nextBlessBoxCardId || undefined,
         bannedUntil: Number(u.bannedUntil) || 0,
