@@ -1693,33 +1693,34 @@
       </div>
 
       <div class="menubar">
-        <!-- 1줄: 회복·카드샵·여신의 탑·무기상점·방어구상점 -->
+        <!-- 1줄: 회복·카드샵·수행·무기상점·방어구상점 -->
         <table><tr>
           <td id="m-heal" onclick="openHeal()">💧 회복의 샘물</td>
           <td id="m-cardshop" onclick="openCardShop()">🃏 카드샵</td>
-          <td id="m-tower" onclick="openTower()" style="background:#ffffff;color:#5a6a7a;font-weight:bold;">👼 여신의 탑 (Lv. 21)</td>
+          <td id="m-hunt" onclick="openHunt()" style="background:#ffffff;color:#000000;font-weight:bold;">⚔ 수행 ⚔</td>
           <td id="m-wshop" onclick="openWeaponShop()">⚔ 무기상점</td>
           <td id="m-ashop" onclick="openArmorShop()">🛡 방어구상점</td>
         </tr></table>
-        <!-- 2줄: 랭킹전·수행·퀘스트 -->
+        <!-- 2줄: 랭킹전·여신의 탑·영원의 회랑·축복의 상점 -->
         <table><tr>
           <td id="m-rank" class="row2" onclick="openRank()">🏆 랭킹전</td>
-          <td id="m-hunt" class="menu-hunt row2" onclick="openHunt()" style="font-weight:bold;">⚔ 수행 ⚔</td>
-          <td class="row2" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
+          <td id="m-tower" class="row2" onclick="openTower()" style="color:#000000;font-weight:bold;">👼 여신의 탑 (Lv. 21)</td>
+          <td id="m-corridor" class="row2" onclick="openCorridor()" style="color:#000000;font-weight:bold;">🗡️ 영원의 회랑 (Lv. 25)</td>
+          <td class="row2" onclick="openBlessShop()" style="color:#000000;">✨ 축복의 상점</td>
         </tr></table>
-        <!-- 3줄: 공격대 3종 (파스텔 하늘색 통일) -->
-        <table><tr>
-          <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')"  style="background:#d6ecfa;color:#2a4a6b;">⛅ 새벽의 언덕 (Lv. 25)</td>
-          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')"  style="background:#d6ecfa;color:#2a4a6b;">🌫 안개의 숲 (Lv. 30)</td>
-          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="background:#d6ecfa;color:#2a4a6b;">🌌 잊혀진 성좌 (Lv. 35)</td>
-        </tr></table>
-        <!-- 4줄: 카드 도감·프로필·명예의 전당·축복의 상점·오픈채팅방 -->
+        <!-- 3줄: 카드 도감·프로필·명예의 전당·퀘스트·오픈채팅방 -->
         <table><tr>
           <td class="row3" onclick="openCardCodex()" style="color:#2e53b2;">📖 카드 도감</td>
           <td id="m-profile" class="row3" onclick="openProfilePage()">👤 프로필 관리</td>
           <td class="row3" onclick="openHonor()" style="color:#a02050;">🏆 명예의 전당</td>
-          <td class="row3" onclick="openBlessShop()" style="color:#b8860b;">✨ 축복의 상점</td>
+          <td class="row3" onclick="openQuests()" style="color:#3366cc;">📋 퀘스트</td>
           <td class="row3" onclick="window.open('https://open.kakao.com/o/gZeYwJAi','_blank','noopener,noreferrer')" style="color:#5a1a6b;">💬 오픈채팅방</td>
+        </tr></table>
+        <!-- 4줄: 공격대 3종 (파스텔 하늘색 통일) -->
+        <table><tr>
+          <td id="m-raid-dawn"  class="row2" onclick="openRaid('dawn')"  style="background:#d6ecfa;color:#2a4a6b;">⛅ 새벽의 언덕 (Lv. 25)</td>
+          <td id="m-raid-mist"  class="row2" onclick="openRaid('mist')"  style="background:#d6ecfa;color:#2a4a6b;">🌫 안개의 숲 (Lv. 30)</td>
+          <td id="m-raid-abyss" class="row2" onclick="openRaid('abyss')" style="background:#d6ecfa;color:#2a4a6b;">🌌 잊혀진 성좌 (Lv. 35)</td>
         </tr></table>
       </div>
 
@@ -2347,6 +2348,82 @@
             <table class="deck mini" id="towerMonsterDeck"></table>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════
+         「영원의 회랑」 (Eternal Corridor) — 비동기 PvP 컨텐츠 · Lv 25+
+         └ content-corridor-lobby: 로비 (승점 랭킹 · 내 상태 · 최근 방어전)
+         └ content-corridor-register: 등록/편집 화면 (스탯·타입·15장·10장 배치)
+         └ content-corridor-battle: 전투 화면
+         └ content-corridor-result: 결과 화면
+    ═══════════════════════════════════════════════════════════════ -->
+
+    <div class="content-pane" id="content-corridor-lobby" hidden>
+      <div style="max-width:1200px;margin:0 auto;">
+        <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);padding:16px 20px;border-radius:6px 6px 0 0;color:#ffd700;text-shadow:1px 1px 2px #000;">
+          <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🌀 영원의 회랑</div>
+          <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
+            비동기 PvP · Lv 25 가상 캐릭터 · 매주 월 06:00 KST 리셋 · 시즌 종료 시 승점 × 3축복 지급
+          </div>
+        </div>
+        <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
+          <!-- 내 상태 카드 -->
+          <div id="corridor_my_status" style="background:#2a0f3a;border:1px solid #7a3ba0;border-radius:4px;padding:12px;margin-bottom:12px;font-size:12px;line-height:1.7;">
+            <div style="color:#999;text-align:center;">불러오는 중…</div>
+          </div>
+
+          <!-- 액션 버튼 -->
+          <div id="corridor_actions" style="display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+            <!-- JS 에서 동적 렌더 -->
+          </div>
+
+          <!-- 좌우 컬럼 -->
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;">
+            <!-- 좌: 승점 랭킹 (도전 목록 겸용) -->
+            <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;">
+              <div style="font-weight:bold;color:#ffd700;margin-bottom:8px;font-size:13px;">🏆 승점 랭킹 · 도전 대상</div>
+              <div id="corridor_ranking_list" style="max-height:400px;overflow-y:auto;">
+                <div style="color:#999;text-align:center;padding:20px;">불러오는 중…</div>
+              </div>
+            </div>
+            <!-- 우: 최근 방어전 10건 -->
+            <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;">
+              <div style="font-weight:bold;color:#ffd700;margin-bottom:8px;font-size:13px;">📜 최근 전투 (10건)</div>
+              <div id="corridor_battles_list" style="max-height:400px;overflow-y:auto;font-size:11px;">
+                <div style="color:#999;text-align:center;padding:20px;">불러오는 중…</div>
+              </div>
+            </div>
+          </div>
+
+          <div style="text-align:center;margin-top:14px;">
+            <button class="btn-back" onclick="exitCorridor()" style="padding:8px 24px;">◀ 메인으로</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-pane" id="content-corridor-register" hidden>
+      <!-- Phase 2b 에서 채워질 등록/편집 화면 스켈레톤 -->
+      <div style="max-width:1200px;margin:0 auto;padding:20px;text-align:center;color:#f5deb3;">
+        <div style="font-size:16px;color:#ff9b3a;">🚧 등록/편집 UI 준비 중 (Phase 2b) 🚧</div>
+        <div style="margin-top:10px;">
+          <button class="btn-back" onclick="openCorridor()">◀ 로비로</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="content-pane" id="content-corridor-battle" hidden>
+      <!-- Phase 2c 에서 채워질 전투 화면 -->
+      <div style="max-width:1200px;margin:0 auto;padding:20px;text-align:center;color:#f5deb3;">
+        <div style="font-size:16px;color:#ff9b3a;">🚧 전투 화면 준비 중 (Phase 2c) 🚧</div>
+      </div>
+    </div>
+
+    <div class="content-pane" id="content-corridor-result" hidden>
+      <!-- Phase 2c 에서 채워질 결과 화면 -->
+      <div style="max-width:1200px;margin:0 auto;padding:20px;text-align:center;color:#f5deb3;">
+        <div style="font-size:16px;color:#ff9b3a;">🚧 결과 화면 준비 중 (Phase 2c) 🚧</div>
       </div>
     </div>
 
@@ -15976,8 +16053,1087 @@ async function claimWeeklyRankingReward(){
 }
 
 // ============================================================
-//   훈련소 (Training Sparring)
+//   영원의 회랑 (Eternal Corridor) — 비동기 PvP · Lv 25+
+//   Phase 2a: 진입 게이트 · 로비 fetch/render · 액션 라우팅
+//   (Phase 2b: 등록/편집 UI · Phase 2c: 전투/결과)
 // ============================================================
+
+// 오픈 준비 중 — 비밀번호 게이트 (0901). 정식 오픈 시 이 블록 제거.
+const CORRIDOR_UNLOCK_PW = '0901';
+
+// 상태 캐시 (로비 데이터)
+GAME.corridor = {
+  myReg: null,          // eternal_corridor_my_registration RPC 결과 (없으면 null)
+  ranking: [],          // eternal_corridor_top_list 결과
+  cooldowns: {},        // { defender_id: remain_sec } — eternal_corridor_cooldown_map 결과
+  battles: [],          // eternal_corridor_my_battles 결과
+  loading: false,
+};
+
+// ─── 진입 (로비) ──────────────────────────────────────────────────
+function openCorridor(){
+  const p = GAME.player;
+  if (!p) return;
+  if (_isBanned && _isBanned(p)){ try { _blockedByBanToast(p); } catch(e){} return; }
+  // 오픈 준비 중 — 비밀번호 게이트 (운영자 계정은 우회)
+  if (!(p && p.isOperator)){
+    try { alert('🚧 오픈 예정 컨텐츠입니다.\n\n「영원의 회랑」은 정식 오픈 준비 중입니다.'); } catch(e){}
+    let pw = null;
+    try { pw = prompt('관리자에게 부여받은 비밀번호를 입력하세요.'); } catch(e){ pw = null; }
+    if (pw == null) return;   // 취소
+    if (String(pw).trim() !== CORRIDOR_UNLOCK_PW){
+      try { alert('비밀번호가 일치하지 않습니다.'); } catch(e){}
+      return;
+    }
+  }
+  // 진입 레벨 (Lv 25+)
+  if ((p.level|0) < 25){
+    toast('영원의 회랑은 Lv 25 이상만 입장할 수 있습니다.');
+    return;
+  }
+  if (!sb){ toast('클라우드 모드에서만 이용 가능합니다.'); return; }
+  showContent('corridor-lobby');
+  refreshCorridorLobby();
+}
+
+function exitCorridor(){
+  showContent('main');
+}
+
+// ─── 로비 데이터 fetch + 렌더 ─────────────────────────────────────
+async function refreshCorridorLobby(){
+  if (GAME.corridor.loading) return;
+  GAME.corridor.loading = true;
+  try {
+    // 병렬 fetch — 3개 RPC (내 등록 · 랭킹 · 최근 전투)
+    const [regRes, listRes, cdRes, battlesRes] = await Promise.all([
+      sb.rpc('eternal_corridor_my_registration'),
+      sb.rpc('eternal_corridor_top_list', { p_limit: 50 }),
+      sb.rpc('eternal_corridor_cooldown_map'),
+      sb.rpc('eternal_corridor_my_battles', { p_limit: 10 }),
+    ]);
+    // 결과 정리
+    GAME.corridor.myReg = (regRes.data && regRes.data[0]) || null;
+    GAME.corridor.ranking = Array.isArray(listRes.data) ? listRes.data : [];
+    GAME.corridor.cooldowns = {};
+    if (Array.isArray(cdRes.data)){
+      cdRes.data.forEach(row => { GAME.corridor.cooldowns[row.defender_id] = row.remain_seconds|0; });
+    }
+    GAME.corridor.battles = Array.isArray(battlesRes.data) ? battlesRes.data : [];
+    // 에러 로깅
+    if (regRes.error)     console.warn('[corridor my_reg]', regRes.error);
+    if (listRes.error)    console.warn('[corridor list]', listRes.error);
+    if (cdRes.error)      console.warn('[corridor cd]', cdRes.error);
+    if (battlesRes.error) console.warn('[corridor battles]', battlesRes.error);
+  } catch(e){ console.warn('[corridor refresh]', e); }
+  finally { GAME.corridor.loading = false; }
+  renderCorridorLobby();
+}
+
+function renderCorridorLobby(){
+  const p = GAME.player;
+  if (!p) return;
+  const reg = GAME.corridor.myReg;
+  // ── 내 상태 카드 ──
+  const statusEl = $('corridor_my_status');
+  if (statusEl){
+    if (!reg){
+      statusEl.innerHTML = `
+        <div style="color:#ff9b3a;font-weight:bold;font-size:13px;margin-bottom:4px;">📋 등록 상태: <span style="color:#ff5555;">미등록</span></div>
+        <div style="color:#ccc;font-size:11px;">
+          컨텐츠 참여를 위해 캐릭터 등록이 필요합니다.<br>
+          <b style="color:#ffd700;">등록 비용: 정령의 축복 5개 → 승점 1점 시작</b> (보유: 🌿 ${(p.spiritBlessing||0).toLocaleString()}개)
+        </div>`;
+    } else {
+      const total = 5 + reg.alloc_str + reg.alloc_dex + reg.alloc_int + reg.alloc_con;   // 표시용 (참고: 개별 스탯 = 5 + alloc)
+      statusEl.innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+          <div>
+            <div style="color:#7eff7e;font-weight:bold;font-size:13px;margin-bottom:4px;">✔ 등록 완료</div>
+            <div style="font-size:11px;color:#e6d3ff;">
+              승점 <b style="color:#ffd700;font-size:14px;">${reg.score}</b> · 승 <b style="color:#7eff7e;">${reg.wins}</b> · 패 <b style="color:#ff7e7e;">${reg.losses}</b>
+            </div>
+            <div style="font-size:11px;color:#ccc;margin-top:2px;">
+              오늘 무료 편집 ${reg.free_edit_available ? '<b style="color:#7eff7e;">가능</b>' : '<b style="color:#999;">사용 완료</b>'}
+              · 이후 편집 <b>1축복/회</b>
+            </div>
+          </div>
+          <div style="text-align:right;font-size:11px;color:#ccc;">
+            <div>공격 타입: <b style="color:#ffd700;">${reg.atk_type}</b></div>
+            <div>STR ${5+reg.alloc_str} · DEX ${5+reg.alloc_dex} · INT ${5+reg.alloc_int} · CON ${5+reg.alloc_con}</div>
+            <div>무기 <b>+10</b> · 방어구 <b>+10</b> (고정)</div>
+            <div>내 캐릭터 카드: <b>${reg.card_pool.length}/15</b> · 배치 <b>${reg.deck.length}/10</b></div>
+          </div>
+        </div>`;
+    }
+  }
+  // ── 액션 버튼 ──
+  const actEl = $('corridor_actions');
+  if (actEl){
+    if (!reg){
+      actEl.innerHTML = `
+        <button onclick="openCorridorRegister(false)" style="padding:10px 24px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
+          🌀 등록하기 (5축복 소모)
+        </button>
+        <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
+    } else {
+      actEl.innerHTML = `
+        <button onclick="openCorridorRegister(true)" style="padding:10px 24px;background:linear-gradient(180deg,#a335ee,#5a1a6b);color:#fff;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
+          ✏ 편집 (${reg.free_edit_available ? '오늘 무료' : '1축복'})
+        </button>
+        <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
+    }
+  }
+  // ── 승점 랭킹 / 도전 목록 ──
+  const listEl = $('corridor_ranking_list');
+  if (listEl){
+    if (!GAME.corridor.ranking.length){
+      listEl.innerHTML = `<div style="color:#999;text-align:center;padding:20px;">등록된 유저 없음</div>`;
+    } else {
+      const rows = GAME.corridor.ranking.map(row => {
+        const isMe = row.user_id === (p.name && GAME.corridor.myReg && GAME.corridor.myReg.user_id === row.user_id);
+        const cd = GAME.corridor.cooldowns[row.user_id] || 0;
+        let btnHtml;
+        if (isMe){
+          btnHtml = `<span style="color:#ffd700;font-size:11px;font-weight:bold;">본인</span>`;
+        } else if (!reg){
+          btnHtml = `<span style="color:#999;font-size:11px;">등록 필요</span>`;
+        } else if (cd > 0){
+          const mm = Math.floor(cd / 60);
+          const ss = String(cd % 60).padStart(2, '0');
+          btnHtml = `<button disabled style="padding:4px 12px;background:#555;color:#aaa;border:0;border-radius:3px;font-size:11px;cursor:not-allowed;">⏳ ${mm}:${ss}</button>`;
+        } else {
+          btnHtml = `<button onclick="openCorridorChallenge('${row.user_id}')" style="padding:4px 12px;background:linear-gradient(180deg,#c00,#800);color:#fff;border:0;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;">⚔ 도전</button>`;
+        }
+        const rankColor = row.rank_pos === 1 ? '#ffd700' : row.rank_pos === 2 ? '#c0c0c0' : row.rank_pos === 3 ? '#cd7f32' : '#ccc';
+        return `<div style="display:flex;align-items:center;gap:8px;padding:6px 4px;border-bottom:1px solid #2a0f3a;font-size:11px;color:#f5deb3;">
+          <div style="width:24px;text-align:center;font-weight:bold;color:${rankColor};">${row.rank_pos}</div>
+          <div style="flex:1;">
+            <div style="font-weight:bold;color:#fff;">${escapeHtml(row.nickname)}</div>
+            <div style="color:#888;font-size:10px;">승점 <b style="color:#ffd700;">${row.score}</b> · 승 ${row.wins} 패 ${row.losses} · ${row.atk_type}</div>
+          </div>
+          <div>${btnHtml}</div>
+        </div>`;
+      }).join('');
+      listEl.innerHTML = rows;
+    }
+  }
+  // ── 최근 전투 10건 ──
+  const battlesEl = $('corridor_battles_list');
+  if (battlesEl){
+    if (!GAME.corridor.battles.length){
+      battlesEl.innerHTML = `<div style="color:#999;text-align:center;padding:20px;">전투 기록 없음</div>`;
+    } else {
+      battlesEl.innerHTML = GAME.corridor.battles.map(b => {
+        const winIcon = b.did_win ? '✅' : '❌';
+        const winColor = b.did_win ? '#7eff7e' : '#ff7e7e';
+        const roleLabel = b.role === 'attacker' ? '⚔ 공격' : '🛡 방어';
+        const timeStr = new Date(b.created_at).toLocaleString('ko-KR', { month:'2-digit', day:'2-digit', hour:'2-digit', minute:'2-digit' });
+        return `<div style="padding:5px 4px;border-bottom:1px solid #2a0f3a;">
+          <div style="display:flex;justify-content:space-between;align-items:center;">
+            <span style="color:${winColor};font-weight:bold;">${winIcon} ${roleLabel}</span>
+            <span style="color:#999;font-size:10px;">${timeStr}</span>
+          </div>
+          <div style="color:#e6d3ff;font-size:11px;margin-top:2px;">
+            vs <b>${escapeHtml(b.opponent_nickname)}</b> · ${b.turns}턴
+          </div>
+        </div>`;
+      }).join('');
+    }
+  }
+}
+
+// ─── 등록/편집 UI (Phase 2b) ─────────────────────────────────────
+GAME.corridor.editing = null;   // 편집 중인 draft 상태
+
+function openCorridorRegister(editMode){
+  const p = GAME.player;
+  if (!p) return;
+  const existing = GAME.corridor.myReg;
+  if (editMode && !existing){
+    toast('먼저 등록이 필요합니다.');
+    return;
+  }
+  if (!editMode && existing){
+    toast('이미 등록되어 있습니다. 편집을 이용하세요.');
+    return;
+  }
+  // 초안 상태 초기화
+  if (editMode){
+    GAME.corridor.editing = {
+      mode: 'edit',
+      alloc_str: existing.alloc_str,
+      alloc_dex: existing.alloc_dex,
+      alloc_int: existing.alloc_int,
+      alloc_con: existing.alloc_con,
+      atk_type: existing.atk_type,
+      card_pool: (existing.card_pool||[]).slice(),   // 잠금
+      deck: (existing.deck||[]).slice(),
+    };
+  } else {
+    GAME.corridor.editing = {
+      mode: 'register',
+      alloc_str: 0, alloc_dex: 0, alloc_int: 0, alloc_con: 0,
+      atk_type: '근접',
+      card_pool: [],
+      deck: [],
+    };
+  }
+  showContent('corridor-register');
+  renderCorridorRegister();
+}
+
+function _corridorRemainingPoints(){
+  const e = GAME.corridor.editing;
+  if (!e) return 0;
+  return 25 - (e.alloc_str + e.alloc_dex + e.alloc_int + e.alloc_con);
+}
+
+function _corridorAllocStat(stat, delta){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  const key = 'alloc_' + stat;
+  const cur = e[key] || 0;
+  const next = cur + delta;
+  if (next < 0) return;
+  if (delta > 0 && _corridorRemainingPoints() <= 0) return;
+  e[key] = next;
+  renderCorridorRegister();
+}
+
+function _corridorSetAtkType(type){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  if (type !== '근접' && type !== '사격' && type !== '마법') return;
+  e.atk_type = type;
+  renderCorridorRegister();
+}
+
+// 회랑 카드 제한: 영웅(h)·전설(l) 금지 · 유니크(u) 최대 1장
+function _corridorCardAllowed(cardId){
+  if (typeof cardId !== 'string') return { ok:false, reason:'invalid' };
+  if (cardId.startsWith('h') || cardId.startsWith('l')){
+    return { ok:false, reason:'hero_legend' };
+  }
+  return { ok:true };
+}
+function _corridorPoolUniqueCount(){
+  const e = GAME.corridor.editing;
+  if (!e) return 0;
+  return e.card_pool.filter(cid => typeof cid === 'string' && cid.startsWith('u')).length;
+}
+
+function _corridorPoolAdd(cardId){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  if (e.mode === 'edit'){ toast('🔒 편집 모드는 카드 풀 변경 불가'); return; }
+  if (e.card_pool.includes(cardId)) return;
+  if (e.card_pool.length >= 15){ toast('카드 풀은 최대 15장까지 선택 가능'); return; }
+  const chk = _corridorCardAllowed(cardId);
+  if (!chk.ok){
+    if (chk.reason === 'hero_legend'){ toast('영웅·전설 카드는 회랑에서 사용할 수 없습니다'); return; }
+    toast('사용 불가한 카드입니다'); return;
+  }
+  if (cardId.startsWith('u') && _corridorPoolUniqueCount() >= 1){
+    toast('유니크 카드는 풀에 최대 1장만 선택 가능');
+    return;
+  }
+  e.card_pool.push(cardId);
+  renderCorridorRegister();
+}
+
+function _corridorPoolRemove(cardId){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  if (e.mode === 'edit'){ toast('🔒 편집 모드는 카드 풀 변경 불가'); return; }
+  const idx = e.card_pool.indexOf(cardId);
+  if (idx < 0) return;
+  e.card_pool.splice(idx, 1);
+  // 덱에서도 자동 제거
+  const dIdx = e.deck.indexOf(cardId);
+  if (dIdx >= 0) e.deck.splice(dIdx, 1);
+  renderCorridorRegister();
+}
+
+function _corridorDeckAdd(cardId){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  if (!e.card_pool.includes(cardId)){ toast('풀에 없는 카드입니다'); return; }
+  if (e.deck.includes(cardId)){ toast('이미 배치된 카드입니다'); return; }
+  if (e.deck.length >= 10){ toast('덱은 최대 10장까지 배치 가능'); return; }
+  e.deck.push(cardId);
+  renderCorridorRegister();
+}
+
+function _corridorDeckRemove(cardId){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  const idx = e.deck.indexOf(cardId);
+  if (idx < 0) return;
+  e.deck.splice(idx, 1);
+  renderCorridorRegister();
+}
+
+function _corridorDeckMove(cardId, dir){
+  const e = GAME.corridor.editing;
+  if (!e) return;
+  const idx = e.deck.indexOf(cardId);
+  if (idx < 0) return;
+  const newIdx = idx + dir;
+  if (newIdx < 0 || newIdx >= e.deck.length) return;
+  const tmp = e.deck[idx];
+  e.deck[idx] = e.deck[newIdx];
+  e.deck[newIdx] = tmp;
+  renderCorridorRegister();
+}
+
+// 카드 렌더 헬퍼 (풀·인벤·덱 공통)
+function _corridorCardBlock(card, opts){
+  const gc = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+  if (!card){
+    return `<div style="background:#1a0a2a;border:2px dashed #555;border-radius:4px;padding:3px;text-align:center;min-height:60px;display:flex;align-items:center;justify-content:center;color:#666;font-size:18px;">＋</div>`;
+  }
+  opts = opts || {};
+  const border = gc[card.grade] || '#bbb';
+  const iconTxt = (typeof cardIcon === 'function') ? cardIcon(card) : (card.icon || '?');
+  const bg = opts.disabled ? '#1a1a1a' : (opts.selected ? '#0e2a12' : '#0a0518');
+  const cursor = opts.disabled ? 'not-allowed' : 'pointer';
+  const opacity = opts.disabled ? '0.45' : '1';
+  const click = opts.onclick ? `onclick="${opts.onclick}"` : '';
+  const title = (`${card.name} — ${card.text||''}${opts.title||''}`).replace(/"/g,'&quot;');
+  const extra = opts.extra || '';
+  return `<div ${click} title="${title}" style="cursor:${cursor};opacity:${opacity};background:${bg};border:2px solid ${border};border-radius:4px;padding:3px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:60px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+    <div style="font-size:14px;">${iconTxt}</div>
+    <div style="color:${card.grade==='normal'?'#ccc':border};font-weight:bold;margin-top:1px;">${card.name}</div>
+    ${extra}
+  </div>`;
+}
+
+function renderCorridorRegister(){
+  const container = $('content-corridor-register');
+  if (!container) return;
+  const e = GAME.corridor.editing;
+  const p = GAME.player;
+  if (!e || !p){ container.innerHTML = ''; return; }
+  const isEdit = e.mode === 'edit';
+  const existing = GAME.corridor.myReg;
+  const remainPts = _corridorRemainingPoints();
+  const cardById = (id) => CARDS.find(c => c.id === id);
+
+  // 인벤토리 카드 (dedupe by id · basic_atk/monsterOnly 제외 · 등급/이름 정렬)
+  const seen = new Set();
+  const invCards = [];
+  for (const c of (GAME.inventory || [])){
+    if (!c || c.id === 'basic_atk' || c.monsterOnly) continue;
+    if (seen.has(c.id)) continue;
+    seen.add(c.id);
+    invCards.push(c);
+  }
+  const gradeOrder = { legend:0, hero:1, unique:2, rare:3, normal:4 };
+  invCards.sort((a,b) => {
+    const ga = gradeOrder[a.grade] ?? 9, gb = gradeOrder[b.grade] ?? 9;
+    if (ga !== gb) return ga - gb;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  });
+
+  // ── 스탯 배분 ──
+  const statRow = (stat, label) => {
+    const key = 'alloc_' + stat;
+    const val = e[key];
+    const total = 5 + val;
+    const canDec = val > 0;
+    const canInc = remainPts > 0;
+    return `<div style="display:flex;align-items:center;gap:6px;padding:4px;background:#160820;border-radius:3px;">
+      <span style="color:#ffd700;font-weight:bold;width:36px;">${label}</span>
+      <button onclick="_corridorAllocStat('${stat}', -1)" ${canDec?'':'disabled'} style="width:26px;height:26px;background:${canDec?'#5a1a6b':'#333'};color:#fff;border:0;border-radius:3px;cursor:${canDec?'pointer':'not-allowed'};font-weight:bold;font-size:14px;">−</button>
+      <span style="min-width:60px;text-align:center;color:#f5deb3;font-size:13px;font-weight:bold;">${total}<span style="color:#888;font-size:10px;font-weight:normal;"> (+${val})</span></span>
+      <button onclick="_corridorAllocStat('${stat}', 1)" ${canInc?'':'disabled'} style="width:26px;height:26px;background:${canInc?'#5a1a6b':'#333'};color:#fff;border:0;border-radius:3px;cursor:${canInc?'pointer':'not-allowed'};font-weight:bold;font-size:14px;">＋</button>
+    </div>`;
+  };
+
+  // ── 공격 타입 ──
+  const atkTypeRow = ['근접', '사격', '마법'].map(t => {
+    const active = e.atk_type === t;
+    const icon = t === '근접' ? '⚔' : (t === '사격' ? '🏹' : '✨');
+    return `<button onclick="_corridorSetAtkType('${t}')" style="flex:1;padding:8px;background:${active?'linear-gradient(180deg,#ffd700,#b8860b)':'#2a0f3a'};color:${active?'#3a1a00':'#f5deb3'};border:1px solid ${active?'#ffd700':'#5a1a6b'};border-radius:3px;font-weight:bold;font-size:12px;cursor:pointer;">${icon} ${t}${active?' ✓':''}</button>`;
+  }).join('');
+
+  // ── 카드 풀 (15칸) ──
+  const poolSlots = [];
+  for (let i = 0; i < 15; i++){
+    const cid = e.card_pool[i];
+    const card = cid ? cardById(cid) : null;
+    if (card){
+      poolSlots.push(_corridorCardBlock(card, {
+        onclick: isEdit ? `toast('🔒 편집 모드: 풀 변경 불가')` : `_corridorPoolRemove('${cid}')`,
+        title: isEdit ? ' [잠금]' : ' [클릭 → 풀에서 제외]',
+        disabled: isEdit,
+      }));
+    } else {
+      poolSlots.push(_corridorCardBlock(null));
+    }
+  }
+
+  // ── 인벤 카드 (등록 모드에서만 활성) ──
+  // 카드 제한: 영웅(h)/전설(l) = 사용 불가 · 유니크(u) = 최대 1장
+  const uniqueInPool = _corridorPoolUniqueCount();
+  const invHtml = invCards.map(c => {
+    const inPool = e.card_pool.includes(c.id);
+    const isHeroLegend = c.id.startsWith('h') || c.id.startsWith('l');
+    const isUnique = c.id.startsWith('u');
+    const uniqueBlocked = isUnique && !inPool && uniqueInPool >= 1;
+    const blockedByRule = isHeroLegend || uniqueBlocked;
+    const disabled = isEdit || blockedByRule;
+    let onclick, title, extra;
+    if (isEdit){
+      onclick = `toast('🔒 편집 모드: 풀 변경 불가')`;
+      title = ' [편집 잠금]';
+      extra = '';
+    } else if (isHeroLegend){
+      onclick = `toast('영웅·전설 카드는 회랑에서 사용 불가')`;
+      title = ' [🚫 회랑 사용 불가 · 영웅/전설]';
+      extra = '<div style="color:#ff5555;font-size:9px;font-weight:bold;">🚫 불가</div>';
+    } else if (inPool){
+      onclick = `_corridorPoolRemove('${c.id}')`;
+      title = ' [클릭 → 제외]';
+      extra = '<div style="color:#7eff7e;font-size:9px;font-weight:bold;">✓ 선택</div>';
+    } else if (uniqueBlocked){
+      onclick = `toast('유니크 카드는 풀에 최대 1장')`;
+      title = ' [유니크 슬롯 만석]';
+      extra = '<div style="color:#ff9b3a;font-size:9px;font-weight:bold;">유니크 만석</div>';
+    } else {
+      onclick = `_corridorPoolAdd('${c.id}')`;
+      title = ' [클릭 → 추가]';
+      extra = '';
+    }
+    return _corridorCardBlock(c, {
+      onclick,
+      selected: inPool && !isEdit,
+      disabled,
+      title,
+      extra,
+    });
+  }).join('');
+
+  // ── 덱 (10칸 · 턴 순서 표시 + 이동 버튼) ──
+  const deckHtml = [];
+  for (let i = 0; i < 10; i++){
+    const cid = e.deck[i];
+    const card = cid ? cardById(cid) : null;
+    if (card){
+      const canPrev = i > 0;
+      const canNext = i < e.deck.length - 1;
+      deckHtml.push(`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <div style="font-size:10px;color:#ffd700;font-weight:bold;">턴 ${i+1}</div>
+        ${_corridorCardBlock(card, { onclick:`_corridorDeckRemove('${cid}')`, title:' [클릭 → 덱에서 제외]' })}
+        <div style="display:flex;gap:2px;">
+          <button onclick="_corridorDeckMove('${cid}', -1)" ${canPrev?'':'disabled'} style="padding:1px 6px;background:${canPrev?'#5a1a6b':'#333'};color:#fff;border:0;border-radius:2px;font-size:10px;cursor:${canPrev?'pointer':'not-allowed'};">◀</button>
+          <button onclick="_corridorDeckMove('${cid}', 1)"  ${canNext?'':'disabled'} style="padding:1px 6px;background:${canNext?'#5a1a6b':'#333'};color:#fff;border:0;border-radius:2px;font-size:10px;cursor:${canNext?'pointer':'not-allowed'};">▶</button>
+        </div>
+      </div>`);
+    } else {
+      deckHtml.push(`<div style="display:flex;flex-direction:column;align-items:center;gap:2px;">
+        <div style="font-size:10px;color:#888;">턴 ${i+1}</div>
+        ${_corridorCardBlock(null)}
+        <div style="height:20px;"></div>
+      </div>`);
+    }
+  }
+
+  // ── 풀에서 배치 가능 (덱에 없는 것) ──
+  const availInPool = e.card_pool.filter(cid => !e.deck.includes(cid));
+  const availHtml = availInPool.map(cid => {
+    const card = cardById(cid);
+    if (!card) return '';
+    return _corridorCardBlock(card, { onclick:`_corridorDeckAdd('${cid}')`, title:' [클릭 → 덱에 추가]' });
+  }).join('');
+
+  // ── 저장 가능 여부 ──
+  const canSave = remainPts === 0 && e.card_pool.length === 15 && e.deck.length === 10;
+  const missing = [];
+  if (remainPts !== 0) missing.push(`스탯 ${remainPts}P 남음`);
+  if (e.card_pool.length !== 15) missing.push(`풀 ${e.card_pool.length}/15`);
+  if (e.deck.length !== 10) missing.push(`덱 ${e.deck.length}/10`);
+  const cost = isEdit
+    ? (existing && existing.free_edit_available ? '오늘 무료' : '축복 1개 소모')
+    : '축복 5개 소모';
+  const saveHint = canSave ? `저장 준비 완료 · ${cost}` : `저장 불가: ${missing.join(' · ')}`;
+  const spirit = p.spiritBlessing || 0;
+
+  container.innerHTML = `
+    <div style="max-width:1300px;margin:0 auto;">
+      <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);padding:14px 20px;border-radius:6px 6px 0 0;color:#ffd700;text-shadow:1px 1px 2px #000;">
+        <div style="font-size:18px;font-weight:bold;">🌀 영원의 회랑 · ${isEdit ? '캐릭터 편집' : '캐릭터 등록'}</div>
+        <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
+          ${isEdit
+            ? '풀 15장은 주간 리셋까지 잠금 · 스탯·공격 타입·덱 배치만 편집 가능'
+            : '스탯 25P 배분 → 15장 카드 풀 선택 → 그 중 10장 덱 배치 → 5축복 소모하여 등록'}
+        </div>
+      </div>
+      <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
+
+        <!-- 스탯 + 공격 타입 -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:12px;margin-bottom:14px;">
+          <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;">
+            <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">
+              📊 스탯 배분 (base 5 + 배분 · 남은 <b style="color:${remainPts===0?'#7eff7e':'#ff9b3a'};font-size:14px;">${remainPts}P</b> / 25P)
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+              ${statRow('str', 'STR')}
+              ${statRow('dex', 'DEX')}
+              ${statRow('int', 'INT')}
+              ${statRow('con', 'CON')}
+            </div>
+          </div>
+          <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;">
+            <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">⚔ 공격 타입</div>
+            <div style="display:flex;flex-direction:column;gap:4px;">${atkTypeRow}</div>
+            <div style="margin-top:8px;font-size:10px;color:#888;line-height:1.5;">
+              무기 <b>+10</b> · 방어구 <b>+10</b> (고정)<br>
+              최대 턴 <b>10</b> · 무승부 → HP 高 승 · 동률 시 방어자 승
+            </div>
+          </div>
+        </div>
+
+        <!-- 카드 풀 -->
+        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;margin-bottom:14px;">
+          <div style="font-weight:bold;color:#ffd700;margin-bottom:8px;font-size:12px;">
+            🎴 카드 풀 <b style="color:${e.card_pool.length===15?'#7eff7e':'#ff9b3a'};">${e.card_pool.length}/15</b>
+            <span style="font-size:11px;font-weight:normal;color:#a335ee;margin-left:8px;">유니크 <b>${uniqueInPool}/1</b></span>
+            ${isEdit
+              ? '<span style="color:#ff9b3a;font-size:11px;font-weight:normal;margin-left:8px;">🔒 잠금 · 다음 주 리셋까지 변경 불가</span>'
+              : '<div style="font-size:11px;font-weight:normal;color:#888;margin-top:3px;">📌 제한: 종류당 1장 · 유니크 최대 1장 · <b style="color:#ff7e7e;">영웅/전설 사용 불가</b></div>'}
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(15,1fr);gap:4px;margin-bottom:10px;">
+            ${poolSlots.join('')}
+          </div>
+          ${!isEdit ? `
+            <div style="font-size:11px;color:#e6d3ff;padding:4px 0;border-top:1px solid #2a0f3a;margin-bottom:6px;">
+              💡 보유 카드 (클릭하여 풀에 추가/제외)
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:4px;max-height:320px;overflow-y:auto;padding:4px;background:#0a0518;border-radius:3px;">
+              ${invHtml || '<div style="grid-column:span 8;color:#888;text-align:center;padding:20px;">보유 카드 없음 · 인벤에서 카드를 획득해야 합니다</div>'}
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- 덱 배치 -->
+        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;margin-bottom:14px;">
+          <div style="font-weight:bold;color:#ffd700;margin-bottom:8px;font-size:12px;">
+            🃏 덱 배치 <b style="color:${e.deck.length===10?'#7eff7e':'#ff9b3a'};">${e.deck.length}/10</b>
+            <span style="font-size:11px;font-weight:normal;color:#888;margin-left:8px;">턴 순서대로 자동 재생 · ◀▶ 로 순서 조정</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(10,1fr);gap:4px;margin-bottom:10px;">
+            ${deckHtml.join('')}
+          </div>
+          <div style="font-size:11px;color:#e6d3ff;padding:4px 0;border-top:1px solid #2a0f3a;margin-bottom:6px;">
+            💡 풀에서 배치 (${availInPool.length}장 · 클릭하여 다음 빈 슬롯에 추가)
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:4px;padding:4px;background:#0a0518;border-radius:3px;min-height:70px;">
+            ${availHtml || '<div style="grid-column:span 8;color:#888;text-align:center;padding:20px;">풀에서 배치할 카드 없음 · 위 카드 풀을 먼저 15장 채워주세요</div>'}
+          </div>
+        </div>
+
+        <!-- 저장 · 취소 -->
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:12px;background:#2a0f3a;border-radius:4px;">
+          <button class="btn-back" onclick="openCorridor()" style="padding:10px 20px;">◀ 로비로 (저장 안 함)</button>
+          <div style="text-align:right;">
+            <div style="color:${canSave?'#7eff7e':'#ff9b3a'};font-size:11px;margin-bottom:4px;font-weight:bold;">${saveHint}</div>
+            <div style="color:#888;font-size:10px;margin-bottom:4px;">보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개</div>
+            <button onclick="commitCorridorRegistration()" ${canSave?'':'disabled'} style="padding:10px 30px;background:${canSave?'linear-gradient(180deg,#ffd700,#b8860b)':'#555'};color:${canSave?'#3a1a00':'#aaa'};border:0;border-radius:4px;font-weight:bold;cursor:${canSave?'pointer':'not-allowed'};font-size:13px;box-shadow:${canSave?'0 0 8px rgba(255,215,0,0.5)':'none'};">
+              ${isEdit ? '💾 편집 저장' : '💾 등록 (5축복)'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+}
+
+async function commitCorridorRegistration(){
+  const e = GAME.corridor.editing;
+  if (!e){ toast('편집 상태가 없습니다'); return; }
+  const p = GAME.player;
+  if (!p) return;
+  const isEdit = e.mode === 'edit';
+
+  // 클라 검증 (RPC 도 재검증)
+  if (e.alloc_str + e.alloc_dex + e.alloc_int + e.alloc_con !== 25){
+    toast('스탯 배분 합계는 25P 여야 합니다'); return;
+  }
+  if (e.card_pool.length !== 15){ toast('카드 풀은 정확히 15장'); return; }
+  if (e.deck.length !== 10){ toast('덱은 정확히 10장'); return; }
+  // 축복 잔량 사전 확인
+  const spirit = p.spiritBlessing || 0;
+  const needSpirit = isEdit
+    ? ((GAME.corridor.myReg && GAME.corridor.myReg.free_edit_available) ? 0 : 1)
+    : 5;
+  if (spirit < needSpirit){
+    alert(`정령의 축복 부족 (필요 ${needSpirit}개 · 보유 ${spirit}개)`);
+    return;
+  }
+
+  // 확인 팝업
+  let confirmMsg;
+  if (isEdit){
+    const free = needSpirit === 0;
+    confirmMsg = free
+      ? '편집 내용을 저장하시겠습니까?\n(오늘 무료 편집 사용 · 이후 편집부터 축복 1개)'
+      : '편집 내용을 저장하시겠습니까?\n(정령의 축복 1개 소모)';
+  } else {
+    confirmMsg = '캐릭터를 등록하시겠습니까?\n\n· 정령의 축복 5개 소모\n· 승점 1점으로 시작\n· 매주 월 06:00 KST 리셋';
+  }
+  if (!confirm(confirmMsg)) return;
+
+  // RPC 호출
+  const btnDisableStart = Date.now();
+  try {
+    let res;
+    if (isEdit){
+      res = await sb.rpc('eternal_corridor_update_deck', {
+        p_alloc_str: e.alloc_str,
+        p_alloc_dex: e.alloc_dex,
+        p_alloc_int: e.alloc_int,
+        p_alloc_con: e.alloc_con,
+        p_atk_type: e.atk_type,
+        p_deck: e.deck,
+      });
+    } else {
+      res = await sb.rpc('eternal_corridor_register', {
+        p_alloc_str: e.alloc_str,
+        p_alloc_dex: e.alloc_dex,
+        p_alloc_int: e.alloc_int,
+        p_alloc_con: e.alloc_con,
+        p_atk_type: e.atk_type,
+        p_card_pool: e.card_pool,
+        p_deck: e.deck,
+      });
+    }
+    if (res.error){
+      alert(`${isEdit?'편집':'등록'} 실패:\n${res.error.message||res.error}`);
+      return;
+    }
+    // 로컬 축복 값 동기화 (RPC 가 서버 saves 를 직접 수정 · 로컬 재계산은 UI 반영용)
+    if (needSpirit > 0){
+      p.spiritBlessing = Math.max(0, spirit - needSpirit);
+    }
+    try { saveGame(); renderSheet(); } catch(err){}
+    GAME.corridor.editing = null;
+    if (isEdit){
+      const row = Array.isArray(res.data) ? res.data[0] : res.data;
+      alert(`✔ 편집 저장 완료\n${row && row.message ? row.message : ''}`);
+    } else {
+      alert('✔ 등록 완료!\n\n승점 1점으로 시작합니다. 랭킹 목록에서 도전할 상대를 선택하세요.');
+    }
+    openCorridor();   // 로비 refresh
+  } catch(err){
+    alert(`${isEdit?'편집':'등록'} 실패:\n${err.message||err}`);
+    console.warn('[corridor commit]', err);
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Phase 2c — 도전 · 전투 시뮬레이션 · 결과
+//   NOTE: 이번 iteration 은 핵심 fx 타입 (dmg / dmgStat / dmgHits / heal /
+//         healStat / multi / basicAtk) 만 처리하는 경량 시뮬레이터.
+//         buff / dot / hot / debuff / cc / evade 등 복합 효과는 다음
+//         iteration 에서 전체 엔진 통합 예정.
+// ═══════════════════════════════════════════════════════════════════
+
+// ─── 가상 캐릭터 조립 (Lv 25 · +10 장비 · 선택 공격 타입) ──────────
+function _corridorBuildVirtual(reg, nickname){
+  const char = {
+    name: nickname,
+    level: 25,
+    str: 5 + (reg.alloc_str|0),
+    dex: 5 + (reg.alloc_dex|0),
+    int: 5 + (reg.alloc_int|0),
+    con: 5 + (reg.alloc_con|0),
+    atkType: reg.atk_type,
+    weapon: { name:'회랑의 무기', atkBonus:10, id:'corridor_weapon' },
+    armor:  { name:'회랑의 방어구', defBonus:10, id:'corridor_armor' },
+    hp: 0, hpMax: 0, mp: 0, mpMax: 0,
+    _hpMaxBonus: 0, _mpMaxBonus: 0,
+    deck: (reg.deck || []).map(id => CARDS.find(c => c.id === id)).filter(Boolean),
+  };
+  // hpMax/mpMax/atk/def 계산 (calcDerived 사용 · 임의 객체에서도 동작)
+  try { calcDerived(char); } catch(e){ console.warn('[corridorBuildVirtual calcDerived]', e); }
+  char.hp = char.hpMax;
+  char.mp = char.mpMax;
+  return char;
+}
+
+// ─── 도전 확인 팝업 ───────────────────────────────────────────────
+function openCorridorChallenge(defenderId){
+  const p = GAME.player;
+  if (!p) return;
+  const myReg = GAME.corridor.myReg;
+  if (!myReg){ toast('먼저 캐릭터 등록이 필요합니다'); return; }
+  const defender = GAME.corridor.ranking.find(r => r.user_id === defenderId);
+  if (!defender){ toast('상대 정보를 찾을 수 없습니다'); return; }
+  if (defender.user_id === myReg.user_id){ toast('본인 캐릭터는 도전 불가'); return; }
+  const cd = GAME.corridor.cooldowns[defenderId] || 0;
+  if (cd > 0){
+    const mm = Math.floor(cd / 60), ss = String(cd % 60).padStart(2,'0');
+    toast(`이 상대는 아직 ${mm}:${ss} 쿨다운 중입니다`); return;
+  }
+
+  // 카드 15장 등급 낮→높 정렬 (순서 숨김)
+  const gradeOrder = { normal:0, rare:1, unique:2, hero:3, legend:4 };
+  const cards = (defender.card_pool || []).map(id => CARDS.find(c => c.id === id)).filter(Boolean);
+  cards.sort((a, b) => {
+    const ga = gradeOrder[a.grade] ?? 9, gb = gradeOrder[b.grade] ?? 9;
+    if (ga !== gb) return ga - gb;
+    return String(a.name).localeCompare(String(b.name), 'ko');
+  });
+  const gc = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+  const cardsHtml = cards.map(c => {
+    const border = gc[c.grade] || '#bbb';
+    const iconTxt = (typeof cardIcon === 'function') ? cardIcon(c) : (c.icon || '?');
+    const nameCol = c.grade === 'normal' ? '#ccc' : border;
+    return `<div title="${(c.name||'').replace(/"/g,'&quot;')} — ${(c.text||'').replace(/"/g,'&quot;')}" style="background:#0a0518;border:2px solid ${border};border-radius:4px;padding:3px;text-align:center;font-size:9px;color:#fff;line-height:1.1;min-height:60px;display:flex;flex-direction:column;justify-content:center;align-items:center;">
+      <div style="font-size:14px;">${iconTxt}</div>
+      <div style="color:${nameCol};font-weight:bold;margin-top:1px;">${c.name}</div>
+    </div>`;
+  }).join('');
+
+  const overlay = document.createElement('div');
+  overlay.id = '_corridorChallengeOv';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.75);z-index:100000;display:flex;justify-content:center;align-items:center;padding:20px;';
+  overlay.innerHTML = `
+    <div style="background:#1a0524;color:#f5deb3;border:2px solid #7a3ba0;border-radius:6px;max-width:900px;width:100%;box-shadow:0 4px 24px rgba(0,0,0,0.6);max-height:90vh;overflow-y:auto;">
+      <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);color:#ffd700;padding:12px 16px;font-weight:bold;font-size:14px;">
+        ⚔ 도전 확인 · <span style="color:#fff;">${escapeHtml(defender.nickname)}</span>
+        <span style="float:right;font-size:12px;font-weight:normal;">승점 <b>${defender.score}</b> · 순위 <b>${defender.rank_pos}</b>위</span>
+      </div>
+      <div style="padding:14px 18px;">
+        <div style="font-size:11px;color:#e6d3ff;margin-bottom:8px;">
+          <b style="color:#ffd700;">🎴 상대 카드 풀 15장</b>
+          <span style="color:#888;font-size:10px;margin-left:8px;">등급 낮→높 정렬 · 배치 순서는 전투 시작 시 공개</span>
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(15,1fr);gap:4px;margin-bottom:12px;">${cardsHtml}</div>
+        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:8px 10px;margin-bottom:12px;font-size:11px;color:#e6d3ff;line-height:1.7;">
+          <div><b style="color:#ffd700;">📊 스탯:</b> STR ${5+defender.alloc_str} · DEX ${5+defender.alloc_dex} · INT ${5+defender.alloc_int} · CON ${5+defender.alloc_con}</div>
+          <div><b style="color:#ffd700;">⚔ 공격 타입:</b> ${defender.atk_type} · 무기 +10 · 방어구 +10</div>
+          <div><b style="color:#ffd700;">📜 전적:</b> 승 <b style="color:#7eff7e;">${defender.wins}</b> · 패 <b style="color:#ff7e7e;">${defender.losses}</b></div>
+          <div style="color:#ff9b3a;margin-top:4px;">⚠ 도전 후 이 상대 재도전은 <b>1시간 쿨다운</b> · 승리 시 승점 +1 / 패배 시 -1</div>
+        </div>
+        <div style="display:flex;justify-content:flex-end;gap:8px;">
+          <button id="_corridorCancelBtn" style="padding:8px 20px;background:#666;color:#fff;border:0;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;">취소</button>
+          <button id="_corridorStartBtn" style="padding:8px 26px;background:linear-gradient(180deg,#ff5555,#8a1a1a);color:#fff;border:0;border-radius:4px;font-size:13px;font-weight:bold;cursor:pointer;box-shadow:0 0 10px rgba(255,85,85,0.6);">⚔ 도전 시작</button>
+        </div>
+      </div>
+    </div>`;
+  document.body.appendChild(overlay);
+  document.getElementById('_corridorCancelBtn').onclick = () => overlay.remove();
+  document.getElementById('_corridorStartBtn').onclick = () => {
+    overlay.remove();
+    startCorridorBattle(defenderId);
+  };
+}
+
+// ─── Phase 2c-beta: 전체 카드 fx 엔진 재사용 시뮬레이션 ────────────
+//   전략:
+//   1. GAME.player 를 virtualAttacker 로 임시 override (참조 유지 · Object.assign)
+//   2. GAME.myDeck 를 virtualAttacker.deck 로 임시 override
+//   3. GAME.rankCombat 를 corridor 전용 state 로 hijack (defender = c.opponent)
+//   4. quests·title 카운터 등 부수 mutation 을 방지하기 위해 임시 blank
+//   5. 커스텀 turn runner (_corridorTurnNoUI) 로 10턴 실행 (UI 렌더 스킵)
+//   6. finally 에서 전부 원복 · 안전한 예외 처리
+// ─────────────────────────────────────────────────────────────────
+
+// checkRankAlive 대체 (rankEnd 호출 방지 · 순수 판정만)
+function _corridorCheckAlive(c){
+  if (!c) return false;
+  const myThresh  = (c.myRebirth  && c.myRebirth.turns  > 0) ? 1 : 0;
+  const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
+  if (GAME.player.hp <= myThresh){
+    try { if (typeof _tryRebirth === 'function') _tryRebirth(c, 'my', GAME.player, () => {}); } catch(e){}
+    if (GAME.player.hp <= 0){ c.finished = true; return false; }
+  }
+  if (c.opponent.hp <= monThresh){
+    try { if (typeof _tryRebirth === 'function') _tryRebirth(c, 'mon', c.opponent, () => {}); } catch(e){}
+    if (c.opponent.hp <= 0){ c.finished = true; return false; }
+  }
+  return true;
+}
+
+// 한 턴 실행 (rankNextTurn 미러 · UI/replay 스킵)
+function _corridorTurnNoUI(){
+  const c = GAME.rankCombat;
+  if (!c || c.finished) return;
+  c.turn++;
+  if (c.turn > c.maxTurns){ c.finished = true; return; }
+  const p = GAME.player;
+  const m = c.opponent;
+  const slot = c.turn - 1;
+  const playerCard = (typeof _dedupCardForTurn === 'function')
+    ? _dedupCardForTurn(GAME.myDeck, slot)
+    : (GAME.myDeck[slot] || BASIC_ATTACK);
+  const monCard = (typeof _dedupCardForTurn === 'function')
+    ? _dedupCardForTurn(m.deck, slot)
+    : (m.deck[slot] || BASIC_ATTACK);
+  _ensureCombatExt(c);
+  // Speed scroll pre-scan
+  if (playerCard && playerCard.fx && playerCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
+  if (monCard && monCard.fx && monCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
+  // 선공 판정 (DEX · 동률 시 공격자 선공)
+  const pDex = p.dex + c.myBuffs.dex;
+  const mDex = m.dex + c.monBuffs.dex;
+  const playerFirst = pDex >= mDex;
+  c._playerFirstThisTurn = playerFirst;
+  c._currentTurnCards = { playerCard, monsterCard: monCard };
+  // 카드 시전 (rankCast 재사용 — 내부적으로 applyCardEffect 호출)
+  try {
+    if (playerFirst){
+      rankCast('player', playerCard);
+      if (!_corridorCheckAlive(c)) return;
+      rankCast('opp', monCard);
+    } else {
+      rankCast('opp', monCard);
+      if (!_corridorCheckAlive(c)) return;
+      rankCast('player', playerCard);
+    }
+  } catch(e){ console.warn('[corridor turn cast]', e); }
+  if (!_corridorCheckAlive(c)) return;
+  // Tick 페이즈 (DoT/HoT/버프 감쇠 등)
+  try { rankProcessTicks(); } catch(e){ console.warn('[corridor ticks]', e); }
+  if (!_corridorCheckAlive(c)) return;
+  if (c.turn >= c.maxTurns) c.finished = true;
+}
+
+// 메인 시뮬레이션 — 전체 엔진 재사용
+function _corridorSimulateFull(virtA, virtD){
+  // 원본 스냅샷 (finally 에서 원복)
+  const origPlayer = JSON.parse(JSON.stringify(GAME.player));
+  const origDeck = GAME.myDeck.slice();
+  const origRankCombat = GAME.rankCombat;
+  const origInv = GAME.inventory;
+  // 퀘스트/타이틀 카운터 뮤테이션 방지
+  const origDailyQuests = GAME.player.dailyQuests
+    ? JSON.parse(JSON.stringify(GAME.player.dailyQuests)) : null;
+  const origWeeklyQuests = GAME.player.weeklyQuests
+    ? JSON.parse(JSON.stringify(GAME.player.weeklyQuests)) : null;
+  const origTitleCounters = GAME.player.titleCounters
+    ? JSON.parse(JSON.stringify(GAME.player.titleCounters)) : null;
+  // 로그 함수 임시 무력화 (DOM 렌더 억제 · chatSys 억제 목적)
+  const origRankLog = window.rankLog;
+  const turnHpHistory = [];   // 각 턴 종료 시 HP 스냅샷 캡처
+  const cardHistory = [];     // 실제 사용된 카드 id (deck slot 기준)
+
+  try {
+    // GAME.player 를 attacker 로 override (참조 유지)
+    Object.keys(GAME.player).forEach(k => delete GAME.player[k]);
+    Object.assign(GAME.player, virtA);
+    // 덱 세팅 (기본공격 padding 은 안 함 — 10장 배치는 정확히 10장)
+    GAME.myDeck = virtA.deck.slice();
+    // 인벤은 비움 (카드 소유 판정 오류 방지 목적)
+    GAME.inventory = [];
+    // 퀘스트 카운터 blank
+    if (GAME.player.dailyQuests)  GAME.player.dailyQuests  = {};
+    if (GAME.player.weeklyQuests) GAME.player.weeklyQuests = {};
+    if (GAME.player.titleCounters) GAME.player.titleCounters = {};
+    // rankCombat state 생성
+    GAME.rankCombat = {
+      opponent: JSON.parse(JSON.stringify(virtD)),
+      targetRank: 0,
+      mode: 'corridor_sim',
+      turn: 0,
+      maxTurns: 10,
+      myBuffs: {str:0,dex:0,int:0,con:0,atk:0,def:0},
+      monBuffs: {str:0,dex:0,int:0,con:0,atk:0,def:0},
+      myDots: [], myHots: [],
+      monDots: [], monHots: [],
+      log: [],
+      statsMyDmg: 0, statsMonDmg: 0,
+      playerHpBefore: GAME.player.hp,
+      playerMpBefore: GAME.player.mp,
+      finished: false,
+    };
+    _ensureCombatExt(GAME.rankCombat);
+    // rankLog 무력화 (silent)
+    window.rankLog = function(){ /* silent */ };
+    // 파생 스탯 재계산
+    try { calcDerived(GAME.player); } catch(e){}
+    // 최초 HP/MP 재설정 (calcDerived 후)
+    GAME.player.hp = GAME.player.hpMax;
+    GAME.player.mp = GAME.player.mpMax;
+
+    // 10턴 실행
+    for (let i = 0; i < 10 && !GAME.rankCombat.finished; i++){
+      const c = GAME.rankCombat;
+      const nextTurn = c.turn + 1;
+      const slot = nextTurn - 1;
+      // 이 턴에 실제로 slot 카드가 재생됨 (dedup 없음 · 회랑 덱은 유일)
+      const aCardId = (virtA.deck[slot] && virtA.deck[slot].id) || 'basic_atk';
+      const dCardId = (virtD.deck[slot] && virtD.deck[slot].id) || 'basic_atk';
+      _corridorTurnNoUI();
+      // 턴 종료 시 HP 캡처
+      turnHpHistory.push({
+        turn: c.turn,
+        attacker_card: aCardId,
+        defender_card: dCardId,
+        attacker_hp_end: Math.max(0, GAME.player.hp|0),
+        defender_hp_end: Math.max(0, c.opponent.hp|0),
+      });
+      cardHistory.push({ atk: aCardId, def: dCardId });
+      if (GAME.player.hp <= 0 || c.opponent.hp <= 0) break;
+    }
+
+    const atkHp = Math.max(0, GAME.player.hp|0);
+    const defHp = Math.max(0, GAME.rankCombat.opponent.hp|0);
+    // 승자 판정 (rankEnd 미호출 · 내부 판정만)
+    let result;
+    if (atkHp <= 0 && defHp <= 0) result = 'defender_win';
+    else if (defHp <= 0) result = 'attacker_win';
+    else if (atkHp <= 0) result = 'defender_win';
+    else result = (atkHp > defHp) ? 'attacker_win' : 'defender_win';   // 동률 시 방어자 승
+    return {
+      turns: turnHpHistory,
+      atkHp,
+      defHp,
+      atkHpMax: GAME.player.hpMax|0,
+      defHpMax: GAME.rankCombat.opponent.hpMax|0,
+      result,
+      statsAtkDmg: GAME.rankCombat.statsMyDmg|0,
+      statsDefDmg: GAME.rankCombat.statsMonDmg|0,
+    };
+  } finally {
+    // 원본 상태 완전 원복
+    try {
+      Object.keys(GAME.player).forEach(k => delete GAME.player[k]);
+      Object.assign(GAME.player, origPlayer);
+      GAME.myDeck = origDeck;
+      GAME.rankCombat = origRankCombat;
+      GAME.inventory = origInv;
+      if (origDailyQuests) GAME.player.dailyQuests = origDailyQuests;
+      if (origWeeklyQuests) GAME.player.weeklyQuests = origWeeklyQuests;
+      if (origTitleCounters) GAME.player.titleCounters = origTitleCounters;
+      window.rankLog = origRankLog;
+    } catch(e){ console.error('[corridor sim restore]', e); }
+  }
+}
+
+// ─── 도전 실행 (시뮬 → 서버 challenge RPC → 결과 화면) ───────────
+async function startCorridorBattle(defenderId){
+  const p = GAME.player;
+  if (!p) return;
+  const myReg = GAME.corridor.myReg;
+  const defender = GAME.corridor.ranking.find(r => r.user_id === defenderId);
+  if (!myReg || !defender){ toast('데이터 오류'); return; }
+
+  // 가상 캐릭터 조립
+  const virtA = _corridorBuildVirtual(myReg, myReg.nickname || p.name);
+  const virtD = _corridorBuildVirtual(defender, defender.nickname);
+  // 시뮬 (Phase 2c-beta · 전체 fx 엔진 재사용)
+  let sim;
+  try {
+    sim = _corridorSimulateFull(virtA, virtD);
+  } catch(err){
+    console.error('[corridor simulateFull]', err);
+    alert('전투 시뮬레이션 오류:\n' + (err.message || err));
+    return;
+  }
+  // 서버 payload
+  const battleLog = {
+    turns: sim.turns,
+    final: {
+      attacker_hp: Math.max(0, sim.atkHp),
+      defender_hp: Math.max(0, sim.defHp),
+      result: sim.result,
+    }
+  };
+
+  // 서버 challenge RPC
+  let serverRow = null;
+  try {
+    const res = await sb.rpc('eternal_corridor_challenge', {
+      p_defender_id: defenderId,
+      p_battle_log: battleLog,
+    });
+    if (res.error){
+      alert('도전 실패:\n' + (res.error.message || res.error));
+      return;
+    }
+    serverRow = Array.isArray(res.data) ? res.data[0] : res.data;
+  } catch(err){
+    alert('도전 실패:\n' + (err.message || err));
+    return;
+  }
+
+  _corridorRenderResult(defender, sim, battleLog, serverRow, virtA, virtD);
+}
+
+// ─── 결과 화면 (턴별 로그 + 승점 변동 + 로비 복귀) ───────────────
+function _corridorRenderResult(defender, sim, battleLog, serverRow, virtA, virtD){
+  const container = $('content-corridor-result');
+  if (!container) return;
+  const win = sim.result === 'attacker_win';
+  const winner = win ? '나' : escapeHtml(defender.nickname);
+  const winColor = win ? '#7eff7e' : '#ff7e7e';
+  const gc = { normal:'#bbbbbb', rare:'#3399ff', unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+  const cardById = (id) => CARDS.find(c => c.id === id);
+
+  const turnRows = sim.turns.map(t => {
+    const aC = cardById(t.attacker_card), dC = cardById(t.defender_card);
+    const aName = aC ? aC.name : t.attacker_card;
+    const dName = dC ? dC.name : t.defender_card;
+    const aCol = aC ? (gc[aC.grade] || '#bbb') : '#bbb';
+    const dCol = dC ? (gc[dC.grade] || '#bbb') : '#bbb';
+    return `<tr>
+      <td style="padding:3px 6px;color:#ffd700;font-weight:bold;text-align:center;">${t.turn}</td>
+      <td style="padding:3px 6px;color:${aCol};font-weight:bold;">${aName}</td>
+      <td style="padding:3px 6px;color:${dCol};font-weight:bold;">${dName}</td>
+      <td style="padding:3px 6px;text-align:right;color:#7eff7e;">${t.attacker_hp_end}</td>
+      <td style="padding:3px 6px;text-align:right;color:#ff7e7e;">${t.defender_hp_end}</td>
+    </tr>`;
+  }).join('');
+
+  const atkScoreDelta = serverRow ? (serverRow.attacker_score_after - GAME.corridor.myReg.score) : 0;
+  const dropMsg = serverRow && serverRow.defender_dropped ? '<div style="color:#ff9b3a;font-size:11px;margin-top:4px;">⚠ 상대 승점 0 · 등록 리스트에서 제외됨</div>' : '';
+
+  container.innerHTML = `
+    <div style="max-width:1000px;margin:0 auto;">
+      <div style="background:linear-gradient(135deg,${win?'#2a5a1f':'#5a1a1a'},${win?'#5a8a3a':'#8a3a3a'});color:#fff;padding:16px 20px;border-radius:6px 6px 0 0;text-shadow:1px 1px 2px #000;">
+        <div style="font-size:20px;font-weight:bold;">${win ? '🏆 승리!' : '💀 패배'}</div>
+        <div style="font-size:12px;margin-top:2px;color:${winColor};font-weight:bold;">${winner} 승리 · ${sim.turns.length}턴 진행</div>
+      </div>
+      <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
+        <!-- 승점 요약 -->
+        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:10px;margin-bottom:12px;font-size:12px;line-height:1.7;">
+          <div><b style="color:#ffd700;">📊 최종 HP:</b> 나 <b style="color:#7eff7e;">${sim.atkHp}</b>/${sim.atkHpMax||virtA.hpMax} · ${escapeHtml(defender.nickname)} <b style="color:#ff7e7e;">${sim.defHp}</b>/${sim.defHpMax||virtD.hpMax}</div>
+          <div><b style="color:#ffd700;">⚔ 총 데미지:</b> 내가 준 <b style="color:#7eff7e;">${sim.statsAtkDmg||0}</b> · 내가 받은 <b style="color:#ff7e7e;">${sim.statsDefDmg||0}</b></div>
+          ${serverRow ? `
+            <div><b style="color:#ffd700;">🏆 내 승점:</b> ${GAME.corridor.myReg.score} → <b style="color:${atkScoreDelta>=0?'#7eff7e':'#ff7e7e'};">${serverRow.attacker_score_after}</b> (${atkScoreDelta>=0?'+':''}${atkScoreDelta})</div>
+            <div><b style="color:#ffd700;">🛡 상대 승점:</b> ${defender.score} → <b>${serverRow.defender_score_after}</b></div>
+            ${dropMsg}
+            ${serverRow.message ? `<div style="margin-top:4px;color:#e6d3ff;">${escapeHtml(serverRow.message)}</div>` : ''}
+          ` : ''}
+        </div>
+        <!-- 턴별 로그 -->
+        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:8px;margin-bottom:12px;">
+          <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">📜 턴별 카드 재생</div>
+          <table style="width:100%;font-size:11px;border-collapse:collapse;">
+            <thead>
+              <tr style="background:#2a0f3a;color:#ffd700;">
+                <th style="padding:4px;">턴</th>
+                <th style="padding:4px;text-align:left;">내 카드</th>
+                <th style="padding:4px;text-align:left;">상대 카드</th>
+                <th style="padding:4px;text-align:right;">내 HP</th>
+                <th style="padding:4px;text-align:right;">상대 HP</th>
+              </tr>
+            </thead>
+            <tbody>${turnRows}</tbody>
+          </table>
+        </div>
+        <div style="text-align:center;">
+          <button onclick="openCorridor()" style="padding:10px 30px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">✔ 확인 · 로비로</button>
+        </div>
+      </div>
+    </div>`;
+  showContent('corridor-result');
+}
+
+
 let _cardPickSlot = -1;      // 카드 선택 모달이 어느 슬롯을 위해 열렸는지
 let _cardPickFilter = 'all'; // 현재 등급 필터
 let _cardPickMode = 'opp';   // 'opp' (상대 덱) | 'my' (내 덱)
