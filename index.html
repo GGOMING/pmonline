@@ -1499,6 +1499,32 @@
       </div>
 
       <div class="sys-group">
+        <h4>🗡️ 영원의 회랑 (PvP)</h4>
+        <div style="margin:6px 0;padding:6px;background:#f4f0ff;border:1px solid #9c9;">
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
+            <b>전체 요약:</b>
+            <span style="font-size:11px;">등록 <b id="adminCorridorCount">-</b> 명 · 총 승점 <b id="adminCorridorTotalScore">-</b></span>
+            <button class="admin-btn small" onclick="adminCorridorRefresh()">🔄 새로고침</button>
+            <button class="admin-btn small" onclick="adminCorridorShowSuspicious()">🚨 의심 배틀 조회</button>
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:6px;">
+            <button class="admin-btn small danger" onclick="adminCorridorForceSettlementCurrent()">⚡ 이번 주 강제 정산 (즉시 시즌 종료)</button>
+            <button class="admin-btn small danger" onclick="adminCorridorForceSettlementPrev()">⚡ 지난 주 강제 정산 (cron 수동 실행)</button>
+            <button class="admin-btn small danger" onclick="adminCorridorResetAll()" style="background:#8a1a1a;color:#fff;">💥 전체 초기화 (nuclear)</button>
+          </div>
+          <div style="font-size:10px;color:#666;margin-bottom:6px;">
+            · 이번 주 강제 정산: 현재 등록 유저 전원 승점 × 3축복 지급 후 등록 해제 · 시즌 조기 종료<br>
+            · 지난 주 강제 정산: cron 이 실패했을 때 수동 재실행용<br>
+            · 전체 초기화: 등록·쿨다운·배틀 모두 삭제 · 정산 없음 (긴급 버그 대응용)
+          </div>
+        </div>
+        <div id="adminCorridorList" style="max-height:300px;overflow-y:auto;font-size:11px;">
+          <div style="color:#888;text-align:center;padding:12px;">🔄 새로고침 클릭</div>
+        </div>
+        <div id="adminCorridorSuspicious" style="margin-top:8px;"></div>
+      </div>
+
+      <div class="sys-group">
         <h4>🎉 이벤트 관리</h4>
         <div style="margin:6px 0;padding:6px;background:#e8f5e9;border:1px solid #66bb6a;">
           <b>뉴비 환영 이벤트:</b>
@@ -1704,8 +1730,8 @@
         <!-- 2줄: 랭킹전·여신의 탑·영원의 회랑·축복의 상점 -->
         <table><tr>
           <td id="m-rank" class="row2" onclick="openRank()">🏆 랭킹전</td>
-          <td id="m-tower" class="row2" onclick="openTower()" style="color:#000000;font-weight:bold;">👼 여신의 탑 (Lv. 21)</td>
-          <td id="m-corridor" class="row2" onclick="openCorridor()" style="color:#000000;font-weight:bold;">🗡️ 영원의 회랑 (Lv. 25)</td>
+          <td id="m-tower" class="row2" onclick="openTower()" style="color:#000000;font-weight:bold;">👼 여신의 탑</td>
+          <td id="m-corridor" class="row2" onclick="openCorridor()" style="color:#000000;font-weight:bold;">🗡️ 영원의 회랑</td>
           <td class="row2" onclick="openBlessShop()" style="color:#000000;">✨ 축복의 상점</td>
         </tr></table>
         <!-- 3줄: 카드 도감·프로필·명예의 전당·퀘스트·오픈채팅방 -->
@@ -22108,6 +22134,167 @@ function _raidKr(key){
 }
 
 // 운영자: 3개 공격대 (dawn/mist/abyss) 즉시 리셋 — 각각 새 보스 + 몬스터 리필
+// ═══════════════════════════════════════════════════════════════════
+// 영원의 회랑 · 관리자 도구
+// ═══════════════════════════════════════════════════════════════════
+async function adminCorridorRefresh(){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  const listEl = $('adminCorridorList');
+  const countEl = $('adminCorridorCount');
+  const totalEl = $('adminCorridorTotalScore');
+  if (listEl) listEl.innerHTML = '<div style="color:#888;text-align:center;padding:12px;">불러오는 중…</div>';
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_get_all');
+    if (error){
+      if (listEl) listEl.innerHTML = `<div style="color:#c00;padding:12px;">조회 실패: ${error.message||error}</div>`;
+      return;
+    }
+    const rows = Array.isArray(data) ? data : [];
+    if (countEl) countEl.textContent = rows.length;
+    const totalScore = rows.reduce((s, r) => s + (r.score|0), 0);
+    if (totalEl) totalEl.textContent = totalScore;
+    if (!rows.length){
+      if (listEl) listEl.innerHTML = '<div style="color:#888;text-align:center;padding:12px;">등록된 유저 없음</div>';
+      return;
+    }
+    const html = `
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#e0d5ff;">
+          <th style="padding:4px 6px;text-align:left;">#</th>
+          <th style="padding:4px 6px;text-align:left;">닉네임</th>
+          <th style="padding:4px 6px;text-align:right;">승점</th>
+          <th style="padding:4px 6px;text-align:right;">승/패</th>
+          <th style="padding:4px 6px;text-align:center;">타입</th>
+          <th style="padding:4px 6px;text-align:center;">스탯 (STR/DEX/INT/CON)</th>
+          <th style="padding:4px 6px;text-align:center;">액션</th>
+        </tr></thead>
+        <tbody>
+          ${rows.map((r, i) => `
+            <tr style="border-bottom:1px solid #ddd;">
+              <td style="padding:4px 6px;color:${i===0?'#ffd700':i===1?'#c0c0c0':i===2?'#cd7f32':'#888'};font-weight:bold;">${i+1}</td>
+              <td style="padding:4px 6px;"><b>${escapeHtml(r.nickname)}</b></td>
+              <td style="padding:4px 6px;text-align:right;color:#5030a0;font-weight:bold;">${r.score}</td>
+              <td style="padding:4px 6px;text-align:right;font-size:10px;">${r.wins}/${r.losses}</td>
+              <td style="padding:4px 6px;text-align:center;font-size:10px;">${r.atk_type}</td>
+              <td style="padding:4px 6px;text-align:center;font-size:10px;">${5+r.alloc_str}/${5+r.alloc_dex}/${5+r.alloc_int}/${5+r.alloc_con}</td>
+              <td style="padding:4px 6px;text-align:center;white-space:nowrap;">
+                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjust('${r.user_id}', '${escapeHtml(r.nickname)}', 1)">+1</button>
+                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjust('${r.user_id}', '${escapeHtml(r.nickname)}', -1)">-1</button>
+                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjustPrompt('${r.user_id}', '${escapeHtml(r.nickname)}', ${r.score})">조정</button>
+                <button class="admin-btn small danger" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorDelete('${r.user_id}', '${escapeHtml(r.nickname)}')">해제</button>
+              </td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>`;
+    if (listEl) listEl.innerHTML = html;
+  } catch(e){
+    if (listEl) listEl.innerHTML = `<div style="color:#c00;padding:12px;">조회 실패: ${e.message||e}</div>`;
+  }
+}
+
+async function adminCorridorAdjust(userId, nickname, delta){
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_adjust_score', { p_user_id: userId, p_delta: delta });
+    if (error){ alert('실패: ' + (error.message||error)); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) alert(`${nickname}: ${row.message}`);
+    adminCorridorRefresh();
+  } catch(e){ alert('실패: ' + (e.message||e)); }
+}
+
+async function adminCorridorAdjustPrompt(userId, nickname, curScore){
+  const raw = prompt(`${nickname} 승점 조정\n\n현재: ${curScore}점\n\n조정값 입력 (예: 3 = +3, -2 = -2)\n(0 이하로 내려가면 등록 자동 해제)`);
+  if (raw == null) return;
+  const delta = parseInt(raw, 10);
+  if (isNaN(delta) || delta === 0){ alert('유효한 정수를 입력하세요 (0 아닌 값)'); return; }
+  await adminCorridorAdjust(userId, nickname, delta);
+}
+
+async function adminCorridorDelete(userId, nickname){
+  if (!confirm(`⚠ ${nickname} 의 회랑 등록을 강제 해제하시겠습니까?\n\n· 등록료(5축복) 환불 없음\n· 배틀 로그·쿨다운은 유지 (감사 목적)\n· 유저는 재등록 시 5축복 재지불 필요`)) return;
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_delete_registration', { p_user_id: userId });
+    if (error){ alert('해제 실패: ' + (error.message||error)); return; }
+    alert(`✔ ${data || nickname} 등록 해제 완료`);
+    adminCorridorRefresh();
+  } catch(e){ alert('해제 실패: ' + (e.message||e)); }
+}
+
+async function adminCorridorResetAll(){
+  if (!confirm('💥 회랑 전체 초기화\n\n· 모든 등록 · 배틀 로그 · 쿨다운 삭제\n· 시즌 정산 없음 (축복 지급 X)\n· 긴급 버그 대응용 · 정상 시즌 종료는 「강제 정산」 사용\n\n계속하시겠습니까?')) return;
+  if (!confirm('⚠ 진짜로 초기화하시겠습니까?\n\n이 작업은 되돌릴 수 없습니다.')) return;
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_reset_all');
+    if (error){ alert('초기화 실패: ' + (error.message||error)); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    alert(`✔ 초기화 완료\n\n등록 ${row.deleted_registrations|0}건 · 배틀 ${row.deleted_battles|0}건 · 쿨다운 ${row.deleted_cooldowns|0}건 삭제`);
+    adminCorridorRefresh();
+  } catch(e){ alert('초기화 실패: ' + (e.message||e)); }
+}
+
+async function adminCorridorForceSettlementCurrent(){
+  if (!confirm('⚡ 이번 주 강제 정산\n\n· 현재 등록 유저 전원 · 승점 × 3축복 지급\n· 등록 즉시 해제 (시즌 조기 종료)\n· 정산 로그 기록\n\n계속하시겠습니까?')) return;
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_force_settlement_current');
+    if (error){ alert('정산 실패: ' + (error.message||error)); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    alert(`✔ 이번 주 강제 정산 완료\n\n정산 유저 ${row.settled_users|0}명 · 총 축복 ${row.total_spirit_paid|0}개 지급`);
+    adminCorridorRefresh();
+  } catch(e){ alert('정산 실패: ' + (e.message||e)); }
+}
+
+async function adminCorridorForceSettlementPrev(){
+  if (!confirm('⚡ 지난 주 정산 수동 실행\n\n· cron 이 실패했을 때 재시도용\n· 지난 주 앵커 대상 (이번 주는 영향 X)\n· 이미 정산된 경우 지난 주 row 가 없어 no-op\n\n계속하시겠습니까?')) return;
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_force_settlement');
+    if (error){ alert('정산 실패: ' + (error.message||error)); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    alert(`✔ 지난 주 정산 완료\n\n정산 유저 ${row.settled_users|0}명 · 총 축복 ${row.total_spirit_paid|0}개 지급`);
+    adminCorridorRefresh();
+  } catch(e){ alert('정산 실패: ' + (e.message||e)); }
+}
+
+async function adminCorridorShowSuspicious(){
+  const el = $('adminCorridorSuspicious');
+  if (!el) return;
+  el.innerHTML = '<div style="color:#888;padding:8px;">불러오는 중…</div>';
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_get_suspicious', { p_limit: 20 });
+    if (error){ el.innerHTML = `<div style="color:#c00;padding:8px;">조회 실패: ${error.message||error}</div>`; return; }
+    const rows = Array.isArray(data) ? data : [];
+    if (!rows.length){
+      el.innerHTML = '<div style="background:#e8f5e9;color:#080;padding:8px;border:1px solid #66bb6a;border-radius:4px;">✔ 의심 배틀 없음 (sanity check 실패 사례 0건)</div>';
+      return;
+    }
+    el.innerHTML = `
+      <div style="background:#fff0f0;border:1px solid #f99;padding:8px;border-radius:4px;">
+        <div style="font-weight:bold;color:#c00;margin-bottom:6px;">🚨 의심 배틀 최근 ${rows.length}건 (sanity check 실패 — 어뷰징 가능성)</div>
+        <table style="width:100%;font-size:10px;border-collapse:collapse;">
+          <thead><tr style="background:#ffd0d0;">
+            <th style="padding:3px 5px;">시각</th>
+            <th style="padding:3px 5px;">공격자</th>
+            <th style="padding:3px 5px;">방어자</th>
+            <th style="padding:3px 5px;">선언 결과</th>
+            <th style="padding:3px 5px;">턴</th>
+          </tr></thead>
+          <tbody>
+            ${rows.map(r => `
+              <tr style="border-bottom:1px solid #eee;">
+                <td style="padding:3px 5px;">${new Date(r.created_at).toLocaleString()}</td>
+                <td style="padding:3px 5px;"><b>${escapeHtml(r.attacker_nickname)}</b></td>
+                <td style="padding:3px 5px;">${escapeHtml(r.defender_nickname)}</td>
+                <td style="padding:3px 5px;color:${r.result==='attacker_win'?'#c00':'#080'};">${r.result==='attacker_win'?'공격 승':'방어 승'}</td>
+                <td style="padding:3px 5px;">${r.turns}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>`;
+  } catch(e){ el.innerHTML = `<div style="color:#c00;padding:8px;">조회 실패: ${e.message||e}</div>`; }
+}
+
 async function adminForceRaidReset(){
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   if (!confirm(`3개 공격대 모두 즉시 리셋하시겠습니까?\n• dawn/mist/abyss 각각 새 보스 무작위 선정\n• 몬스터 리필 (dawn ${DAWN_MOB_TOTAL}, mist ${MIST_MOB_TOTAL}, abyss ${ABYSS_MOB_TOTAL})\n• session_start 갱신`)) return;
