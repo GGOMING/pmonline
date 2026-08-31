@@ -2407,28 +2407,28 @@
           <details style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;margin-bottom:12px;">
             <summary style="padding:8px 12px;cursor:pointer;font-weight:bold;color:#ffd700;font-size:12px;">📜 룰 안내 · 클릭하여 펼치기/접기</summary>
             <div style="padding:10px 14px 12px;font-size:11px;color:#e6d3ff;line-height:1.7;">
-              <div style="margin-bottom:6px;"><b style="color:#ffd700;">🌀 컨텐츠 요약</b> — 비동기 PvP · 등록된 다른 유저들과 승점 경쟁</div>
+              <div style="margin-bottom:6px;"><b style="color:#ffd700;">🌀 컨텐츠 요약</b> — PvP · 등록된 다른 유저들과 승점 경쟁</div>
               <ul style="margin:0 0 8px 16px;padding:0;">
-                <li><b>가상 캐릭터</b>: 모두 <b>Lv 25</b> · 스탯 <b>25P 자유 배분</b> (base 5/5/5/5) · 무기·방어구 +10 고정 · 공격 타입 자유</li>
-                <li><b>카드</b>: 보유 카드 중 15장 선택 → 그 중 10장 배치 (턴 순서 확정) · <b style="color:#ff7e7e;">영웅/전설 사용 불가 · 유니크 최대 1장</b></li>
-                <li><b>전투</b>: 최대 10턴 · 무승부 시 HP 高 승 · 동률 시 방어자 승</li>
+                <li><b>동일 조건</b>: 모두 <b>Lv 25</b> · 스탯 <b>25P 자유 배분</b> (base 5/5/5/5) · 무기·방어구 +10 고정 · 공격 타입 재설정</li>
+                <li><b>카드</b>: 보유 카드 중 15장 선택 → 그 중 10장 배치 · <b style="color:#ff7e7e;">영웅/전설 사용 불가 · 유니크 최대 1장</b></li>
+                <li><b>전투</b>: 최대 10턴 · 무승부 시 잔여 HP 판정 승 · 동률 시 방어자 승</li>
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">💰 비용 · 승점</b></div>
               <ul style="margin:0 0 8px 16px;padding:0;">
                 <li><b>등록/재등록</b>: 정령의 축복 <b>5개</b> → 승점 <b>1점</b> 시작</li>
-                <li><b>편집</b>: 하루 1회 무료 · 이후 편집당 축복 <b>1개</b> (등록 후 15장 pool 은 잠금 · deck/스탯/타입만 변경 가능)</li>
+                <li><b>수정</b>: 하루 1회 무료 · 이후 덱 수정 시 축복 <b>1개</b> (등록 후 15장 pool 은 고정 · deck/스탯/타입만 변경 가능)</li>
                 <li><b>도전 입장료</b>: <b style="color:#ff9b3a;">실제 레벨 × 50 골드</b> (도전 시작 시 즉시 차감 · 이탈/포기 환불 X)</li>
                 <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>3시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
-                <li><b>승점 변동</b>: 승 <b style="color:#7eff7e;">+1</b> · 패 <b style="color:#ff7e7e;">-1</b> · <b style="color:#ff5555;">0점 도달 시 등록 자동 삭제 → 재등록(5축복) 필요</b></li>
+                <li><b>승점 변동</b>: 승 <b style="color:#7eff7e;">+1</b> · 패 <b style="color:#ff7e7e;">-1</b> · <b style="color:#ff5555;">0점 도달 시 등록 자동 삭제 (도전/방어 모두 동일)</b> → 재등록(5축복) 필요</li>
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">📅 주간 리셋 · 시즌 정산</b></div>
               <ul style="margin:0 0 8px 16px;padding:0;">
                 <li><b>매주 월 06:00 KST</b>: 등록/카드풀/스탯 전면 리셋 · 재등록 필요</li>
-                <li><b>시즌 정산</b>: 마지막 승점 × <b style="color:#7eff7e;">축복 3개</b> 자동 지급 (계정으로)</li>
+                <li><b>시즌 정산</b>: 마지막 승점 × <b style="color:#7eff7e;">축복 3개</b> 지급</li>
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">⚠ 도전 시 주의사항</b></div>
               <ul style="margin:0 0 4px 16px;padding:0;">
-                <li>상대 카드 15장은 등급 낮→높 순으로만 공개 · <b>배치 순서는 도전 시작 시</b> 공개</li>
+                <li>상대 카드 15장은 <b>등급 낮은 순</b>으로만 공개 · <b>배치 순서는 도전 시작 시</b> 공개</li>
                 <li><b style="color:#ff5555;">전투 중 새로고침·탭 닫기·이탈 시 자동 패배 처리 (승점 -1)</b></li>
               </ul>
             </div>
@@ -16378,21 +16378,41 @@ window.addEventListener('beforeunload', function(e){
 // ─── 등록/편집 UI (Phase 2b) ─────────────────────────────────────
 GAME.corridor.editing = null;   // 편집 중인 draft 상태
 
-// ─── 프리셋 (localStorage · 유저별) ──────────────────────────────
-function _corridorPresetKey(){
+// ─── 프리셋 (계정별 · saves.data.player.corridorPresets 에 저장 · 클라우드 동기화) ─
+// 이전 localStorage 저장분은 최초 조회 시 자동 마이그레이션.
+function _corridorLegacyPresetKey(){
   const p = GAME.player;
   return 'yeoshin_corridor_presets__' + (p ? p.name : 'anon');
 }
 function _corridorLoadPresets(){
+  const p = GAME.player;
+  if (!p) return [];
+  // 이미 계정에 있으면 그대로 반환
+  if (Array.isArray(p.corridorPresets)) return p.corridorPresets;
+  // 마이그레이션 — 구 localStorage 저장분 확인
   try {
-    const raw = localStorage.getItem(_corridorPresetKey());
-    if (!raw) return [];
-    const arr = JSON.parse(raw);
-    return Array.isArray(arr) ? arr : [];
-  } catch(e){ return []; }
+    const raw = localStorage.getItem(_corridorLegacyPresetKey());
+    if (raw){
+      const arr = JSON.parse(raw);
+      if (Array.isArray(arr) && arr.length > 0){
+        p.corridorPresets = arr;
+        try { saveGame(); } catch(e){}
+        try { cloudSaveNow().catch(()=>{}); } catch(e){}
+        try { localStorage.removeItem(_corridorLegacyPresetKey()); } catch(e){}
+        try { toast('✔ 프리셋 ' + arr.length + '개를 계정에 이관 완료 (이제 캐시 삭제해도 유지)'); } catch(e){}
+        return p.corridorPresets;
+      }
+    }
+  } catch(e){}
+  p.corridorPresets = [];
+  return p.corridorPresets;
 }
 function _corridorSavePresetList(list){
-  try { localStorage.setItem(_corridorPresetKey(), JSON.stringify(list)); } catch(e){}
+  const p = GAME.player;
+  if (!p) return;
+  p.corridorPresets = Array.isArray(list) ? list : [];
+  try { saveGame(); } catch(e){}
+  try { cloudSaveNow().catch(err => console.warn('[corridor preset cloudSave]', err)); } catch(e){}
 }
 function _corridorSaveCurrentPreset(){
   const e = GAME.corridor.editing;
@@ -16408,8 +16428,8 @@ function _corridorSaveCurrentPreset(){
   const trimmed = name.trim().slice(0, 20);
   if (!trimmed) return;
   const list = _corridorLoadPresets();
-  if (list.length >= 10){
-    if (!confirm('프리셋 최대 10개 도달 · 가장 오래된 것 삭제 후 저장할까요?')) return;
+  if (list.length >= 3){
+    if (!confirm('프리셋 최대 3개 도달 · 가장 오래된 것 삭제 후 저장할까요?')) return;
     list.sort((a, b) => (b.createdAt||0) - (a.createdAt||0));
     list.pop();
   }
@@ -16677,6 +16697,8 @@ function renderCorridorRegister(){
   const e = GAME.corridor.editing;
   const p = GAME.player;
   if (!e || !p){ container.innerHTML = ''; return; }
+  // 재렌더 전 인벤 스크롤 위치 캡처 (카드 추가/제거 시 상단으로 튀는 문제 방지)
+  const _invScrollBefore = (function(){ const el = $('corridor_inv_scroll'); return el ? el.scrollTop : 0; })();
   const isEdit = e.mode === 'edit';
   const existing = GAME.corridor.myReg;
   const remainPts = _corridorRemainingPoints();
@@ -16841,7 +16863,7 @@ function renderCorridorRegister(){
           <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">
             💾 프리셋
             <span style="font-size:10px;font-weight:normal;color:#888;margin-left:8px;">
-              이 브라우저에만 저장 (localStorage) · 최대 10개
+              계정에 저장 (클라우드 동기화) · 최대 3개
               ${isEdit ? '· <b style="color:#ff9b3a;">편집 모드는 덱/스탯/타입만 적용 (풀 잠금)</b>' : ''}
             </span>
           </div>
@@ -16897,7 +16919,7 @@ function renderCorridorRegister(){
             <div style="font-size:11px;color:#e6d3ff;padding:4px 0;border-top:1px solid #2a0f3a;margin-bottom:6px;">
               💡 보유 카드 (클릭하여 풀에 추가/제외)
             </div>
-            <div style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:4px;max-height:320px;overflow-y:auto;padding:4px;background:#0a0518;border-radius:3px;">
+            <div id="corridor_inv_scroll" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(80px, 1fr));gap:4px;max-height:320px;overflow-y:auto;padding:4px;background:#0a0518;border-radius:3px;">
               ${invHtml || '<div style="grid-column:span 8;color:#888;text-align:center;padding:20px;">보유 카드 없음 · 인벤에서 카드를 획득해야 합니다</div>'}
             </div>
           ` : ''}
@@ -16939,6 +16961,9 @@ function renderCorridorRegister(){
         </div>
       </div>
     </div>`;
+  // 인벤 스크롤 위치 복원 (재렌더 후 상단으로 튀는 것 방지)
+  const _invEl = $('corridor_inv_scroll');
+  if (_invEl && _invScrollBefore) _invEl.scrollTop = _invScrollBefore;
 }
 
 async function commitCorridorRegistration(){
