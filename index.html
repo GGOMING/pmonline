@@ -2389,14 +2389,17 @@
       <div style="max-width:1200px;margin:0 auto;">
         <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);padding:16px 20px;border-radius:6px 6px 0 0;color:#ffd700;text-shadow:1px 1px 2px #000;">
           <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🗡️ 영원의 회랑</div>
+          <!-- 정적 HTML 이라 JS 템플릿 리터럴 사용 불가 · 테스트/정식 전환 시 아래 두 블록 수동 수정 -->
           <div style="font-size:12px;color:#e6d3ff;margin-top:10px;line-height:1.7;">
             영원의 회랑은 유저들이 자신의 축복을 걸고 신성한 결투를 벌이는 곳입니다.<br>
-            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 <b style="color:#ffd700;">${CORRIDOR_TEST_MODE ? '500G' : '정령의 축복 5개'}</b>를 지불해야 합니다.<br><br>
+            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 <b style="color:#ffd700;">500G</b>를 지불해야 합니다.<br><br>
             도전자로 등록되면 회랑에 등록된 다른 유저에게 도전할 수 있습니다.<br>
-            승리한 유저에게는 승점이 주어지고, ${CORRIDOR_TEST_MODE ? '<b style="color:#ff9b3a;">테스트 기간 동안 주간 정산은 진행되지 않습니다</b> (정식 오픈 시 매주 월요일 오전 6시 1승점당 정령의 축복 3개 지급).' : '매주 월요일 오전 6시 정산을 통해 1승점당 정령의 축복 3개를 획득할 수 있습니다.'}<br>
+            승리한 유저에게는 승점이 주어지고, <b style="color:#ff9b3a;">테스트 기간 동안 주간 정산은 진행되지 않습니다</b> (정식 오픈 시 매주 월요일 오전 6시 1승점당 정령의 축복 3개 지급).<br>
             도전자는 상대방의 카드 15장을 볼 수 있으며, 그 중 어떤 10장을 사용했는지는 알 수 없습니다.<br>
             <span style="color:#ffd700;font-weight:bold;">상대의 덱을 예측하여 압도적인 승리를 쟁취하세요!</span>
-            ${CORRIDOR_TEST_MODE ? '<div style="margin-top:8px;padding:6px 10px;background:rgba(255,155,58,0.15);border:1px solid #ff9b3a;border-radius:4px;color:#ff9b3a;font-size:11px;">🚧 <b>테스트 기간 안내</b> — 등록료 <b>500G</b> · 주간 정산 없음 · 언제든지 정식 오픈 시 정령의 축복 기반으로 전환됩니다.</div>' : ''}
+            <div style="margin-top:8px;padding:6px 10px;background:rgba(255,155,58,0.15);border:1px solid #ff9b3a;border-radius:4px;color:#ff9b3a;font-size:11px;">
+              🚧 <b>테스트 기간 안내</b> — 등록료 <b>500G</b> · 주간 정산 없음 · 정식 오픈 시 정령의 축복 기반으로 전환됩니다.
+            </div>
           </div>
         </div>
         <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -16228,7 +16231,7 @@ function renderCorridorLobby(){
   const actEl = $('corridor_actions');
   if (actEl){
     if (!reg){
-      const regBtnLabel = CORRIDOR_TEST_MODE ? '🌀 등록하기 (500G 소모)' : '🌀 등록하기 (5축복 소모)';
+      const regBtnLabel = CORRIDOR_TEST_MODE ? '🌀 회랑 입장 (500G 소모)' : '🌀 회랑 입장 (5축복 소모)';
       actEl.innerHTML = `
         <button onclick="openCorridorRegister(false)" style="padding:10px 24px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
           ${regBtnLabel}
@@ -16237,7 +16240,7 @@ function renderCorridorLobby(){
     } else {
       actEl.innerHTML = `
         <button onclick="openCorridorRegister(true)" style="padding:10px 24px;background:linear-gradient(180deg,#a335ee,#5a1a6b);color:#fff;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
-          ✏ 편집 (${reg.free_edit_available ? '오늘 무료' : '1축복'})
+          ✏ 덱 수정 (${reg.free_edit_available ? '1회 무료' : '1축복'})
         </button>
         <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
     }
@@ -16828,7 +16831,7 @@ function renderCorridorRegister(){
         <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
           ${isEdit
             ? '풀 15장은 주간 리셋까지 잠금 · 스탯·공격 타입·덱 배치만 편집 가능'
-            : `스탯 25P 배분 → 15장 카드 풀 선택 → 그 중 10장 덱 배치 → ${registerCostLabel}하여 등록`}
+            : `스탯 25P 배분 → 15장 카드 풀 선택 → 그 중 10장 덱 배치 → ${registerCostLabel.replace('소모', '사용')}하여 등록`}
         </div>
       </div>
       <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
