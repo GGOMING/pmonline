@@ -16335,10 +16335,13 @@ function _corridorSetAtkType(type){
   renderCorridorRegister();
 }
 
-// 회랑 카드 제한: 영웅(h)·전설(l) 금지 · 유니크(u) 최대 1장
+// 회랑 카드 제한: 영웅/전설 금지 · 유니크 최대 1장
+// (실제 card.grade 필드 참조 · id prefix 는 신뢰 불가 · 예: r34 스피드스크롤 grade=unique)
 function _corridorCardAllowed(cardId){
   if (typeof cardId !== 'string') return { ok:false, reason:'invalid' };
-  if (cardId.startsWith('h') || cardId.startsWith('l')){
+  const card = CARDS.find(c => c.id === cardId);
+  if (!card) return { ok:false, reason:'invalid' };
+  if (card.grade === 'hero' || card.grade === 'legend'){
     return { ok:false, reason:'hero_legend' };
   }
   return { ok:true };
@@ -16346,7 +16349,10 @@ function _corridorCardAllowed(cardId){
 function _corridorPoolUniqueCount(){
   const e = GAME.corridor.editing;
   if (!e) return 0;
-  return e.card_pool.filter(cid => typeof cid === 'string' && cid.startsWith('u')).length;
+  return e.card_pool.filter(cid => {
+    const card = CARDS.find(c => c.id === cid);
+    return card && card.grade === 'unique';
+  }).length;
 }
 
 function _corridorPoolAdd(cardId){
@@ -16505,8 +16511,8 @@ function renderCorridorRegister(){
   const uniqueInPool = _corridorPoolUniqueCount();
   const invHtml = invCards.map(c => {
     const inPool = e.card_pool.includes(c.id);
-    const isHeroLegend = c.id.startsWith('h') || c.id.startsWith('l');
-    const isUnique = c.id.startsWith('u');
+    const isHeroLegend = c.grade === 'hero' || c.grade === 'legend';
+    const isUnique = c.grade === 'unique';
     const uniqueBlocked = isUnique && !inPool && uniqueInPool >= 1;
     const blockedByRule = isHeroLegend || uniqueBlocked;
     const disabled = isEdit || blockedByRule;
@@ -17047,10 +17053,37 @@ async function startCorridorBattle(defenderId){
   const defender = GAME.corridor.ranking.find(r => r.user_id === defenderId);
   if (!myReg || !defender){ toast('데이터 오류'); return; }
 
-  // 가상 캐릭터 조립
+  // Step 1: 서버에 방어자 덱 공개 요청 (쿨다운 즉시 커밋 · 5분 이내 challenge 필요)
+  let revealed;
+  try {
+    const rev = await sb.rpc('eternal_corridor_reveal_defender_deck', { p_defender_id: defenderId });
+    if (rev.error){
+      alert('도전 시작 실패:\n' + (rev.error.message || rev.error));
+      return;
+    }
+    revealed = Array.isArray(rev.data) ? rev.data[0] : rev.data;
+    if (!revealed || !revealed.defender_deck){
+      alert('방어자 정보 조회 실패');
+      return;
+    }
+  } catch(err){
+    console.error('[corridor reveal]', err);
+    alert('도전 시작 실패:\n' + (err.message || err));
+    return;
+  }
+
+  // Step 2: 가상 캐릭터 조립 (방어자 = 서버 공개 값 기준)
   const virtA = _corridorBuildVirtual(myReg, myReg.nickname || p.name);
-  const virtD = _corridorBuildVirtual(defender, defender.nickname);
-  // 시뮬 (Phase 2c-beta · 전체 fx 엔진 재사용)
+  const defRegExpanded = {
+    deck: revealed.defender_deck,
+    atk_type: revealed.defender_atk_type,
+    alloc_str: revealed.defender_alloc_str,
+    alloc_dex: revealed.defender_alloc_dex,
+    alloc_int: revealed.defender_alloc_int,
+    alloc_con: revealed.defender_alloc_con,
+  };
+  const virtD = _corridorBuildVirtual(defRegExpanded, revealed.defender_nickname || defender.nickname);
+  // Step 3: 시뮬레이션 (Phase 2c-beta · 전체 fx 엔진 재사용)
   let sim;
   try {
     sim = _corridorSimulateFull(virtA, virtD);
