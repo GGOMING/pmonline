@@ -2388,9 +2388,14 @@
     <div class="content-pane" id="content-corridor-lobby" hidden>
       <div style="max-width:1200px;margin:0 auto;">
         <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);padding:16px 20px;border-radius:6px 6px 0 0;color:#ffd700;text-shadow:1px 1px 2px #000;">
-          <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🌀 영원의 회랑</div>
-          <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
-            비동기 PvP · Lv 25 가상 캐릭터 · 매주 월 06:00 KST 리셋 · 시즌 종료 시 승점 × 3축복 지급
+          <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🗡️ 영원의 회랑</div>
+          <div style="font-size:12px;color:#e6d3ff;margin-top:10px;line-height:1.7;">
+            영원의 회랑은 유저들이 자신의 축복을 걸고 신성한 결투를 벌이는 곳입니다.<br>
+            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 정령의 축복 5개를 지불해야 합니다.<br><br>
+            도전자로 등록되면 회랑에 등록된 다른 유저에게 도전할 수 있습니다.<br>
+            승리한 유저에게는 승점이 주어지고, 매주 월요일 오전 6시 정산을 통해 1승점당 정령의 축복 3개를 획득할 수 있습니다.<br>
+            도전자는 상대방의 카드 15장을 볼 수 있으며, 그 중 어떤 10장을 사용했는지는 알 수 없습니다.<br>
+            <span style="color:#ffd700;font-weight:bold;">상대의 덱을 예측하여 압도적인 승리를 쟁취하세요!</span>
           </div>
         </div>
         <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -2409,7 +2414,7 @@
                 <li><b>등록/재등록</b>: 정령의 축복 <b>5개</b> → 승점 <b>1점</b> 시작</li>
                 <li><b>편집</b>: 하루 1회 무료 · 이후 편집당 축복 <b>1개</b> (등록 후 15장 pool 은 잠금 · deck/스탯/타입만 변경 가능)</li>
                 <li><b>도전 입장료</b>: <b style="color:#ff9b3a;">실제 레벨 × 50 골드</b> (도전 시작 시 즉시 차감 · 이탈/포기 환불 X)</li>
-                <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>1시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
+                <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>3시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
                 <li><b>승점 변동</b>: 승 <b style="color:#7eff7e;">+1</b> · 패 <b style="color:#ff7e7e;">-1</b> · <b style="color:#ff5555;">0점 도달 시 등록 자동 삭제 → 재등록(5축복) 필요</b></li>
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">📅 주간 리셋 · 시즌 정산</b></div>
@@ -16257,9 +16262,11 @@ function renderCorridorLobby(){
         } else if (!reg){
           btnHtml = `<span style="color:#999;font-size:11px;">등록 필요</span>`;
         } else if (cd > 0){
-          const mm = Math.floor(cd / 60);
+          const hh = Math.floor(cd / 3600);
+          const mm = Math.floor((cd % 3600) / 60);
           const ss = String(cd % 60).padStart(2, '0');
-          btnHtml = `<button disabled style="padding:4px 12px;background:#555;color:#aaa;border:0;border-radius:3px;font-size:11px;cursor:not-allowed;">⏳ ${mm}:${ss}</button>`;
+          const label = hh > 0 ? `${hh}:${String(mm).padStart(2,'0')}:${ss}` : `${mm}:${ss}`;
+          btnHtml = `<button disabled style="padding:4px 12px;background:#555;color:#aaa;border:0;border-radius:3px;font-size:11px;cursor:not-allowed;">⏳ ${label}</button>`;
         } else {
           btnHtml = `<button onclick="openCorridorChallenge('${row.user_id}')" style="padding:4px 12px;background:linear-gradient(180deg,#c00,#800);color:#fff;border:0;border-radius:3px;font-size:11px;font-weight:bold;cursor:pointer;">⚔ 도전</button>`;
         }
@@ -17052,8 +17059,11 @@ function openCorridorChallenge(defenderId){
   if (defender.user_id === myReg.user_id){ toast('본인 캐릭터는 도전 불가'); return; }
   const cd = GAME.corridor.cooldowns[defenderId] || 0;
   if (cd > 0){
-    const mm = Math.floor(cd / 60), ss = String(cd % 60).padStart(2,'0');
-    toast(`이 상대는 아직 ${mm}:${ss} 쿨다운 중입니다`); return;
+    const hh = Math.floor(cd / 3600);
+    const mm = Math.floor((cd % 3600) / 60);
+    const ss = String(cd % 60).padStart(2,'0');
+    const label = hh > 0 ? `${hh}시간 ${mm}분 ${ss}초` : `${mm}분 ${ss}초`;
+    toast(`이 상대는 아직 ${label} 쿨다운 중입니다`); return;
   }
 
   // 카드 15장 등급 낮→높 정렬 (순서 숨김)
@@ -17101,7 +17111,7 @@ function openCorridorChallenge(defenderId){
             return `<div style="margin-top:6px;padding:6px 8px;background:${canPay?'#2a0f3a':'#3a0508'};border-radius:3px;">
               <div><b style="color:#ffd700;">💰 도전 입장료:</b> <b style="color:${canPay?'#7eff7e':'#ff7e7e'};">${fee.toLocaleString()}G</b> (실제 레벨 ${p.level|0} × 50) · 보유 ${gold.toLocaleString()}G ${canPay?'':'<b style="color:#ff5555;">— 부족!</b>'}</div>
               <div style="color:#ff9b3a;font-size:10px;margin-top:3px;">⚠ 도전 시작 시 즉시 차감 · 이탈/포기/새로고침 시에도 <b>환불 X</b> · 승리 시 승점 +1 / 패배 시 -1</div>
-              <div style="color:#ff9b3a;font-size:10px;">⚠ 같은 상대 재도전은 <b>1시간 쿨다운</b></div>
+              <div style="color:#ff9b3a;font-size:10px;">⚠ 같은 상대 재도전은 <b>3시간 쿨다운</b></div>
             </div>`;
           })()}
         </div>
