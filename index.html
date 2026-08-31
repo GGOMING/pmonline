@@ -2391,11 +2391,12 @@
           <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🗡️ 영원의 회랑</div>
           <div style="font-size:12px;color:#e6d3ff;margin-top:10px;line-height:1.7;">
             영원의 회랑은 유저들이 자신의 축복을 걸고 신성한 결투를 벌이는 곳입니다.<br>
-            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 정령의 축복 5개를 지불해야 합니다.<br><br>
+            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 <b style="color:#ffd700;">${CORRIDOR_TEST_MODE ? '500G' : '정령의 축복 5개'}</b>를 지불해야 합니다.<br><br>
             도전자로 등록되면 회랑에 등록된 다른 유저에게 도전할 수 있습니다.<br>
-            승리한 유저에게는 승점이 주어지고, 매주 월요일 오전 6시 정산을 통해 1승점당 정령의 축복 3개를 획득할 수 있습니다.<br>
+            승리한 유저에게는 승점이 주어지고, ${CORRIDOR_TEST_MODE ? '<b style="color:#ff9b3a;">테스트 기간 동안 주간 정산은 진행되지 않습니다</b> (정식 오픈 시 매주 월요일 오전 6시 1승점당 정령의 축복 3개 지급).' : '매주 월요일 오전 6시 정산을 통해 1승점당 정령의 축복 3개를 획득할 수 있습니다.'}<br>
             도전자는 상대방의 카드 15장을 볼 수 있으며, 그 중 어떤 10장을 사용했는지는 알 수 없습니다.<br>
             <span style="color:#ffd700;font-weight:bold;">상대의 덱을 예측하여 압도적인 승리를 쟁취하세요!</span>
+            ${CORRIDOR_TEST_MODE ? '<div style="margin-top:8px;padding:6px 10px;background:rgba(255,155,58,0.15);border:1px solid #ff9b3a;border-radius:4px;color:#ff9b3a;font-size:11px;">🚧 <b>테스트 기간 안내</b> — 등록료 <b>500G</b> · 주간 정산 없음 · 언제든지 정식 오픈 시 정령의 축복 기반으로 전환됩니다.</div>' : ''}
           </div>
         </div>
         <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -16119,8 +16120,9 @@ async function claimWeeklyRankingReward(){
 //   (Phase 2b: 등록/편집 UI · Phase 2c: 전투/결과)
 // ============================================================
 
-// 오픈 준비 중 — 비밀번호 게이트 (0901). 정식 오픈 시 이 블록 제거.
-const CORRIDOR_UNLOCK_PW = '0901';
+// 테스트 기간 플래그 — true 시 등록료 500G · 주간 정산 없음
+// 정식 오픈 시 CORRIDOR_TEST_MODE=false + SQL 07 재배포 + 정산 크론 재등록
+const CORRIDOR_TEST_MODE = true;
 
 // 상태 캐시 (로비 데이터)
 GAME.corridor = {
@@ -16136,17 +16138,6 @@ function openCorridor(){
   const p = GAME.player;
   if (!p) return;
   if (_isBanned && _isBanned(p)){ try { _blockedByBanToast(p); } catch(e){} return; }
-  // 오픈 준비 중 — 비밀번호 게이트 (운영자 계정은 우회)
-  if (!(p && p.isOperator)){
-    try { alert('🚧 오픈 예정 컨텐츠입니다.\n\n「영원의 회랑」은 정식 오픈 준비 중입니다.'); } catch(e){}
-    let pw = null;
-    try { pw = prompt('관리자에게 부여받은 비밀번호를 입력하세요.'); } catch(e){ pw = null; }
-    if (pw == null) return;   // 취소
-    if (String(pw).trim() !== CORRIDOR_UNLOCK_PW){
-      try { alert('비밀번호가 일치하지 않습니다.'); } catch(e){}
-      return;
-    }
-  }
   // 진입 레벨 (Lv 25+)
   if ((p.level|0) < 25){
     toast('영원의 회랑은 Lv 25 이상만 입장할 수 있습니다.');
@@ -16201,11 +16192,14 @@ function renderCorridorLobby(){
   const statusEl = $('corridor_my_status');
   if (statusEl){
     if (!reg){
+      const costLabel = CORRIDOR_TEST_MODE
+        ? `500G → 승점 1점 시작 (보유: 💰 ${(p.gold||0).toLocaleString()}G)`
+        : `정령의 축복 5개 → 승점 1점 시작 (보유: 🌿 ${(p.spiritBlessing||0).toLocaleString()}개)`;
       statusEl.innerHTML = `
         <div style="color:#ff9b3a;font-weight:bold;font-size:13px;margin-bottom:4px;">📋 등록 상태: <span style="color:#ff5555;">미등록</span></div>
         <div style="color:#ccc;font-size:11px;">
           컨텐츠 참여를 위해 캐릭터 등록이 필요합니다.<br>
-          <b style="color:#ffd700;">등록 비용: 정령의 축복 5개 → 승점 1점 시작</b> (보유: 🌿 ${(p.spiritBlessing||0).toLocaleString()}개)
+          <b style="color:#ffd700;">등록 비용: ${costLabel}</b>
         </div>`;
     } else {
       const total = 5 + reg.alloc_str + reg.alloc_dex + reg.alloc_int + reg.alloc_con;   // 표시용 (참고: 개별 스탯 = 5 + alloc)
@@ -16234,9 +16228,10 @@ function renderCorridorLobby(){
   const actEl = $('corridor_actions');
   if (actEl){
     if (!reg){
+      const regBtnLabel = CORRIDOR_TEST_MODE ? '🌀 등록하기 (500G 소모)' : '🌀 등록하기 (5축복 소모)';
       actEl.innerHTML = `
         <button onclick="openCorridorRegister(false)" style="padding:10px 24px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
-          🌀 등록하기 (5축복 소모)
+          ${regBtnLabel}
         </button>
         <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
     } else {
@@ -16818,11 +16813,13 @@ function renderCorridorRegister(){
   if (remainPts !== 0) missing.push(`스탯 ${remainPts}P 남음`);
   if (e.card_pool.length !== 15) missing.push(`풀 ${e.card_pool.length}/15`);
   if (e.deck.length !== 10) missing.push(`덱 ${e.deck.length}/10`);
+  const registerCostLabel = CORRIDOR_TEST_MODE ? '500G 소모' : '축복 5개 소모';
   const cost = isEdit
     ? (existing && existing.free_edit_available ? '오늘 무료' : '축복 1개 소모')
-    : '축복 5개 소모';
+    : registerCostLabel;
   const saveHint = canSave ? `저장 준비 완료 · ${cost}` : `저장 불가: ${missing.join(' · ')}`;
   const spirit = p.spiritBlessing || 0;
+  const gold = p.gold || 0;
 
   container.innerHTML = `
     <div style="max-width:1300px;margin:0 auto;">
@@ -16831,7 +16828,7 @@ function renderCorridorRegister(){
         <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
           ${isEdit
             ? '풀 15장은 주간 리셋까지 잠금 · 스탯·공격 타입·덱 배치만 편집 가능'
-            : '스탯 25P 배분 → 15장 카드 풀 선택 → 그 중 10장 덱 배치 → 5축복 소모하여 등록'}
+            : `스탯 25P 배분 → 15장 카드 풀 선택 → 그 중 10장 덱 배치 → ${registerCostLabel}하여 등록`}
         </div>
       </div>
       <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -16925,9 +16922,15 @@ function renderCorridorRegister(){
           <button class="btn-back" onclick="openCorridor()" style="padding:10px 20px;">◀ 로비로 (저장 안 함)</button>
           <div style="text-align:right;">
             <div style="color:${canSave?'#7eff7e':'#ff9b3a'};font-size:11px;margin-bottom:4px;font-weight:bold;">${saveHint}</div>
-            <div style="color:#888;font-size:10px;margin-bottom:4px;">보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개</div>
+            <div style="color:#888;font-size:10px;margin-bottom:4px;">
+              ${isEdit
+                ? `보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개`
+                : (CORRIDOR_TEST_MODE
+                   ? `보유 골드: 💰 <b style="color:#ffd700;">${gold.toLocaleString()}</b>G`
+                   : `보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개`)}
+            </div>
             <button onclick="commitCorridorRegistration()" ${canSave?'':'disabled'} style="padding:10px 30px;background:${canSave?'linear-gradient(180deg,#ffd700,#b8860b)':'#555'};color:${canSave?'#3a1a00':'#aaa'};border:0;border-radius:4px;font-weight:bold;cursor:${canSave?'pointer':'not-allowed'};font-size:13px;box-shadow:${canSave?'0 0 8px rgba(255,215,0,0.5)':'none'};">
-              ${isEdit ? '💾 편집 저장' : '💾 등록 (5축복)'}
+              ${isEdit ? '💾 편집 저장' : (CORRIDOR_TEST_MODE ? '💾 등록 (500G)' : '💾 등록 (5축복)')}
             </button>
           </div>
         </div>
@@ -16948,13 +16951,19 @@ async function commitCorridorRegistration(){
   }
   if (e.card_pool.length !== 15){ toast('카드 풀은 정확히 15장'); return; }
   if (e.deck.length !== 10){ toast('덱은 정확히 10장'); return; }
-  // 축복 잔량 사전 확인
+  // 자산 잔량 사전 확인 (편집은 항상 축복 · 등록은 테스트 모드면 500G · 정식이면 5축복)
   const spirit = p.spiritBlessing || 0;
+  const gold = p.gold || 0;
   const needSpirit = isEdit
     ? ((GAME.corridor.myReg && GAME.corridor.myReg.free_edit_available) ? 0 : 1)
-    : 5;
+    : (CORRIDOR_TEST_MODE ? 0 : 5);
+  const needGold = (!isEdit && CORRIDOR_TEST_MODE) ? 500 : 0;
   if (spirit < needSpirit){
     alert(`정령의 축복 부족 (필요 ${needSpirit}개 · 보유 ${spirit}개)`);
+    return;
+  }
+  if (needGold > 0 && gold < needGold){
+    alert(`골드 부족 (필요 ${needGold.toLocaleString()}G · 보유 ${gold.toLocaleString()}G)`);
     return;
   }
 
@@ -16966,7 +16975,11 @@ async function commitCorridorRegistration(){
       ? '편집 내용을 저장하시겠습니까?\n(오늘 무료 편집 사용 · 이후 편집부터 축복 1개)'
       : '편집 내용을 저장하시겠습니까?\n(정령의 축복 1개 소모)';
   } else {
-    confirmMsg = '캐릭터를 등록하시겠습니까?\n\n· 정령의 축복 5개 소모\n· 승점 1점으로 시작\n· 매주 월 06:00 KST 리셋';
+    const costLine = CORRIDOR_TEST_MODE ? '· 500G 소모 (테스트 기간)' : '· 정령의 축복 5개 소모';
+    const settlementLine = CORRIDOR_TEST_MODE
+      ? '· 테스트 기간 · 주간 정산 없음 (정식 오픈 시 승점 × 축복 3개 지급)'
+      : '· 시즌 종료 시 승점 × 축복 3개 자동 지급';
+    confirmMsg = `캐릭터를 등록하시겠습니까?\n\n${costLine}\n· 승점 1점으로 시작\n· 매주 월 06:00 KST 리셋\n${settlementLine}`;
   }
   if (!confirm(confirmMsg)) return;
 
@@ -16998,10 +17011,9 @@ async function commitCorridorRegistration(){
       alert(`${isEdit?'편집':'등록'} 실패:\n${res.error.message||res.error}`);
       return;
     }
-    // 로컬 축복 값 동기화 (RPC 가 서버 saves 를 직접 수정 · 로컬 재계산은 UI 반영용)
-    if (needSpirit > 0){
-      p.spiritBlessing = Math.max(0, spirit - needSpirit);
-    }
+    // 로컬 자산 값 동기화 (RPC 가 서버 saves 를 직접 수정 · 로컬 재계산은 UI 반영용)
+    if (needSpirit > 0) p.spiritBlessing = Math.max(0, spirit - needSpirit);
+    if (needGold > 0)   p.gold          = Math.max(0, gold - needGold);
     try { saveGame(); renderSheet(); } catch(err){}
     GAME.corridor.editing = null;
     if (isEdit){
@@ -17591,7 +17603,8 @@ function _corridorRenderBattle(){
     </div>`;
   };
 
-  const isFinished = pb.finished || cur >= sim.turns.length;
+  const isPlaybackDone = cur >= sim.turns.length;   // 재생 완료 (결과 미제출)
+  const isSubmitted = !!pb.finished;                 // 결과 제출 완료
   const autoLabel = pb.autoPlay ? '⏸ 일시정지' : '▶ 자동 재생 재개';
 
   container.innerHTML = `
@@ -17599,7 +17612,7 @@ function _corridorRenderBattle(){
       <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);color:#ffd700;padding:12px 20px;border-radius:6px 6px 0 0;">
         <div style="font-size:16px;font-weight:bold;">🗡️ 영원의 회랑 · 전투</div>
         <div style="font-size:11px;color:#e6d3ff;margin-top:2px;">
-          진행 <b style="color:#ffd700;">${cur}</b> / ${sim.turns.length}턴 · ${isFinished ? '완료' : (pb.autoPlay ? '자동 재생 중' : '일시정지')}
+          진행 <b style="color:#ffd700;">${cur}</b> / ${sim.turns.length}턴 · ${isSubmitted ? '완료' : (isPlaybackDone ? '재생 완료 · 결과 확인 대기' : (pb.autoPlay ? '자동 재생 중' : '일시정지'))}
         </div>
       </div>
       <div style="background:#1a0524;padding:12px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -17624,9 +17637,15 @@ function _corridorRenderBattle(){
               ${logHtml}
             </div>
             <div style="display:flex;gap:6px;margin-top:8px;">
-              <button onclick="_corridorPlayNextTurn()" ${isFinished ? 'disabled' : ''} style="flex:1;padding:8px;background:${isFinished?'#555':'linear-gradient(180deg,#ffd700,#b8860b)'};color:${isFinished?'#aaa':'#3a1a00'};border:0;border-radius:3px;font-weight:bold;cursor:${isFinished?'not-allowed':'pointer'};font-size:12px;">▶ 다음 턴</button>
-              <button onclick="_corridorToggleAutoPlay()" ${isFinished ? 'disabled' : ''} style="flex:1;padding:8px;background:${isFinished?'#555':'#5a1a6b'};color:${isFinished?'#aaa':'#fff'};border:0;border-radius:3px;font-weight:bold;cursor:${isFinished?'not-allowed':'pointer'};font-size:12px;">${autoLabel}</button>
-              <button onclick="_corridorAbandonBattle()" ${isFinished ? 'disabled' : ''} style="flex:1;padding:8px;background:${isFinished?'#555':'linear-gradient(180deg,#ff5555,#8a1a1a)'};color:${isFinished?'#aaa':'#fff'};border:0;border-radius:3px;font-weight:bold;cursor:${isFinished?'not-allowed':'pointer'};font-size:12px;">🏳 중도 포기</button>
+              ${isPlaybackDone ? `
+                <button onclick="_corridorFinishPlayback()" ${isSubmitted?'disabled':''} style="flex:1;padding:10px;background:${isSubmitted?'#555':'linear-gradient(180deg,#7eff7e,#3a8a3a)'};color:${isSubmitted?'#aaa':'#0a2a0a'};border:0;border-radius:3px;font-weight:bold;cursor:${isSubmitted?'not-allowed':'pointer'};font-size:13px;box-shadow:${isSubmitted?'none':'0 0 8px rgba(126,255,126,0.5)'};">
+                  ${isSubmitted ? '⏳ 결과 제출 중…' : '✔ 결과 확인 · 로비로'}
+                </button>
+              ` : `
+                <button onclick="_corridorPlayNextTurn()" style="flex:1;padding:8px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:3px;font-weight:bold;cursor:pointer;font-size:12px;">▶ 다음 턴</button>
+                <button onclick="_corridorToggleAutoPlay()" style="flex:1;padding:8px;background:#5a1a6b;color:#fff;border:0;border-radius:3px;font-weight:bold;cursor:pointer;font-size:12px;">${autoLabel}</button>
+                <button onclick="_corridorAbandonBattle()" style="flex:1;padding:8px;background:linear-gradient(180deg,#ff5555,#8a1a1a);color:#fff;border:0;border-radius:3px;font-weight:bold;cursor:pointer;font-size:12px;">🏳 중도 포기</button>
+              `}
             </div>
           </div>
           <!-- 우: 상대 -->
@@ -17703,21 +17722,54 @@ function _corridorRenderResult(defender, sim, battleLog, serverRow, virtA, virtD
             ${serverRow.message ? `<div style="margin-top:4px;color:#e6d3ff;">${escapeHtml(serverRow.message)}</div>` : ''}
           ` : ''}
         </div>
-        <!-- 턴별 로그 -->
-        <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:8px;margin-bottom:12px;">
-          <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">📜 턴별 카드 재생</div>
-          <table style="width:100%;font-size:11px;border-collapse:collapse;">
-            <thead>
-              <tr style="background:#2a0f3a;color:#ffd700;">
-                <th style="padding:4px;">턴</th>
-                <th style="padding:4px;text-align:left;">내 카드</th>
-                <th style="padding:4px;text-align:left;">상대 카드</th>
-                <th style="padding:4px;text-align:right;">내 HP</th>
-                <th style="padding:4px;text-align:right;">상대 HP</th>
-              </tr>
-            </thead>
-            <tbody>${turnRows}</tbody>
-          </table>
+        <!-- 좌: 턴별 카드 재생 요약 · 우: 상세 전투 로그 -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:12px;">
+          <div style="background:#160820;border:1px solid #5a1a6b;border-radius:4px;padding:8px;">
+            <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">📜 턴별 카드 재생</div>
+            <div style="max-height:340px;overflow-y:auto;">
+              <table style="width:100%;font-size:11px;border-collapse:collapse;">
+                <thead>
+                  <tr style="background:#2a0f3a;color:#ffd700;">
+                    <th style="padding:4px;">턴</th>
+                    <th style="padding:4px;text-align:left;">내 카드</th>
+                    <th style="padding:4px;text-align:left;">상대 카드</th>
+                    <th style="padding:4px;text-align:right;">내 HP</th>
+                    <th style="padding:4px;text-align:right;">상대 HP</th>
+                  </tr>
+                </thead>
+                <tbody>${turnRows}</tbody>
+              </table>
+            </div>
+          </div>
+          <div style="background:#0a0518;border:1px solid #5a1a6b;border-radius:4px;padding:8px;">
+            <div style="font-weight:bold;color:#ffd700;margin-bottom:6px;font-size:12px;">📖 상세 전투 로그</div>
+            <div style="max-height:340px;overflow-y:auto;padding:4px;font-size:11px;line-height:1.5;">
+              ${(function(){
+                const logBy = sim.logByTurn || {};
+                const parts = [];
+                for (let t = 1; t <= sim.turns.length; t++){
+                  parts.push(`<div style="color:#7eff7e;font-weight:bold;margin-top:6px;border-bottom:1px dashed #2a0f3a;padding-bottom:2px;">━━━ ${t}턴 ━━━</div>`);
+                  const msgs = logBy[t] || [];
+                  if (!msgs.length){
+                    parts.push(`<div style="color:#666;font-size:10px;padding-left:6px;">(로그 없음)</div>`);
+                    continue;
+                  }
+                  msgs.forEach(m => {
+                    const cls = m.cls || '';
+                    let color = '#ccc';
+                    if (cls === 'sys') color = '#ffd700';
+                    else if (cls === 'hit') color = '#7eff7e';
+                    else if (cls === 'opp') color = '#ff7e7e';
+                    else if (cls === 'heal') color = '#66ffff';
+                    else if (cls === 'me') color = '#7eff7e';
+                    else if (cls === 'info') color = '#e6d3ff';
+                    parts.push(`<div style="color:${color};padding-left:4px;">${m.msg}</div>`);
+                  });
+                }
+                return parts.join('');
+              })()}
+            </div>
+          </div>
         </div>
         <div style="text-align:center;">
           <button onclick="openCorridor()" style="padding:10px 30px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">✔ 확인 · 로비로</button>
