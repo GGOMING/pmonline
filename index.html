@@ -2418,7 +2418,7 @@
                 <li><b>등록/재등록</b>: 정령의 축복 <b>5개</b> → 승점 <b>1점</b> 시작</li>
                 <li><b>수정</b>: 하루 1회 무료 · 이후 덱 수정 시 축복 <b>1개</b> (등록 후 15장 pool 은 고정 · deck/스탯/타입만 변경 가능)</li>
                 <li><b>도전 입장료</b>: <b style="color:#ff9b3a;">실제 레벨 × 50 골드</b> (도전 시작 시 즉시 차감 · 이탈/포기 환불 X)</li>
-                <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>3시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
+                <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>2시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
                 <li><b>승점 변동</b>: 승 <b style="color:#7eff7e;">+1</b> · 패 <b style="color:#ff7e7e;">-1</b> · <b style="color:#ff5555;">0점 도달 시 등록 자동 삭제 (도전/방어 모두 동일)</b> → 재등록(5축복) 필요</li>
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">📅 주간 리셋 · 시즌 정산</b></div>
@@ -17151,7 +17151,7 @@ function openCorridorChallenge(defenderId){
             return `<div style="margin-top:6px;padding:6px 8px;background:${canPay?'#2a0f3a':'#3a0508'};border-radius:3px;">
               <div><b style="color:#ffd700;">💰 도전 입장료:</b> <b style="color:${canPay?'#7eff7e':'#ff7e7e'};">${fee.toLocaleString()}G</b> (실제 레벨 ${p.level|0} × 50) · 보유 ${gold.toLocaleString()}G ${canPay?'':'<b style="color:#ff5555;">— 부족!</b>'}</div>
               <div style="color:#ff9b3a;font-size:10px;margin-top:3px;">⚠ 도전 시작 시 즉시 차감 · 이탈/포기/새로고침 시에도 <b>환불 X</b> · 승리 시 승점 +1 / 패배 시 -1</div>
-              <div style="color:#ff9b3a;font-size:10px;">⚠ 같은 상대 재도전은 <b>3시간 쿨다운</b></div>
+              <div style="color:#ff9b3a;font-size:10px;">⚠ 같은 상대 재도전은 <b>2시간 쿨다운</b></div>
             </div>`;
           })()}
         </div>
