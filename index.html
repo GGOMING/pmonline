@@ -7493,27 +7493,29 @@ function getCurrentSessionStart(){
   return getSessionStartFor('dawn');
 }
 function getSessionStartFor(raidKey){
-  const now = new Date();
-  const s = new Date(now);
-  s.setMinutes(0, 0, 0);
+  // KST (UTC+9) 고정 기준 세션 앵커 계산 — 유저 브라우저 timezone 과 무관하게 동일 값 산출
+  //   기존 방식(로컬 시간대 사용)은 해외 timezone 유저가 접속 시 서로 다른 session_start
+  //   전송하여 서버 raid_state 가 반복적으로 리셋되는 버그 원인. KST 고정으로 해결.
+  //   dawn/abyss 앵커: 0/6/12/18 KST · mist 앵커: 3/9/15/21 KST
+  const KST_OFFSET_MS = 9 * 3600 * 1000;
+  const nowMs = Date.now();
+  const kst = new Date(nowMs + KST_OFFSET_MS);   // UTC getters 사용 시 KST 시각 반환
+  const kstYear  = kst.getUTCFullYear();
+  const kstMonth = kst.getUTCMonth();
+  const kstDate  = kst.getUTCDate();
+  const kstHour  = kst.getUTCHours();
+
+  let bucketHour, bucketDay = kstDate;
   if (raidKey === 'mist'){
-    // mist 는 3시간 offset: (h - 3) 를 6으로 나눈 몫 × 6 + 3
-    const h = s.getHours();
-    // 현재 시각이 아직 이번 mist 세션의 시작 앵커에 도달 안 했으면 이전 앵커 사용
-    const adj = ((h - MIST_SESSION_OFFSET_HOURS) % 24 + 24) % 24;
-    const bucketStart = Math.floor(adj / RAID_SESSION_HOURS) * RAID_SESSION_HOURS + MIST_SESSION_OFFSET_HOURS;
-    // bucketStart 가 h 보다 크면 어제 앵커 (day - 1)
-    if (bucketStart > h){
-      s.setDate(s.getDate() - 1);
-      s.setHours(bucketStart);
-    } else {
-      s.setHours(bucketStart);
-    }
-    return s.getTime();
+    const adj = ((kstHour - MIST_SESSION_OFFSET_HOURS) % 24 + 24) % 24;
+    bucketHour = Math.floor(adj / RAID_SESSION_HOURS) * RAID_SESSION_HOURS + MIST_SESSION_OFFSET_HOURS;
+    if (bucketHour > kstHour) bucketDay -= 1;   // 어제 앵커
+  } else {
+    bucketHour = Math.floor(kstHour / RAID_SESSION_HOURS) * RAID_SESSION_HOURS;
   }
-  // dawn / abyss : 0/6/12/18
-  s.setHours(Math.floor(s.getHours() / RAID_SESSION_HOURS) * RAID_SESSION_HOURS);
-  return s.getTime();
+  // KST (bucketDay bucketHour:00) → UTC epoch: Date.UTC() 로 만든 UTC epoch 에서 -9시간
+  const kstAsUtcEpoch = Date.UTC(kstYear, kstMonth, bucketDay, bucketHour, 0, 0);
+  return kstAsUtcEpoch - KST_OFFSET_MS;
 }
 // abyss 세션 시작 시각 (6시간 단위 — 0/6/12/18시 정각)
 function getAbyssSessionStart(){
@@ -7637,25 +7639,33 @@ function _refreshNewbieEventNotice(){
 // ─── 공격대 클라우드 (실시간 공유) ───
 let _raidChannel = null;
 
+// raid_check_reset_key throttle — 매 loadRaidFromCloud 마다 3 RPC 호출은 낭비
+//   · 5분 이내 이미 체크했으면 skip (Realtime UPDATE 로 자주 호출되는 것 방지)
+let _raidResetCheckAt = 0;
 async function loadRaidFromCloud(){
   if (!sb) return false;
   // dawn / mist / abyss 각자 앵커로 세션 리셋 판정 (raid_check_reset_key RPC · SECURITY DEFINER)
   //   - 구 raid_check_reset_all 은 하나의 앵커로 3개 raid 전부 비교 → mist 3시간 조기 리셋 버그
   //   - RPC 미배포 시 폴백 없음 (조기 리셋 위험보다 리셋 지연이 안전) · raid_check_reset_key.sql 배포 필요
-  try {
-    const dawnStart  = getSessionStartFor('dawn');
-    const mistStart  = getSessionStartFor('mist');
-    const abyssStart = getSessionStartFor('abyss');
-    const results = await Promise.all([
-      sb.rpc('raid_check_reset_key', { p_raid_key: 'dawn',  p_session_start: dawnStart }),
-      sb.rpc('raid_check_reset_key', { p_raid_key: 'mist',  p_session_start: mistStart }),
-      sb.rpc('raid_check_reset_key', { p_raid_key: 'abyss', p_session_start: abyssStart }),
-    ]);
-    const errs = results.map(r => r && r.error).filter(Boolean);
-    if (errs.length){
-      console.warn('[raid_check_reset_key] RPC 오류 · raid_check_reset_key.sql 을 Supabase 에 배포하세요', errs);
-    }
-  } catch(e){ console.warn('[raid_check_reset]', e); }
+  //   - 5분 throttle: 잦은 UPDATE 브로드캐스트로 반복 호출되는 것 방지
+  const nowMs = Date.now();
+  if (nowMs - _raidResetCheckAt > 5 * 60 * 1000){
+    _raidResetCheckAt = nowMs;
+    try {
+      const dawnStart  = getSessionStartFor('dawn');
+      const mistStart  = getSessionStartFor('mist');
+      const abyssStart = getSessionStartFor('abyss');
+      const results = await Promise.all([
+        sb.rpc('raid_check_reset_key', { p_raid_key: 'dawn',  p_session_start: dawnStart }),
+        sb.rpc('raid_check_reset_key', { p_raid_key: 'mist',  p_session_start: mistStart }),
+        sb.rpc('raid_check_reset_key', { p_raid_key: 'abyss', p_session_start: abyssStart }),
+      ]);
+      const errs = results.map(r => r && r.error).filter(Boolean);
+      if (errs.length){
+        console.warn('[raid_check_reset_key] RPC 오류 · raid_check_reset_key.sql 을 Supabase 에 배포하세요', errs);
+      }
+    } catch(e){ console.warn('[raid_check_reset]', e); }
+  }
   try {
     // 새 스키마: raid_key 필드로 조회. 기존 스키마: id=1 단일 row + active_key.
     // 우선 새 스키마 시도
@@ -7895,8 +7905,8 @@ function _startRaidSummaryTicker(){
 }
 
 // 메인 메뉴의 공격대 버튼 — 활성 raid로 자동 진입
-// 공격대별 보스 처치 후 재입장 쿨다운 (5분) — raidKey 별 독립
-const RAID_BOSS_COOLDOWN_MS = 5 * 60 * 1000;
+// 공격대별 보스 처치 후 재입장 쿨다운 (10분) — raidKey 별 독립
+const RAID_BOSS_COOLDOWN_MS = 10 * 60 * 1000;
 function _ensureRaidBossCooldowns(p){
   if (!p) return null;
   if (!p.raidBossCooldowns || typeof p.raidBossCooldowns !== 'object') p.raidBossCooldowns = {};
@@ -8054,7 +8064,7 @@ function renderRaidLobby(){
     const ss = Math.floor((cdRemain % 60000) / 1000).toString().padStart(2, '0');
     btn.textContent = `⏳ 재입장 쿨다운 ${mm}:${ss}`;
     btn.disabled = true;
-    $('raid_tip').textContent = `직전에 보스 처치 보상을 받아 5분간 재입장이 제한됩니다. (다른 공격대는 정상 진입 가능)`;
+    $('raid_tip').textContent = `직전에 보스 처치 보상을 받아 10분간 재입장이 제한됩니다. (다른 공격대는 정상 진입 가능)`;
   } else if (r.bossDefeated){
     btn.textContent = `🏆 보스 처치됨 (${r.lastKiller})`;
     btn.disabled = true;
@@ -15962,13 +15972,24 @@ async function saveTowerRecord(){
 }
 
 // ── 랭킹 조회 ──
+// 여신의 탑 랭킹 캐시 — 10분 TTL (egress 절감)
+const _TOWER_RANKING_CACHE = { key:'', data:null, at:0, ttl: 10 * 60 * 1000 };
 async function loadTowerRanking(limit){
   const listEl = $('towerRankingList');
   if (!listEl) return;
   if (!sb){ listEl.innerHTML = '<div style="color:#888;text-align:center;padding:10px;">클라우드 미연결</div>'; return; }
   try {
     const ws = _towerCurrentWeekStart();
-    const { data, error } = await sb.rpc('dojo_top_ranking', { p_week_start: ws, p_limit: limit || 10 });
+    const cacheKey = `${ws}_${limit||10}`;
+    let data, error;
+    if (_TOWER_RANKING_CACHE.key === cacheKey && _TOWER_RANKING_CACHE.data && Date.now() - _TOWER_RANKING_CACHE.at < _TOWER_RANKING_CACHE.ttl){
+      data = _TOWER_RANKING_CACHE.data;
+      error = null;
+    } else {
+      const res = await sb.rpc('dojo_top_ranking', { p_week_start: ws, p_limit: limit || 10 });
+      data = res.data; error = res.error;
+      if (!error && data){ _TOWER_RANKING_CACHE.key = cacheKey; _TOWER_RANKING_CACHE.data = data; _TOWER_RANKING_CACHE.at = Date.now(); }
+    }
     if (error){ listEl.innerHTML = `<div style="color:#f88;text-align:center;padding:10px;">랭킹 조회 실패: ${error.message||error}</div>`; return; }
     if (!data || !data.length){
       listEl.innerHTML = '<div style="color:#888;text-align:center;padding:10px;">이번 주 아직 랭킹 없음 — 첫 도전자가 되어보세요!</div>';
@@ -16158,18 +16179,30 @@ function exitCorridor(){
 }
 
 // ─── 로비 데이터 fetch + 렌더 ─────────────────────────────────────
-async function refreshCorridorLobby(){
+// 회랑 로비 fetch 캐시 — 30초 TTL · egress 절감
+//   · 등록/편집/도전 후에는 invalidate 하여 최신 상태 재조회
+//   · 유저 「🔄 새로고침」 버튼도 invalidate 후 재fetch
+const CORRIDOR_LOBBY_CACHE_MS = 30 * 1000;
+GAME.corridor._lastFetchAt = 0;
+function _corridorInvalidateCache(){ GAME.corridor._lastFetchAt = 0; }
+
+async function refreshCorridorLobby(forceRefresh){
   if (GAME.corridor.loading) return;
+  // 캐시 유효하고 강제 재fetch 아니면 렌더만 재실행
+  const cacheAge = Date.now() - (GAME.corridor._lastFetchAt || 0);
+  if (!forceRefresh && GAME.corridor._lastFetchAt && cacheAge < CORRIDOR_LOBBY_CACHE_MS){
+    renderCorridorLobby();
+    return;
+  }
   GAME.corridor.loading = true;
   try {
-    // 병렬 fetch — 3개 RPC (내 등록 · 랭킹 · 최근 전투)
+    // 병렬 fetch — 4개 RPC · top_list 는 25명으로 제한 (egress 절감)
     const [regRes, listRes, cdRes, battlesRes] = await Promise.all([
       sb.rpc('eternal_corridor_my_registration'),
-      sb.rpc('eternal_corridor_top_list', { p_limit: 50 }),
+      sb.rpc('eternal_corridor_top_list', { p_limit: 25 }),
       sb.rpc('eternal_corridor_cooldown_map'),
       sb.rpc('eternal_corridor_my_battles', { p_limit: 10 }),
     ]);
-    // 결과 정리
     GAME.corridor.myReg = (regRes.data && regRes.data[0]) || null;
     GAME.corridor.ranking = Array.isArray(listRes.data) ? listRes.data : [];
     GAME.corridor.cooldowns = {};
@@ -16177,7 +16210,7 @@ async function refreshCorridorLobby(){
       cdRes.data.forEach(row => { GAME.corridor.cooldowns[row.defender_id] = row.remain_seconds|0; });
     }
     GAME.corridor.battles = Array.isArray(battlesRes.data) ? battlesRes.data : [];
-    // 에러 로깅
+    GAME.corridor._lastFetchAt = Date.now();
     if (regRes.error)     console.warn('[corridor my_reg]', regRes.error);
     if (listRes.error)    console.warn('[corridor list]', listRes.error);
     if (cdRes.error)      console.warn('[corridor cd]', cdRes.error);
@@ -16236,13 +16269,13 @@ function renderCorridorLobby(){
         <button onclick="openCorridorRegister(false)" style="padding:10px 24px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
           ${regBtnLabel}
         </button>
-        <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
+        <button class="btn-back" onclick="refreshCorridorLobby(true)" style="padding:10px 20px;" title="30초 캐시 무시하고 즉시 최신 상태 조회">🔄 새로고침</button>`;
     } else {
       actEl.innerHTML = `
         <button onclick="openCorridorRegister(true)" style="padding:10px 24px;background:linear-gradient(180deg,#a335ee,#5a1a6b);color:#fff;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
           ✏ 덱 수정 (${reg.free_edit_available ? '1회 무료' : '1축복'})
         </button>
-        <button class="btn-back" onclick="refreshCorridorLobby()" style="padding:10px 20px;">🔄 새로고침</button>`;
+        <button class="btn-back" onclick="refreshCorridorLobby(true)" style="padding:10px 20px;" title="30초 캐시 무시하고 즉시 최신 상태 조회">🔄 새로고침</button>`;
     }
   }
   // ── 승점 랭킹 / 도전 목록 ──
@@ -17044,6 +17077,7 @@ async function commitCorridorRegistration(){
     if (needGold > 0)   p.gold          = Math.max(0, gold - needGold);
     try { saveGame(); renderSheet(); } catch(err){}
     GAME.corridor.editing = null;
+    _corridorInvalidateCache();   // 등록/편집 후 캐시 무효화 → 최신 상태 재조회
     if (isEdit){
       const row = Array.isArray(res.data) ? res.data[0] : res.data;
       alert(`✔ 편집 저장 완료\n${row && row.message ? row.message : ''}`);
@@ -17555,6 +17589,7 @@ async function _corridorSubmitAndShowResult(battleLog, abandoned){
     turns: battleLog.turns,
     abandoned,
   };
+  _corridorInvalidateCache();   // 도전 완료 → 랭킹·승점 변경 · 로비 캐시 무효화
   _corridorRenderResult(pb.defender, simForResult, battleLog, serverRow, pb.virtA, pb.virtD);
 }
 
