@@ -2389,17 +2389,13 @@
       <div style="max-width:1200px;margin:0 auto;">
         <div style="background:linear-gradient(135deg,#2a0f3a,#5a1a6b);padding:16px 20px;border-radius:6px 6px 0 0;color:#ffd700;text-shadow:1px 1px 2px #000;">
           <div style="font-size:22px;font-weight:bold;letter-spacing:2px;">🗡️ 영원의 회랑</div>
-          <!-- 정적 HTML 이라 JS 템플릿 리터럴 사용 불가 · 테스트/정식 전환 시 아래 두 블록 수동 수정 -->
           <div style="font-size:12px;color:#e6d3ff;margin-top:10px;line-height:1.7;">
             영원의 회랑은 유저들이 자신의 축복을 걸고 신성한 결투를 벌이는 곳입니다.<br>
-            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, 참여를 위해서는 <b style="color:#ffd700;">500G</b>를 지불해야 합니다.<br><br>
+            유저들은 모두 동일한 조건에서 10장의 카드로 전투를 벌이게 되며, <b style="color:#ffd700;">주간 첫 등록은 무료</b>입니다. 승점 0 도달 후 재등록 시엔 <b style="color:#ffd700;">정령의 축복 5개</b>가 필요합니다.<br><br>
             도전자로 등록되면 회랑에 등록된 다른 유저에게 도전할 수 있습니다.<br>
-            승리한 유저에게는 승점이 주어지고, <b style="color:#ff9b3a;">테스트 기간 동안 주간 정산은 진행되지 않습니다</b> (정식 오픈 시 매주 월요일 오전 6시 1승점당 정령의 축복 3개 지급).<br>
+            승리한 유저에게는 승점이 주어지고, 매주 월요일 오전 6시 정산을 통해 1승점당 정령의 축복 3개를 획득할 수 있습니다.<br>
             도전자는 상대방의 카드 15장을 볼 수 있으며, 그 중 어떤 10장을 사용했는지는 알 수 없습니다.<br>
             <span style="color:#ffd700;font-weight:bold;">상대의 덱을 예측하여 압도적인 승리를 쟁취하세요!</span>
-            <div style="margin-top:8px;padding:6px 10px;background:rgba(255,155,58,0.15);border:1px solid #ff9b3a;border-radius:4px;color:#ff9b3a;font-size:11px;">
-              🚧 <b>테스트 기간 안내</b> — 등록료 <b>500G</b> · 주간 정산 없음 · 정식 오픈 시 정령의 축복 기반으로 전환됩니다.
-            </div>
           </div>
         </div>
         <div style="background:#1a0524;padding:14px;color:#f5deb3;border-radius:0 0 6px 6px;">
@@ -2415,7 +2411,7 @@
               </ul>
               <div style="margin-bottom:6px;"><b style="color:#ffd700;">💰 비용 · 승점</b></div>
               <ul style="margin:0 0 8px 16px;padding:0;">
-                <li><b>등록/재등록</b>: 정령의 축복 <b>5개</b> → 승점 <b>1점</b> 시작</li>
+                <li><b>등록</b>: <b style="color:#7eff7e;">주간 첫 등록 무료</b> · 재등록(승점 0 도달 후) <b>정령의 축복 5개</b> → 승점 <b>1점</b> 시작</li>
                 <li><b>수정</b>: 하루 1회 무료 · 이후 덱 수정 시 축복 <b>1개</b> (등록 후 15장 pool 은 고정 · deck/스탯/타입만 변경 가능)</li>
                 <li><b>도전 입장료</b>: <b style="color:#ff9b3a;">실제 레벨 × 50 골드</b> (도전 시작 시 즉시 차감 · 이탈/포기 환불 X)</li>
                 <li><b>도전</b>: 랭킹 목록에서 선택 · 같은 상대 <b>2시간 쿨다운</b> · 하루 도전 횟수 무제한</li>
@@ -16144,9 +16140,15 @@ async function claimWeeklyRankingReward(){
 //   (Phase 2b: 등록/편집 UI · Phase 2c: 전투/결과)
 // ============================================================
 
-// 테스트 기간 플래그 — true 시 등록료 500G · 주간 정산 없음
-// 정식 오픈 시 CORRIDOR_TEST_MODE=false + SQL 07 재배포 + 정산 크론 재등록
-const CORRIDOR_TEST_MODE = true;
+// 정식 오픈: 주간 첫 등록 무료 · 재등록 (승점 0 후) 축복 5개
+// (구 CORRIDOR_TEST_MODE 플래그 폐기 · saves.data.player.corridorLastRegisteredWeek 로 판정)
+function _corridorRegisterCost(){
+  const p = GAME.player;
+  if (!p) return 5;
+  const cur = _towerCurrentWeekStart();   // 회랑도 동일 주간 앵커 사용 (Mon 06:00 KST)
+  const last = Number(p.corridorLastRegisteredWeek || 0);
+  return (last === cur) ? 5 : 0;   // 이번 주 이미 등록 이력 있으면 5축복 · 없으면 무료
+}
 
 // 상태 캐시 (로비 데이터)
 GAME.corridor = {
@@ -16228,9 +16230,10 @@ function renderCorridorLobby(){
   const statusEl = $('corridor_my_status');
   if (statusEl){
     if (!reg){
-      const costLabel = CORRIDOR_TEST_MODE
-        ? `500G → 승점 1점 시작 (보유: 💰 ${(p.gold||0).toLocaleString()}G)`
-        : `정령의 축복 5개 → 승점 1점 시작 (보유: 🌿 ${(p.spiritBlessing||0).toLocaleString()}개)`;
+      const _regCost = _corridorRegisterCost();
+      const costLabel = _regCost === 0
+        ? `🎁 무료 (주간 첫 등록) → 승점 1점 시작`
+        : `정령의 축복 5개 (재등록) → 승점 1점 시작 (보유: 🌿 ${(p.spiritBlessing||0).toLocaleString()}개)`;
       statusEl.innerHTML = `
         <div style="color:#ff9b3a;font-weight:bold;font-size:13px;margin-bottom:4px;">📋 등록 상태: <span style="color:#ff5555;">미등록</span></div>
         <div style="color:#ccc;font-size:11px;">
@@ -16264,7 +16267,7 @@ function renderCorridorLobby(){
   const actEl = $('corridor_actions');
   if (actEl){
     if (!reg){
-      const regBtnLabel = CORRIDOR_TEST_MODE ? '🌀 회랑 입장 (500G 소모)' : '🌀 회랑 입장 (5축복 소모)';
+      const regBtnLabel = _corridorRegisterCost() === 0 ? '🌀 회랑 입장 (무료)' : '🌀 회랑 입장 (5축복 소모)';
       actEl.innerHTML = `
         <button onclick="openCorridorRegister(false)" style="padding:10px 24px;background:linear-gradient(180deg,#ffd700,#b8860b);color:#3a1a00;border:0;border-radius:4px;font-weight:bold;cursor:pointer;font-size:13px;">
           ${regBtnLabel}
@@ -16871,7 +16874,8 @@ function renderCorridorRegister(){
   if (remainPts !== 0) missing.push(`스탯 ${remainPts}P 남음`);
   if (e.card_pool.length !== 15) missing.push(`풀 ${e.card_pool.length}/15`);
   if (e.deck.length !== 10) missing.push(`덱 ${e.deck.length}/10`);
-  const registerCostLabel = CORRIDOR_TEST_MODE ? '500G 소모' : '축복 5개 소모';
+  const _regCost2 = _corridorRegisterCost();
+  const registerCostLabel = _regCost2 === 0 ? '무료 (주간 첫 등록)' : '축복 5개 소모 (재등록)';
   const cost = isEdit
     ? (existing && existing.free_edit_available ? '오늘 무료' : '축복 1개 소모')
     : registerCostLabel;
@@ -16983,12 +16987,12 @@ function renderCorridorRegister(){
             <div style="color:#888;font-size:10px;margin-bottom:4px;">
               ${isEdit
                 ? `보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개`
-                : (CORRIDOR_TEST_MODE
-                   ? `보유 골드: 💰 <b style="color:#ffd700;">${gold.toLocaleString()}</b>G`
-                   : `보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개`)}
+                : (_regCost2 === 0
+                   ? `🎁 이번 주 첫 등록 · 무료`
+                   : `보유 축복: 🌿 <b style="color:#ffd700;">${spirit}</b>개 · 필요 <b>5</b>개`)}
             </div>
             <button onclick="commitCorridorRegistration()" ${canSave?'':'disabled'} style="padding:10px 30px;background:${canSave?'linear-gradient(180deg,#ffd700,#b8860b)':'#555'};color:${canSave?'#3a1a00':'#aaa'};border:0;border-radius:4px;font-weight:bold;cursor:${canSave?'pointer':'not-allowed'};font-size:13px;box-shadow:${canSave?'0 0 8px rgba(255,215,0,0.5)':'none'};">
-              ${isEdit ? '💾 편집 저장' : (CORRIDOR_TEST_MODE ? '💾 등록 (500G)' : '💾 등록 (5축복)')}
+              ${isEdit ? '💾 편집 저장' : (_regCost2 === 0 ? '💾 등록 (무료)' : '💾 등록 (5축복)')}
             </button>
           </div>
         </div>
@@ -17012,19 +17016,14 @@ async function commitCorridorRegistration(){
   }
   if (e.card_pool.length !== 15){ toast('카드 풀은 정확히 15장'); return; }
   if (e.deck.length !== 10){ toast('덱은 정확히 10장'); return; }
-  // 자산 잔량 사전 확인 (편집은 항상 축복 · 등록은 테스트 모드면 500G · 정식이면 5축복)
+  // 자산 잔량 사전 확인 (편집: 하루 1회 무료 · 이후 축복 1개 / 등록: 주간 첫 등록 무료 · 재등록 축복 5개)
   const spirit = p.spiritBlessing || 0;
-  const gold = p.gold || 0;
+  const registerCost = isEdit ? 0 : _corridorRegisterCost();
   const needSpirit = isEdit
     ? ((GAME.corridor.myReg && GAME.corridor.myReg.free_edit_available) ? 0 : 1)
-    : (CORRIDOR_TEST_MODE ? 0 : 5);
-  const needGold = (!isEdit && CORRIDOR_TEST_MODE) ? 500 : 0;
+    : registerCost;
   if (spirit < needSpirit){
     alert(`정령의 축복 부족 (필요 ${needSpirit}개 · 보유 ${spirit}개)`);
-    return;
-  }
-  if (needGold > 0 && gold < needGold){
-    alert(`골드 부족 (필요 ${needGold.toLocaleString()}G · 보유 ${gold.toLocaleString()}G)`);
     return;
   }
 
@@ -17036,11 +17035,10 @@ async function commitCorridorRegistration(){
       ? '편집 내용을 저장하시겠습니까?\n(오늘 무료 편집 사용 · 이후 편집부터 축복 1개)'
       : '편집 내용을 저장하시겠습니까?\n(정령의 축복 1개 소모)';
   } else {
-    const costLine = CORRIDOR_TEST_MODE ? '· 500G 소모 (테스트 기간)' : '· 정령의 축복 5개 소모';
-    const settlementLine = CORRIDOR_TEST_MODE
-      ? '· 테스트 기간 · 주간 정산 없음 (정식 오픈 시 승점 × 축복 3개 지급)'
-      : '· 시즌 종료 시 승점 × 축복 3개 자동 지급';
-    confirmMsg = `캐릭터를 등록하시겠습니까?\n\n${costLine}\n· 승점 1점으로 시작\n· 매주 월 06:00 KST 리셋\n${settlementLine}`;
+    const costLine = registerCost === 0
+      ? '· 🎁 이번 주 첫 등록 · 무료'
+      : '· 정령의 축복 5개 소모 (승점 0 후 재등록)';
+    confirmMsg = `캐릭터를 등록하시겠습니까?\n\n${costLine}\n· 승점 1점으로 시작\n· 매주 월 06:00 KST 리셋\n· 시즌 종료 시 승점 × 축복 3개 자동 지급`;
   }
   if (!confirm(confirmMsg)) return;
 
@@ -17074,7 +17072,8 @@ async function commitCorridorRegistration(){
     }
     // 로컬 자산 값 동기화 (RPC 가 서버 saves 를 직접 수정 · 로컬 재계산은 UI 반영용)
     if (needSpirit > 0) p.spiritBlessing = Math.max(0, spirit - needSpirit);
-    if (needGold > 0)   p.gold          = Math.max(0, gold - needGold);
+    // 등록 시 corridorLastRegisteredWeek 로컬에도 반영 (다음 등록 판정용)
+    if (!isEdit) p.corridorLastRegisteredWeek = _towerCurrentWeekStart();
     try { saveGame(); renderSheet(); } catch(err){}
     GAME.corridor.editing = null;
     _corridorInvalidateCache();   // 등록/편집 후 캐시 무효화 → 최신 상태 재조회
