@@ -9903,7 +9903,7 @@ function rankNextTurn(){
 
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex >= mDex;
+  const playerFirst = pDex > mDex;   // 동률 시 방어자(상대) 선공
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   rankLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
 
@@ -17247,10 +17247,10 @@ function _corridorTurnNoUI(){
   // Speed scroll pre-scan
   if (playerCard && playerCard.fx && playerCard.fx.type === 'doubleCastNext') c.myScrollGuardTurn = c.turn;
   if (monCard && monCard.fx && monCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
-  // 선공 판정 (DEX · 동률 시 공격자 선공)
+  // 선공 판정 (DEX · 동률 시 방어자 선공)
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex >= mDex;
+  const playerFirst = pDex > mDex;
   c._playerFirstThisTurn = playerFirst;
   c._currentTurnCards = { playerCard, monsterCard: monCard };
   // 카드 시전 (rankCast 재사용 — 내부적으로 applyCardEffect 호출)
@@ -22862,7 +22862,8 @@ async function adminCorridorRefresh(){
               <td style="padding:4px 6px;text-align:center;white-space:nowrap;">
                 <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjust('${r.user_id}', '${escapeHtml(r.nickname)}', 1)">+1</button>
                 <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjust('${r.user_id}', '${escapeHtml(r.nickname)}', -1)">-1</button>
-                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjustPrompt('${r.user_id}', '${escapeHtml(r.nickname)}', ${r.score})">조정</button>
+                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorAdjustPrompt('${r.user_id}', '${escapeHtml(r.nickname)}', ${r.score})">±조정</button>
+                <button class="admin-btn small" style="padding:2px 6px;font-size:10px;background:#5030a0;color:#fff;" onclick="adminCorridorSetPrompt('${r.user_id}', '${escapeHtml(r.nickname)}', ${r.score})">설정</button>
                 <button class="admin-btn small danger" style="padding:2px 6px;font-size:10px;" onclick="adminCorridorDelete('${r.user_id}', '${escapeHtml(r.nickname)}')">해제</button>
               </td>
             </tr>
@@ -22887,11 +22888,26 @@ async function adminCorridorAdjust(userId, nickname, delta){
 }
 
 async function adminCorridorAdjustPrompt(userId, nickname, curScore){
-  const raw = prompt(`${nickname} 승점 조정\n\n현재: ${curScore}점\n\n조정값 입력 (예: 3 = +3, -2 = -2)\n(0 이하로 내려가면 등록 자동 해제)`);
+  const raw = prompt(`${nickname} 승점 ± 조정 (delta)\n\n현재: ${curScore}점\n\n조정값 입력 (예: 3 = +3, -2 = -2)\n(0 이하로 내려가면 등록 자동 해제)`);
   if (raw == null) return;
   const delta = parseInt(raw, 10);
   if (isNaN(delta) || delta === 0){ alert('유효한 정수를 입력하세요 (0 아닌 값)'); return; }
   await adminCorridorAdjust(userId, nickname, delta);
+}
+
+async function adminCorridorSetPrompt(userId, nickname, curScore){
+  const raw = prompt(`${nickname} 승점 직접 설정 (절대값)\n\n현재: ${curScore}점\n\n원하는 승점 값 입력 (예: 5 → 정확히 5점)\n(0 이하 입력 시 등록 자동 삭제)`);
+  if (raw == null) return;
+  const score = parseInt(raw, 10);
+  if (isNaN(score)){ alert('유효한 정수를 입력하세요'); return; }
+  if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
+  try {
+    const { data, error } = await sb.rpc('admin_corridor_set_score', { p_user_id: userId, p_score: score });
+    if (error){ alert('실패: ' + (error.message||error)); return; }
+    const row = Array.isArray(data) ? data[0] : data;
+    if (row) alert(`${nickname}: ${row.message}`);
+    adminCorridorRefresh();
+  } catch(e){ alert('실패: ' + (e.message||e)); }
 }
 
 async function adminCorridorDelete(userId, nickname){
