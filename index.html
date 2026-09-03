@@ -3362,7 +3362,7 @@ const CARDS = [
   { id:'r11', name:'버로우',         grade:'rare', icon:'med',      text:'2턴 동안 HP 35씩 회복 / 1턴 동안 모든 공격 회피 / 시전 후 1턴 행동불능', fx:{type:'multi',effects:[{type:'hot',turns:2,heal:35},{type:'evadeBuff',turns:1,pct:1.0},{type:'selfCc',turns:1}]} },
   { id:'r12', name:'베놈오브',       grade:'rare', icon:'rapier',   text:'3턴 동안 10씩 독 데미지 / 무기 +10 증가 / [시전자 STR이 10 이상일 경우에만 발동]', statReq:{str:10}, fx:{type:'multi',effects:[{type:'dot',turns:3,dmg:10},{type:'buff',atk:10}]} },
   { id:'r13', name:'변이',           grade:'rare', icon:'plague',   text:'25% 확률로 3턴 동안 상대방 STR/DEX/INT 0 / INT만큼 MP 소모', fx:{type:'multi',effects:[{type:'zeroStat',stats:['str','dex','int'],turns:3,chance:0.25},{type:'mpCost',stat:'int'}]} },
-  { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모', fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
+  { id:'r14', name:'사이클론',       grade:'rare', icon:'ghost',    text:'50% 확률로 상대방 2턴 마비 / INT*2만큼 MP 소모 / [시전자 INT가 10 이상일 경우에만 발동]', statReq:{int:10}, fx:{type:'multi',effects:[{type:'cc',turns:2,chance:0.5},{type:'mpCost',stat:'int',mult:2}]} },
   { id:'r15', name:'쉐도우스트라이크', grade:'rare', icon:'dagger', text:'4턴 동안 10 고정 데미지', fx:{type:'dot',turns:4,dmg:10} },
   { id:'r16', name:'스톰볼트',       grade:'rare', icon:'brain',    text:'[STR+무기] 데미지 / 상대방 30% 확률로 1턴 기절', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true},{type:'cc',turns:1,chance:0.3}]} },
   { id:'r17', name:'스파이크드카리패스', grade:'rare', icon:'meteor', text:'방어구 +6 증가 및 3회 동안 상대방 공격의 60%를 반사', fx:{type:'multi',effects:[{type:'buff',def:6},{type:'reflect',hits:3,pct:0.6}]} },
