@@ -6649,8 +6649,19 @@ const DAILY_QUEST_POOL = [
   { id:'dq_dmg_3k',           name:'파괴자',              diff:'어려움', desc:'하루 누적 데미지 3,000 이상',   target:3000,   gold:4000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_full_hp_win_1',    name:'샘물 스킵',           diff:'어려움', desc:'HP 100%인 상태로 전투 종료 1회', target:1,      gold:30000, xp:0, card:null,   bless:0, minLevel:1  },
   { id:'dq_bless_1',          name:'축복 수집가',         diff:'어려움', desc:'여신의 축복 1개 획득',           target:1,      gold:4000, xp:0, card:null,    bless:0, minLevel:26 },
+  { id:'dq_tower_floor_15',   name:'탑 정복자',           diff:'어려움', desc:'여신의 탑 15층 도달',            target:1,      gold:5000, xp:0, card:'unique',bless:0, minLevel:21 },
+  { id:'dq_corridor_win_5',   name:'결투사',              diff:'어려움', desc:'영원의 회랑 도전 5회 승리',      target:5,      gold:5000, xp:0, card:'unique',bless:0, minLevel:25 },
   // ── 도전 ──
   { id:'dq_boss_hit',         name:'보스 킬러',           diff:'도전',  desc:'공격대 보스에 2,000 이상 데미지', target:2000,  gold:4000, xp:0, card:'rare',  bless:0, minLevel:26 },
+  { id:'dq_tower_boss_spirit',name:'일일 정령 사냥꾼',    diff:'도전',  desc:'여신의 탑 보스층(10·20·30·40·50) 첫 도달로 정령의 축복 획득', target:1, gold:4000, xp:0, card:'unique', bless:0, minLevel:21 },
+  { id:'dq_corridor_defense_1',name:'방벽',               diff:'도전',  desc:'영원의 회랑 방어전 1회 승리',    target:1,      gold:4000, xp:0, card:'unique',bless:0, minLevel:25 },
+  // ── 여신의 탑 (Lv 21+) ──
+  { id:'dq_tower_enter',      name:'탑의 방문자',         diff:'쉬움',  desc:'여신의 탑 진입 1회',             target:1,      gold:2000, xp:0, card:null,    bless:0, minLevel:21 },
+  { id:'dq_tower_floor_5',    name:'탑 등반가',           diff:'보통',  desc:'여신의 탑 5층 도달',             target:1,      gold:3000, xp:0, card:null,    bless:0, minLevel:21 },
+  // ── 영원의 회랑 (Lv 25+) ──
+  { id:'dq_corridor_enter',   name:'회랑의 방문자',       diff:'쉬움',  desc:'영원의 회랑 진입 1회',           target:1,      gold:2000, xp:0, card:null,    bless:0, minLevel:25 },
+  { id:'dq_corridor_challenge_3',name:'회랑 도전자',      diff:'보통',  desc:'영원의 회랑 도전 3회 (승패 무관)', target:3,     gold:3000, xp:0, card:null,    bless:0, minLevel:25 },
+  { id:'dq_corridor_win_1',   name:'첫 승리',             diff:'보통',  desc:'영원의 회랑 도전 1회 승리',      target:1,      gold:3000, xp:0, card:null,    bless:0, minLevel:25 },
 ];
 // 고정 배정 퀘스트 — 5개 랜덤 완료 시 자동 완료
 const DAILY_QUEST_FIXED = {
@@ -6673,6 +6684,15 @@ const WEEKLY_QUEST_POOL = [
   { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1  },
   { id:'wq_gacha_normal',   name:'꽝손 토닥토닥',      diff:'주간', desc:'일반 뽑기 100장',                 target:100,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
   { id:'wq_gacha_unique',   name:'이번엔 진짜 나온다', diff:'주간', desc:'유니크·영웅·전설 뽑기(또는 축복 뽑기) 50회',  target:50,     gold:30000, xp:0, card:null,     bless:0, minLevel:1  },
+  // ── 여신의 탑 (Lv 21+) ──
+  { id:'wq_tower_run_20',    name:'탑의 순례자',        diff:'주간', desc:'여신의 탑 20회 도전',             target:20,     gold:15000, xp:0, card:'hero',   bless:1, minLevel:21 },
+  { id:'wq_tower_floor_100', name:'탑 등반 100',         diff:'주간', desc:'여신의 탑 주간 누적 층 클리어 100층', target:100, gold:30000, xp:0, card:'hero',   bless:2, minLevel:21 },
+  { id:'wq_tower_spirit_10', name:'정령 대량 수확',     diff:'주간', desc:'여신의 탑에서 정령의 축복 10개 획득', target:10, gold:25000, xp:0, card:'hero',   bless:3, minLevel:21 },
+  // ── 영원의 회랑 (Lv 25+) ──
+  { id:'wq_corridor_challenge_30', name:'회랑의 순례자', diff:'주간', desc:'영원의 회랑 도전 30회 (승패 무관)', target:30, gold:15000, xp:0, card:'hero', bless:1, minLevel:25 },
+  { id:'wq_corridor_win_20',       name:'회랑의 지배자', diff:'주간', desc:'영원의 회랑 도전 20회 승리',       target:20, gold:30000, xp:0, card:'hero', bless:2, minLevel:25 },
+  { id:'wq_corridor_zero_3',       name:'봉인의 파훼자', diff:'주간', desc:'영원의 회랑 상대 승점 0 만들기 3회', target:3, gold:25000, xp:0, card:'hero', bless:3, minLevel:25 },
+  { id:'wq_corridor_score_10',     name:'승점 사냥꾼',   diff:'주간', desc:'영원의 회랑 시즌 최고 승점 10점 도달', target:10, gold:20000, xp:0, card:'hero', bless:2, minLevel:25 },
 ];
 const WEEKLY_QUEST_ASSIGN_COUNT = 4;
 const WEEKLY_RESET_DOW = 1;   // 월요일 (0=일, 1=월 ...)
@@ -6783,7 +6803,9 @@ function _assignWeeklyQuests(p){
   const picked = shuffled.slice(0, Math.min(WEEKLY_QUEST_ASSIGN_COUNT, shuffled.length));
   const slots = picked.map(q => ({ id:q.id, progress:0, target:q.target, claimed:false }));
   p.weeklyQuests = { weekKey: _getWeeklyQuestKey(), slots };
-  p._weeklyCounters = { goldGained:0, xpGained:0, blessingGained:0, huntWins:0, rankWins:0, raidMobKills:0, bossKills:0, dailyFullDays:0, goldSpent:0 };
+  p._weeklyCounters = { goldGained:0, xpGained:0, blessingGained:0, huntWins:0, rankWins:0, raidMobKills:0, bossKills:0, dailyFullDays:0, goldSpent:0,
+    towerRunsWeek:0, towerFloorsClearedWeek:0, towerSpiritsWeek:0,
+    corridorChallengesWeek:0, corridorWinsWeek:0, corridorZeroWeek:0, corridorMaxScoreWeek:0 };
 }
 function checkWeeklyQuestReset(p){
   if (!p) return;
@@ -7147,6 +7169,43 @@ const TITLE_POOL = [
   { id:'title_sponsor_partner',   name:'Partner',   tier:'전설',   color:'#ffd700', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_patron',    name:'Patron',    tier:'영웅',   color:'#FFBB2A', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_sponsor',   name:'Sponsor',   tier:'유니크', color:'#a335ee', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  // ── 영원의 회랑 (Corridor) — 31개 ──
+  // 일반
+  { id:'title_corridor_first_entry',    name:'회랑 입성',        tier:'일반', color:'#a8a8a8', desc:'영원의 회랑에 첫 등록',                     cond:{type:'corridor_registrations_total', target:1  } },
+  { id:'title_corridor_challenges_10',  name:'회랑의 도전자',    tier:'일반', color:'#a8a8a8', desc:'회랑 누적 도전 10회',                       cond:{type:'corridor_challenges_total',    target:10 } },
+  { id:'title_corridor_defenses_10',    name:'흔들리지 않는',    tier:'일반', color:'#a8a8a8', desc:'회랑 누적 방어전 10회 발생',                 cond:{type:'corridor_defenses_total',      target:10 } },
+  { id:'title_corridor_first_win',      name:'승리의 첫 걸음',   tier:'일반', color:'#a8a8a8', desc:'회랑 첫 승리',                              cond:{type:'corridor_wins_total',          target:1  } },
+  { id:'title_corridor_wins_10',        name:'은빛 결투사',      tier:'일반', color:'#a8a8a8', desc:'회랑 누적 승리 10회',                       cond:{type:'corridor_wins_total',          target:10 } },
+  { id:'title_corridor_first_zero',     name:'봉인의 파훼자',    tier:'일반', color:'#a8a8a8', desc:'회랑 상대 승점을 0으로 만들기 첫 성공',      cond:{type:'corridor_opponents_zeroed',    target:1  } },
+  // 레어
+  { id:'title_corridor_challenges_50',  name:'심연의 도전자',    tier:'레어', color:'#3366cc', desc:'회랑 누적 도전 50회',                       cond:{type:'corridor_challenges_total',    target:50 } },
+  { id:'title_corridor_defenses_50',    name:'무너지지 않는',    tier:'레어', color:'#3366cc', desc:'회랑 누적 방어전 50회',                     cond:{type:'corridor_defenses_total',      target:50 } },
+  { id:'title_corridor_max_score_5',    name:'달달하죠?',        tier:'레어', color:'#3366cc', desc:'회랑 시즌 내 최고 승점 5점 달성',            cond:{type:'corridor_max_score_ever',      target:5  } },
+  { id:'title_corridor_wins_50',        name:'회랑의 검투사',    tier:'레어', color:'#3366cc', desc:'회랑 누적 승리 50회',                       cond:{type:'corridor_wins_total',          target:50 } },
+  { id:'title_corridor_zero_10',        name:'마지막 도전자',    tier:'레어', color:'#3366cc', desc:'회랑 상대 승점을 0으로 만들기 10회',        cond:{type:'corridor_opponents_zeroed',    target:10 } },
+  { id:'title_corridor_streak_5',       name:'심판의 검',        tier:'레어', color:'#3366cc', desc:'회랑 5연승 달성',                            cond:{type:'corridor_max_win_streak',      target:5  } },
+  { id:'title_corridor_max_score_10',   name:'결투의 대가',      tier:'레어', color:'#3366cc', desc:'회랑 시즌 내 최고 승점 10점 달성',           cond:{type:'corridor_max_score_ever',      target:10 } },
+  { id:'title_corridor_top10',          name:'초신성',           tier:'레어', color:'#3366cc', desc:'회랑 시즌 정산 랭킹 TOP 10 진입',           cond:{type:'corridor_best_season_rank_le', target:10 } },
+  { id:'title_corridor_melee_30',       name:'근접의 정수',      tier:'레어', color:'#3366cc', desc:'회랑 근접 공격 타입으로 승리 30회',          cond:{type:'corridor_wins_by_melee',       target:30 } },
+  { id:'title_corridor_ranged_30',      name:'사격의 정수',      tier:'레어', color:'#3366cc', desc:'회랑 사격 공격 타입으로 승리 30회',          cond:{type:'corridor_wins_by_ranged',      target:30 } },
+  { id:'title_corridor_magic_30',       name:'마법의 정수',      tier:'레어', color:'#3366cc', desc:'회랑 마법 공격 타입으로 승리 30회',          cond:{type:'corridor_wins_by_magic',       target:30 } },
+  { id:'title_corridor_seasons_5',      name:'결투의 순례자',    tier:'레어', color:'#3366cc', desc:'회랑 시즌 5회 완주',                        cond:{type:'corridor_seasons_completed',   target:5  } },
+  // 유니크
+  { id:'title_corridor_perfect_win_20', name:'영역전개',         tier:'유니크', color:'#a335ee', desc:'회랑 무결한 승리 (HP 손실 없음) 20회',        cond:{type:'corridor_perfect_wins',      target:20 } },
+  { id:'title_corridor_wins_300',       name:'회랑의 승리자',    tier:'유니크', color:'#a335ee', desc:'회랑 누적 승리 300회',                       cond:{type:'corridor_wins_total',        target:300} },
+  { id:'title_corridor_zero_100',       name:'저승사자',         tier:'유니크', color:'#a335ee', desc:'회랑 상대 승점을 0으로 만들기 100회',       cond:{type:'corridor_opponents_zeroed',  target:100} },
+  { id:'title_corridor_max_score_20',   name:'순수한 힘',        tier:'유니크', color:'#a335ee', desc:'회랑 시즌 내 최고 승점 20점 달성',           cond:{type:'corridor_max_score_ever',    target:20 } },
+  { id:'title_corridor_type_master',    name:'올 라운더',        tier:'유니크', color:'#a335ee', desc:'회랑 근접·사격·마법 각 30승 달성',           cond:{type:'corridor_all_type_masters',  target:1  } },
+  { id:'title_corridor_perfect_wins_30',name:'닿을 수 없는',     tier:'유니크', color:'#a335ee', desc:'회랑 무결한 승리 (HP 손실 없음) 30회',       cond:{type:'corridor_perfect_wins',      target:30 } },
+  { id:'title_corridor_seasons_15',     name:'영원의 회귀자',    tier:'유니크', color:'#a335ee', desc:'회랑 시즌 15회 완주',                       cond:{type:'corridor_seasons_completed', target:15 } },
+  // 영웅
+  { id:'title_corridor_wins_500',       name:'회랑의 영웅',      tier:'영웅', color:'#FFBB2A', desc:'회랑 누적 승리 500회',                       cond:{type:'corridor_wins_total',          target:500} },
+  { id:'title_corridor_zero_300',       name:'명왕의 대행자',    tier:'영웅', color:'#FFBB2A', desc:'회랑 상대 승점을 0으로 만들기 300회',        cond:{type:'corridor_opponents_zeroed',    target:300} },
+  { id:'title_corridor_streak_30',      name:'불멸의 결투사',    tier:'영웅', color:'#FFBB2A', desc:'회랑 30연승 달성',                           cond:{type:'corridor_max_win_streak',      target:30 } },
+  { id:'title_corridor_rank_1',         name:'회랑의 정복자',    tier:'영웅', color:'#FFBB2A', desc:'회랑 시즌 정산 랭킹 1위 10회 달성',           cond:{type:'corridor_rank1_count',         target:10 } },
+  // 전설
+  { id:'title_corridor_streak_50',      name:'영원의 지배자',    tier:'전설', color:'#ffd700', desc:'회랑 50연승 달성',                           cond:{type:'corridor_max_win_streak',      target:50 } },
+  { id:'title_corridor_pioneer',        name:'영원의 시작',      tier:'전설', color:'#ffd700', desc:'영원의 회랑 오픈 베타 참여자 (관리자 지급 전용)', cond:{type:'admin_only',                 target:1  }, hiddenIfUnowned:true },
 ];
 // Lv 26 게이트 — 유니크·영웅·전설·신화 tier 는 조건을 이전에 충족했더라도 Lv 26 도달 시점에 여전히 조건이 성립해야 지급됨
 // 랭킹처럼 유동적인 조건은 역대 최고치가 아니라 현재 상태로 판정 (_getTitleCurrentValue useCurrent)
@@ -7183,6 +7242,18 @@ function _ensureTitleState(p){
   if (typeof p.titleCounters.hero_exchange_success         !== 'number') p.titleCounters.hero_exchange_success         = 0;
   // 유니크+ 이력 플래그 (흑마법사·불혹 판정용). 인벤토리 스캔 결과 자동 마킹.
   if (typeof p.titleCounters.ever_acquired_unique_plus !== 'number') p.titleCounters.ever_acquired_unique_plus = 0;
+  // 영원의 회랑 칭호 카운터 (신규)
+  const corridorFields = [
+    'corridor_registrations_total','corridor_challenges_total','corridor_defenses_total',
+    'corridor_wins_total','corridor_opponents_zeroed','corridor_perfect_wins',
+    'corridor_max_win_streak','corridor_current_win_streak','corridor_max_score_ever',
+    'corridor_best_season_rank','corridor_rank1_count','corridor_seasons_completed',
+    'corridor_wins_by_melee','corridor_wins_by_ranged','corridor_wins_by_magic',
+    'corridor_all_type_masters'
+  ];
+  corridorFields.forEach(f => {
+    if (typeof p.titleCounters[f] !== 'number') p.titleCounters[f] = 0;
+  });
 }
 // 조건 유형별 현재값 조회
 // useCurrent=true (Lv26 게이트 칭호용) — 역대치가 아니라 현재 상태 기준
@@ -7272,6 +7343,27 @@ function _getTitleCurrentValue(p, cond, useCurrent){
       return (wpn && arm) ? cond.target : 0;
     }
     case 'admin_only': return 0;   // 조건 자동 충족 없음 — 관리자 지급 전용
+    // ── 영원의 회랑 ──
+    case 'corridor_registrations_total': return p.titleCounters.corridor_registrations_total|0;
+    case 'corridor_challenges_total':    return p.titleCounters.corridor_challenges_total|0;
+    case 'corridor_defenses_total':      return p.titleCounters.corridor_defenses_total|0;
+    case 'corridor_wins_total':          return p.titleCounters.corridor_wins_total|0;
+    case 'corridor_opponents_zeroed':    return p.titleCounters.corridor_opponents_zeroed|0;
+    case 'corridor_perfect_wins':        return p.titleCounters.corridor_perfect_wins|0;
+    case 'corridor_max_win_streak':      return p.titleCounters.corridor_max_win_streak|0;
+    case 'corridor_max_score_ever':      return p.titleCounters.corridor_max_score_ever|0;
+    case 'corridor_rank1_count':         return p.titleCounters.corridor_rank1_count|0;
+    case 'corridor_seasons_completed':   return p.titleCounters.corridor_seasons_completed|0;
+    case 'corridor_wins_by_melee':       return p.titleCounters.corridor_wins_by_melee|0;
+    case 'corridor_wins_by_ranged':      return p.titleCounters.corridor_wins_by_ranged|0;
+    case 'corridor_wins_by_magic':       return p.titleCounters.corridor_wins_by_magic|0;
+    case 'corridor_all_type_masters':    return p.titleCounters.corridor_all_type_masters|0;
+    case 'corridor_best_season_rank_le': {
+      // 낮은 숫자가 좋음 · 0이면 미달성. 저장된 값이 target 이하면 target 반환 (충족)
+      const r = p.titleCounters.corridor_best_season_rank|0;
+      if (r > 0 && r <= cond.target) return cond.target;
+      return 0;
+    }
     case 'tower_50_cleared': return p.titleCounters.tower_50_cleared ? 1 : 0;
     case 'tower_attempted':  return p.titleCounters.tower_attempted  ? 1 : 0;
     case 'tower_best_floor': return (p.titleCounters.tower_best_floor|0);
@@ -14873,6 +14965,7 @@ function openTower(){
     return;
   }
   _ensureDojoState(p);
+  try { advanceDailyQuest('dq_tower_enter', 1); } catch(e){}
   showPage('tower');
   renderTowerLobby();
   loadTowerRanking(10).catch(e => console.warn('[tower ranking]', e));
@@ -15760,6 +15853,7 @@ function towerBattleEnd(result){
       if (!p.titleCounters.tower_attempted) p.titleCounters.tower_attempted = true;
       checkTitleUnlocks();
     } catch(e){ console.warn('[tower_attempt counters]', e); }
+    try { _bumpWeeklyCounter('towerRunsWeek', 1, 'wq_tower_run_20'); } catch(e){}
   }
 
   if (outcome === 'win'){
@@ -15802,6 +15896,12 @@ function towerBattleEnd(result){
         checkTitleUnlocks();
       }
     } catch(e){ console.warn('[tower_best_floor]', e); }
+    // 일일/주간 퀘스트 카운터
+    try {
+      if (floor >= 5)  advanceDailyQuest('dq_tower_floor_5',  1);
+      if (floor >= 15) advanceDailyQuest('dq_tower_floor_15', 1);
+      _bumpWeeklyCounter('towerFloorsClearedWeek', 1, 'wq_tower_floor_100');
+    } catch(e){ console.warn('[tower_floor quest]', e); }
     // 50층 클리어 = 최종
     if (floor >= TOWER_MAX_FLOOR){
       // 칭호 카운터 세팅 → checkTitleUnlocks 자동 발동
@@ -15880,6 +15980,7 @@ function checkTowerReward(floor){
   p.gold = (p.gold|0) + (r.gold|0);
   p.spiritBlessing = (p.spiritBlessing|0) + (r.spirit|0);
   try { bumpTitleCounter('total_gold_earned', r.gold|0); } catch(e){}
+  try { if (r.spirit|0) _bumpWeeklyCounter('towerSpiritsWeek', r.spirit|0, 'wq_tower_spirit_10'); } catch(e){}
   towerLog(`🎁 <b>${floor}층 첫 도달 보상</b> — 🌿${r.spirit} · +${(r.gold|0).toLocaleString()}G`, 'sys');
   try { chatSys(`👼 ${p.name}님이 여신의 탑 ${floor}층 첫 도달! (+🌿${r.spirit} · +${(r.gold|0).toLocaleString()}G)`, { local: true }); } catch(e){}
 }
@@ -15895,6 +15996,8 @@ function grantDailySpiritBoss(floor){
   done.add(floor);
   p.dojo.spiritClearedFloors = Array.from(done);
   p.spiritBlessing = (p.spiritBlessing|0) + TOWER_DAILY_SPIRIT_PER_BOSS;
+  try { advanceDailyQuest('dq_tower_boss_spirit', 1); } catch(e){}
+  try { _bumpWeeklyCounter('towerSpiritsWeek', TOWER_DAILY_SPIRIT_PER_BOSS, 'wq_tower_spirit_10'); } catch(e){}
   towerLog(`🌿 <b>일일 보스 클리어 보상</b> — 정령의 축복 +${TOWER_DAILY_SPIRIT_PER_BOSS} (오늘 최초)`, 'sys');
 }
 
@@ -16171,10 +16274,14 @@ function openCorridor(){
     return;
   }
   if (!sb){ toast('클라우드 모드에서만 이용 가능합니다.'); return; }
+  try { advanceDailyQuest('dq_corridor_enter', 1); } catch(e){}
   showContent('corridor-lobby');
   // 이전 전투 이탈 pending 처리 후 로비 리프레시
   _corridorRecoverPendingLoss().catch(err => console.warn('[corridor recover]', err))
-    .finally(() => refreshCorridorLobby());
+    .finally(() => refreshCorridorLobby().then(() => {
+      try { _corridorPollDefenseWins(); } catch(e){}
+      _corridorPollNewSettlements().catch(err => console.warn('[corridor settlement]', err));
+    }));
 }
 
 function exitCorridor(){
@@ -16204,7 +16311,7 @@ async function refreshCorridorLobby(forceRefresh){
       sb.rpc('eternal_corridor_my_registration'),
       sb.rpc('eternal_corridor_top_list', { p_limit: 25 }),
       sb.rpc('eternal_corridor_cooldown_map'),
-      sb.rpc('eternal_corridor_my_battles', { p_limit: 10 }),
+      sb.rpc('eternal_corridor_my_battles', { p_limit: 30 }),
     ]);
     GAME.corridor.myReg = (regRes.data && regRes.data[0]) || null;
     GAME.corridor.ranking = Array.isArray(listRes.data) ? listRes.data : [];
@@ -16221,6 +16328,76 @@ async function refreshCorridorLobby(forceRefresh){
   } catch(e){ console.warn('[corridor refresh]', e); }
   finally { GAME.corridor.loading = false; }
   renderCorridorLobby();
+}
+
+// 새로 정산된 시즌 결과 fetch → best_season_rank / rank1_count / seasons_completed 반영
+async function _corridorPollNewSettlements(){
+  if (!sb) return;
+  const p = GAME.player;
+  if (!p) return;
+  _ensureTitleState(p);
+  const afterId = p.corridorLastSettlementConsumedId || null;
+  let rows;
+  try {
+    const res = await sb.rpc('eternal_corridor_my_new_settlements', { p_after_id: afterId });
+    if (res.error){ console.warn('[corridor settlement poll]', res.error); return; }
+    rows = Array.isArray(res.data) ? res.data : [];
+  } catch(e){ console.warn('[corridor settlement poll]', e); return; }
+  if (!rows.length) return;
+  let changed = false;
+  rows.forEach(r => {
+    const rk = r.final_rank|0;
+    p.titleCounters.corridor_seasons_completed = (p.titleCounters.corridor_seasons_completed|0) + 1;
+    if (rk > 0){
+      // 최저 rank = 최고 성적 (1이 최고)
+      const cur = p.titleCounters.corridor_best_season_rank|0;
+      if (cur === 0 || rk < cur) p.titleCounters.corridor_best_season_rank = rk;
+      if (rk === 1) p.titleCounters.corridor_rank1_count = (p.titleCounters.corridor_rank1_count|0) + 1;
+    }
+    p.corridorLastSettlementConsumedId = r.id;
+    changed = true;
+  });
+  if (changed){
+    try { checkTitleUnlocks(); } catch(e){}
+    try { saveGame(); } catch(e){}
+  }
+}
+
+// 방어전 발생/승리를 my_battles 데이터로 감지 · 이미 카운트한 battle id 는 스킵
+//   · defenses_total: role='defender' 인 모든 배틀 (승패 무관)
+//   · defense_win (일일 퀘스트): defender & did_win
+function _corridorPollDefenseWins(){
+  const p = GAME.player;
+  if (!p) return;
+  const battles = GAME.corridor.battles || [];
+  if (!battles.length) return;
+  _ensureTitleState(p);
+  const seenAll = new Set(p.corridorSeenDefenseIds || []);      // 모든 방어전 id
+  const seenWin = new Set(p.corridorSeenDefenseWinIds || []);   // 방어전 승리 id
+  let newDef = 0, newWins = 0;
+  battles.forEach(b => {
+    if (b.role !== 'defender' || !b.id) return;
+    if (!seenAll.has(b.id)){
+      seenAll.add(b.id);
+      newDef++;
+    }
+    if (b.did_win === true && !seenWin.has(b.id)){
+      seenWin.add(b.id);
+      newWins++;
+    }
+  });
+  if (newDef > 0 || newWins > 0){
+    p.corridorSeenDefenseIds     = Array.from(seenAll).slice(-100);
+    p.corridorSeenDefenseWinIds  = Array.from(seenWin).slice(-100);
+    if (newDef > 0){
+      p.titleCounters.corridor_defenses_total = (p.titleCounters.corridor_defenses_total|0) + newDef;
+    }
+    for (let i = 0; i < newWins; i++){
+      try { advanceDailyQuest('dq_corridor_defense_1', 1); } catch(e){}
+    }
+    try { checkTitleUnlocks(); } catch(e){}
+    try { saveGame(); } catch(e){}
+  }
 }
 
 function renderCorridorLobby(){
@@ -17075,6 +17252,15 @@ async function commitCorridorRegistration(){
     if (needSpirit > 0) p.spiritBlessing = Math.max(0, spirit - needSpirit);
     // 등록 시 corridorLastRegisteredWeek 로컬에도 반영 (다음 등록 판정용)
     if (!isEdit) p.corridorLastRegisteredWeek = _towerCurrentWeekStart();
+    // 칭호 카운터: 신규 등록만 카운트 (편집은 제외)
+    if (!isEdit){
+      try {
+        _ensureTitleState(p);
+        p.titleCounters.corridor_registrations_total = (p.titleCounters.corridor_registrations_total|0) + 1;
+        p.titleCounters.corridor_current_win_streak = 0;   // 새 시즌 등록 시 현재 연승 리셋
+        checkTitleUnlocks();
+      } catch(err){ console.warn('[corridor register title]', err); }
+    }
     try { saveGame(); renderSheet(); } catch(err){}
     GAME.corridor.editing = null;
     _corridorInvalidateCache();   // 등록/편집 후 캐시 무효화 → 최신 상태 재조회
@@ -17580,6 +17766,80 @@ async function _corridorSubmitAndShowResult(battleLog, abandoned){
     showContent('corridor-lobby'); refreshCorridorLobby();
     return;
   }
+  // 일일/주간 퀘스트 + 칭호 카운터 (공격자 도전)
+  try {
+    advanceDailyQuest('dq_corridor_challenge_3', 1);
+    _bumpWeeklyCounter('corridorChallengesWeek', 1, 'wq_corridor_challenge_30');
+    const isWin = (battleLog.final && battleLog.final.result === 'attacker_win');
+    const p = GAME.player;
+    if (p){
+      _ensureTitleState(p);
+      p.titleCounters.corridor_challenges_total = (p.titleCounters.corridor_challenges_total|0) + 1;
+    }
+    if (isWin){
+      advanceDailyQuest('dq_corridor_win_1', 1);
+      advanceDailyQuest('dq_corridor_win_5', 1);
+      _bumpWeeklyCounter('corridorWinsWeek', 1, 'wq_corridor_win_20');
+      if (serverRow && serverRow.defender_dropped){
+        _bumpWeeklyCounter('corridorZeroWeek', 1, 'wq_corridor_zero_3');
+      }
+      if (p){
+        p.titleCounters.corridor_wins_total = (p.titleCounters.corridor_wins_total|0) + 1;
+        // 연승
+        p.titleCounters.corridor_current_win_streak = (p.titleCounters.corridor_current_win_streak|0) + 1;
+        if (p.titleCounters.corridor_current_win_streak > (p.titleCounters.corridor_max_win_streak|0)){
+          p.titleCounters.corridor_max_win_streak = p.titleCounters.corridor_current_win_streak;
+        }
+        // 승점 0 격퇴
+        if (serverRow && serverRow.defender_dropped){
+          p.titleCounters.corridor_opponents_zeroed = (p.titleCounters.corridor_opponents_zeroed|0) + 1;
+        }
+        // 최고 승점 (역대)
+        if (serverRow && Number.isFinite(serverRow.attacker_score_after)){
+          const cur = serverRow.attacker_score_after|0;
+          if (cur > (p.titleCounters.corridor_max_score_ever|0)){
+            p.titleCounters.corridor_max_score_ever = cur;
+          }
+        }
+        // 공격 타입별 승리 (attacker 는 나 · pb.virtA.atkType)
+        const atkType = (pb && pb.virtA && pb.virtA.atkType) || p.atkType || '';
+        if (atkType === '근접') p.titleCounters.corridor_wins_by_melee  = (p.titleCounters.corridor_wins_by_melee |0) + 1;
+        else if (atkType === '사격') p.titleCounters.corridor_wins_by_ranged = (p.titleCounters.corridor_wins_by_ranged|0) + 1;
+        else if (atkType === '마법') p.titleCounters.corridor_wins_by_magic  = (p.titleCounters.corridor_wins_by_magic |0) + 1;
+        // 파생: 3타입 각 30승 시 all_type_masters=1
+        if ((p.titleCounters.corridor_wins_by_melee |0) >= 30
+         && (p.titleCounters.corridor_wins_by_ranged|0) >= 30
+         && (p.titleCounters.corridor_wins_by_magic |0) >= 30){
+          p.titleCounters.corridor_all_type_masters = 1;
+        }
+        // 완벽승 (HP 손실 0 = attacker_hp_end == hpMax)
+        if (serverRow && Number.isFinite(serverRow.attacker_hp_end) && Number.isFinite(serverRow.attacker_hp_max)){
+          if ((serverRow.attacker_hp_end|0) >= (serverRow.attacker_hp_max|0)){
+            p.titleCounters.corridor_perfect_wins = (p.titleCounters.corridor_perfect_wins|0) + 1;
+          }
+        } else if (pb && pb.virtA && Number.isFinite(pb.virtA.hpMax)){
+          // 서버 필드 없으면 클라이언트 sim 기준 (attacker_hp end from battleLog.final)
+          const endHp = battleLog.final ? (battleLog.final.attacker_hp|0) : -1;
+          if (endHp >= (pb.virtA.hpMax|0) && endHp > 0){
+            p.titleCounters.corridor_perfect_wins = (p.titleCounters.corridor_perfect_wins|0) + 1;
+          }
+        }
+        // 최고 승점 (주간)
+        if (serverRow && Number.isFinite(serverRow.attacker_score_after)){
+          const cur = serverRow.attacker_score_after|0;
+          const wc = p._weeklyCounters || (p._weeklyCounters = {});
+          if (cur > (wc.corridorMaxScoreWeek|0)){
+            const delta = cur - (wc.corridorMaxScoreWeek|0);
+            _bumpWeeklyCounter('corridorMaxScoreWeek', delta, 'wq_corridor_score_10');
+          }
+        }
+      }
+    } else {
+      // 패배 → 연승 리셋
+      if (p) p.titleCounters.corridor_current_win_streak = 0;
+    }
+    if (p){ try { checkTitleUnlocks(); } catch(err){} }
+  } catch(e){ console.warn('[corridor quest counters]', e); }
   // 결과 화면 렌더
   const simForResult = {
     ...pb.sim,
