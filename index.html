@@ -164,58 +164,341 @@
   .card-inv-grid .cell .nm { flex:1; }
   .card-inv-grid .cell button { padding:1px 5px; font-size:9px; background:#7E181E; color:#fff; border:0; cursor:pointer; }
 
-  /* ===== 로그인 페이지 ===== */
-  #pg-login {
-    background:#fff;
-    border:1px solid #555;
-    padding:30px;
+  /* ===== 로그인 · 회원가입 페이지 (성전 배경) ===== */
+  #pg-login, #pg-register {
+    background: #0a0518 url('assets/wallpaper/wallpaper.png') center/cover no-repeat;
+    border: 0;
+    padding: 40px 20px;
+    min-height: 100vh;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+    box-sizing: border-box;
   }
-  .login-inner {
-    width:500px; margin:0 auto;
-    display:flex; flex-direction:column; align-items:center;
+  /* .page 기본 display:none 유지 · active 일 때만 flex 로 표시 */
+  #pg-login.active, #pg-register.active { display: flex; }
+  /* 상·하 vignette — 텍스트/폼 가독성 */
+  #pg-login::after, #pg-register::after {
+    content: '';
+    position: absolute; inset: 0;
+    background:
+      linear-gradient(to bottom,
+        rgba(6, 4, 20, 0.35) 0%,
+        rgba(6, 4, 20, 0.10) 45%,
+        rgba(6, 4, 20, 0.55) 100%);
+    pointer-events: none;
+    z-index: 0;
   }
-  .login-banner {
-    width:500px;
-    background: radial-gradient(ellipse at center,
-      #e8f4ff 0%,
-      #b5d6f2 30%,
-      #7099d4 70%,
-      #4a6fa8 100%);
-    border:1px solid #555;
-    position:relative;
-    overflow:hidden;
+  #pg-login .login-inner, #pg-register .login-inner {
+    position: relative; z-index: 2;
+    width: 100%;
+    max-width: 480px;
+    margin: 0 auto;
+    display: flex; flex-direction: column; align-items: stretch;
   }
-  .login-banner-img { display:block; width:100%; height:auto; position:relative; z-index:1; }
-  .login-banner::before {
-    content:""; position:absolute; inset:0;
-    background-image:
-      radial-gradient(circle at 20% 30%, rgba(255,255,255,.4) 0%, transparent 8%),
-      radial-gradient(circle at 70% 60%, rgba(255,255,255,.3) 0%, transparent 6%),
-      radial-gradient(circle at 50% 20%, rgba(255,255,255,.5) 0%, transparent 4%),
-      radial-gradient(circle at 30% 80%, rgba(255,255,255,.3) 0%, transparent 5%),
-      radial-gradient(circle at 85% 35%, rgba(255,255,255,.4) 0%, transparent 7%);
+  /* 배너 — 이미지·그라디언트 배경 제거, 타이틀만 표시 */
+  #pg-login .login-banner, #pg-register .login-banner {
+    width: 100%;
+    background: none;
+    border: 0;
+    padding: 0;
+    margin-bottom: 30px;
+    overflow: visible;
+    position: relative;
   }
-  .login-banner .goddess {
-    position:absolute; left:0; right:0; bottom:14px;
-    text-align:center; z-index:3;
-    color:#fff; font-size:42px; font-weight:bold; letter-spacing:8px;
-    text-shadow:2px 2px 6px rgba(0,0,0,.5), 0 0 20px rgba(180,210,255,.7);
-    font-family:"바탕",Batang,serif;
+  #pg-login .login-banner-img { display: none; }
+  #pg-login .login-banner::before, #pg-register .login-banner::before { display: none; }
+  /* title.png 로고 이미지 — 성전 배경 위 삽입 */
+  #pg-login .login-title-img, #pg-register .login-title-img {
+    display: block;
+    width: 100%;
+    max-width: 340px;
+    height: auto;
+    margin: 0 auto 4px;
+    filter:
+      drop-shadow(0 4px 12px rgba(0, 0, 0, 0.65))
+      drop-shadow(0 0 24px rgba(255, 200, 60, 0.20));
+    pointer-events: none;
   }
-  .login-form {
-    margin-top:20px; width:500px;
-    border:1px solid #888; background:#fff;
+  /* 로그인 페이지 — 타이틀만 살짝 위로 올림 (폼은 그대로) */
+  #pg-login .login-banner { margin-top: -40px; }
+  #pg-register .login-title-img.small {
+    max-width: 220px;
+    margin-bottom: 2px;
+    opacity: 0.85;
   }
-  .login-form table { width:100%; border-collapse:collapse; }
-  .login-form td { padding:8px 12px; border:1px solid #ddd; }
-  .login-form td.lbl { background:#f0f0f0; font-weight:bold; width:130px; text-align:right; }
-  .login-form input { width:220px; padding:4px; border:1px solid #888; font-size:12px; }
-  .login-actions { text-align:center; margin-top:14px; }
-  .login-actions button { padding:6px 24px; margin:0 4px; background:#2e53b2; color:#fff; border:1px solid #1a3d8a; cursor:pointer; font-size:13px; font-weight:bold; }
-  .login-actions button:hover { background:#3d68d4; }
-  .login-actions button.alt { background:#7E181E; border-color:#4a0d10; }
-  .login-actions button.alt:hover { background:#B02025; }
-  .login-tip { margin-top:14px; text-align:center; font-size:11px; color:#777; line-height:1.6; }
+  #pg-register .register-banner {
+    display: flex; flex-direction: column; align-items: center;
+    gap: 6px;
+  }
+  /* 회원가입 타이틀은 조금 작게 */
+  #pg-register .login-banner .goddess.register-title {
+    font-size: clamp(30px, 5.5vw, 46px);
+    letter-spacing: 8px;
+  }
+  /* 「여신전쟁」 타이틀 — 황금 그라디언트 · 세리프 · 광채 */
+  #pg-login .login-banner .goddess, #pg-register .login-banner .goddess {
+    position: static;
+    color: transparent;
+    background: linear-gradient(180deg,
+      #fff8d6 0%,
+      #ffe88a 30%,
+      #ffcf3d 55%,
+      #b57a10 100%);
+    -webkit-background-clip: text;
+            background-clip: text;
+    -webkit-text-fill-color: transparent;
+    font-family: "Noto Serif KR","궁서체",GungSuh,"바탕",Batang,serif;
+    font-size: clamp(38px, 7.5vw, 66px);
+    font-weight: 900;
+    letter-spacing: 10px;
+    text-align: center;
+    line-height: 1.15;
+    padding: 8px 0;
+    filter:
+      drop-shadow(0 3px 8px rgba(0,0,0,0.72))
+      drop-shadow(0 0 22px rgba(255, 200, 60, 0.38));
+  }
+  /* 타이틀 위·아래 장식 라인 */
+  #pg-login .login-banner .goddess::before,
+  #pg-login .login-banner .goddess::after,
+  #pg-register .login-banner .goddess::before,
+  #pg-register .login-banner .goddess::after {
+    content: '✦';
+    display: inline-block;
+    padding: 0 18px;
+    color: #ffd93b;
+    font-size: 0.55em;
+    vertical-align: middle;
+    filter: drop-shadow(0 0 6px rgba(255,215,0,0.7));
+  }
+  /* 유리 카드 (login-form) */
+  #pg-login .login-form, #pg-register .login-form {
+    width: 100%;
+    box-sizing: border-box;
+    margin-top: 0;
+    border: 1px solid rgba(255, 215, 0, 0.28);
+    border-radius: 8px;
+    background: rgba(14, 10, 28, 0.62);
+    -webkit-backdrop-filter: blur(14px) saturate(1.15);
+            backdrop-filter: blur(14px) saturate(1.15);
+    box-shadow:
+      0 10px 40px rgba(0,0,0,0.55),
+      inset 0 1px 0 rgba(255, 215, 0, 0.18);
+    padding: 6px;
+  }
+  #pg-login .login-form table, #pg-register .login-form table {
+    width: 100%; border-collapse: collapse;
+  }
+  #pg-login .login-form td, #pg-register .login-form td {
+    padding: 10px 12px; border: 0; color: #f0e8cc; vertical-align: middle;
+  }
+  #pg-login .login-form td.lbl, #pg-register .login-form td.lbl {
+    background: transparent;
+    font-weight: bold;
+    width: 96px;
+    text-align: right;
+    color: #f2c45a;
+    font-size: 12px;
+    letter-spacing: 1px;
+    border-right: 1px solid rgba(255, 215, 0, 0.16);
+  }
+  #pg-login .login-form input, #pg-register .login-form input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 8px 10px;
+    background: rgba(0, 0, 0, 0.30);
+    border: 1px solid rgba(255, 215, 0, 0.24);
+    border-radius: 4px;
+    color: #f5efd9;
+    font-size: 13px;
+    transition: border-color 0.2s, box-shadow 0.2s, background 0.2s;
+  }
+  #pg-login .login-form input:focus, #pg-register .login-form input:focus {
+    outline: none;
+    border-color: #ffd93b;
+    background: rgba(0, 0, 0, 0.42);
+    box-shadow: 0 0 0 2px rgba(255, 215, 0, 0.18);
+  }
+  #pg-login .login-form input::placeholder, #pg-register .login-form input::placeholder {
+    color: rgba(240, 220, 180, 0.42);
+  }
+  /* 회원가입 폼 안 보조 텍스트 (안내문·상태) 배경 톤과 조화 */
+  #pg-register .login-form td div {
+    color: rgba(240, 220, 180, 0.85);
+  }
+  #pg-register .login-form td button {
+    background: rgba(0, 0, 0, 0.35);
+    color: #f2c45a;
+    border: 1px solid rgba(255, 215, 0, 0.35);
+    padding: 3px 8px;
+    font-size: 11px;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+  #pg-register .login-form td button:hover {
+    background: rgba(255, 215, 0, 0.15);
+    color: #fff5cc;
+  }
+  /* 액션 버튼 — 황금 로그인 · 진홍 회원가입 · 회색 삭제 */
+  #pg-login .login-actions, #pg-register .login-actions {
+    margin-top: 22px;
+    text-align: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 8px;
+  }
+  #pg-login .login-actions button, #pg-register .login-actions button {
+    padding: 10px 26px;
+    margin: 0;
+    background: linear-gradient(180deg, #ffe07a 0%, #d19a1a 100%);
+    color: #241705;
+    border: 1px solid #7c5a10;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1.5px;
+    text-shadow: 0 1px 0 rgba(255, 245, 200, 0.55);
+    box-shadow:
+      0 3px 10px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255, 255, 220, 0.55);
+    transition: transform 0.1s, box-shadow 0.2s, filter 0.2s;
+  }
+  #pg-login .login-actions button:hover, #pg-register .login-actions button:hover {
+    filter: brightness(1.10);
+    box-shadow:
+      0 4px 14px rgba(255, 215, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 220, 0.65);
+  }
+  #pg-login .login-actions button:active, #pg-register .login-actions button:active {
+    transform: translateY(1px);
+  }
+  #pg-login .login-actions button.alt, #pg-register .login-actions button.alt {
+    background: linear-gradient(180deg, #a13540 0%, #5a1017 100%);
+    color: #fff2d5;
+    border-color: #3a0a0e;
+    text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+    box-shadow:
+      0 3px 10px rgba(0,0,0,0.5),
+      inset 0 1px 0 rgba(255, 200, 200, 0.28);
+  }
+  #pg-login .login-actions button.alt:hover, #pg-register .login-actions button.alt:hover {
+    filter: brightness(1.15);
+    box-shadow:
+      0 4px 14px rgba(230, 80, 100, 0.40),
+      inset 0 1px 0 rgba(255, 220, 220, 0.4);
+  }
+  /* 저장 삭제 버튼 (인라인 style="background:#999;" 오버라이드) */
+  #pg-login .login-actions button[style*="background:#999"],
+  #pg-login .login-actions button[style*="background: #999"] {
+    background: linear-gradient(180deg, #4a4a4a 0%, #222 100%) !important;
+    color: rgba(220, 220, 220, 0.85);
+    border-color: #111;
+    text-shadow: 0 1px 0 rgba(0, 0, 0, 0.6);
+    letter-spacing: 0.5px;
+  }
+  /* 보조 액션 — 로그인 아래 회원가입/저장삭제 링크 라인 */
+  #pg-login .login-secondary {
+    margin-top: 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  #pg-login .login-secondary .link-btn {
+    background: transparent;
+    color: rgba(240, 220, 180, 0.85);
+    border: 0;
+    padding: 4px 8px;
+    font-size: 12px;
+    cursor: pointer;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+    transition: color 0.15s, text-shadow 0.15s;
+  }
+  #pg-login .login-secondary .link-btn b {
+    color: #ffd93b;
+    letter-spacing: 1px;
+    padding-left: 4px;
+  }
+  #pg-login .login-secondary .link-btn:hover {
+    color: #fff5cc;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7), 0 0 12px rgba(255, 215, 0, 0.45);
+  }
+  #pg-login .login-secondary .link-btn:hover b {
+    color: #fff5cc;
+  }
+  #pg-login .login-secondary .link-btn.subtle {
+    color: rgba(200, 190, 170, 0.55);
+    font-size: 11px;
+  }
+  #pg-login .login-secondary .link-btn.subtle:hover {
+    color: rgba(240, 220, 180, 0.85);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  }
+  #pg-login .login-secondary .sep {
+    color: rgba(240, 220, 180, 0.35);
+    font-size: 11px;
+  }
+  /* 팁 텍스트 */
+  #pg-login .login-tip, #pg-register .login-tip {
+    margin-top: 18px;
+    text-align: center;
+    color: rgba(240, 220, 180, 0.78);
+    font-size: 11px; line-height: 1.7;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
+  }
+  /* 상단 ADMIN 버튼 — 배경과 조화 */
+  #pg-login #adminLoginBtn {
+    background: rgba(20, 15, 30, 0.55);
+    color: rgba(255, 220, 100, 0.85);
+    border: 1px solid rgba(255, 215, 0, 0.30);
+    -webkit-backdrop-filter: blur(6px);
+            backdrop-filter: blur(6px);
+  }
+  #pg-login #adminLoginBtn:hover {
+    background: rgba(90, 26, 107, 0.6);
+    color: #ffe888;
+  }
+  /* 모바일 조정 — 배경 왜곡 없이 스케일 · iOS zoom 방지 */
+  @media (max-width: 640px) {
+    #pg-login, #pg-register {
+      padding: 20px 12px;
+      background-attachment: scroll;
+      background-position: center center;
+      background-size: cover;
+    }
+    #pg-login .login-banner, #pg-register .login-banner {
+      margin-bottom: 22px;
+    }
+    #pg-login .login-title-img, #pg-register .login-title-img {
+      max-width: 260px;
+    }
+    #pg-register .login-title-img.small {
+      max-width: 180px;
+    }
+    #pg-login .login-banner .goddess, #pg-register .login-banner .goddess {
+      letter-spacing: 6px;
+    }
+    #pg-login .login-banner .goddess::before,
+    #pg-login .login-banner .goddess::after,
+    #pg-register .login-banner .goddess::before,
+    #pg-register .login-banner .goddess::after {
+      padding: 0 10px;
+    }
+    #pg-login .login-form td.lbl, #pg-register .login-form td.lbl {
+      width: 72px; padding: 8px 8px;
+      font-size: 11px;
+    }
+    #pg-login .login-form input, #pg-register .login-form input {
+      font-size: 16px;   /* iOS 자동 확대 방지 */
+    }
+    #pg-login .login-actions button, #pg-register .login-actions button {
+      padding: 9px 18px; font-size: 12px;
+    }
+  }
 
   /* ===== 메인 페이지 ===== */
   #pg-main {
@@ -1314,8 +1597,7 @@
   <button id="adminLoginBtn" onclick="showAdminAuth()">🔧 ADMIN</button>
   <div class="login-inner">
     <div class="login-banner">
-      <img class="login-banner-img" src="assets/main.png" alt="">
-      <div class="goddess">여 신 전 쟁</div>
+      <img class="login-title-img" src="assets/wallpaper/title.png" alt="여신전쟁">
     </div>
     <div class="login-form">
       <table>
@@ -1331,8 +1613,11 @@
     </div>
     <div class="login-actions">
       <button onclick="doLogin()">로그인</button>
-      <button class="alt" onclick="showRegisterPage()">회원가입</button>
-      <button onclick="doDeleteSave()" style="background:#999;">저장 삭제</button>
+    </div>
+    <div class="login-secondary">
+      <button class="link-btn" onclick="showRegisterPage()">계정이 없으신가요? <b>회원가입 →</b></button>
+      <span class="sep">·</span>
+      <button class="link-btn subtle" onclick="doDeleteSave()">저장 삭제</button>
     </div>
     <div class="login-tip">
       가입한 계정으로 로그인하면 이어서 플레이할 수 있습니다.
@@ -1343,8 +1628,9 @@
 <!-- ===== 회원가입 페이지 ===== -->
 <div id="pg-register" class="page">
   <div class="login-inner">
-    <div class="login-banner">
-      <div class="goddess" style="font-size:34px;">회 원 가 입</div>
+    <div class="login-banner register-banner">
+      <img class="login-title-img small" src="assets/wallpaper/title.png" alt="여신전쟁">
+      <div class="goddess register-title">회 원 가 입</div>
     </div>
     <div class="login-form">
       <table>
@@ -1376,7 +1662,7 @@
           </td>
         </tr>
         <tr>
-          <td class="lbl">이메일 코드</td>
+          <td class="lbl">인증번호</td>
           <td>
             <input id="regEmailCode" maxlength="6" placeholder="6자리 숫자" style="width:120px;">
             <button type="button" onclick="verifyEmailOtp()" style="margin-left:4px;padding:2px 8px;">인증 확인</button>
@@ -3328,7 +3614,7 @@ const CARDS = [
   { id:'n68', name:'클리플',         grade:'normal', icon:'curse',  text:'상대방 STR, DEX, INT, 무기 모두 -5씩 감소', fx:{type:'debuff',str:-5,dex:-5,int:-5,atk:-5} },
   { id:'n69', name:'트롤리제네레이션', grade:'normal', icon:'cross', text:'5턴 턴당 CON*0.5만큼 HP 회복', fx:{type:'hotStat',stats:['con'],mult:0.5,turns:5} },
   { id:'n70', name:'파이어볼트',     grade:'normal', icon:'fire',   text:'INT*2.2 데미지 / INT*1.5만큼 MP소모', fx:{type:'multi',effects:[{type:'dmgStat',stats:['int'],mult:2.2},{type:'mpCost',stat:'int',mult:1.5}]} },
-  { id:'n71', name:'퍼지',           grade:'normal', icon:'holy',   text:'적 버프 제거 / 25 고정 데미지 (방어력 무시) / 적 올스탯 -5 / 평타 병행 (Int 10 필요)', forceBasicAtk:true, fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:25,max:25,ignoreDef:true},{type:'debuff',str:-5,dex:-5,int:-5,con:-5}]} },
+  { id:'n71', name:'퍼지',           grade:'normal', icon:'holy',   text:'적 버프 제거 / 25 고정 데미지 (방어력 무시) / 적 올스탯 -5 / 평타 병행 / [시전자 INT가 10 이상일 경우에만 발동]', forceBasicAtk:true, statReq:{int:10}, fx:{type:'multi',effects:[{type:'dispel'},{type:'dmg',min:25,max:25,ignoreDef:true},{type:'debuff',str:-5,dex:-5,int:-5,con:-5}]} },
   { id:'n72', name:'페어리파이어',   grade:'normal', icon:'ghost',  text:'5 고정 데미지 (방어력 무시) / 상대방 방어구 -10 감소', fx:{type:'multi',effects:[{type:'dmg',min:5,max:5,ignoreDef:true},{type:'debuff',def:-10}]} },
   { id:'n73', name:'포세션',         grade:'normal', icon:'ghost',  text:'상대방의 STR, DEX, INT를 복사하여 시전자 스탯으로 반영 / 시전자 무기 0, 방어구 0으로 감소', fx:{type:'statCopy',stats:['str','dex','int'],zeroWeapon:true,zeroArmor:true} },
   { id:'n74', name:'포이즌스피어',   grade:'normal', icon:'venom',  text:'기본공격으로 타격 / 2턴 동안 5 고정 데미지', fx:{type:'multi',effects:[{type:'basicAtk'},{type:'dot',turns:2,dmg:5}]} },
@@ -12051,19 +12337,17 @@ function _buildCombatCtx(kind, caster){
 // - 감소: 현재치를 새 최대치에 대해 pro-rata 스케일 (예: 160/200 → 최대 -20 → 144/180)
 // HP 배수: CON = +5/포인트 (calcDerived와 동일 배수)  |  MP 배수: INT = +7.5/포인트 (소수점 버림)
 // _syncPoolOnStatChange — CON/INT 변화 시 hpMax/mpMax 자동 동기화
-// - 증가: 늘어난 만큼 현재치도 증가
-// - 감소: 현재치 pro-rata 스케일. 단, 라이프업 등 flat maxHp/MpBuff 로 얻은 보너스는
-//   감소 하한으로 보호 (스탯 유래 부분만 감소, LU flat 은 유지)
+// - 증가: 늘어난 만큼 현재치도 증가 (기존과 동일)
+// - 감소: hpMax/mpMax 만 감소 · 현재치는 그대로 유지 (새 max 초과분만 클램프)
+//   · 라이프업 등 flat maxHp/MpBuff 로 얻은 보너스는 감소 하한으로 보호
 function _syncPoolOnStatChange(obj, stat, delta){
   if (!obj || !delta) return;
   const _apply = (maxKey, curKey, deltaMax, bonusKey) => {
     if (!deltaMax) return;
     const oldMax = obj[maxKey] || 0;
     const bonus = (bonusKey && obj[bonusKey]) || 0;
-    const oldStatMax = Math.max(0, oldMax - bonus);   // 스탯 유래 부분 (LU 제외)
+    const oldStatMax = Math.max(0, oldMax - bonus);
     // 감소 시 LU flat 은 CON 감소의 영향을 받지 않음 → delta 를 stat 비율로 스케일
-    // 예) hpMax=130 (100 stat + 30 LU), CON -6 → raw delta -30 → scaled -30*(100/130) ≈ -23
-    //     → 새 hpMax = 107 (LU 가 준 30 중 일부 유지). LU 없었으면 정상 -30 감소.
     let effectiveDelta = deltaMax;
     if (deltaMax < 0 && bonus > 0 && oldMax > 0){
       effectiveDelta = Math.round(deltaMax * (oldStatMax / oldMax));
@@ -12072,18 +12356,13 @@ function _syncPoolOnStatChange(obj, stat, delta){
     // hpMax 하한: LU flat 만큼은 절대 아래로 안 내려감
     if (bonus > 0) newMax = Math.max(newMax, bonus);
     const oldCur = obj[curKey] || 0;
+    obj[maxKey] = newMax;
     if (newMax >= oldMax){
-      obj[maxKey] = newMax;
+      // 증가 — 늘어난 만큼 현재치도 증가
       obj[curKey] = Math.min(newMax, oldCur + (newMax - oldMax));
     } else {
-      // 감소 — 스탯 유래 부분만 pro-rata, flat 부분은 그대로 유지
-      const newStatMax = Math.max(0, newMax - bonus);
-      const flatCur    = Math.min(bonus, oldCur);
-      const oldStatCur = Math.max(0, oldCur - flatCur);
-      const statRatio  = oldStatMax > 0 ? oldStatCur / oldStatMax : 1;
-      const newStatCur = Math.max(0, Math.min(newStatMax, Math.floor(newStatMax * statRatio)));
-      obj[maxKey] = newMax;
-      obj[curKey] = Math.min(newMax, flatCur + newStatCur);
+      // 감소 — 현재치는 유지 · 새 max 초과분만 클램프
+      if (oldCur > newMax) obj[curKey] = newMax;
     }
   };
   if (stat === 'con') _apply('hpMax', 'hp', delta * 5, '_hpMaxBonus');
@@ -13192,6 +13471,10 @@ function applyCardEffect(card, ctx){
         const tb = tbs[i];
         if ((tb.value||0) < 0){
           cb[tb.stat] = (cb[tb.stat]||0) - tb.value;
+          // CON/INT 원복 시 hpMax/mpMax 동기화
+          if (tb.stat === 'con' || tb.stat === 'int'){
+            try { _syncPoolOnStatChange(ctx.castObj, tb.stat, -tb.value); } catch(e){}
+          }
           // byGrade 트래커도 정리
           if (ctx.castBuffsByGrade && tb.grade && ctx.castBuffsByGrade[tb.grade]){
             ctx.castBuffsByGrade[tb.grade][tb.stat] = (ctx.castBuffsByGrade[tb.grade][tb.stat] || 0) - tb.value;
@@ -13200,7 +13483,16 @@ function applyCardEffect(card, ctx){
         }
       }
       // 영구 디버프(turnBuffs 없이 직접 음수로 누적된 값)도 0으로 복귀
-      for (const k of Object.keys(cb)){ if ((cb[k]||0) < 0) cb[k] = 0; }
+      for (const k of Object.keys(cb)){
+        if ((cb[k]||0) < 0){
+          const restore = -cb[k];
+          cb[k] = 0;
+          // CON/INT 원복 시 hpMax/mpMax 동기화
+          if (k === 'con' || k === 'int'){
+            try { _syncPoolOnStatChange(ctx.castObj, k, restore); } catch(e){}
+          }
+        }
+      }
       // byGrade 트래커에서도 음수 항목 제거 (레거시 디버프 정리)
       if (ctx.castBuffsByGrade){
         for (const g of Object.keys(ctx.castBuffsByGrade)){
@@ -13276,20 +13568,23 @@ function applyCardEffect(card, ctx){
       }
       // 등급 필터 — normal은 rare까지, rare는 unique까지, hero는 전부
       const allowed = _dispelAllowedGrades(card.grade);
-      // 1) turnBuffs 필터 — 허용 등급 것만 제거
+      // 1) turnBuffs 필터 — 허용 등급 · 양수 값(버프)만 제거. 음수(디버프)는 유지
       for (let i = tb.length - 1; i >= 0; i--){
         const g = tb[i].grade || 'normal';
-        if (allowed.has(g)) tb.splice(i, 1);
+        if (allowed.has(g) && (tb[i].value|0) > 0) tb.splice(i, 1);
       }
-      // 2) byGrade에서 허용 등급 항목 빼기 (b 딕셔너리에서도 감쇠)
+      // 2) byGrade에서 허용 등급 · 양수 항목만 b 딕셔너리에서 감쇠 (디버프는 유지)
       if (bg){
         for (const g of Object.keys(bg)){
           if (!allowed.has(g)) continue;
           const entries = bg[g];
           for (const k of Object.keys(entries)){
-            b[k] = (b[k]||0) - (entries[k]||0);
+            const v = entries[k]||0;
+            if (v > 0){
+              b[k] = (b[k]||0) - v;
+              entries[k] = 0;
+            }
           }
-          bg[g] = {};
         }
       }
       // 3) 잠긴 버프 보장 — locked 는 등급 무관 dispel 면역. Step 2 에서 함께 감쇠됐다면 baseline 복원.
