@@ -447,9 +447,38 @@
     margin-top: 18px;
     text-align: center;
     color: rgba(240, 220, 180, 0.78);
-    font-size: 11px; line-height: 1.7;
+    font-size: 12px; line-height: 1.8;
     text-shadow: 0 1px 3px rgba(0, 0, 0, 0.7);
   }
+  /* 오픈채팅방 안내 버튼 */
+  #pg-login .login-openchat {
+    margin-top: 14px;
+    text-align: center;
+  }
+  #pg-login .btn-openchat {
+    display: inline-block;
+    padding: 10px 22px;
+    background: linear-gradient(180deg, #ffe97a 0%, #f2c40a 100%);
+    color: #241705;
+    border: 1px solid #7c5a10;
+    border-radius: 4px;
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    text-decoration: none;
+    text-shadow: 0 1px 0 rgba(255, 245, 200, 0.55);
+    box-shadow:
+      0 3px 10px rgba(0,0,0,0.45),
+      inset 0 1px 0 rgba(255, 255, 220, 0.55);
+    transition: filter 0.15s, transform 0.1s, box-shadow 0.2s;
+  }
+  #pg-login .btn-openchat:hover {
+    filter: brightness(1.1);
+    box-shadow:
+      0 4px 14px rgba(255, 215, 0, 0.42),
+      inset 0 1px 0 rgba(255, 255, 220, 0.65);
+  }
+  #pg-login .btn-openchat:active { transform: translateY(1px); }
   /* 상단 ADMIN 버튼 — 배경과 조화 */
   #pg-login #adminLoginBtn {
     background: rgba(20, 15, 30, 0.55);
@@ -1620,7 +1649,13 @@
       <button class="link-btn subtle" onclick="doDeleteSave()">저장 삭제</button>
     </div>
     <div class="login-tip">
-      가입한 계정으로 로그인하면 이어서 플레이할 수 있습니다.
+      현재 게임물관리위원회의 등급 심사 진행 중입니다.<br>
+      오픈채팅방에 입장하셔서 같이 기다려요.
+    </div>
+    <div class="login-openchat">
+      <a class="btn-openchat" href="https://open.kakao.com/o/gZeYwJAi" target="_blank" rel="noopener">
+        💬 오픈채팅방 입장하기
+      </a>
     </div>
   </div>
 </div>
