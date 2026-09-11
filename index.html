@@ -9047,11 +9047,16 @@ function checkRaidAlive(){
   const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
   if (GAME.player.hp <= myThresh){
     if (_tryRebirth(c, 'my', GAME.player, raidLog)) { /* 부활 처리됨, death 스킵 */ }
-    else if (GAME.player.hp <= 0){ raidEnd('lose'); return false; }
+    else if (GAME.player.hp <= 0){
+      try { _flushDueDelayedRestoresForCombat(c, raidLog); } catch(e){}
+      raidEnd('lose'); return false;
+    }
   }
   if (c.monster.hp <= monThresh){
     if (_tryRebirth(c, 'mon', c.monster, raidLog)) { /* 부활 처리됨 */ }
     else if (c.monster.hp <= 0){
+      // 사망으로 조기 종료 시에도 생존자 delayedRestore 는 이번 턴 몫으로 발동 (빅배드부두 등)
+      try { _flushDueDelayedRestoresForCombat(c, raidLog); } catch(e){}
       // 보스 모드: 최종 타격 처리
       if (c.mode === 'boss'){
         raidEnd('boss_kill');
@@ -10314,12 +10319,18 @@ function checkRankAlive(){
   const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
   if (GAME.player.hp <= myThresh){
     if (!_tryRebirth(c, 'my', GAME.player, rankLog)){
-      if (GAME.player.hp <= 0){ rankEnd('lose'); return false; }
+      if (GAME.player.hp <= 0){
+        try { _flushDueDelayedRestoresForCombat(c, rankLog); } catch(e){}
+        rankEnd('lose'); return false;
+      }
     }
   }
   if (c.opponent.hp <= monThresh){
     if (!_tryRebirth(c, 'mon', c.opponent, rankLog)){
-      if (c.opponent.hp <= 0){ rankEnd('win'); return false; }
+      if (c.opponent.hp <= 0){
+        try { _flushDueDelayedRestoresForCombat(c, rankLog); } catch(e){}
+        rankEnd('win'); return false;
+      }
     }
   }
   return true;
@@ -12085,12 +12096,18 @@ function checkAlive(){
   const monThresh = (c.monRebirth && c.monRebirth.turns > 0) ? 1 : 0;
   if (GAME.player.hp <= myThresh){
     if (!_tryRebirth(c, 'my', GAME.player, huntLog)){
-      if (GAME.player.hp <= 0){ huntEnd('lose'); return false; }
+      if (GAME.player.hp <= 0){
+        try { _flushDueDelayedRestoresForCombat(c, huntLog); } catch(e){}
+        huntEnd('lose'); return false;
+      }
     }
   }
   if (c.monster.hp <= monThresh){
     if (!_tryRebirth(c, 'mon', c.monster, huntLog)){
-      if (c.monster.hp <= 0){ huntEnd('win'); return false; }
+      if (c.monster.hp <= 0){
+        try { _flushDueDelayedRestoresForCombat(c, huntLog); } catch(e){}
+        huntEnd('win'); return false;
+      }
     }
   }
   return true;
@@ -12292,6 +12309,9 @@ function _buildCombatCtx(kind, caster){
     targLogCls: isP ? 'opp' : 'hit',
     log,
     addDmg(amt){ if (isP) c.statsMyDmg += amt; else c.statsMonDmg += amt; },
+    // 반사 데미지 — target 측이 reflector 이므로 target 측 데미지 카운터에 반영
+    // (내가 시전 → 적 반사 → 나에게 dmg = 적 데미지 output / 적이 시전 → 내 벤전스 반사 → 적에게 dmg = 내 데미지 output)
+    addTargDmg(amt){ if (isP) c.statsMonDmg += amt; else c.statsMyDmg += amt; },
     // stun은 누적이 아닌 max 갱신 — 같은 cc 카드 연속 시전 시 무한 행동불능 방지
     addCastStun(turns){
       if (isP) c.myStun = Math.max(c.myStun||0, turns);
@@ -12528,6 +12548,7 @@ function _dealIgnoreDef(ctx, raw, opts){
     const cms = ctx.castManaShield && ctx.castManaShield();
     const { hpDmg: rHpDmg, mpAbsorbed: rMpAbsorbed } = _applyManaShield(cms, ctx.castObj, reflected);
     ctx.castObj.hp = Math.max(0, ctx.castObj.hp - rHpDmg);
+    ctx.addTargDmg(rHpDmg);   // 반사 데미지 — target 측(reflector) 데미지 output 으로 반영
     const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
     const _msNote  = mpAbsorbed  > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>`  : '';
     const _msNoteR = rMpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${rMpAbsorbed})</span>` : '';
@@ -12704,6 +12725,7 @@ function applyCardEffect(card, ctx){
         const cms = ctx.castManaShield && ctx.castManaShield();
         const { hpDmg: rHpDmg, mpAbsorbed: rMpAbsorbed } = _applyManaShield(cms, ctx.castObj, reflected);
         ctx.castObj.hp = Math.max(0, ctx.castObj.hp - rHpDmg);
+        ctx.addTargDmg(rHpDmg);   // 반사 데미지 — target 측(reflector) 데미지 output 으로 반영
         const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
         const _msNote  = mpAbsorbed  > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${mpAbsorbed})</span>`  : '';
         const _msNoteR = rMpAbsorbed > 0 ? ` <span style="color:#38f;font-size:10px;">(마나쉴드 MP -${rMpAbsorbed})</span>` : '';
@@ -12737,6 +12759,7 @@ function applyCardEffect(card, ctx){
       if (refl && refl.pct > 0){
         const r = Math.max(1, Math.floor(dmg * refl.pct));
         ctx.castObj.hp = Math.max(0, ctx.castObj.hp - r);
+        ctx.addTargDmg(r);   // 반사 데미지 — 스파이크드카리패스 등 · target 측 데미지 output 으로 반영
         ctx.log(`  ↺ 반사 → ${ctx.castName} -${r}`, ctx.targLogCls);
         // hits 기반 반사는 1회 소비
         if (refl.hits != null){
@@ -13028,6 +13051,7 @@ function applyCardEffect(card, ctx){
           ctx.targObj.hp -= reduced;
           ctx.addDmg(reduced);
           ctx.castObj.hp = Math.max(0, ctx.castObj.hp - reflected);
+          ctx.addTargDmg(reflected);   // 반사 데미지 — target 측(reflector) 데미지 output 으로 반영
           const _sgNote = _sgActive ? ' / 스크롤실드 50% 감소' : '';
           ctx.log(`  → ${ctx.targName} <span style="color:#a00;">-${reduced}</span> <span style="color:#888;font-size:10px;">(방어력 무시 / 벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소${_sgNote})</span>`, ctx.castLogCls);
           ctx.log(`  ↺ 벤전스 반사 → ${ctx.castName} -${reflected}`, ctx.targLogCls);
@@ -13929,19 +13953,22 @@ function processCombatTicks(kind){
       reflector.hp = Math.max(0, reflector.hp - r.hpDmg);
       log(`  ☠ 도트 → ${targName} -${t.hpDmg} <span style="color:#888;font-size:10px;">(벤전스 ${Math.floor((vg.dmgReduce||0.5)*100)}% 감소)</span>${_msNote(t.mpAbsorbed)}`, srcCls);
       log(`  ↺ 벤전스 반사 → ${srcName} -${r.hpDmg}${_msNote(r.mpAbsorbed)}`, srcCls === 'hit' ? 'opp' : 'hit');
-      return t.hpDmg;
+      return { applied: t.hpDmg, reflected: r.hpDmg };
     }
     const noVg = _applyManaShield(tgtShield, target, dmg);
     target.hp -= noVg.hpDmg;
     log(`  ☠ 도트 → ${targName} -${noVg.hpDmg}${_msNote(noVg.mpAbsorbed)}`, srcCls);
-    return noVg.hpDmg;
+    return { applied: noVg.hpDmg, reflected: 0 };
   }
   // 도트 (적이 받는) — 적 vengeance 시 내가 반사 받음 (무적 몬스터는 skip)
   for (const d of c.monDots){
     const dmg = rollDot(d, opp);
     if (opp.invincible){ d.turns--; continue; }
-    const applied = _vgDot(opp, me, dmg, c.monVengeance, c.monManaShield, c.myManaShield, log, opp.name, '나', 'hit');
+    const res = _vgDot(opp, me, dmg, c.monVengeance, c.monManaShield, c.myManaShield, log, opp.name, '나', 'hit');
+    const applied = (res && typeof res === 'object') ? (res.applied|0) : (res|0);
+    const reflected = (res && typeof res === 'object') ? (res.reflected|0) : 0;
     c.statsMyDmg += applied;
+    if (reflected > 0) c.statsMonDmg += reflected;   // 적 벤전스 반사 → 나에게 dmg = 적 데미지 output
     try { _bumpDailyCounter('dotDamage', applied, 'dq_dot_100'); } catch(e){}
     d.turns--;
     if (d.growth) d.dmg = (d.dmg || 0) + d.growth; // 매 턴 dmg 증가 (성장형)
@@ -13950,8 +13977,11 @@ function processCombatTicks(kind){
   // 도트 (내가 받는) — 내 vengeance 시 적이 반사 받음
   for (const d of c.myDots){
     const dmg = rollDot(d, me);
-    const applied = _vgDot(me, opp, dmg, c.myVengeance, c.myManaShield, c.monManaShield, log, '나', opp.name, 'opp');
+    const res = _vgDot(me, opp, dmg, c.myVengeance, c.myManaShield, c.monManaShield, log, '나', opp.name, 'opp');
+    const applied = (res && typeof res === 'object') ? (res.applied|0) : (res|0);
+    const reflected = (res && typeof res === 'object') ? (res.reflected|0) : 0;
     c.statsMonDmg += applied;
+    if (reflected > 0) c.statsMyDmg += reflected;    // 내 벤전스 반사 → 적에게 dmg = 내 데미지 output (보스 데미지 포함)
     d.turns--;
     if (d.growth) d.dmg = (d.dmg || 0) + d.growth;
   }
@@ -14065,31 +14095,49 @@ function processCombatTicks(kind){
   // 마나 쉴드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
-  // 지연 회복 발동 — turnsLeft 카운트다운, 0 도달 시 시전자 HP/MP 회복 (버프 만료 후에 실행되어 hpMax 안정 상태 기준)
-  function _tickDelayedRestores(list, tgt, tgtName){
-    if (!Array.isArray(list)) return list;
-    for (let i = list.length - 1; i >= 0; i--){
-      const e = list[i];
-      e.turnsLeft--;
-      if (e.turnsLeft <= 0){
-        if (e.hp > 0){
-          const before = tgt.hp;
-          tgt.hp = Math.min(tgt.hpMax, tgt.hp + e.hp);
-          const gainedDR = tgt.hp - before;
-          log(`  💫 예약 회복 → ${tgtName} HP +${gainedDR}`, 'heal');
-          if (tgt === GAME.player && gainedDR > 0){ try { _bumpDailyCounter('healing', gainedDR, 'dq_heal_500'); } catch(e){} }
+  // 지연 회복 발동 — 이번 턴에 이미 flushed 됐으면 스킵 (checkAlive 조기 종료 시 선반영)
+  if (!c._delayedRestoreTickedTurn || c._delayedRestoreTickedTurn !== c.turn){
+    _flushDelayedRestoresForSide(c.myDelayedRestores, me, '나', log);
+    _flushDelayedRestoresForSide(c.monDelayedRestores, opp, opp && opp.name, log);
+    c._delayedRestoreTickedTurn = c.turn;
+  }
+}
+// 모듈 스코프 helper — 사망한 대상 부활 방지 (hp<=0 이면 skip). checkAlive 조기종료 경로에서도 호출.
+function _flushDelayedRestoresForSide(list, tgt, tgtName, log){
+  if (!Array.isArray(list) || !tgt) return;
+  if (tgt.hp <= 0) return;   // 사망 시 부활 방지
+  for (let i = list.length - 1; i >= 0; i--){
+    const e = list[i];
+    e.turnsLeft--;
+    if (e.turnsLeft <= 0){
+      if (e.hp > 0){
+        const before = tgt.hp;
+        tgt.hp = Math.min(tgt.hpMax, tgt.hp + e.hp);
+        const gained = tgt.hp - before;
+        try { log(`  💫 예약 회복 → ${tgtName} HP +${gained}`, 'heal'); } catch(_){}
+        if (tgt === GAME.player && gained > 0){
+          try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(_){}
         }
-        if (e.mp > 0){
-          const before = tgt.mp;
-          tgt.mp = Math.min(tgt.mpMax, tgt.mp + e.mp);
-          log(`  💫 예약 회복 → ${tgtName} MP +${tgt.mp - before}`, 'heal');
-        }
-        list.splice(i, 1);
       }
+      if (e.mp > 0){
+        const before = tgt.mp;
+        tgt.mp = Math.min(tgt.mpMax, tgt.mp + e.mp);
+        try { log(`  💫 예약 회복 → ${tgtName} MP +${tgt.mp - before}`, 'heal'); } catch(_){}
+      }
+      list.splice(i, 1);
     }
   }
-  _tickDelayedRestores(c.myDelayedRestores, me, '나');
-  _tickDelayedRestores(c.monDelayedRestores, opp, opp.name);
+}
+// 사망으로 인한 조기 종료 시에도 생존자 delayedRestore 는 이번 턴 몫으로 처리
+// (예: 빅배드부두 3턴차에 보스에 막타 → 예약 회복은 정상 발동)
+function _flushDueDelayedRestoresForCombat(c, log){
+  if (!c) return;
+  if (c._delayedRestoreTickedTurn === c.turn) return;   // 이미 이번 턴 tick 됨
+  const me = GAME.player;
+  const opp = c.monster || c.opponent;
+  _flushDelayedRestoresForSide(c.myDelayedRestores, me, '나', log);
+  _flushDelayedRestoresForSide(c.monDelayedRestores, opp, opp && opp.name, log);
+  c._delayedRestoreTickedTurn = c.turn;
 }
 
 // 행동불능 체크 — true 반환 시 stun 카운터 1 소비
@@ -20785,6 +20833,22 @@ async function doLogin(){
   if (!name){ alert('아이디를 입력하여 주세요.'); return; }
   if (!pw){ alert('비밀번호를 입력하여 주세요.'); return; }
 
+  // 0) 서버 유지보수 상태 사전 확인 — 신규 방문/시크릿 창/localStorage 미보유도 차단
+  if (sb){
+    try {
+      const svrOn = await fetchMaintenanceStateFromServer();
+      if (svrOn === true){
+        // localStorage 캐시도 동기화 (다음 로그인·재접속 시 UI 반영)
+        localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+        // 운영자 계정만 예외 통과 — 로그인 세션 획득 후 isOperator 확인
+        // (이 지점에서는 아직 미확인이므로 일단 로그인 시도 → cloudLoad 후 재검증)
+      } else if (svrOn === false){
+        // 서버가 OFF 라고 명확히 알려주면 로컬 잔여 플래그 제거
+        localStorage.removeItem(MAINTENANCE_LS_KEY);
+      }
+    } catch(e){ console.warn('[login maintenance pre-check]', e); }
+  }
+
   // 1) Supabase 클라우드 로그인 (가능한 경우)
   if (sb){
     try {
@@ -20823,12 +20887,18 @@ async function doLogin(){
         return;
       }
       // 서버 유지보수 모드 체크 — 운영자 이외 로그인 차단 (isOperator 는 cloudLoad 후 확정)
-      if (localStorage.getItem(MAINTENANCE_LS_KEY) === '1' && !(GAME.player && GAME.player.isOperator)){
+      // 서버 재조회로 최신 상태 확인 (사전 조회 실패했거나 로그인 중 상태 변경 케이스 커버)
+      const _mtSvr = await fetchMaintenanceStateFromServer();
+      const _mtOn  = (_mtSvr === true) || (_mtSvr == null && localStorage.getItem(MAINTENANCE_LS_KEY) === '1');
+      if (_mtOn && !(GAME.player && GAME.player.isOperator)){
         alert('현재 서버 유지보수 중입니다. 잠시 후 다시 접속해 주세요.');
         await cloudSignOut();
         GAME.player = null;
         return;
       }
+      // 서버 상태와 로컬 캐시 동기화
+      if (_mtSvr === true) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+      else if (_mtSvr === false) localStorage.removeItem(MAINTENANCE_LS_KEY);
       // 로컬 캐시에도 저장 (오프라인 대비)
       addAccount(GAME.player.name);
       saveGame();
@@ -21161,8 +21231,15 @@ async function doRegisterSubmit(){
   const finalName = name.slice(0,6);
   const finalEmail = _regVerifiedEmail;
 
-  // 클라우드: 닉네임 중복 + 이메일 중복 + Auth 가입
+  // 클라우드: 유지보수 상태 · 닉네임 중복 · 이메일 중복 · Auth 가입
   if (sb){
+    // 서버 유지보수 중이면 신규 가입도 차단
+    const _mtSvr = await fetchMaintenanceStateFromServer();
+    if (_mtSvr === true){
+      localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+      alert('현재 서버 유지보수 중입니다. 잠시 후 다시 시도해 주세요.');
+      return;
+    }
     const nickTaken = await cloudNicknameTaken(finalName);
     if (nickTaken){ alert('해당 아이디는 이미 사용 중입니다. 다른 아이디로 가입해 주세요.'); return; }
     // 이메일 중복 체크 — 같은 이메일로 여러 계정 가입 차단
@@ -24102,6 +24179,12 @@ async function toggleOperatorPanel(){
   // 열기 전 최신 raid 상태 로드
   if (typeof sb !== 'undefined' && sb){
     try { await loadRaidFromCloud(); } catch(e){ console.warn('[op panel load]', e); }
+    // 서버 유지보수 상태를 로컬 캐시에 동기화 (운영자 패널 진입 시 최신 상태 반영)
+    try {
+      const _mtSvr = await fetchMaintenanceStateFromServer();
+      if (_mtSvr === true) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
+      else if (_mtSvr === false) localStorage.removeItem(MAINTENANCE_LS_KEY);
+    } catch(e){ console.warn('[op panel maintenance sync]', e); }
   }
   _opRefreshInfo();
   try { _updateMaintenanceBtn(); } catch(e){}
@@ -24327,10 +24410,20 @@ async function opForceRankReset(){
   }
 }
 
-// ─── 서버 유지보수: 전체 로그아웃 + 접속 차단 (Supabase Realtime broadcast) ───
-// 별도 SQL/테이블 없이 broadcast 로 동기화. localStorage 로 각 클라이언트 상태 캐시.
-// 한계: broadcast 미도달 브라우저(신규 방문/캐시 없음)는 로그인 시도 → cloudLoad 후 isOperator 체크로 필터
+// ─── 서버 유지보수: 전체 로그아웃 + 접속 차단 ───
+// 서버 (game_settings.maintenance.enabled) 를 신뢰 소스로 사용하고,
+// Supabase Realtime broadcast 는 접속 중 유저의 즉각 로그아웃 트리거 용도.
+// localStorage 는 UI 버튼 상태 캐시 용도.
 const MAINTENANCE_LS_KEY = '__yeoshin_maintenance__';
+// 서버 조회 헬퍼 — 신규 방문/시크릿 창도 서버 상태를 기준으로 판정
+async function fetchMaintenanceStateFromServer(){
+  if (!sb) return null;
+  try {
+    const { data, error } = await sb.rpc('get_maintenance_state');
+    if (error){ console.warn('[maintenance fetch]', error); return null; }
+    return !!data;
+  } catch(e){ console.warn('[maintenance fetch]', e); return null; }
+}
 async function opForceLogoutAll(){
   if (!confirm('현재 접속 중인 모든 유저를 강제 로그아웃 시킬까요?\n(운영자 본인은 유지)')) return;
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
@@ -24347,20 +24440,28 @@ async function opToggleMaintenance(){
   const cur = localStorage.getItem(MAINTENANCE_LS_KEY) === '1';
   const next = !cur;
   const label = next
-    ? '유지보수 모드 ON → 운영자 이외 계정 로그인·재접속 차단'
+    ? '유지보수 모드 ON → 운영자 이외 계정 로그인·재접속 차단 (신규 방문자 포함)'
     : '유지보수 모드 OFF → 정상 운영 재개';
   if (!confirm(`${label}\n\n적용하시겠습니까?`)) return;
   if (!sb){ alert('클라우드 모드에서만 동작합니다.'); return; }
   try {
+    // 1) 서버 game_settings 업데이트 — 신뢰 소스 · 신규 방문자도 차단됨
+    const { error: setErr } = await sb.rpc('admin_set_maintenance_state', { p_enabled: next });
+    if (setErr){
+      alert('서버 상태 변경 실패: ' + (setErr.message || setErr));
+      return;
+    }
+    // 2) 접속 중 유저 즉시 로그아웃용 broadcast
     const ch = sb.channel('admin-broadcast', { config: { broadcast: { self: false } } });
     await ch.subscribe();
     await ch.send({ type:'broadcast', event:'maintenance', payload:{ on: next, at: Date.now() } });
     setTimeout(() => { try { sb.removeChannel(ch); } catch(e){} }, 500);
+    // 3) 운영자 본인 UI 캐시 갱신
     if (next) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
     else localStorage.removeItem(MAINTENANCE_LS_KEY);
     _updateMaintenanceBtn();
     try { chatSys(next ? '★ 서버 유지보수를 시작합니다.' : '★ 서버 유지보수가 종료되었습니다.'); } catch(e){}
-    alert(`✔ 유지보수 모드 ${next ? 'ON' : 'OFF'}`);
+    alert(`✔ 유지보수 모드 ${next ? 'ON' : 'OFF'} (서버 저장 완료)`);
   } catch(e){ alert('전송 실패: ' + (e.message||e)); }
 }
 function _updateMaintenanceBtn(){
