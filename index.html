@@ -10815,9 +10815,22 @@ const RACE_FALLBACK_ICON = {
 function monsterIconFile(m){
   return MONSTER_ICON_MAP[m.id] || RACE_FALLBACK_ICON[m.race] || 'BTNGrunt-Reforged.png';
 }
+// 수행 몬스터 24종 — 신규 초상화 (assets/hunt_monster/<id>.png) 로 오버라이드
+const HUNT_MONSTER_PORTRAIT_DIR = 'assets/hunt_monster/';
+const HUNT_MONSTER_PORTRAIT_IDS = new Set([
+  // 수행 (Lv 1~25) 18종
+  'grunt','pedent','troll','headhunter','shaman',
+  'footman','peasant','rifleman','wizard','priest',
+  'zombie','ghoul','shroda','witchdoctor',
+  'archer','huntress','dryad','gargoyle',
+  // 수행2 (Lv 26+) 6종
+  'gryphon','mighty','keeper','abyssal','wyvern','golem',
+]);
 function monsterIconPath(m){
   // 황금상자 등 몬스터 객체가 직접 icon 경로를 명시한 경우 그대로 사용
   if (m && m.icon && (m.icon.startsWith('assets/') || m.icon.startsWith('http'))) return m.icon;
+  // 수행 몬스터 24종 — 신규 초상화 (Gemini 생성) 우선 사용
+  if (m && m.id && HUNT_MONSTER_PORTRAIT_IDS.has(m.id)) return HUNT_MONSTER_PORTRAIT_DIR + m.id + '.png';
   return MONSTER_ICON_DIR + monsterIconFile(m);
 }
 
