@@ -2049,10 +2049,11 @@
           <td id="m-ashop" onclick="openArmorShop()">🛡 방어구상점</td>
         </tr></table>
         <!-- 2줄: 랭킹전·여신의 탑·영원의 회랑·축복의 상점 -->
+        <!-- 재오픈 시 아래 두 td 의 style="display:none;" 만 제거하면 됩니다. -->
         <table><tr>
-          <td id="m-rank" class="row2" onclick="openRank()">🏆 랭킹전</td>
+          <td id="m-rank" class="row2" onclick="openRank()" style="display:none;">🏆 랭킹전</td>
           <td id="m-tower" class="row2" onclick="openTower()" style="color:#000000;font-weight:bold;">👼 여신의 탑</td>
-          <td id="m-corridor" class="row2" onclick="openCorridor()" style="color:#000000;font-weight:bold;">🗡️ 영원의 회랑</td>
+          <td id="m-corridor" class="row2" onclick="openCorridor()" style="color:#000000;font-weight:bold;display:none;">🗡️ 영원의 회랑</td>
           <td class="row2" onclick="openBlessShop()" style="color:#000000;">✨ 축복의 상점</td>
         </tr></table>
         <!-- 3줄: 카드 도감·프로필·명예의 전당·퀘스트·오픈채팅방 -->
@@ -2896,7 +2897,8 @@
         </div>
 
         <!-- ─── Visionary Circle (후원자 순위) — 크림슨 세련 톤 ─── -->
-        <div style="margin-top:14px;background:linear-gradient(135deg,#4a0e14 0%,#2a0508 55%,#1a0304 100%);border:2px solid #c9a26b;border-radius:8px;padding:16px;box-shadow:0 4px 18px rgba(122,24,30,0.5), inset 0 0 24px rgba(0,0,0,0.35);">
+        <!-- 재오픈 시 아래 div 의 style="display:none;" 만 제거하면 됩니다. -->
+        <div style="display:none;margin-top:14px;background:linear-gradient(135deg,#4a0e14 0%,#2a0508 55%,#1a0304 100%);border:2px solid #c9a26b;border-radius:8px;padding:16px;box-shadow:0 4px 18px rgba(122,24,30,0.5), inset 0 0 24px rgba(0,0,0,0.35);">
           <div style="font-size:19px;font-weight:bold;color:#f5deb3;text-align:center;letter-spacing:2px;text-shadow:0 1px 3px rgba(0,0,0,0.6), 0 0 12px rgba(201,162,107,0.4);margin-bottom:6px;font-family:'Georgia','굴림',serif;">
             ✦ Visionary Circle ✦
           </div>
