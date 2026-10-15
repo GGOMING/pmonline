@@ -2815,7 +2815,9 @@
       <div class="shop-page">
         <div class="shop-head">✨ 축복의 상점</div>
         <div class="shop-desc">
-          <b>✨ 여신의 축복</b>은 공격대 보스 최종 타격 시 1개씩 확정 드롭됩니다.<br>
+          <b>✨ 여신의 축복</b>은 공격대 보스 최종 타격 시 획득됩니다.<br>
+          <span style="font-size:11px;color:#666;">· 새벽의 언덕 · 안개의 숲 : 50% 확률로 1개 지급<br>
+          · 잊혀진 성좌 : 확정 1개 지급 + 영웅 뽑기 1장</span><br>
           <b style="color:#2e7d32;">🌿 정령의 축복</b>은 여신의 탑 10·20·30·40·50층 보스 최초 클리어 시 매일 1개씩 획득 (+ 층 첫 도달 보상).<br>
           두 축복 모두 카드 뽑기·랜덤 상자 구매에 사용할 수 있습니다 <b style="color:#a02050;">(혼용 불가 · 한 번의 구매에 하나만 소모)</b>.
         </div>
@@ -3716,7 +3718,7 @@ const CARDS = [
   { id:'u10', name:'크로노스의 혼',  grade:'unique', icon:'ice',    iconPath:'assets/wc3_reforged_used/BTNFrostRevenant.png', text:'시전자 DEX% 확률로 2턴 간 기절 / 2턴 간 DEX × 1.2 고정 데미지 (방어력 무시, 매턴 현재 DEX 재계산)', fx:{type:'multi',effects:[{type:'cc',turns:2,chanceStat:'dex'},{type:'dotStat',stats:['dex'],mult:1.2,turns:2,dynamic:true}]} },
 
   // ───── 영웅 카드 5종 ─────
-  { id:'h01', name:'개구리만들기',   grade:'hero', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
+  { id:'h01', name:'개구리만들기',   grade:'unique', icon:'curse',    iconPath:'assets/wc3_reforged_used/BTNHex-Reforged.png', text:'50% 확률로 상대방을 3턴간 행동불능 (개구리로 변신)', fx:{type:'cc',turns:3,chance:0.50,frog:true} },
   { id:'h02', name:'데몬변신',       grade:'hero', icon:'crown',    iconPath:'assets/renew/h02.jpg', text:'STR·DEX·INT 를 40으로 고정 (데몬 변신)', fx:{type:'setStat',target:'self',stats:{str:40,dex:40,int:40}} },
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/renew/h03.jpg', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 턴부터 3턴간 방어구 +20 증가, CON +20 증가 / 3턴 후 시전자 레벨 × 2.5 만큼 HP·MP 회복', fx:{type:'multi',effects:[{type:'buff',def:20,con:20,turns:3},{type:'delayedRestore',after:3,hpFromLevel:2.5,mpFromLevel:2.5}]} },
@@ -9377,26 +9379,27 @@ async function raidEnd(result){
       // 보상 지급 시점부터 이 raidKey 5분 재입장 쿨다운 시작 (dawn/mist/abyss 각각 독립)
       try { startRaidBossCooldown(c.raidKey); } catch(e){}
       if (isAbyssBoss){
-        // 3차 공격대 막타 특별 보상: 축복 +5, XP 30k+누적×0.1 → 1/3 축소, 골드 +5k, 영웅 뽑기 1뽑
+        // 3차 공격대 막타 특별 보상: 축복 +1 확정, XP 30k+누적×0.1 → 1/3 축소, 골드 +5k, 영웅 뽑기 1뽑
         const abyssGold = 5000 + goldReward;
         const abyssXp   = Math.floor((30000 + xpReward) / 3);   // 잊혀진 성좌 보스 XP 1/3 축소
+        const abyssBless = 1;
         p.gold += abyssGold;
         p.xp += abyssXp;
-        p.blessing = (p.blessing||0) + 3;
+        p.blessing = (p.blessing||0) + abyssBless;
         try {
           _bumpDailyCounter('goldGained', abyssGold, 'dq_gold_5k');
           _bumpDailyCounter('xpGained', abyssXp, 'dq_xp_3k');
-          _bumpDailyCounter('blessingGained', 3, 'dq_bless_1');
+          _bumpDailyCounter('blessingGained', abyssBless, 'dq_bless_1');
           _bumpWeeklyCounter('goldGained', abyssGold, 'wq_gold_50k');
           _bumpWeeklyCounter('xpGained', abyssXp, 'wq_xp_50k');
-          _bumpWeeklyCounter('blessingGained', 3, 'wq_bless_5');
+          _bumpWeeklyCounter('blessingGained', abyssBless, 'wq_bless_5');
           advanceWeeklyQuest('wq_boss_finish_3', 1);
           // 칭호: 잊혀진 성좌 보스 킬 (서로 다른 보스만 카운트해야 하나 우선 단순 카운트)
           bumpTitleCounter('abyss_boss_kills', 1);
           bumpTitleCounter('boss_kills', 1);
           bumpTitleCounter('total_gold_earned', abyssGold);
           bumpTitleCounter('total_xp_earned', abyssXp);
-          bumpTitleCounter('total_blessing_earned', 3);
+          bumpTitleCounter('total_blessing_earned', abyssBless);
         } catch(e){}
         // 영웅 뽑기 확률표로 카드 1장 지급
         const cardPool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
@@ -9447,7 +9450,7 @@ async function raidEnd(result){
           }
           try { checkTitleUnlocks(); } catch(e){}
         }
-        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +3 (보유 ${p.blessing})</p>`;
+        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +${abyssBless} (보유 ${p.blessing})</p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 잊혀진 성좌 보스 ${bossName} 처치! 🏆🏆</p>
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${abyssGold}G, +${abyssXp}XP</b></p>
           ${blessLine}
@@ -9455,24 +9458,27 @@ async function raidEnd(result){
           ${legendHtml}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
-        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +3, XP +${abyssXp.toLocaleString()})`, { sticky: true });
+        chatSys(`★ 잊혀진 성좌 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ +${abyssBless}, XP +${abyssXp.toLocaleString()})`, { sticky: true });
       } else {
-        // 기존 dawn/mist
+        // 기존 dawn/mist — 축복 50% 확률 지급 (적중 시 +1)
         p.gold += goldReward;
         p.xp += xpReward;
-        p.blessing = (p.blessing||0) + 1;
+        const dmBlessDrop = Math.random() < 0.5 ? 1 : 0;
+        if (dmBlessDrop > 0) p.blessing = (p.blessing||0) + dmBlessDrop;
         try {
           _bumpDailyCounter('goldGained', goldReward, 'dq_gold_5k');
           _bumpDailyCounter('xpGained', xpReward, 'dq_xp_3k');
-          _bumpDailyCounter('blessingGained', 1, 'dq_bless_1');
+          if (dmBlessDrop > 0){
+            _bumpDailyCounter('blessingGained', dmBlessDrop, 'dq_bless_1');
+            _bumpWeeklyCounter('blessingGained', dmBlessDrop, 'wq_bless_5');
+            bumpTitleCounter('total_blessing_earned', dmBlessDrop);
+          }
           _bumpWeeklyCounter('goldGained', goldReward, 'wq_gold_50k');
           _bumpWeeklyCounter('xpGained', xpReward, 'wq_xp_50k');
-          _bumpWeeklyCounter('blessingGained', 1, 'wq_bless_5');
           advanceWeeklyQuest('wq_boss_finish_3', 1);
           bumpTitleCounter('boss_kills', 1);
           bumpTitleCounter('total_gold_earned', goldReward);
           bumpTitleCounter('total_xp_earned', xpReward);
-          bumpTitleCounter('total_blessing_earned', 1);
         } catch(e){}
         // dawn/mist 카드 보상 — 유니크 뽑기 확률표로 카드 1장 즉시 지급 + 결과창 노출 (abyss 와 동일 UX)
         const cardPoolDM = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
@@ -9522,7 +9528,9 @@ async function raidEnd(result){
           }
           try { checkTitleUnlocks(); } catch(e){}
         }
-        const blessLine = `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing})</p>`;
+        const blessLine = dmBlessDrop > 0
+          ? `<p style="color:#ffd700;font-weight:bold;">✨ 여신의 축복 +1 (보유 ${p.blessing}) <span style="color:#aaa;font-weight:normal;font-size:11px;">— 50% 확률 적중</span></p>`
+          : `<p style="color:#888;font-weight:bold;">✨ 여신의 축복 미지급 <span style="font-weight:normal;font-size:11px;">(50% 확률 — 이번엔 지급되지 않았습니다)</span></p>`;
         bodyHtml = `<p style="color:#a02050; font-size:16px;">🏆🏆 보스 ${bossName} 처치 최종 타격! 🏆🏆</p>
           <p>누적 데미지 보상: <b style="color:#7E181E; font-size:14px;">+${goldReward}G, +${xpReward}XP</b></p>
           ${blessLine}
@@ -9530,7 +9538,8 @@ async function raidEnd(result){
           ${legendHtmlDM}
           <p>세션 누적 데미지: <b>${cumDmg.toLocaleString()}</b> / ${r.bossHpMax.toLocaleString()}</p>
           <p style="font-size:11px;color:#666;">이번 도전 데미지: ${dealtTotal.toLocaleString()}</p>`;
-        chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (✨ 여신의 축복 +1)`, { sticky: true });
+        const chatBlessTag = dmBlessDrop > 0 ? '✨ 여신의 축복 +1' : '✨ 축복 미지급';
+        chatSys(`★ 보스 ${bossName} 처치! 최종 타격: ${p.name}님 🏆 (${chatBlessTag})`, { sticky: true });
       }
       let raidBossLvUp = false;
       let raidBossBonus = 0;
@@ -19769,7 +19778,7 @@ const TUTORIAL_STEPS = [
       <p style="margin-top:8px;">파괴가 발동되면 <b style="color:#ffd700;">여신의 축복</b>으로 즉시 방지 팝업이 뜹니다.</p>
       <p>• 유니크·레어 카드 / 장비 <b>+15 이하</b> → <b>여신의 축복 1개</b><br>
          • 영웅 카드 / 장비 <b>+15 초과</b> → <b>여신의 축복 3개</b></p>
-      <div class="tip">✨ 여신의 축복은 <b>공격대 보스 최종 타격 시 +1 확정 드롭</b>됩니다.<br>
+      <div class="tip">✨ 여신의 축복은 <b>공격대 보스 최종 타격 시 획득</b>됩니다. <span style="font-size:11px;color:#888;">(새벽·안개 : 50% 확률 · 성좌 : 확정 1개)</span><br>
         ⚠ <b>방지 팝업 상태에서 새로고침·강제 종료 시 파괴가 그대로 확정</b>되니 반드시 응답해 주세요.</div>`,
     target:'#m-hunt', page:'main', position:'corner',
   },
@@ -22495,6 +22504,11 @@ function renderAdminEdit(){
       <button class="admin-btn ok" onclick="adminSaveUser()">💾 저장</button>
       ${(u.source === 'local' || u.source === 'cloud') ? `<button class="admin-btn danger" onclick="adminDeleteUser()">🗑 계정 삭제</button>` : ''}
     </div>
+    ${(u.source === 'local' || u.source === 'cloud') ? `
+    <div style="padding:10px 12px;text-align:center;border-top:1px dashed #ccc;background:#fff8e8;">
+      <div style="font-size:11px;color:#7E181E;margin-bottom:6px;font-weight:bold;">⚠ 계정 초기화 (칭호·프로필 사진 유지, 그 외 신규 계정으로 되돌림)</div>
+      <button class="admin-btn danger" onclick="adminResetAccount()" style="background:#b85a2a;">↺ 계정 초기화</button>
+    </div>` : ''}
   `;
   $('adminEditPane').innerHTML = html;
 }
@@ -22945,6 +22959,169 @@ async function adminDeleteUser(){
   removeAccountEntry(u.name);
   alert('계정 삭제 완료. 페이지를 새로고침합니다.');
   location.reload();
+}
+
+// 관리자: 계정 초기화 — 칭호·프로필 사진·닉네임·비밀번호·이메일은 유지하고
+// 그 외는 신규 계정 (newCharacter 기준) 상태로 되돌림.
+async function adminResetAccount(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  if (u.source !== 'local' && u.source !== 'cloud') return;
+  if (!confirm(
+    `계정 「${u.name}」을(를) 초기화합니다.\n\n` +
+    `유지: 칭호 · 프로필 사진 · 닉네임 · 비밀번호 · 이메일\n` +
+    `초기화: 레벨 1 · 스탯 전부 5 · HP 25/26 · MP 25/25 · 골드 100\n` +
+    `  무기 「훈련용 목검」 · 방어구 「천 갑옷」 · 보유 장비 전부 삭제\n` +
+    `  인벤토리 · 덱 · 축복 · 공격대 기여도 · 퀘스트 · 공격대 참여 기록 등 전부 초기화\n\n` +
+    `이 작업은 되돌릴 수 없습니다. 계속할까요?`
+  )) return;
+
+  // 1) 메모리 상의 유저 객체(u) 를 신규 계정 기본값으로 덮어쓰기 (유지 필드 제외)
+  //    newCharacter() 기본값과 완전히 동일하게 맞춤
+  u.level = 1;
+  u.xp = 0;
+  u.xpUp = 1;
+  u.str = 5; u.dex = 5; u.int = 5; u.con = 5;
+  u.hp = 25; u.hpMax = 26;
+  u.mp = 25; u.mpMax = 25;
+  u.gold = 100;
+  u.blessing = 0;
+  u.spiritBlessing = 0;
+  u.sponsorAmount = 0;
+  u.gp = 0;
+  u.rank = '평민';
+  u.rankPos = 0;
+  u.atk = [2, 5];
+  u.def = 0;
+  u.atkType = '근접';
+  u.weapon = { name: '훈련용 목검', atkBonus: 1, id: 'basic_club' };
+  u.armor  = { name: '천 갑옷',     defBonus: 1, id: 'basic_cloth' };
+  u.weapons = [];
+  u.armors  = [];
+  u.inventory = [];
+  u.myDeck = [];
+  u.deckPresets = [null, null, null];
+  u.huntHistory = [];
+  u.huntGraceRemain = 0;
+  u.dailyQuests = null;
+  u.weeklyQuests = null;
+  u.pendingTitles = [];
+  // 공격대 참여 기록·보상 수령·쿨다운·세션 상태 등 모두 리셋
+  u.raidContrib = {};
+  u.raidBossClaimed = {};
+  u.raidBossCooldown = {};
+  u.raidPendingMob = null;
+  // 재접속 시 튜토리얼 다시 보이도록
+  u.tutorialDone = false;
+  // 조우 override · 트랩 플래그 · 축복 상자 next 등 운영 조정값은 해제 (신규와 동일)
+  delete u.riggedTrap;
+  delete u.riggedDeathTarget;
+  delete u.nextBlessBoxReward;
+  delete u.nextBlessBoxCardId;
+  delete u.encounterRates;
+  u.autoFocus = false;
+  u.captchaPending = false;
+  u.captchaFailCount = 0;
+  u.bannedUntil = 0;
+  // 칭호 카운터는 전부 초기화 — 칭호 자체는 유지되지만 재달성 카운터는 0부터
+  // (_ensureTitleState 가 재진입 시 신규 필드 자동 세팅)
+  u.titleCounters = null;
+  // 사이트에서 쓰는 데일리/위클리 카운터도 초기화
+  u._dailyCounters = null;
+  u._weeklyCounters = null;
+  // ※ 유지 필드 (아래는 건드리지 않음)
+  //   name · pw · email · avatar · titles · equippedTitle · isOperator
+
+  // 2) 로컬 저장 — source 가 local 이면 localStorage 에 반영
+  if (u.source === 'local'){
+    const key = saveKeyFor(u.name);
+    const saved = JSON.parse(localStorage.getItem(key) || '{}');
+    saved.player = {
+      name: u.name,
+      pw: u.pw,
+      email: u.email || '',
+      avatar: u.avatar || null,
+      // ── 유지되는 칭호 데이터 ──
+      titles: Array.isArray(u.titles) ? u.titles.slice() : [],
+      equippedTitle: u.equippedTitle || null,
+      pendingTitles: [],
+      titleCounters: null,
+      // ── 신규 계정 기본값 ──
+      level: 1, xp: 0, xpUp: 1,
+      hp: 25, hpMax: 26, mp: 25, mpMax: 25,
+      str: 5, dex: 5, int: 5, con: 5,
+      gold: 100, blessing: 0, spiritBlessing: 0, sponsorAmount: 0,
+      weapon: { name: '훈련용 목검', atkBonus: 1, id: 'basic_club' },
+      armor:  { name: '천 갑옷',     defBonus: 1, id: 'basic_cloth' },
+      weapons: [], armors: [],
+      rank: '평민', gp: 0, rankPos: 0,
+      atk: [2, 5], def: 0, atkType: '근접',
+      autoFocus: false,
+      isOperator: !!u.isOperator,   // 운영자 플래그 유지 (내부용)
+      tutorialDone: false,
+      deckPresets: [null, null, null],
+      huntHistory: [],
+      huntGraceRemain: 0,
+      dailyQuests: null, weeklyQuests: null,
+      bannedUntil: 0, captchaPending: false, captchaFailCount: 0,
+    };
+    saved.inventory = [];
+    saved.myDeck = [];
+    localStorage.setItem(key, JSON.stringify(saved));
+    // 현재 로그인 중인 계정이면 메모리 상태도 동기화 + 화면 갱신
+    if (GAME.player && GAME.player.name === u.name){
+      loadGame(u.name);
+      try { renderSheet(); } catch(e){}
+      try { renderDeck(); } catch(e){}
+    }
+  }
+
+  // 3) 클라우드 저장 — source 가 cloud 이면 saves 테이블 업데이트
+  if (u.source === 'cloud' && sb){
+    try {
+      const payload = {
+        player: {
+          name: u.name,
+          email: u.email || '',
+          avatar: u.avatar || null,
+          titles: Array.isArray(u.titles) ? u.titles.slice() : [],
+          equippedTitle: u.equippedTitle || null,
+          pendingTitles: [],
+          titleCounters: null,
+          level: 1, xp: 0, xpUp: 1,
+          hp: 25, hpMax: 26, mp: 25, mpMax: 25,
+          str: 5, dex: 5, int: 5, con: 5,
+          gold: 100, blessing: 0, spiritBlessing: 0, sponsorAmount: 0,
+          weapon: { name: '훈련용 목검', atkBonus: 1, id: 'basic_club' },
+          armor:  { name: '천 갑옷',     defBonus: 1, id: 'basic_cloth' },
+          weapons: [], armors: [],
+          rank: '평민', gp: 0, rankPos: 0,
+          atk: [2, 5], def: 0, atkType: '근접',
+          autoFocus: false,
+          isOperator: !!u.isOperator,
+          tutorialDone: false,
+          deckPresets: [null, null, null],
+          huntHistory: [],
+          huntGraceRemain: 0,
+          dailyQuests: null, weeklyQuests: null,
+          bannedUntil: 0, captchaPending: false, captchaFailCount: 0,
+        },
+        inventory: [],
+        myDeck: [],
+      };
+      const { error: upErr } = await sb.from('saves').update({ data: payload }).eq('user_id', u.user_id);
+      if (upErr){
+        alert('클라우드 초기화 실패: ' + (upErr.message || upErr));
+        return;
+      }
+    } catch(e){
+      alert('클라우드 초기화 실패: ' + (e.message || e));
+      return;
+    }
+  }
+
+  alert(`✔ 계정 「${u.name}」 초기화 완료.\n(칭호 · 프로필 사진 유지)`);
+  renderAdminEdit();
 }
 
 // 강제 보정치 체크 상태에 맞춰 조우 % 입력칸 활성화/비활성화 (미체크 → 0% 강제)
