@@ -994,6 +994,52 @@
     cursor:not-allowed;
   }
   .deck tr.icons td.locked:hover { box-shadow:none !important; }
+
+  /* 메인 덱 영교(swap) 모드 — 선택된 소스 슬롯 하이라이트 */
+  .deck tr.icons td.swap-source {
+    outline: 2px dashed #ffd93b;
+    outline-offset: -2px;
+    animation: swapSourcePulse 1s ease-in-out infinite;
+  }
+  .deck tr.icons td.swap-source .card-ico { opacity: 0.35; }
+  @keyframes swapSourcePulse {
+    0%, 100% { outline-color: #ffd93b; box-shadow: inset 0 0 10px rgba(255, 215, 0, 0.4); }
+    50%      { outline-color: #ffe888; box-shadow: inset 0 0 18px rgba(255, 215, 0, 0.7); }
+  }
+  /* 영교 중 다른 슬롯 호버 시 "여기로 이동" 표시 — 노란 테두리 대신 초록 */
+  body.deck-swap-active .deck tr.icons td:not(.swap-source):not(.locked):hover {
+    box-shadow: inset 0 0 0 2px #7eff7e, inset 0 0 14px rgba(126, 255, 126, 0.4);
+  }
+  body.deck-swap-active .deck tr.icons td:hover .ctip { display: none; }
+  /* 커서 따라다니는 ghost (현재 들고 있는 카드) */
+  #deckSwapGhost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    width: 72px; height: 72px;
+    background: rgba(10, 5, 24, 0.9);
+    border: 2px solid #ffd93b;
+    border-radius: 6px;
+    box-shadow: 0 4px 18px rgba(255, 215, 0, 0.45), 0 0 24px rgba(0, 0, 0, 0.7);
+    opacity: 0.9;
+    transform: translate(-50%, -50%);
+    display: none;
+    padding: 4px;
+    overflow: hidden;
+  }
+  #deckSwapGhost.show { display: block; }
+  #deckSwapGhost .ghost-inner {
+    width: 100%; height: 100%;
+    display: flex; align-items: center; justify-content: center;
+  }
+  #deckSwapGhost .ghost-inner > * { width: 100%; height: 100%; }
+  #deckSwapGhost .ghost-label {
+    position: absolute; left: 0; right: 0; bottom: -18px;
+    text-align: center; color: #ffd93b;
+    font-size: 10px; font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.9);
+    letter-spacing: 1px;
+  }
   .slot-locked {
     color:#666; font-size:11px; text-align:center; line-height:1.3;
     padding-top:18px;
@@ -3464,6 +3510,12 @@
 
 <!-- 토스트 -->
 <div class="toast" id="toast"></div>
+
+<!-- 메인 덱 영교 모드 — 커서 따라다니는 카드 ghost -->
+<div id="deckSwapGhost" aria-hidden="true">
+  <div class="ghost-inner" id="deckSwapGhostInner"></div>
+  <div class="ghost-label">선택됨</div>
+</div>
 
 <!-- 튜토리얼 모달 -->
 <div class="tutorial-overlay" id="tutorialOverlay">
@@ -6949,7 +7001,7 @@ const DAILY_QUEST_POOL = [
   { id:'dq_hunt_3',           name:'첫 걸음',            diff:'쉬움',  desc:'수행 30회 진행 (승패 무관)',    target:30,     gold:2000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_gacha_3',          name:'카드 획득',           diff:'쉬움',  desc:'카드샵에서 아무 뽑기 10회',     target:10,     gold:1000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_heal_1',           name:'회복의 손길',         diff:'쉬움',  desc:'회복의 샘물 10회 사용',         target:10,     gold:500,  xp:0, card:null,    bless:0, minLevel:1  },
-  { id:'dq_rank_try',         name:'랭킹 도전자',         diff:'쉬움',  desc:'랭킹전 1회 시도 (승패 무관)',   target:1,      gold:500,  xp:0, card:null,    bless:0, minLevel:20 },
+  { id:'dq_rank_try',         name:'랭킹 도전자',         diff:'쉬움',  desc:'랭킹전 1회 시도 (승패 무관)',   target:1,      gold:500,  xp:0, card:null,    bless:0, minLevel:20, locked:true },
   { id:'dq_sell_3',           name:'카드 정리',           diff:'쉬움',  desc:'카드 3장 판매',                 target:3,      gold:500,  xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_login_1h',         name:'장기 접속자',         diff:'쉬움',  desc:'로그인 시간 1시간 충족',        target:3600,   gold:4000, xp:0, card:null,    bless:0, minLevel:1  },
   { id:'dq_status_msg',       name:'프로필 확인',         diff:'쉬움',  desc:'상태메시지 1회 변경',           target:1,      gold:500,  xp:0, card:'rare',  bless:0, minLevel:1  },
@@ -6997,7 +7049,7 @@ const DAILY_RESET_HOUR = 4;              // 04:00 KST 리셋
 // 주간 퀘스트 풀 — 4개 랜덤 배정. 매주 월요일 04:00 KST 리셋.
 const WEEKLY_QUEST_POOL = [
   { id:'wq_hunt_30',        name:'폭업! 폭업! 폭업!',   diff:'주간', desc:'수행 200회 승리',                 target:200,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
-  { id:'wq_rank_20',        name:'주간 챔피언',        diff:'주간', desc:'랭킹전 1위 20회 달성',            target:20,     gold:15000, xp:0, card:null,     bless:1, minLevel:20 },
+  { id:'wq_rank_20',        name:'주간 챔피언',        diff:'주간', desc:'랭킹전 1위 20회 달성',            target:20,     gold:15000, xp:0, card:null,     bless:1, minLevel:20, locked:true },
   { id:'wq_raid_mob_50',    name:'던전 방황자',        diff:'주간', desc:'공격대 몹 200마리 처치',          target:200,    gold:10000, xp:0, card:null,     bless:0, minLevel:26 },
   { id:'wq_gold_50k',       name:'개같이 벌어서',      diff:'주간', desc:'주간 누적 골드 100,000 획득',     target:100000, gold:10000, xp:0, card:'unique', bless:0, minLevel:1  },
   { id:'wq_xp_50k',         name:'주간 경험치 마스터', diff:'주간', desc:'주간 누적 XP 50,000',             target:50000,  gold:5000,  xp:0, card:null,     bless:0, minLevel:1  },
@@ -7005,7 +7057,7 @@ const WEEKLY_QUEST_POOL = [
   { id:'wq_bless_5',        name:'축복이 충만하리',    diff:'주간', desc:'여신의 축복 5개 획득',            target:5,      gold:10000, xp:0, card:'unique', bless:0, minLevel:26 },
   { id:'wq_daily_full_3',   name:'주간 완벽주의자',    diff:'주간', desc:'일일퀘스트 전부 완료 5일',        target:5,      gold:25000, xp:0, card:null,     bless:3, minLevel:1  },
   { id:'wq_gold_spent',     name:'정승같이 쓰자',      diff:'주간', desc:'주간 누적 골드 100,000 사용',     target:100000, gold:10000, xp:0, card:'unique', bless:0, minLevel:1  },
-  { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1  },
+  { id:'wq_rank_vs_user',   name:'주간 일진',          diff:'주간', desc:'랭킹전에서 유저(NPC 제외)와 전투 30회', target:30, gold:10000, xp:0, card:null, bless:1, minLevel:1, locked:true },
   { id:'wq_gacha_normal',   name:'꽝손 토닥토닥',      diff:'주간', desc:'일반 뽑기 100장',                 target:100,    gold:10000, xp:0, card:null,     bless:0, minLevel:1  },
   { id:'wq_gacha_unique',   name:'이번엔 진짜 나온다', diff:'주간', desc:'유니크·영웅·전설 뽑기(또는 축복 뽑기) 50회',  target:50,     gold:30000, xp:0, card:null,     bless:0, minLevel:1  },
   // ── 여신의 탑 (Lv 21+) ──
@@ -7043,7 +7095,8 @@ function _dailyQuestSecondsToReset(){
 // 유저별 오늘의 일일퀘스트 배정 (랜덤 5개 + 고정 1개)
 function _assignDailyQuests(p){
   const lv = p.level || 1;
-  const pool = DAILY_QUEST_POOL.filter(q => (q.minLevel || 1) <= lv);
+  // locked:true 플래그가 있는 퀘스트는 풀에서 제외 (랭킹전 등 비활성 컨텐츠)
+  const pool = DAILY_QUEST_POOL.filter(q => !q.locked && (q.minLevel || 1) <= lv);
   // 셔플 후 5개 선정
   const shuffled = pool.slice();
   for (let i = shuffled.length - 1; i > 0; i--){
@@ -7118,7 +7171,8 @@ function _weeklyQuestSecondsToReset(){
 }
 function _assignWeeklyQuests(p){
   const lv = p.level || 1;
-  const pool = WEEKLY_QUEST_POOL.filter(q => (q.minLevel || 1) <= lv);
+  // locked:true 플래그가 있는 퀘스트는 풀에서 제외 (랭킹전 등 비활성 컨텐츠)
+  const pool = WEEKLY_QUEST_POOL.filter(q => !q.locked && (q.minLevel || 1) <= lv);
   const shuffled = pool.slice();
   for (let i = shuffled.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -20856,7 +20910,10 @@ function renderDeck(){
         lblCell.style.fontWeight = 'bold';
         lblCell.style.textShadow = 'none';
       }
+      // 핸들러 완전 교체 (잠긴 슬롯은 토스트만)
       td.onclick = ()=>toast('Lv 26부터 해금되는 슬롯입니다.');
+      td.onpointerdown = null;
+      td.onpointerup = null;
     } else {
       const c = GAME.myDeck[i] || BASIC_ATTACK;
       td.classList.remove('locked');
@@ -20878,11 +20935,140 @@ function renderDeck(){
         lblCell.style.fontWeight = (c.grade === 'normal') ? 'bold' : '900';
         lblCell.style.textShadow = 'none';
       }
-      td.onclick = ()=>openMyCardPick(i);
+      // 짧게 클릭 = 영교 선택 · 길게 누르기(≈450ms) = 카드 피커 모달
+      td.onclick = null;   // onclick 비활성 (pointerup 로 처리)
+      td.onpointerdown = (ev) => _deckSlotPointerDown(ev, i);
+      td.onpointerup   = (ev) => _deckSlotPointerUp(ev, i);
+      td.onpointercancel = () => _deckSlotPointerCancel();
     }
+    // 영교 모드에서 source slot 하이라이트 반영
+    if (_deckSwapState.sourceSlot === i) td.classList.add('swap-source');
+    else td.classList.remove('swap-source');
   }
   try { renderDeckPresetLabels(); } catch(e){}
 }
+
+// ─── 메인 덱 영교(swap) 모드 ───────────────────────────────────
+// 짧게 클릭 = 선택/이동, 길게 누르기 = 피커 모달
+// 선택 → 다른 슬롯 클릭 시:
+//   · 대상이 빈 슬롯(기본공격) → 이동, 선택 종료
+//   · 대상에 카드 있음 → 선택 카드가 그 자리로, 밀려난 카드가 "들린" 상태로 chain 계속
+// 같은 source slot 재클릭 or ESC → 들려 있던 카드를 source로 복귀하고 취소
+const DECK_HOLD_MS = 450;
+const DECK_MOVE_TOLERANCE_PX = 10;
+const _deckSwapState = {
+  sourceSlot: null,     // 현재 들고 있는 카드의 "원래 자리" slot index (chain 중 매번 갱신)
+  heldCard: null,       // 현재 들고 있는 카드 객체 (null = 선택 없음)
+  holdTimer: null,
+  holdFired: false,
+  startX: 0, startY: 0,
+  activePointerSlot: null,
+};
+function _deckSlotPointerDown(ev, slot){
+  _deckSwapState.holdFired = false;
+  _deckSwapState.activePointerSlot = slot;
+  _deckSwapState.startX = ev.clientX;
+  _deckSwapState.startY = ev.clientY;
+  // hold 임계 지나면 피커 모달 (영교 모드 해제 후)
+  _deckSwapState.holdTimer = setTimeout(() => {
+    _deckSwapState.holdFired = true;
+    _deckSwapState.holdTimer = null;
+    if (_deckSwapState.heldCard != null) _deckSwapRestoreAndCancel();
+    try { openMyCardPick(slot); } catch(e){}
+  }, DECK_HOLD_MS);
+}
+function _deckSlotPointerCancel(){
+  if (_deckSwapState.holdTimer){ clearTimeout(_deckSwapState.holdTimer); _deckSwapState.holdTimer = null; }
+  _deckSwapState.activePointerSlot = null;
+}
+function _deckSlotPointerUp(ev, slot){
+  const movedTooFar = (Math.hypot(ev.clientX - _deckSwapState.startX, ev.clientY - _deckSwapState.startY) > DECK_MOVE_TOLERANCE_PX);
+  if (_deckSwapState.holdTimer){ clearTimeout(_deckSwapState.holdTimer); _deckSwapState.holdTimer = null; }
+  _deckSwapState.activePointerSlot = null;
+  if (_deckSwapState.holdFired){ _deckSwapState.holdFired = false; return; }
+  if (movedTooFar) return;   // 많이 움직였으면 짧은 클릭 아님 (스크롤 의도)
+  _deckSwapHandleClick(slot);
+}
+function _deckSwapHandleClick(slot){
+  const held = _deckSwapState.heldCard;
+  if (held == null){
+    // 선택 시작
+    const card = GAME.myDeck[slot];
+    if (!card || card === BASIC_ATTACK || card.id === 'basic_atk'){
+      // 기본공격 슬롯은 들 카드가 없음 → 그냥 피커 열기
+      try { openMyCardPick(slot); } catch(e){}
+      return;
+    }
+    _deckSwapState.sourceSlot = slot;
+    _deckSwapState.heldCard   = card;
+    GAME.myDeck[slot] = BASIC_ATTACK;   // 원래 자리는 비움
+    document.body.classList.add('deck-swap-active');
+    _deckSwapShowGhost(card);
+    renderDeck();
+    return;
+  }
+  // 들고 있는 상태
+  if (slot === _deckSwapState.sourceSlot){
+    // 같은 자리 재클릭 → 취소
+    _deckSwapRestoreAndCancel();
+    return;
+  }
+  // 다른 자리로 이동
+  const target = GAME.myDeck[slot];
+  GAME.myDeck[slot] = held;
+  if (target && target !== BASIC_ATTACK && target.id !== 'basic_atk'){
+    // chain — 밀려난 카드를 손에 들고 source 를 target slot 으로 이동
+    _deckSwapState.heldCard   = target;
+    _deckSwapState.sourceSlot = slot;
+    _deckSwapShowGhost(target);
+  } else {
+    // 빈 자리에 놓음 → 종료
+    _deckSwapState.heldCard   = null;
+    _deckSwapState.sourceSlot = null;
+    document.body.classList.remove('deck-swap-active');
+    _deckSwapHideGhost();
+  }
+  try { saveGame(); } catch(e){}
+  renderDeck();
+}
+function _deckSwapRestoreAndCancel(){
+  if (_deckSwapState.heldCard != null && _deckSwapState.sourceSlot != null){
+    GAME.myDeck[_deckSwapState.sourceSlot] = _deckSwapState.heldCard;
+    try { saveGame(); } catch(e){}
+  }
+  _deckSwapState.heldCard   = null;
+  _deckSwapState.sourceSlot = null;
+  document.body.classList.remove('deck-swap-active');
+  _deckSwapHideGhost();
+  renderDeck();
+}
+function _deckSwapShowGhost(card){
+  const g = document.getElementById('deckSwapGhost');
+  const inner = document.getElementById('deckSwapGhostInner');
+  if (!g || !inner) return;
+  inner.innerHTML = `<div class="card-ico">${cardIcon(card)}</div>`;
+  g.classList.add('show');
+}
+function _deckSwapHideGhost(){
+  const g = document.getElementById('deckSwapGhost');
+  if (g) g.classList.remove('show');
+}
+function _deckSwapOnPointerMove(ev){
+  const g = document.getElementById('deckSwapGhost');
+  if (!g || !g.classList.contains('show')) return;
+  const x = (ev.touches && ev.touches[0]) ? ev.touches[0].clientX : ev.clientX;
+  const y = (ev.touches && ev.touches[0]) ? ev.touches[0].clientY : ev.clientY;
+  if (x == null || y == null) return;
+  g.style.left = x + 20 + 'px';
+  g.style.top  = y + 20 + 'px';
+}
+document.addEventListener('pointermove', _deckSwapOnPointerMove, { passive: true });
+document.addEventListener('keydown', (ev) => {
+  if (ev.key === 'Escape' && _deckSwapState.heldCard != null){
+    ev.preventDefault();
+    _deckSwapRestoreAndCancel();
+  }
+});
 
 // ─── 로그인 ───
 async function doLogin(){
