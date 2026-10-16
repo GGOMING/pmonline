@@ -9212,9 +9212,6 @@ function raidNextTurn(){
   const playerFirst = pDex >= mDex;
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   raidLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'보스 선공'}) ━━━`, 'sys');
-  // 지속 회복 선행 발동 — 카드 교환 전에 HOT 를 먼저 적용 (전투 종료 전 반영 보장)
-  _applyPreTurnHots(c, p, m, raidLog, m.name);
-  if (!checkRaidAlive()) return;
 
   c._currentTurnCards = { playerCard, monsterCard: monCard };
   if (playerFirst){
@@ -10493,9 +10490,6 @@ function rankNextTurn(){
   const playerFirst = pDex > mDex;   // 동률 시 방어자(상대) 선공
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   rankLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
-  // 지속 회복 선행 발동 — 카드 교환 전에 HOT 를 먼저 적용 (전투 종료 전 반영 보장)
-  _applyPreTurnHots(c, p, m, rankLog, m.name);
-  if (!checkRankAlive()) return;
 
   c._currentTurnCards = { playerCard, monsterCard: monCard };
   if (playerFirst){
@@ -12274,9 +12268,6 @@ function huntNextTurn(){
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
 
   huntLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
-  // 지속 회복 선행 발동 — 카드 교환 전에 HOT 를 먼저 적용 (전투 종료 전 반영 보장)
-  _applyPreTurnHots(c, p, m, huntLog, m.name);
-  if (!checkAlive()) return;
 
   // 이번 턴 카드 저장 — 조기 사망 시에도 로그에 사용
   c._currentTurnCards = { playerCard, monsterCard };
@@ -14130,93 +14121,6 @@ function applyCardEffect(card, ctx){
   return true; // 시전 성공
 }
 
-// ─── 훈련소 전용 — 턴 시작 시 지속 회복 선행 발동 ───────────
-// train 모드는 opp 가 c.opp (별도 객체), hots 는 opp.hots / opp.mpHots 사용
-function _applyPreTurnHotsTrain(c, me, opp){
-  if (!c || !opp) return;
-  if (Array.isArray(c.myHots) && c.myHots.length){
-    for (const h of c.myHots){
-      const before = me.hp;
-      me.hp = Math.min(me.hpMax, me.hp + h.heal);
-      const gained = me.hp - before;
-      try { trainLog(`  + 지속 회복 → 나 +${h.heal}`, 'heal'); } catch(e){}
-      if (gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
-      h.turns--;
-    }
-    c.myHots = c.myHots.filter(h => h.turns > 0);
-  }
-  if (Array.isArray(opp.hots) && opp.hots.length){
-    for (const h of opp.hots){
-      opp.hp = Math.min(opp.hpMax, opp.hp + h.heal);
-      try { trainLog(`  + [상대] 지속 회복 → 상대 +${h.heal}`, 'opp'); } catch(e){}
-      h.turns--;
-    }
-    opp.hots = opp.hots.filter(h => h.turns > 0);
-  }
-  if (Array.isArray(c.myMpHots) && c.myMpHots.length){
-    for (const h of c.myMpHots){
-      me.mp = Math.min(me.mpMax, me.mp + h.heal);
-      try { trainLog(`  + MP 지속 회복 → 나 +${h.heal}`, 'heal'); } catch(e){}
-      h.turns--;
-    }
-    c.myMpHots = c.myMpHots.filter(h => h.turns > 0);
-  }
-  if (Array.isArray(opp.mpHots) && opp.mpHots.length){
-    for (const h of opp.mpHots){
-      opp.mp = Math.min(opp.mpMax, opp.mp + h.heal);
-      h.turns--;
-    }
-    opp.mpHots = opp.mpHots.filter(h => h.turns > 0);
-  }
-}
-
-// ─── 턴 시작 시 지속 회복 선행 발동 ───────────────────────────
-// 턴 시작 시점에 HOT·MP HOT 를 가장 먼저 발동하여, 플레이어가 데미지로 사망하기 전에
-// 지속 회복 효과가 반영되도록 함. processCombatTicks 는 HOT 를 처리하지 않음.
-function _applyPreTurnHots(c, me, opp, log, oppName){
-  if (!c) return;
-  const oppLabel = oppName || (opp && opp.name) || '상대';
-  // HP 지속 회복 — 플레이어
-  if (Array.isArray(c.myHots) && c.myHots.length){
-    for (const h of c.myHots){
-      const before = me.hp;
-      me.hp = Math.min(me.hpMax, me.hp + h.heal);
-      const gained = me.hp - before;
-      log(`  + 나 지속 회복 +${h.heal}`, 'heal');
-      if (gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
-      h.turns--;
-    }
-    c.myHots = c.myHots.filter(h => h.turns > 0);
-  }
-  // HP 지속 회복 — 상대
-  if (Array.isArray(c.monHots) && c.monHots.length){
-    for (const h of c.monHots){
-      if (opp.invincible) { h.turns--; continue; }   // 무적 상대 skip
-      opp.hp = Math.min(opp.hpMax, opp.hp + h.heal);
-      log(`  + ${oppLabel} 지속 회복 +${h.heal}`, 'heal');
-      h.turns--;
-    }
-    c.monHots = c.monHots.filter(h => h.turns > 0);
-  }
-  // MP 지속 회복 — 플레이어
-  if (Array.isArray(c.myMpHots) && c.myMpHots.length){
-    for (const h of c.myMpHots){
-      me.mp = Math.min(me.mpMax, me.mp + h.heal);
-      log(`  + 나 MP 지속 회복 +${h.heal}`, 'heal');
-      h.turns--;
-    }
-    c.myMpHots = c.myMpHots.filter(h => h.turns > 0);
-  }
-  // MP 지속 회복 — 상대
-  if (Array.isArray(c.monMpHots) && c.monMpHots.length){
-    for (const h of c.monMpHots){
-      opp.mp = Math.min(opp.mpMax, opp.mp + h.heal);
-      h.turns--;
-    }
-    c.monMpHots = c.monMpHots.filter(h => h.turns > 0);
-  }
-}
-
 // 통합 도트/회복/턴버프 처리
 function processCombatTicks(kind){
   let c, opp, log;
@@ -14301,8 +14205,23 @@ function processCombatTicks(kind){
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
   for (const d of c.monSelfDots){ let dmg = d.dmg; if (d.pct){ dmg = Math.floor(opp.hpMax * d.pct); if (d.max != null) dmg = Math.min(d.max, dmg); } if (d.mpPct) dmg = Math.floor((opp.mp||0) * d.mpPct); opp.hp -= dmg; log(`  ☠ 자해 도트 → ${opp.name} -${dmg}`, 'hit'); d.turns--; }
   c.monSelfDots = c.monSelfDots.filter(d=>d.turns>0);
-  // 지속 회복(HOT·MP HOT) — 턴 시작 시점에 _applyPreTurnHots() 에서 선행 처리됨 (여기서는 생략)
-  // 이렇게 하면 플레이어가 데미지로 사망하기 전에 지속 회복이 반영되어 생존 가능
+  // 지속 회복 — 플레이어(me) 회복은 dq_heal_500 (하루 누적 회복) 카운트에 반영
+  for (const h of c.myHots){
+    const before = me.hp;
+    me.hp = Math.min(me.hpMax, me.hp + h.heal);
+    const gained = me.hp - before;
+    log(`  + 나 회복 +${h.heal}`, 'heal');
+    if (gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
+    h.turns--;
+  }
+  c.myHots = c.myHots.filter(h=>h.turns>0);
+  for (const h of c.monHots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); log(`  + ${opp.name} 회복 +${h.heal}`, 'heal'); h.turns--; }
+  c.monHots = c.monHots.filter(h=>h.turns>0);
+  // MP 지속 회복
+  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); log(`  + 나 MP 회복 +${h.heal}`, 'heal'); h.turns--; }
+  c.myMpHots = c.myMpHots.filter(h=>h.turns>0);
+  for (const h of c.monMpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
+  c.monMpHots = c.monMpHots.filter(h=>h.turns>0);
   // INT 15 이상 자동 MP 회복 — INT × 0.5 (올림). 현재 mpMax 상한 준수 (버프로 늘어난 mpMax 도 적용, 버프 해제되면 그 시점 mpMax 까지만).
   const _intMe  = (me.int  || 0) + ((c.myBuffs  && c.myBuffs.int)  || 0);
   const _intOpp = (opp.int || 0) + ((c.monBuffs && c.monBuffs.int) || 0);
@@ -14597,7 +14516,14 @@ function processTrainTicks(){
   c.mySelfDots = c.mySelfDots.filter(d=>d.turns>0);
   for (const d of opp.selfDots){ opp.hp -= d.dmg; trainLog(`  ☠ 자해 도트 → 상대 -${d.dmg}`, 'hit'); d.turns--; }
   opp.selfDots = opp.selfDots.filter(d=>d.turns>0);
-  // 지속 회복(HOT·MP HOT) — 턴 시작 시점에 _applyPreTurnHotsTrain() 에서 선행 처리됨
+  for (const h of c.myHots){ me.hp = Math.min(me.hpMax, me.hp + h.heal); trainLog(`  + 회복 → 나 +${h.heal}`, 'heal'); h.turns--; }
+  c.myHots = c.myHots.filter(h=>h.turns>0);
+  for (const h of opp.hots){ opp.hp = Math.min(opp.hpMax, opp.hp + h.heal); trainLog(`  + [상대] 회복 → 상대 +${h.heal}`, 'opp'); h.turns--; }
+  opp.hots = opp.hots.filter(h=>h.turns>0);
+  for (const h of c.myMpHots){ me.mp = Math.min(me.mpMax, me.mp + h.heal); trainLog(`  + MP 회복 → 나 +${h.heal}`, 'heal'); h.turns--; }
+  c.myMpHots = c.myMpHots.filter(h=>h.turns>0);
+  for (const h of opp.mpHots){ opp.mp = Math.min(opp.mpMax, opp.mp + h.heal); h.turns--; }
+  opp.mpHots = opp.mpHots.filter(h=>h.turns>0);
   // INT 15 이상 자동 MP 회복
   const _intMe  = (me.int  || 0) + ((c.myBuffs && c.myBuffs.int) || 0);
   const _intOpp = (opp.int || 0) + ((opp.buffs && opp.buffs.int) || 0);
@@ -19177,9 +19103,6 @@ function trainNextTurn(){
   const playerFirst = myDex >= oppDex;
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   trainLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
-  // 지속 회복 선행 발동 — 카드 교환 전에 HOT 를 먼저 적용 (전투 종료 전 반영 보장)
-  _applyPreTurnHotsTrain(c, me, opp);
-  if (!checkTrainAlive()) return;
   function castMe(){ if (isTrainStunned('me')) trainLog('  ✱ 나 행동불능', 'sys'); else { trainLog(`🃏 <b>${myCard.name}</b> 발동`, 'info'); trainApplyCard(myCard, 'me'); c.statsMyCards++; } }
   function castOpp(){ if (isTrainStunned('opp')) trainLog('  ✱ 상대 행동불능', 'sys'); else { trainLog(`🃏 [상대] <b>${oppCard.name}</b> 발동`, 'opp'); trainApplyCard(oppCard, 'opp'); } }
   if (playerFirst){
