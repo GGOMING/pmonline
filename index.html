@@ -4072,7 +4072,32 @@ let _lastCloudSaveError = null;
 let _cloudSaveVersion = 0;
 // 버전 충돌로 cloudLoad 를 재실행 중일 때 중복 트리거 방지 플래그
 let _cloudVersionConflictResolving = false;
+// 저장 큐 — 같은 세션 내 중복/동시 저장 호출을 serialize (불필요한 충돌 alert 방지)
+let _cloudSaveInProgress = false;
+let _cloudSavePending = false;
+let _cloudSaveRetryCount = 0;
+// 외부 호출용 wrapper — 저장 중이면 큐에 올리고 조용히 종료, 끝난 뒤 자동 재실행
 async function cloudSaveNow(){
+  if (_cloudSaveInProgress){
+    // 이미 저장 중 → 끝나면 자동으로 한 번 더 호출 (최신 GAME 상태로)
+    _cloudSavePending = true;
+    return true;
+  }
+  _cloudSaveInProgress = true;
+  let result = false;
+  try {
+    result = await _doCloudSave();
+  } finally {
+    _cloudSaveInProgress = false;
+    if (_cloudSavePending){
+      _cloudSavePending = false;
+      // 큐에 쌓인 요청 — 최신 GAME 상태 + 최신 version 으로 재시도
+      try { await cloudSaveNow(); } catch(e){ console.warn('[cloudSave queued]', e); }
+    }
+  }
+  return result;
+}
+async function _doCloudSave(){
   _lastCloudSaveError = null;
   if (!sb){ _lastCloudSaveError = 'Supabase SDK 미로드'; return false; }
   if (!GAME.player){ _lastCloudSaveError = 'GAME.player 없음'; return false; }
@@ -4102,6 +4127,7 @@ async function cloudSaveNow(){
   if (updated){
     _cloudSaveVersion = updated.data_version;
     _lastCloudSaveAt = Date.now();
+    _cloudSaveRetryCount = 0;
     return true;
   }
   // ── 2) UPDATE 영향 row 0 — 레코드가 없거나 version 충돌 ──
@@ -4130,24 +4156,47 @@ async function cloudSaveNow(){
     }
     _cloudSaveVersion = 1;
     _lastCloudSaveAt = Date.now();
+    _cloudSaveRetryCount = 0;
     return true;
   }
-  // ── 3) 버전 충돌 — 다른 세션이 저장했음. 저장 거부 + 자동 재동기화 ──
-  _lastCloudSaveError = `버전 충돌 (내: v${expectedVersion}, 서버: v${existing.data_version}) · 다른 기기 저장 감지`;
-  console.warn('[cloudSave version conflict]', 'local=', expectedVersion, 'server=', existing.data_version);
+  // ── 3) 버전 충돌 — 로컬 version 과 서버 version 불일치 ──
+  //    자동 재시도 (최대 1회): 서버 version 으로 _cloudSaveVersion 갱신 후 UPDATE 재시도
+  //    같은 유저 세션 내 중복 저장 간섭일 가능성이 높으므로 조용히 재시도
+  //    재시도도 실패하면 그 때만 alert (실제 다른 기기 간섭 가능성)
+  console.warn('[cloudSave version mismatch]', 'local=', expectedVersion, 'server=', existing.data_version);
+  if (_cloudSaveRetryCount < 1){
+    _cloudSaveRetryCount++;
+    _cloudSaveVersion = existing.data_version;
+    // 재시도: 서버 최신 version 으로 UPDATE 한 번 더 시도 (로컬 GAME 상태는 그대로 유지)
+    const retryPayload = {
+      nickname: GAME.player.name,
+      data: buildSavePayload(),
+      data_version: _cloudSaveVersion + 1,
+    };
+    const { data: retryUpdated, error: retryErr } = await sb.from('saves')
+      .update(retryPayload)
+      .eq('user_id', uid)
+      .eq('data_version', _cloudSaveVersion)
+      .select('data_version')
+      .maybeSingle();
+    if (!retryErr && retryUpdated){
+      _cloudSaveVersion = retryUpdated.data_version;
+      _lastCloudSaveAt = Date.now();
+      _cloudSaveRetryCount = 0;
+      return true;
+    }
+    // 재시도 실패 → 진짜 다른 기기 간섭 가능성 → cloudLoad 로 서버 상태 받아옴
+  }
+  // 재시도도 실패 — 실제 외부 세션 간섭일 가능성. 조용히 서버 상태로 롤백 (alert 없음).
+  _lastCloudSaveError = `버전 충돌 (내: v${expectedVersion}, 서버: v${existing.data_version}) · 다른 기기 저장 감지 (silent rollback)`;
   if (!_cloudVersionConflictResolving){
     _cloudVersionConflictResolving = true;
-    try {
-      alert(
-        '⚠ 다른 기기·브라우저에서 변경이 감지되어 이 세션의 변경 사항을 저장할 수 없습니다.\n\n' +
-        '서버의 최신 상태로 동기화합니다. 작업하시던 뽑기·사용 결과는 이미 다른 기기에서 반영되어 있을 수 있습니다.'
-      );
-    } catch(e){}
     try {
       await cloudLoad();   // 서버 최신 상태로 덮어씀 (version 갱신 포함)
       try { renderSheet(); renderDeck(); } catch(e){}
     } catch(e){ console.warn('[cloudSave conflict reload]', e); }
     _cloudVersionConflictResolving = false;
+    _cloudSaveRetryCount = 0;
   }
   return false;
 }
