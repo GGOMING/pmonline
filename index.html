@@ -17271,6 +17271,8 @@ async function refreshCorridorLobby(forceRefresh){
 }
 
 // 새로 정산된 시즌 결과 fetch → best_season_rank / rank1_count / seasons_completed 반영
+// 서버 정산 시점(월 06:00 KST)에 로그인 상태였던 유저도 보상 즉시 반영 되도록
+// cloudLoad 로 축복/골드 등 서버가 수정한 player 데이터 재동기화 포함
 async function _corridorPollNewSettlements(){
   if (!sb) return;
   const p = GAME.player;
@@ -17284,24 +17286,72 @@ async function _corridorPollNewSettlements(){
     rows = Array.isArray(res.data) ? res.data : [];
   } catch(e){ console.warn('[corridor settlement poll]', e); return; }
   if (!rows.length) return;
+  // ★ 신규: 새 settlement 발견 → 서버에서 정령의 축복 지급 완료된 상태.
+  //   cloudLoad 로 서버 player 데이터 재수신 (spiritBlessing 등 반영됨)
+  //   먼저 로드 후 그 데이터 위에 titleCounters 를 바꿔야 덮어쓰기 안됨.
+  let totalSpiritPaid = 0;
+  rows.forEach(r => { totalSpiritPaid += Number(r.spirit_paid || 0); });
+  try {
+    await cloudLoad();   // 서버 상태 (spiritBlessing + 축복 지급분) 받아옴
+  } catch(e){ console.warn('[corridor settlement reload]', e); }
+  // cloudLoad 후 GAME.player 가 새 참조일 수 있으므로 재참조
+  const p2 = GAME.player;
+  if (!p2) return;
+  _ensureTitleState(p2);
   let changed = false;
   rows.forEach(r => {
     const rk = r.final_rank|0;
-    p.titleCounters.corridor_seasons_completed = (p.titleCounters.corridor_seasons_completed|0) + 1;
+    p2.titleCounters.corridor_seasons_completed = (p2.titleCounters.corridor_seasons_completed|0) + 1;
     if (rk > 0){
       // 최저 rank = 최고 성적 (1이 최고)
-      const cur = p.titleCounters.corridor_best_season_rank|0;
-      if (cur === 0 || rk < cur) p.titleCounters.corridor_best_season_rank = rk;
-      if (rk === 1) p.titleCounters.corridor_rank1_count = (p.titleCounters.corridor_rank1_count|0) + 1;
+      const cur = p2.titleCounters.corridor_best_season_rank|0;
+      if (cur === 0 || rk < cur) p2.titleCounters.corridor_best_season_rank = rk;
+      if (rk === 1) p2.titleCounters.corridor_rank1_count = (p2.titleCounters.corridor_rank1_count|0) + 1;
     }
-    p.corridorLastSettlementConsumedId = r.id;
+    p2.corridorLastSettlementConsumedId = r.id;
     changed = true;
   });
   if (changed){
     try { checkTitleUnlocks(); } catch(e){}
     try { saveGame(); } catch(e){}
+    try { cloudSaveNow().catch(err => console.warn('[corridor settlement save]', err)); } catch(e){}
+    try { renderSheet(); } catch(e){}
+    // 유저 알림 — 축복 지급 결과 요약 (하나 이상 정산 완료 시)
+    if (totalSpiritPaid > 0){
+      try {
+        toast(`🏆 영원의 회랑 시즌 정산 보상 — 🌿 정령의 축복 +${totalSpiritPaid}`, 4000);
+      } catch(e){}
+      try {
+        chatSys(`🏆 영원의 회랑 시즌 정산 — 🌿 정령의 축복 +${totalSpiritPaid} 지급`, { local: true });
+      } catch(e){}
+    }
   }
 }
+// ─── 주기적 settlement 폴링 ─────────────────────────────────────
+// 월요일 06:00 KST 자동 정산 직후 로그인 중인 유저에게도 보상 즉시 반영 되도록
+// 로그인 상태에서 매 5분 체크 (settlement_log 는 거의 비어있으므로 egress 최소)
+const CORRIDOR_SETTLEMENT_POLL_MS = 5 * 60 * 1000;
+let _corridorSettlementPollerId = null;
+function _startCorridorSettlementPoller(){
+  if (_corridorSettlementPollerId) return;
+  _corridorSettlementPollerId = setInterval(() => {
+    if (!sb || !GAME.player) return;
+    if (document.visibilityState !== 'visible') return;   // 백그라운드 탭은 skip (복귀 시 다시 체크)
+    _corridorPollNewSettlements().catch(err => console.warn('[corridor poller]', err));
+  }, CORRIDOR_SETTLEMENT_POLL_MS);
+}
+function _stopCorridorSettlementPoller(){
+  if (_corridorSettlementPollerId){
+    clearInterval(_corridorSettlementPollerId);
+    _corridorSettlementPollerId = null;
+  }
+}
+// 탭 복귀 시에도 즉시 1회 체크 (백그라운드 중에 정산이 발생했을 수 있음)
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && sb && GAME.player){
+    _corridorPollNewSettlements().catch(err => console.warn('[corridor visibilitycheck]', err));
+  }
+});
 
 // 방어전 발생/승리를 my_battles 데이터로 감지 · 이미 카운트한 battle id 는 스킵
 //   · defenses_total: role='defender' 인 모든 배틀 (승패 무관)
@@ -21733,6 +21783,7 @@ async function doLogout(){
   await _teardownRaid();
   try { await _teardownSessionChannel(); } catch(e){}
   _myUserId = null;
+  try { _stopCorridorSettlementPoller(); } catch(e){}
   await cloudSignOut();
   GAME.player = null;
   GAME.myDeck = Array(15).fill(BASIC_ATTACK);
@@ -22111,6 +22162,12 @@ function enterMain(){
   // 여신의 탑 지난 주 랭킹 시상은 로비의 수령 버튼으로 수동 수령 (자동 지급 폐지)
   // 세션 타이머 시작 (탭이 보이는 동안만 카운트)
   try { _startDailyQuestSessionTimer(); } catch(e){}
+  // 영원의 회랑 시즌 정산 보상 자동 수령 — 로그인 즉시 1회 + 매 5분 폴링
+  //   월요일 06:00 KST 정산 시점에 로그인 중이던 유저도 보상 즉시 반영
+  try {
+    _corridorPollNewSettlements().catch(err => console.warn('[corridor enterMain poll]', err));
+    _startCorridorSettlementPoller();
+  } catch(e){ console.warn('[corridor poller start]', e); }
   // 클라우드 랭킹·공격대 초기 로드 + 미수령 보상 수령
   // Realtime 구독은 실제 페이지 진입 시(openRank / raidOpen)로 지연 → Realtime message quota 절감
   //   - 로그인 상시 구독 시 raid_state / ranking_global UPDATE 가 전체 접속자에게 fan-out → 월 수백만 msg 소모
@@ -24498,9 +24555,8 @@ async function adminCorridorResetAll(){
     adminCorridorRefresh();
   } catch(e){ alert('초기화 실패: ' + (e.message||e)); }
 }
-
 async function adminCorridorForceSettlementCurrent(){
-  if (!confirm('⚡ 이번 주 강제 정산\n\n· 현재 등록 유저 전원 · 승점 × 3축복 지급\n· 등록 즉시 해제 (시즌 조기 종료)\n· 정산 로그 기록\n\n계속하시겠습니까?')) return;
+  if (!confirm('⚡ 이번 주 강제 정산\n\n· 현재 등록 유저 전원 · 승점 × 1축복 지급\n· 등록 즉시 해제 (시즌 조기 종료)\n· 정산 로그 기록\n\n계속하시겠습니까?')) return;
   try {
     const { data, error } = await sb.rpc('admin_corridor_force_settlement_current');
     if (error){ alert('정산 실패: ' + (error.message||error)); return; }
