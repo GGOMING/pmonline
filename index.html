@@ -13754,19 +13754,20 @@ function applyCardEffect(card, ctx){
       return;
     }
     if (t === 'buffOverTime'){
-      // 매턴 시전자 스탯 누적 buff (메디테이션 n86)
-      // fx: {stats:{str:1,...}, turns:10} — turns 턴 동안 매턴 stats 만큼 영구 buff 스택
+      // 매턴 시전자 스탯 누적 buff (메디테이션 n86 · 디보우션오라 r02 등)
+      // fx: {stats:{str:1,...}, turns:3} — turns 턴 동안 매턴 stats 만큼 영구 buff 스택
       const stats = fx.stats || {};
       const turns = fx.turns || 0;
       const isP = (ctx.caster === 'player');
       const arr = isP ? ctx.c.myStatGrowth : ctx.c.monStatGrowth;
       if (arr){
-        // pending 없이 즉시 시전 턴에 첫 스택 발동
+        // 시전 턴에 첫 스택 즉시 발동
         for (const k of Object.keys(stats)){
           _addTurnBuff(ctx.castBuffs, ctx.castTurnBuffs, k, stats[k], 0, ctx.castObj, selfOpts);
         }
         // 남은 (turns-1) 턴은 processCombatTicks 에서 자동 스택
-        arr.push({ stats: {...stats}, turnsLeft: Math.max(0, turns - 1), grade: card.grade });
+        // pending:true → 시전 턴 종료 틱에서 중복 스택 방지 (다음 턴 종료부터 발동)
+        arr.push({ stats: {...stats}, turnsLeft: Math.max(0, turns - 1), grade: card.grade, pending: true });
       }
       const desc = Object.entries(stats).map(([k,v]) => `${_korStatKey(k)} +${v}`).join(', ');
       ctx.log(`  + ${ctx.castName} ${turns}턴 동안 매턴 ${desc} 누적 (영구)`, 'heal');
@@ -14630,6 +14631,8 @@ function processCombatTicks(kind){
     for (let i = list.length - 1; i >= 0; i--){
       const e = list[i];
       if (!e || e.turnsLeft <= 0){ list.splice(i, 1); continue; }
+      // pending: 시전 턴 종료 틱은 skip (즉시 발동으로 이미 1스택 소비됨)
+      if (e.pending){ e.pending = false; continue; }
       const msgs = [];
       for (const k of Object.keys(e.stats || {})){
         _addTurnBuff(buffs, turnBuffs, k, e.stats[k], 0, targetObj, { grade: e.grade, byGrade: byGrade });
