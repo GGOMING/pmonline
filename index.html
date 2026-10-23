@@ -14060,13 +14060,19 @@ function applyCardEffect(card, ctx){
         }
       }
       // 영구 디버프(turnBuffs 없이 직접 음수로 누적된 값)도 0으로 복귀
+      // 단, transferStat (베어폼·크로우폼 등 폼카드) 로 생긴 음수는 자발적 변환이므로 복원 대상 제외
       for (const k of Object.keys(cb)){
+        if (k.startsWith('_')) continue;   // 내부 플래그 skip
         if ((cb[k]||0) < 0){
-          const restore = -cb[k];
-          cb[k] = 0;
-          // CON/INT 원복 시 hpMax/mpMax 동기화
-          if (k === 'con' || k === 'int'){
-            try { _syncPoolOnStatChange(ctx.castObj, k, restore); } catch(e){}
+          const transformed = (cb._transformSources && cb._transformSources[k]) || 0;
+          const totalNeg = -cb[k];
+          const debuffAmount = Math.max(0, totalNeg - transformed);   // 폼카드 성분 제외한 디버프 부분만
+          if (debuffAmount > 0){
+            cb[k] += debuffAmount;   // -25 + 20(transform) → -20 (폼카드 유지, 디버프 5만 복원)
+            // CON/INT 원복 시 hpMax/mpMax 동기화
+            if (k === 'con' || k === 'int'){
+              try { _syncPoolOnStatChange(ctx.castObj, k, debuffAmount); } catch(e){}
+            }
           }
         }
       }
@@ -14360,8 +14366,26 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'transferStat'){
       const amt = (ctx.castObj[fx.from]||0) + (ctx.castBuffs[fx.from]||0);
+      if (amt <= 0){ ctx.log(`  ✱ ${fx.from} 변환할 양 없음`, 'info'); return; }
       ctx.castBuffs[fx.from] = (ctx.castBuffs[fx.from]||0) - amt; // from을 0으로
       ctx.castBuffs[fx.to] = (ctx.castBuffs[fx.to]||0) + amt;
+      // 변환 소스 추적 — cleanseSelfDebuff 가 "디버프 아님" 으로 식별해 복원 대상에서 제외
+      ctx.castBuffs._transformSources = ctx.castBuffs._transformSources || {};
+      ctx.castBuffs._transformSources[fx.from] = (ctx.castBuffs._transformSources[fx.from] || 0) + amt;
+      // Pool 조정 — INT/CON 변환 시 mpMax/hpMax 와 현재 mp/hp 를 함께 비례 감소 (대칭성 유지)
+      if (fx.from === 'int' || fx.from === 'con'){
+        const obj = ctx.castObj;
+        const maxKey = fx.from === 'int' ? 'mpMax' : 'hpMax';
+        const curKey = fx.from === 'int' ? 'mp' : 'hp';
+        const prevMax = obj[maxKey] || 0;
+        const prevCur = obj[curKey] || 0;
+        _syncPoolOnStatChange(obj, fx.from, -amt);
+        // 현재 pool 을 ratio 로 비례 조정 (디바우어 복구 시 2배 증폭 방지)
+        if (prevMax > 0){
+          const minCur = fx.from === 'con' ? 1 : 0;   // CON 변환 시 HP 1 하한 (즉사 방지)
+          obj[curKey] = Math.max(minCur, Math.floor(prevCur * (obj[maxKey] || 0) / prevMax));
+        }
+      }
       ctx.log(`  + ${fx.from}→${fx.to} ${amt} 이동`, 'heal');
       // 플레이어 시전자면 공격 타입도 to 스탯 기반으로 전환. 원본은 _origAtkType 에 저장 → 전투 종료 시 자동 복구
       if (ctx.castObj === GAME.player){
