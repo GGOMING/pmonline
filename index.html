@@ -23293,6 +23293,17 @@ function renderAdminEdit(){
       </div>
     </div>
 
+    ${(u.source === 'cloud') ? `
+    <div class="edit-row" style="display:block;background:#f0f8ff;border:1px solid #4a7cc8;padding:8px 10px;margin:6px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#2e53b2;margin-bottom:6px;font-size:12px;">📊 뽑기 로그 조회 (유니크·영웅·전설 획득 이력)</div>
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
+        <button class="admin-btn small" onclick="adminFetchCardLog('${(u.name||'').replace(/'/g,"\\'")}')">🔍 상세 로그 (최근 100건)</button>
+        <button class="admin-btn small" onclick="adminFetchCardLogSummary('${(u.name||'').replace(/'/g,"\\'")}')">📈 집계 (grade × source)</button>
+        <span style="font-size:10px;color:#666;">· 뽑기·공격대·상자·퀘스트·교환 등 모든 획득 경로 추적</span>
+      </div>
+      <div id="adminCardLogPanel" style="font-size:11px;max-height:260px;overflow:auto;background:#fff;border:1px solid #ccc;padding:6px;min-height:30px;color:#333;">조회 버튼을 눌러주세요.</div>
+    </div>` : ''}
+
     <div style="padding:12px;text-align:center;border-top:1px solid #ccc;">
       <button class="admin-btn ok" onclick="adminSaveUser()">💾 저장</button>
       ${(u.source === 'local' || u.source === 'cloud') ? `<button class="admin-btn danger" onclick="adminDeleteUser()">🗑 계정 삭제</button>` : ''}
@@ -23760,6 +23771,91 @@ async function adminDeleteUser(){
 
 // 관리자: 계정 초기화 — 칭호·프로필 사진·닉네임·비밀번호·이메일은 유지하고
 // 그 외는 신규 계정 (newCharacter 기준) 상태로 되돌림.
+// 운영자: 특정 유저의 카드 획득 상세 로그 조회 (최근 100건)
+async function adminFetchCardLog(nickname){
+  const panel = document.getElementById('adminCardLogPanel');
+  if (!panel) return;
+  if (!sb){ panel.innerHTML = '<span style="color:#c00;">클라우드 모드 전용</span>'; return; }
+  panel.innerHTML = '<span style="color:#666;">조회 중...</span>';
+  try {
+    const { data, error } = await sb.rpc('admin_fetch_card_log', { p_nickname: nickname, p_limit: 100 });
+    if (error){ panel.innerHTML = `<span style="color:#c00;">조회 실패: ${error.message || error}</span>`; return; }
+    if (!Array.isArray(data) || data.length === 0){
+      panel.innerHTML = `<span style="color:#888;">${nickname} 님의 획득 로그가 없습니다 (유니크 이상 카드 획득 시에만 기록됨)</span>`;
+      return;
+    }
+    const gradeColor = { unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+    const gradeKor   = { unique:'유니크', hero:'영웅', legend:'전설' };
+    const rows = data.map(r => {
+      const d = new Date(r.created_at);
+      const dt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+      const gc = gradeColor[r.grade] || '#666';
+      const gk = gradeKor[r.grade] || r.grade;
+      return `<tr>
+        <td style="padding:2px 4px;color:#666;white-space:nowrap;">${dt}</td>
+        <td style="padding:2px 4px;"><span style="background:${gc};color:#fff;padding:1px 4px;border-radius:2px;font-size:9px;font-weight:bold;">${gk}</span></td>
+        <td style="padding:2px 4px;font-weight:bold;color:${gc};">${r.card_name||r.card_id}</td>
+        <td style="padding:2px 4px;color:#555;">${r.source||'-'}</td>
+      </tr>`;
+    }).join('');
+    panel.innerHTML = `
+      <div style="font-size:10px;color:#666;margin-bottom:4px;">총 ${data.length}건 (최근순, 최대 100건)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead><tr style="background:#eef;"><th style="padding:3px 4px;text-align:left;">시각</th><th>등급</th><th style="text-align:left;">카드</th><th style="text-align:left;">출처</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e){
+    panel.innerHTML = `<span style="color:#c00;">조회 실패: ${e.message || e}</span>`;
+  }
+}
+// 운영자: 특정 유저의 카드 획득 집계 (grade × source 별 count)
+async function adminFetchCardLogSummary(nickname){
+  const panel = document.getElementById('adminCardLogPanel');
+  if (!panel) return;
+  if (!sb){ panel.innerHTML = '<span style="color:#c00;">클라우드 모드 전용</span>'; return; }
+  panel.innerHTML = '<span style="color:#666;">조회 중...</span>';
+  try {
+    const { data, error } = await sb.rpc('admin_fetch_card_log_summary', { p_nickname: nickname });
+    if (error){ panel.innerHTML = `<span style="color:#c00;">조회 실패: ${error.message || error}</span>`; return; }
+    if (!Array.isArray(data) || data.length === 0){
+      panel.innerHTML = `<span style="color:#888;">${nickname} 님의 획득 로그가 없습니다</span>`;
+      return;
+    }
+    const gradeColor = { unique:'#a335ee', hero:'#dc143c', legend:'#ffd700' };
+    const gradeKor   = { unique:'유니크', hero:'영웅', legend:'전설' };
+    const fmtDate = (t) => {
+      const d = new Date(t);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    const rows = data.map(r => {
+      const gc = gradeColor[r.grade] || '#666';
+      const gk = gradeKor[r.grade] || r.grade;
+      return `<tr>
+        <td style="padding:3px 4px;"><span style="background:${gc};color:#fff;padding:1px 6px;border-radius:2px;font-size:10px;font-weight:bold;">${gk}</span></td>
+        <td style="padding:3px 4px;color:#555;">${r.source||'-'}</td>
+        <td style="padding:3px 4px;text-align:right;font-weight:bold;color:${gc};">${r.cnt}회</td>
+        <td style="padding:3px 4px;color:#999;font-size:10px;">${fmtDate(r.first_at)} ~ ${fmtDate(r.last_at)}</td>
+      </tr>`;
+    }).join('');
+    // 전체 합계 추가
+    const totals = {};
+    data.forEach(r => { totals[r.grade] = (totals[r.grade]||0) + Number(r.cnt||0); });
+    const totalLine = Object.keys(totals).map(g => {
+      const gc = gradeColor[g] || '#666';
+      const gk = gradeKor[g] || g;
+      return `<span style="background:${gc};color:#fff;padding:2px 8px;border-radius:3px;margin-right:4px;font-weight:bold;">${gk} ${totals[g]}회</span>`;
+    }).join('');
+    panel.innerHTML = `
+      <div style="font-size:11px;margin-bottom:6px;">${totalLine}</div>
+      <table style="width:100%;border-collapse:collapse;font-size:11px;">
+        <thead><tr style="background:#eef;"><th>등급</th><th style="text-align:left;">출처</th><th style="text-align:right;">횟수</th><th style="text-align:left;">기간</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e){
+    panel.innerHTML = `<span style="color:#c00;">조회 실패: ${e.message || e}</span>`;
+  }
+}
+
 async function adminResetAccount(){
   const u = _adminUsers[_adminSelectedUser];
   if (!u) return;
