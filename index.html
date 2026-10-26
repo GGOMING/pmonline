@@ -5708,6 +5708,7 @@ function executeSynthesis(){
   GAME.inventory.push(card);
   try { _markGradeAcquired([card]); } catch(e){}
   try { _logCardAcquisition(card, 'card_synthesis'); } catch(e){}
+  try { _logCardDrawAttempt('card_synthesis', [card], { gold: SYNTHESIS_COST_GOLD }); } catch(e){}
 
   // 결과 알림 — 유니크 등급 획득만 채팅에 공지 (일반/레어/영웅/전설은 개인 알림만)
   const gradeName = gradeKr(grade);
@@ -5801,6 +5802,7 @@ function doGachaShop(shopId, n){
     try { _logCardAcquisition(card, 'gacha_shop_' + shopId); } catch(e){}
   }
   _markGradeAcquired(results);
+  try { _logCardDrawAttempt('gacha_shop_' + shopId, results, { gold: cost }); } catch(e){}
   // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
   _offerExchangeForResults(results).catch(e => console.warn('[exchange]', e));
   // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
@@ -6469,6 +6471,7 @@ function buyBlessItem(id, currency){
       try { _logCardAcquisition(card, blessSrc); } catch(e){}
     }
     _markGradeAcquired(results);
+    try { _logCardDrawAttempt(blessSrc, results, { bless: it.cost }); } catch(e){}
     const legends = results.filter(c => c.grade === 'legend').length;
     const heroes  = results.filter(c => c.grade === 'hero').length;
     const uniques = results.filter(c => c.grade === 'unique').length;
@@ -6577,6 +6580,7 @@ function buyBlessItem(id, currency){
       } else {
         GAME.inventory.push(card);
         try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
+        try { _logCardDrawAttempt('bless_box', [card], { bless: it.cost }); } catch(e){}
         const exResults = [card];
         _offerExchangeForResults(exResults).catch(e => console.warn('[bless box rigged exchange]', e));
         const finalCard = exResults[0] || card;
@@ -6613,6 +6617,7 @@ function buyBlessItem(id, currency){
         } else {
           GAME.inventory.push(card);
           try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
+          try { _logCardDrawAttempt('bless_box', [card], { bless: it.cost }); } catch(e){}
           // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
           const exResults = [card];
           _offerExchangeForResults(exResults).catch(e => console.warn('[bless box exchange]', e));
@@ -7045,6 +7050,7 @@ function doGacha(n){
     results.push(card);
     try { _logCardAcquisition(card, 'gacha_shop_hero'); } catch(e){}
   }
+  try { _logCardDrawAttempt('gacha_shop_hero', results, { gold: cost }); } catch(e){}
 
   // 결과 렌더링
   $('gachaResult').hidden = false;
@@ -9686,6 +9692,7 @@ async function raidEnd(result){
             GAME.inventory.push(card);
             _markGradeAcquired([card]);
             try { _logCardAcquisition(card, 'raid_boss_abyss'); } catch(e){}
+            try { _logCardDrawAttempt('raid_boss_abyss', [card]); } catch(e){}
             // 일반/레어 카드는 인라인 즉시 판매 버튼 노출
             let sellBtn = '';
             if (card.grade === 'normal' || card.grade === 'rare'){
@@ -22505,6 +22512,37 @@ function _logCardAcquisition(card, source){
   } catch(e){ console.warn('[cardLog]', e); }
 }
 
+// 영웅+ 가능 뽑기 「시행」 로그 (card_draw_log)
+// - 획득 결과(_logCardAcquisition) 와 별도 — 뽑기 자체가 돌아갔는지 추적
+// - 유저가 영웅/전설 카드를 보유해도 여기 시행 로그가 적으면 조작 의심 신호
+// - 영웅+ 등급이 나올 수 있는 뽑기만 (일반/레어 상점은 제외)
+function _logCardDrawAttempt(shopId, results, opts){
+  try {
+    if (!sb || !GAME.player) return;
+    const sid = String(shopId || '');
+    // 영웅+ 가능 뽑기만 — 일반/레어 상점은 제외
+    const TRACKED = ['gacha_shop_unique','gacha_shop_hero','gacha_shop_legend',
+                     'bless_gacha_1','bless_gacha_11','bless_box',
+                     'card_synthesis','raid_boss_abyss'];
+    if (!TRACKED.includes(sid)) return;
+    const gc = { normal:0, rare:0, unique:0, hero:0, legend:0 };
+    (results || []).forEach(c => { if (c && gc[c.grade] !== undefined) gc[c.grade]++; });
+    const o = opts || {};
+    sb.auth.getUser().then(({ data: ud }) => {
+      if (!ud || !ud.user) return;
+      sb.from('card_draw_log').insert({
+        user_id: ud.user.id,
+        nickname: GAME.player.name,
+        shop_id: sid,
+        draw_count: (results || []).length,
+        grade_counts: gc,
+        cost_gold: o.gold | 0,
+        cost_bless: o.bless | 0,
+      }).then(({ error }) => { if (error) console.warn('[drawLog]', error); });
+    }).catch(e => console.warn('[drawLog getUser]', e));
+  } catch(e){ console.warn('[drawLog]', e); }
+}
+
 function sendChat(){
   const input = $('chatInput');
   const msg = (input.value || '').trim();
@@ -23295,13 +23333,22 @@ function renderAdminEdit(){
 
     ${(u.source === 'cloud') ? `
     <div class="edit-row" style="display:block;background:#f0f8ff;border:1px solid #4a7cc8;padding:8px 10px;margin:6px 0;border-radius:4px;">
-      <div style="font-weight:bold;color:#2e53b2;margin-bottom:6px;font-size:12px;">📊 뽑기 로그 조회 (유니크·영웅·전설 획득 이력)</div>
+      <div style="font-weight:bold;color:#2e53b2;margin-bottom:6px;font-size:12px;">📊 카드 획득 로그 (유니크·영웅·전설 획득 이력)</div>
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
         <button class="admin-btn small" onclick="adminFetchCardLog('${(u.name||'').replace(/'/g,"\\'")}')">🔍 상세 로그 (최근 100건)</button>
         <button class="admin-btn small" onclick="adminFetchCardLogSummary('${(u.name||'').replace(/'/g,"\\'")}')">📈 집계 (grade × source)</button>
         <span style="font-size:10px;color:#666;">· 뽑기·공격대·상자·퀘스트·교환 등 모든 획득 경로 추적</span>
       </div>
       <div id="adminCardLogPanel" style="font-size:11px;max-height:260px;overflow:auto;background:#fff;border:1px solid #ccc;padding:6px;min-height:30px;color:#333;">조회 버튼을 눌러주세요.</div>
+    </div>
+    <div class="edit-row" style="display:block;background:#fff5e6;border:1px solid #c08040;padding:8px 10px;margin:6px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#8a4a00;margin-bottom:6px;font-size:12px;">🎲 뽑기 시행 로그 (영웅+ 가능 상점 — 획득 확률 역산용)</div>
+      <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
+        <button class="admin-btn small" onclick="adminFetchDrawLog('${(u.name||'').replace(/'/g,"\\'")}')">🔍 시행 상세 (최근 100건)</button>
+        <button class="admin-btn small" onclick="adminFetchDrawSummary('${(u.name||'').replace(/'/g,"\\'")}')">📈 상점별 집계 + 획득률</button>
+        <span style="font-size:10px;color:#666;">· 시행 수 대비 영웅/전설 획득률이 과도하게 높으면 조작 의심</span>
+      </div>
+      <div id="adminDrawLogPanel" style="font-size:11px;max-height:260px;overflow:auto;background:#fff;border:1px solid #ccc;padding:6px;min-height:30px;color:#333;">조회 버튼을 눌러주세요.</div>
     </div>` : ''}
 
     <div style="padding:12px;text-align:center;border-top:1px solid #ccc;">
@@ -23849,6 +23896,127 @@ async function adminFetchCardLogSummary(nickname){
       <div style="font-size:11px;margin-bottom:6px;">${totalLine}</div>
       <table style="width:100%;border-collapse:collapse;font-size:11px;">
         <thead><tr style="background:#eef;"><th>등급</th><th style="text-align:left;">출처</th><th style="text-align:right;">횟수</th><th style="text-align:left;">기간</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e){
+    panel.innerHTML = `<span style="color:#c00;">조회 실패: ${e.message || e}</span>`;
+  }
+}
+
+// 운영자: 뽑기 「시행」 상세 로그 (card_draw_log) — 영웅+ 가능 상점만 기록됨
+async function adminFetchDrawLog(nickname){
+  const panel = document.getElementById('adminDrawLogPanel');
+  if (!panel) return;
+  if (!sb){ panel.innerHTML = '<span style="color:#c00;">클라우드 모드 전용</span>'; return; }
+  panel.innerHTML = '<span style="color:#666;">조회 중...</span>';
+  try {
+    const { data, error } = await sb.rpc('admin_fetch_card_draw_log', { p_nickname: nickname, p_limit: 100 });
+    if (error){ panel.innerHTML = `<span style="color:#c00;">조회 실패: ${error.message || error}</span>`; return; }
+    if (!Array.isArray(data) || data.length === 0){
+      panel.innerHTML = `<span style="color:#888;">${nickname} 님의 뽑기 시행 로그가 없습니다 (영웅+ 가능 상점만 기록 · 배포 전 시행은 미포함)</span>`;
+      return;
+    }
+    const SHOP_LABEL = {
+      'gacha_shop_unique':'🔮 유니크 상점', 'gacha_shop_hero':'⭐ 영웅 상점', 'gacha_shop_legend':'👑 전설 상점',
+      'bless_gacha_1':'✨ 축복 1연', 'bless_gacha_11':'✨ 축복 11연',
+      'bless_box':'📦 축복 상자', 'card_synthesis':'🔨 카드 합성', 'raid_boss_abyss':'🌑 성좌 보스'
+    };
+    const rows = data.map(r => {
+      const d = new Date(r.created_at);
+      const dt = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}:${String(d.getSeconds()).padStart(2,'0')}`;
+      const gc = r.grade_counts || {};
+      const parts = [];
+      if (gc.legend) parts.push(`<span style="color:#b8860b;font-weight:bold;">전설 ${gc.legend}</span>`);
+      if (gc.hero)   parts.push(`<span style="color:#dc143c;font-weight:bold;">영웅 ${gc.hero}</span>`);
+      if (gc.unique) parts.push(`<span style="color:#a335ee;font-weight:bold;">유니크 ${gc.unique}</span>`);
+      if (gc.rare)   parts.push(`<span style="color:#3399ff;">레어 ${gc.rare}</span>`);
+      if (gc.normal) parts.push(`<span style="color:#888;">일반 ${gc.normal}</span>`);
+      const resultHtml = parts.length ? parts.join(' · ') : '<span style="color:#aaa;">카드 외 보상</span>';
+      const costParts = [];
+      if (r.cost_gold)  costParts.push(`${(r.cost_gold||0).toLocaleString()}G`);
+      if (r.cost_bless) costParts.push(`축복 ${r.cost_bless}`);
+      return `<tr>
+        <td style="padding:2px 4px;color:#666;white-space:nowrap;">${dt}</td>
+        <td style="padding:2px 4px;font-weight:bold;">${SHOP_LABEL[r.shop_id]||r.shop_id}</td>
+        <td style="padding:2px 4px;text-align:center;">${r.draw_count}장</td>
+        <td style="padding:2px 4px;">${resultHtml}</td>
+        <td style="padding:2px 4px;color:#888;font-size:10px;">${costParts.join(' / ')||'-'}</td>
+      </tr>`;
+    }).join('');
+    panel.innerHTML = `
+      <div style="font-size:10px;color:#666;margin-bottom:4px;">총 ${data.length}건 (최근순, 최대 100건)</div>
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead><tr style="background:#fee;"><th style="padding:3px 4px;text-align:left;">시각</th><th>상점</th><th>뽑기 수</th><th style="text-align:left;">결과</th><th style="text-align:left;">비용</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>`;
+  } catch(e){
+    panel.innerHTML = `<span style="color:#c00;">조회 실패: ${e.message || e}</span>`;
+  }
+}
+// 운영자: 뽑기 시행 집계 — 상점별 총 시행수 · 뽑기 수 · 등급별 획득 · 획득률
+async function adminFetchDrawSummary(nickname){
+  const panel = document.getElementById('adminDrawLogPanel');
+  if (!panel) return;
+  if (!sb){ panel.innerHTML = '<span style="color:#c00;">클라우드 모드 전용</span>'; return; }
+  panel.innerHTML = '<span style="color:#666;">조회 중...</span>';
+  try {
+    const { data, error } = await sb.rpc('admin_fetch_card_draw_summary', { p_nickname: nickname });
+    if (error){ panel.innerHTML = `<span style="color:#c00;">조회 실패: ${error.message || error}</span>`; return; }
+    if (!Array.isArray(data) || data.length === 0){
+      panel.innerHTML = `<span style="color:#888;">${nickname} 님의 뽑기 시행 로그가 없습니다</span>`;
+      return;
+    }
+    const SHOP_LABEL = {
+      'gacha_shop_unique':'🔮 유니크 상점', 'gacha_shop_hero':'⭐ 영웅 상점', 'gacha_shop_legend':'👑 전설 상점',
+      'bless_gacha_1':'✨ 축복 1연', 'bless_gacha_11':'✨ 축복 11연',
+      'bless_box':'📦 축복 상자', 'card_synthesis':'🔨 카드 합성', 'raid_boss_abyss':'🌑 성좌 보스'
+    };
+    const fmtDate = (t) => {
+      const d = new Date(t);
+      return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    };
+    const pct = (n, d) => d > 0 ? ((100 * n / d).toFixed(2) + '%') : '-';
+    let totLegend=0, totHero=0, totUnique=0, totDraws=0;
+    const rows = data.map(r => {
+      const draws = Number(r.total_draws)||0;
+      totDraws += draws;
+      totLegend += Number(r.legend_cnt)||0;
+      totHero   += Number(r.hero_cnt)||0;
+      totUnique += Number(r.unique_cnt)||0;
+      return `<tr>
+        <td style="padding:3px 4px;font-weight:bold;">${SHOP_LABEL[r.shop_id]||r.shop_id}</td>
+        <td style="padding:3px 4px;text-align:right;">${r.attempt_cnt}회</td>
+        <td style="padding:3px 4px;text-align:right;">${draws}장</td>
+        <td style="padding:3px 4px;text-align:right;color:#b8860b;font-weight:bold;">${r.legend_cnt||0} <span style="color:#999;font-weight:normal;font-size:9px;">(${pct(r.legend_cnt, draws)})</span></td>
+        <td style="padding:3px 4px;text-align:right;color:#dc143c;font-weight:bold;">${r.hero_cnt||0} <span style="color:#999;font-weight:normal;font-size:9px;">(${pct(r.hero_cnt, draws)})</span></td>
+        <td style="padding:3px 4px;text-align:right;color:#a335ee;font-weight:bold;">${r.unique_cnt||0} <span style="color:#999;font-weight:normal;font-size:9px;">(${pct(r.unique_cnt, draws)})</span></td>
+        <td style="padding:3px 4px;text-align:right;color:#3399ff;">${r.rare_cnt||0}</td>
+        <td style="padding:3px 4px;text-align:right;color:#888;">${r.normal_cnt||0}</td>
+        <td style="padding:3px 4px;color:#888;font-size:10px;">${(r.total_gold||0).toLocaleString()}G / 축복${r.total_bless||0}</td>
+        <td style="padding:3px 4px;color:#999;font-size:10px;">${fmtDate(r.first_at)}<br>~ ${fmtDate(r.last_at)}</td>
+      </tr>`;
+    }).join('');
+    const totalLine = `
+      <div style="font-size:11px;margin-bottom:6px;">
+        <span style="background:#b8860b;color:#fff;padding:2px 8px;border-radius:3px;margin-right:4px;font-weight:bold;">전설 ${totLegend}장 (${pct(totLegend,totDraws)})</span>
+        <span style="background:#dc143c;color:#fff;padding:2px 8px;border-radius:3px;margin-right:4px;font-weight:bold;">영웅 ${totHero}장 (${pct(totHero,totDraws)})</span>
+        <span style="background:#a335ee;color:#fff;padding:2px 8px;border-radius:3px;margin-right:4px;font-weight:bold;">유니크 ${totUnique}장 (${pct(totUnique,totDraws)})</span>
+        <span style="color:#555;font-weight:bold;">총 ${totDraws}장 뽑기</span>
+      </div>`;
+    panel.innerHTML = `
+      ${totalLine}
+      <table style="width:100%;border-collapse:collapse;font-size:10px;">
+        <thead><tr style="background:#fee;">
+          <th style="padding:3px 4px;text-align:left;">상점</th>
+          <th>시행</th><th>총 뽑기</th>
+          <th style="color:#b8860b;">전설</th>
+          <th style="color:#dc143c;">영웅</th>
+          <th style="color:#a335ee;">유니크</th>
+          <th style="color:#3399ff;">레어</th>
+          <th>일반</th>
+          <th style="text-align:left;">비용</th>
+          <th style="text-align:left;">기간</th>
+        </tr></thead>
         <tbody>${rows}</tbody>
       </table>`;
   } catch(e){
