@@ -5512,19 +5512,21 @@ function renderSynthesisGrid(){
   const cells = sortedIdx.map(idx => {
     const c = GAME.inventory[idx];
     if (!c) return '';
+    // 인벤 카드의 iconPath 는 획득 시점 스냅샷일 수 있어 outdated.
+    // CARDS 레지스트리의 최신 정의로 재해석 → renew / pmcard / wc3_icons 폴백 활용 (cardIcon 참조)
+    const defC = (typeof CARDS !== 'undefined' && CARDS.find(x => x.id === c.id)) || c;
     const picked = _synthesisPicks.has(idx);
     const gColor = GRADE_COLOR[c.grade] || '#666';
     const gLabel = GRADE_KR[c.grade] || c.grade;
-    const icon = c.iconPath
-      ? `<img src="${c.iconPath}" alt="${c.name}" style="width:38px;height:38px;object-fit:contain;background:#000;border:1px solid #666;display:block;">`
-      : `<div style="width:38px;height:38px;background:#333;color:${gColor};font-size:20px;display:flex;align-items:center;justify-content:center;">🎴</div>`;
+    const icon = `<div style="width:38px;height:38px;background:#000;border:1px solid #666;flex:none;overflow:hidden;">${cardIcon(defC)}</div>`;
+    const displayName = defC.name || c.name;
     return `
       <div class="synth-card" onclick="toggleSynthesisPick(${idx})"
            style="width:120px;padding:6px;background:${picked ? '#e0d5f5' : '#fff'};border:2px solid ${picked ? '#5a1a6b' : gColor};border-radius:4px;cursor:pointer;display:flex;align-items:center;gap:6px;user-select:none;">
         <input type="checkbox" ${picked?'checked':''} onclick="event.stopPropagation();toggleSynthesisPick(${idx})" style="cursor:pointer;">
         ${icon}
         <div style="flex:1;font-size:10px;line-height:1.2;overflow:hidden;">
-          <div style="font-weight:bold;color:${c.grade==='normal'?'#000':gColor};">${c.name}</div>
+          <div style="font-weight:bold;color:${c.grade==='normal'?'#000':gColor};">${displayName}</div>
           <div style="color:${gColor};font-size:9px;font-weight:bold;">${gLabel}</div>
         </div>
       </div>`;
