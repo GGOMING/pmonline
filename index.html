@@ -2944,8 +2944,8 @@
         </div>
 
         <!-- ─── Visionary Circle (후원자 순위) — 크림슨 세련 톤 ─── -->
-        <!-- 재오픈 시 아래 div 의 style="display:none;" 만 제거하면 됩니다. -->
-        <div style="display:none;margin-top:14px;background:linear-gradient(135deg,#4a0e14 0%,#2a0508 55%,#1a0304 100%);border:2px solid #c9a26b;border-radius:8px;padding:16px;box-shadow:0 4px 18px rgba(122,24,30,0.5), inset 0 0 24px rgba(0,0,0,0.35);">
+        <!-- 숨기려면 아래 div 의 style 맨 앞에 "display:none;" 를 다시 넣으면 됩니다. -->
+        <div style="margin-top:14px;background:linear-gradient(135deg,#4a0e14 0%,#2a0508 55%,#1a0304 100%);border:2px solid #c9a26b;border-radius:8px;padding:16px;box-shadow:0 4px 18px rgba(122,24,30,0.5), inset 0 0 24px rgba(0,0,0,0.35);">
           <div style="font-size:19px;font-weight:bold;color:#f5deb3;text-align:center;letter-spacing:2px;text-shadow:0 1px 3px rgba(0,0,0,0.6), 0 0 12px rgba(201,162,107,0.4);margin-bottom:6px;font-family:'Georgia','굴림',serif;">
             ✦ Visionary Circle ✦
           </div>
@@ -10117,14 +10117,23 @@ async function loadRankingFromCloud(){
   } catch(e){ console.warn('[loadRanking]', e); return false; }
 }
 
+// ══════════════════════════════════════════════════════════════════════
+// RANKING_DISABLED — 랭킹전 운영 중단 플래그 (영구 폐지, 기능 코드는 유지)
+//   · 모든 자동 트래픽 (heartbeat / Realtime 구독 / 정각 리셋 / sync / cleanup) 중단
+//   · 재오픈하려면 이 상수를 false 로만 바꾸면 됨 (코드 복원 불필요)
+// ══════════════════════════════════════════════════════════════════════
+const RANKING_DISABLED = true;
+
 // 랭킹전 슬롯 하트비트 — 등록된 상태에서 2분마다 last_active_at 갱신. 10분 이상 미갱신 시 rank_cleanup_stale 이 정리.
 let _rankHeartbeatTimer = null;
 async function _rankHeartbeatTick(){
+  if (RANKING_DISABLED) return;
   if (!sb || !GAME.player) return;
   if (!GAME.ranking || GAME.ranking.myRank <= 0) return;   // 미등록 상태면 skip
   try { await sb.rpc('rank_heartbeat'); } catch(e){ /* RPC 미배포 시 무시 */ }
 }
 function startRankHeartbeat(){
+  if (RANKING_DISABLED) return;
   if (_rankHeartbeatTimer) return;
   _rankHeartbeatTick();
   _rankHeartbeatTimer = setInterval(_rankHeartbeatTick, 120000);   // 2분
@@ -10134,6 +10143,7 @@ function stopRankHeartbeat(){
 }
 // 로그아웃·페이지 종료 시 본인 랭킹 슬롯 즉시 삭제 (fire-and-forget)
 async function _rankExitCleanup(){
+  if (RANKING_DISABLED) return;
   if (!sb) return;
   try {
     const myUid = await _getMyUserId();
@@ -10143,6 +10153,7 @@ async function _rankExitCleanup(){
 }
 
 async function subscribeRanking(){
+  if (RANKING_DISABLED) return;
   if (!sb) return;
   // 이미 구독 중이면 재구독 비용 회피 (Realtime msg quota 절감)
   if (_rankChannel) return;
@@ -10167,6 +10178,7 @@ async function _teardownRanking(){
 
 // 본인 슬롯 정보(레벨/스탯/덱) 클라우드와 동기화
 async function syncMyRankSlot(){
+  if (RANKING_DISABLED) return;
   if (!sb) return;
   try {
     await cloudSaveNow();
@@ -10177,6 +10189,7 @@ async function syncMyRankSlot(){
 // 본인이 1~10위에 등록된 경우, 변경 후 디바운스 동기화
 let _rankSyncTimer = null;
 function scheduleRankSlotSync(){
+  if (RANKING_DISABLED) return;
   if (!sb || !GAME.player) return;
   const myRank = GAME.ranking && GAME.ranking.myRank;
   if (!(myRank >= 1 && myRank <= 10)) return;
@@ -10226,6 +10239,7 @@ function getRankRewardsLeft(){
 }
 
 async function checkRankingReset(){
+  if (RANKING_DISABLED) return;
   // 매 정각 리셋 — 클라이언트가 시간 경계 감지 후 rank_full_reset 트리거.
   // (pg_cron 없이 접속 클라이언트가 대신 실행. Realtime subscription 으로 다른 온라인 유저에게도 자동 전파)
   // 여러 클라이언트가 동시에 감지해도 rank_claim_reset RPC 가 원자적으로 대표 클라이언트 1명만 선정 →
@@ -10279,6 +10293,7 @@ function getRankBonus(){
 
 const RANK_MIN_LEVEL = 20;
 async function openRank(){
+  if (RANKING_DISABLED){ toast('랭킹전은 현재 운영이 중단되었습니다.'); return; }
   const _p0 = GAME.player;
   if (_p0 && _isBanned(_p0)){ _blockedByBanToast(_p0); return; }
   if (_p0 && !_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
