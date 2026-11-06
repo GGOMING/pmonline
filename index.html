@@ -560,6 +560,11 @@
   }
   #logoutBtn:hover { background:#666; }
   #pg-main.active ~ #logoutBtn, body:has(#pg-main.active) #logoutBtn { display:block; }
+  /* 수행(hunt) 전투 진행 중에는 로그아웃·PC/모바일 전환 버튼 숨김
+     ─ 모바일에서 로그아웃 버튼이 하단에 있어 전투 중 오터치 유발 가능
+     ─ hunt-result (결과창) 로 전환되면 hidden 해제 → 자동 복원 */
+  body:has(#hunt-battle:not([hidden])) #logoutBtn,
+  body:has(#hunt-battle:not([hidden])) #layoutToggle { display:none !important; }
   /* 모바일: 상단 로그아웃 버튼이 캐릭터 스탯 셀 위에 겹쳐 표시되는 문제 → 좌측 하단으로 이동 (PC모드 버튼 반대쪽) */
   body.layout-vertical #logoutBtn {
     top:auto; right:auto;
@@ -4269,15 +4274,98 @@ function saveGameLocalOnly(){
     localStorage.setItem(key, JSON.stringify(data));
   } catch(e){}
 }
+// ═══════════════════════════════════════════════════════════════════
+// 2026-10-15 사건 복구 모드
+//   공격자가 운영자 계정 탈취 후 saves 테이블 대량 삭제 (약 340명 손실).
+//   그 후 재접속한 유저는 신규 가입 상태로 서버에 Lv1 세이브가 생성되어
+//   기존 로컬 캐시의 과거 데이터가 묻히는 2차 손실 진행 중.
+//
+//   이 패치는:
+//   1) 서버 saves 없을 때 localStorage 폴백 자동 복구
+//   2) 서버 saves 가 "리셋 의심" (사건 이후 저장된 Lv1/inv 0 신규 상태) 일 때
+//      로컬 캐시의 더 좋은 데이터가 있으면 복구 제안
+//   3) 닉네임 보안 검증으로 타인 데이터 가로채기 차단
+//
+//   RECOVERY_MODE = true 상태로 2~4주 운영 후 해제.
+// ═══════════════════════════════════════════════════════════════════
+const RECOVERY_MODE = true;
+const INCIDENT_AT_MS = Date.parse('2026-10-15T08:00:00Z');   // 사건 추정 시각 (KST 17:00)
+
+// 리셋 의심 상태 판별 (사건 이후 자동 재가입된 Lv1 신규 상태)
+function _isLikelyResetSave(data){
+  if (!data || !data.player) return false;
+  const p = data.player;
+  const savedAt = data.savedAt || 0;
+  const level = Number(p.level) || 1;
+  const gold = Number(p.gold) || 0;
+  const invCnt = Array.isArray(data.inventory) ? data.inventory.length : 0;
+  return (level === 1 && gold <= 200 && invCnt === 0 && savedAt >= INCIDENT_AT_MS);
+}
+
+// 로컬 캐시에서 더 좋은 데이터 찾기 (닉네임 일치 + 더 좋은 상태)
+function _findBetterLocalSave(nickname){
+  if (!nickname) return null;
+  try {
+    const localRaw = localStorage.getItem(saveKeyFor(nickname));
+    if (!localRaw) return null;
+    const localData = JSON.parse(localRaw);
+    // 보안: localStorage 의 player.name 과 요청 닉네임 일치 필수
+    if (!localData || !localData.player || localData.player.name !== nickname) return null;
+    // 리셋 상태가 아닌 "쓸만한" 데이터만
+    if (_isLikelyResetSave(localData)) return null;
+    const level = Number(localData.player.level) || 1;
+    const gold = Number(localData.player.gold) || 0;
+    const invCnt = Array.isArray(localData.inventory) ? localData.inventory.length : 0;
+    // 최소 조건: Lv >= 2 또는 골드 > 500 또는 인벤토리 보유
+    if (level < 2 && gold <= 500 && invCnt === 0) return null;
+    return localData;
+  } catch(e){ console.warn('[findLocal]', e); return null; }
+}
+
 async function cloudLoad(){
   if (!sb) return false;
   const { data: ud } = await sb.auth.getUser();
   if (!ud || !ud.user) return false;
   const { data: row, error } = await sb.from('saves').select('data,nickname,data_version').eq('user_id', ud.user.id).maybeSingle();
   if (error){ console.warn('[cloudLoad]', error); return false; }
-  if (!row || !row.data) return false;
+
+  // ★ 복구 모드: 서버 saves 없음 → 로컬 캐시 fallback (2026-10-15 사건 대응)
+  if (!row || !row.data) {
+    if (RECOVERY_MODE){
+      const nickname = (ud.user.user_metadata && ud.user.user_metadata.nickname) || null;
+      const local = _findBetterLocalSave(nickname);
+      if (local){
+        console.log(`[cloudLoad 복구] 서버 saves 없음 — 로컬 캐시(${new Date(local.savedAt).toLocaleString()}) 로 복구`);
+        _cloudSaveVersion = 0;
+        const ok = applySavePayload(local);
+        if (ok){
+          cloudSaveNow().catch(e => console.warn('[recovery upload]', e));
+          setTimeout(() => { try { toast('✔ 세이브 복구 완료 — 로컬 캐시에서 복원'); } catch(e){} }, 500);
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   // 낙관적 잠금 — 받은 version 저장 (저장 시 UPDATE WHERE 조건으로 사용)
   _cloudSaveVersion = Number(row.data_version) || 0;
+
+  // ★ 복구 모드: 서버 saves 가 "리셋 의심 상태" 이고 로컬에 더 좋은 데이터 있으면 복구
+  if (RECOVERY_MODE && _isLikelyResetSave(row.data)){
+    const localName = row.nickname || (row.data.player && row.data.player.name);
+    const local = _findBetterLocalSave(localName);
+    if (local){
+      console.log(`[cloudLoad 복구] 서버가 리셋 상태 — 로컬 캐시(${new Date(local.savedAt).toLocaleString()}) 로 복구`);
+      const ok = applySavePayload(local);
+      if (ok){
+        cloudSaveNow().catch(e => console.warn('[recovery upload]', e));
+        setTimeout(() => { try { toast('✔ 세이브 복구 완료 — 서버 리셋 상태를 로컬 캐시로 덮어씀'); } catch(e){} }, 500);
+        return true;
+      }
+    }
+  }
+
   // 로컬 캐시가 클라우드보다 신선하면 로컬 우선 (탭 unload 시 클라우드 flush 실패 케이스 복구)
   //  - 조건: 동일 닉네임의 로컬 저장의 savedAt이 클라우드보다 뒤(더 큰 값)
   try {
@@ -11503,6 +11591,11 @@ function _ggomingLoseReward(){
 // ─── 전투 로그 CSV 캡처 & Google Drive 업로드 ───
 // 전투 시작 시 스냅샷 · 매 턴 후 기록 · 종료 시 CSV 조립 후 /api/battle-log 로 fire-and-forget POST
 // (렉 방지: await 없음, 실패해도 게임 흐름 방해 안 함)
+//
+// 📜 2026-11-01: Vercel Hobby Fluid Active CPU 한도 초과로 배포가 1회 pause.
+//   원인: /api/battle-log 가 매 전투마다 Google OAuth + Drive API 4~6회 호출.
+//   조치: Pro 플랜 업그레이드 (240h Active CPU 포함) → 재활성화.
+//   유저 500명 초과하면 Supabase 테이블로 이전 검토할 것.
 const BATTLE_LOG_ENABLED = true;
 const BATTLE_LOG_ENDPOINT = '/api/battle-log';
 function _btlIsoNow(){
