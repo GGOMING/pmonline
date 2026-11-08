@@ -560,11 +560,12 @@
   }
   #logoutBtn:hover { background:#666; }
   #pg-main.active ~ #logoutBtn, body:has(#pg-main.active) #logoutBtn { display:block; }
-  /* 수행(hunt) 전투 진행 중에는 로그아웃·PC/모바일 전환 버튼 숨김
-     ─ 모바일에서 로그아웃 버튼이 하단에 있어 전투 중 오터치 유발 가능
-     ─ hunt-result (결과창) 로 전환되면 hidden 해제 → 자동 복원 */
-  body:has(#hunt-battle:not([hidden])) #logoutBtn,
-  body:has(#hunt-battle:not([hidden])) #layoutToggle { display:none !important; }
+  /* 수행(hunt) 전투 진행 중에만 로그아웃·PC/모바일 전환 버튼 숨김
+     ─ hunt-battle 요소는 HTML 상 hidden 속성이 없는 상태로 렌더링되므로
+       content-hunt 가 열린 경우에 한해서만 매칭되도록 범위 좁힘
+     ─ hunt-result (결과창) 로 전환되면 hunt-battle 이 hidden → 자동 복원 */
+  body:has(#content-hunt:not([hidden]) #hunt-battle:not([hidden])) #logoutBtn,
+  body:has(#content-hunt:not([hidden]) #hunt-battle:not([hidden])) #layoutToggle { display:none !important; }
   /* 모바일: 상단 로그아웃 버튼이 캐릭터 스탯 셀 위에 겹쳐 표시되는 문제 → 좌측 하단으로 이동 (PC모드 버튼 반대쪽) */
   body.layout-vertical #logoutBtn {
     top:auto; right:auto;
