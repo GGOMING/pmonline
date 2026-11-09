@@ -1775,6 +1775,7 @@
   <div class="admin-header">
     🔧 관리자 에디터 — 여신전쟁
     <span style="float:right;">
+      <button id="opMaintenanceBtnTop" onclick="opToggleMaintenance()" style="padding:3px 12px;font-size:12px;background:#c00;color:#fff;border:0;border-radius:3px;font-weight:bold;margin-right:6px;cursor:pointer;">🚧 유지보수 ON</button>
       <button onclick="exitAdmin()" style="padding:3px 12px; font-size:12px;">로그인으로 돌아가기</button>
     </span>
   </div>
@@ -25873,11 +25874,16 @@ async function opToggleMaintenance(){
   } catch(e){ alert('전송 실패: ' + (e.message||e)); }
 }
 function _updateMaintenanceBtn(){
-  const b = document.getElementById('opMaintenanceBtn');
-  if (!b) return;
   const on = localStorage.getItem(MAINTENANCE_LS_KEY) === '1';
-  b.textContent = on ? '🚧 유지보수 OFF' : '🚧 유지보수 ON';
-  b.style.background = on ? '#0a7' : '';
+  // System 패널 안 버튼 + admin 페이지 헤더 버튼 둘 다 갱신
+  ['opMaintenanceBtn', 'opMaintenanceBtnTop'].forEach(id => {
+    const b = document.getElementById(id);
+    if (!b) return;
+    b.textContent = on ? '🚧 유지보수 OFF' : '🚧 유지보수 ON';
+    // 헤더 버튼은 기본 배경이 #c00 (ON 유도 빨강) → ON 상태면 녹색으로 전환
+    b.style.background = on ? '#0a7' : (id === 'opMaintenanceBtnTop' ? '#c00' : '');
+    b.style.color = '#fff';
+  });
 }
 // 모든 클라이언트에서 admin-broadcast 채널 구독 — 앱 시작 시 1회 (subscribeChatChannel 등과 유사)
 let _adminBroadcastCh = null;
