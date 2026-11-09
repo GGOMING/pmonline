@@ -3927,7 +3927,7 @@ function toggleLayout(){
 // 진짜 멀티 디바이스/멀티 브라우저는 서버 백엔드가 도입돼야 한다.
 const ACCOUNTS_KEY = 'yeoshin_accounts_v1';        // 가입된 계정 이름 목록 (JSON 배열)
 const LAST_USER_KEY = 'yeoshin_last_user_v1';      // 마지막 로그인 이름 (아이디 자동 채움 용)
-const SAVE_KEY_PREFIX = 'yeoshin_save_v1__';        // 계정별 저장 키 prefix
+const SAVE_KEY_PREFIX = 'yeoshin_save_v2__';        // 계정별 저장 키 prefix (2026-11 전원 재시작 시 v1 → v2 변경 · 구버전 localStorage 캐시 자연 폐기)
 const LEGACY_SAVE_KEY = 'yeoshin_save_v1';         // 구버전 단일 슬롯 (마이그레이션 용)
 function saveKeyFor(name){ return SAVE_KEY_PREFIX + name; }
 function backupKeysFor(name){
@@ -4276,20 +4276,13 @@ function saveGameLocalOnly(){
   } catch(e){}
 }
 // ═══════════════════════════════════════════════════════════════════
-// 2026-10-15 사건 복구 모드
-//   공격자가 운영자 계정 탈취 후 saves 테이블 대량 삭제 (약 340명 손실).
-//   그 후 재접속한 유저는 신규 가입 상태로 서버에 Lv1 세이브가 생성되어
-//   기존 로컬 캐시의 과거 데이터가 묻히는 2차 손실 진행 중.
-//
-//   이 패치는:
-//   1) 서버 saves 없을 때 localStorage 폴백 자동 복구
-//   2) 서버 saves 가 "리셋 의심" (사건 이후 저장된 Lv1/inv 0 신규 상태) 일 때
-//      로컬 캐시의 더 좋은 데이터가 있으면 복구 제안
-//   3) 닉네임 보안 검증으로 타인 데이터 가로채기 차단
-//
-//   RECOVERY_MODE = true 상태로 2~4주 운영 후 해제.
+// 2026-10-15 사건 복구 모드 — 비활성화됨
+//   사건 후 "데이터 복구" 를 시도했으나 운영팀 결정으로 전원 재시작
+//   (complete_wipe.sql 실행 + SAVE_KEY_PREFIX v1→v2 변경).
+//   복구 로직 자체는 코드로 보존하되 상수 하나로 끔.
+//   재활용 필요 시 RECOVERY_MODE = true + 사건 시각 조정.
 // ═══════════════════════════════════════════════════════════════════
-const RECOVERY_MODE = true;
+const RECOVERY_MODE = false;
 const INCIDENT_AT_MS = Date.parse('2026-10-15T08:00:00Z');   // 사건 추정 시각 (KST 17:00)
 
 // 리셋 의심 상태 판별 (사건 이후 자동 재가입된 Lv1 신규 상태)
