@@ -1824,6 +1824,14 @@
           <label>영웅: <input type="number" id="adminSellHero" style="width:60px;"></label>
           <button class="admin-btn small" onclick="adminApplySellPrice()">적용</button>
         </div>
+        <div style="margin-top:10px;padding:6px 8px;background:#fff8e0;border:1px solid #c98d1a;border-radius:3px;font-size:11px;">
+          <b>⏰ 일일 수행/공격대 한도</b> <span style="color:#888;font-size:10px;">(KST 자정 리셋 · game_settings 즉시 반영)</span>
+          <div style="margin-top:4px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <label>수행: <input type="number" id="adminDailyHuntLimit" style="width:70px;" min="1" max="100000"></label>
+            <label>공격대: <input type="number" id="adminDailyRaidLimit" style="width:70px;" min="1" max="100000"></label>
+            <button class="admin-btn small" onclick="adminApplyDailyLimits()">적용</button>
+          </div>
+        </div>
       </div>
 
       <div class="sys-group">
@@ -8827,6 +8835,7 @@ async function openRaid(raidKey){
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
   if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  if (!_canDoDailyRaid(p)){ _dailyRaidBlockToast(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
@@ -9126,6 +9135,7 @@ function startRaidMobBattle(){
     return;
   }
   _incHourlyActivity(p);
+  _incDailyRaid(p);
   let monster;
   const pending = p.pendingRaidMob;
   // 같은 raid 키 + 같은 세션 + HP 남아있는 몬스터이 있으면 복원
@@ -11904,6 +11914,64 @@ function _incHourlyActivity(p){
   try { refreshHourlyLimitUI(); } catch(e){}
   try { saveGame(); } catch(e){}
 }
+
+// ─── 일일 수행/공격대 한도 (KST 자정 리셋) ───
+//   서버 game_settings 로 override 가능 (기본: 3000 / 1000)
+//   매크로 방지 / 꼬밍 이벤트도 카운트됨 (예외 없음)
+let _DAILY_HUNT_LIMIT = 3000;
+let _DAILY_RAID_LIMIT = 1000;
+async function _fetchDailyLimits(){
+  if (!sb) return;
+  try {
+    const { data } = await sb.from('game_settings').select('key, value_int')
+      .in('key', ['hunt.daily_limit', 'raid.daily_limit']);
+    if (Array.isArray(data)){
+      for (const row of data){
+        if (row.key === 'hunt.daily_limit' && row.value_int > 0) _DAILY_HUNT_LIMIT = row.value_int;
+        if (row.key === 'raid.daily_limit' && row.value_int > 0) _DAILY_RAID_LIMIT = row.value_int;
+      }
+    }
+  } catch(e){ console.warn('[fetchDailyLimits]', e); }
+}
+function _ensureDailyActivityState(p){
+  if (!p) return;
+  const today = _corridorTodayKstDate();   // KST 'YYYY-MM-DD'
+  if (p.dailyActivityDate !== today){
+    p.dailyActivityDate = today;
+    p.dailyHuntCount = 0;
+    p.dailyRaidCount = 0;
+  }
+}
+function _dailyHuntRemaining(p){
+  if (!p) return 0;
+  _ensureDailyActivityState(p);
+  return Math.max(0, _DAILY_HUNT_LIMIT - (p.dailyHuntCount || 0));
+}
+function _dailyRaidRemaining(p){
+  if (!p) return 0;
+  _ensureDailyActivityState(p);
+  return Math.max(0, _DAILY_RAID_LIMIT - (p.dailyRaidCount || 0));
+}
+function _canDoDailyHunt(p){ return _dailyHuntRemaining(p) > 0; }
+function _canDoDailyRaid(p){ return _dailyRaidRemaining(p) > 0; }
+function _incDailyHunt(p){
+  if (!p) return;
+  _ensureDailyActivityState(p);
+  p.dailyHuntCount = (p.dailyHuntCount || 0) + 1;
+  try { refreshHourlyLimitUI(); } catch(e){}
+}
+function _incDailyRaid(p){
+  if (!p) return;
+  _ensureDailyActivityState(p);
+  p.dailyRaidCount = (p.dailyRaidCount || 0) + 1;
+  try { refreshHourlyLimitUI(); } catch(e){}
+}
+function _dailyHuntBlockToast(){
+  try { toast(`⛔ 오늘 수행 한도 도달 (${_DAILY_HUNT_LIMIT}회) · KST 자정에 리셋됩니다.`); } catch(e){}
+}
+function _dailyRaidBlockToast(){
+  try { toast(`⛔ 오늘 공격대 한도 도달 (${_DAILY_RAID_LIMIT}회) · KST 자정에 리셋됩니다.`); } catch(e){}
+}
 function _hourlyResetRemainMs(){
   const d = new Date();
   return (60 - d.getMinutes()) * 60000 - d.getSeconds() * 1000;
@@ -12633,6 +12701,7 @@ function openHunt(tier){
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
   if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
+  if (!_canDoDailyHunt(p)){ _dailyHuntBlockToast(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     openHeal();
@@ -12647,6 +12716,7 @@ function openHunt(tier){
     return;
   }
   _incHourlyActivity(p);
+  _incDailyHunt(p);
   // tier 자동 결정 (Lv 1~25 → tier 1, Lv 26+ → tier 2)
   if (tier == null) tier = p.level >= 26 ? 2 : 1;
   setCombatMode(true);
@@ -22671,6 +22741,7 @@ function enterMain(){
         await loadRaidFromCloud();
         await claimRaidRewards();
         await fetchOverallRank();
+        _fetchDailyLimits().catch(e => console.warn('[daily limits]', e));
         renderSheet();
         try { updateRaidUI(); } catch(e){}
       } catch(e){ console.warn('init cloud', e); }
@@ -23341,6 +23412,9 @@ async function loadAdminUsers(){
             captchaFailCount: Number(p.captchaFailCount) || 0,
             macroBustsToday: Number(p.macroBustsToday) || 0,
             macroBustsDate: p.macroBustsDate || null,
+            dailyActivityDate: p.dailyActivityDate || null,
+            dailyHuntCount: Number(p.dailyHuntCount) || 0,
+            dailyRaidCount: Number(p.dailyRaidCount) || 0,
             encounterRates: (p.encounterRates && typeof p.encounterRates === 'object') ? {...p.encounterRates} : undefined,
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
             pendingTitles: Array.isArray(p.pendingTitles) ? p.pendingTitles.slice() : [],
@@ -23495,6 +23569,13 @@ function renderAdminEdit(){
     <div class="edit-row"><span class="lbl">골드</span> <input type="number" id="ed_gold" value="${u.gold||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">✨ 축복</span> <input type="number" id="ed_blessing" value="${u.blessing||0}" min="0"></div>
     <div class="edit-row"><span class="lbl">🌿 정령축복</span> <input type="number" id="ed_spiritBlessing" value="${u.spiritBlessing||0}" min="0"> <span style="font-size:10px;color:#666;margin-left:6px;">여신의 탑 10·20·30·40·50층 보스 하루 1회 클리어 시 획득</span></div>
+    <div class="edit-row" style="background:#fff8e0;border-left:3px solid #c98d1a;padding:2px 4px;">
+      <span class="lbl">⏰ 일일 수행/공격대</span>
+      수행 <input type="number" id="ed_dailyHuntCount" value="${u.dailyHuntCount||0}" min="0" style="width:70px;">/${_DAILY_HUNT_LIMIT}
+      공격대 <input type="number" id="ed_dailyRaidCount" value="${u.dailyRaidCount||0}" min="0" style="width:70px;">/${_DAILY_RAID_LIMIT}
+      <button type="button" class="admin-btn small" onclick="adminQuickResetDailyActivity()" style="margin-left:6px;">오늘 0으로</button>
+      <span style="font-size:10px;color:#666;margin-left:6px;">기준일: ${u.dailyActivityDate || '(없음)'}</span>
+    </div>
     <div class="edit-row" style="background:#fff3cd;border-left:3px solid #ffd700;padding:2px 4px;"><span class="lbl">💎 후원액</span> <input type="number" id="ed_sponsorAmount" value="${u.sponsorAmount||0}" min="0" placeholder="원 단위 수기 입력"> <span style="font-size:10px;color:#666;margin-left:6px;">Visionary Circle 순위 반영 (금액 비공개)</span></div>
     <div class="edit-row"><span class="lbl">STR</span> <input type="number" id="ed_str" value="${u.str||5}" min="1" oninput="_adminRecalcHpMp()"></div>
     <div class="edit-row"><span class="lbl">DEX</span> <input type="number" id="ed_dex" value="${u.dex||5}" min="1" oninput="_adminRecalcHpMp()"></div>
@@ -23891,6 +23972,9 @@ async function adminSaveUser(){
   u.blessing = parseInt($('ed_blessing').value) || 0;
   { const _sb = $('ed_spiritBlessing'); u.spiritBlessing = _sb ? Math.max(0, parseInt(_sb.value) || 0) : (u.spiritBlessing || 0); }
   { const _sp = $('ed_sponsorAmount'); u.sponsorAmount = _sp ? (parseInt(_sp.value) || 0) : (u.sponsorAmount || 0); }
+  // 일일 수행/공격대 카운트 수정
+  { const _dh = $('ed_dailyHuntCount'); if (_dh) u.dailyHuntCount = Math.max(0, parseInt(_dh.value) || 0); }
+  { const _dr = $('ed_dailyRaidCount'); if (_dr) u.dailyRaidCount = Math.max(0, parseInt(_dr.value) || 0); }
   u.str = parseInt($('ed_str').value) || 5;
   u.dex = parseInt($('ed_dex').value) || 5;
   u.int = parseInt($('ed_int').value) || 5;
@@ -24082,6 +24166,9 @@ async function adminSaveUser(){
       captchaFailCount: Number(u.captchaFailCount) || 0,
       macroBustsToday: Number(u.macroBustsToday) || 0,
       macroBustsDate: u.macroBustsDate || (saved.player && saved.player.macroBustsDate) || null,
+      dailyActivityDate: u.dailyActivityDate || (saved.player && saved.player.dailyActivityDate) || null,
+      dailyHuntCount: Math.max(0, Number(u.dailyHuntCount) || 0),
+      dailyRaidCount: Math.max(0, Number(u.dailyRaidCount) || 0),
       encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : ((saved.player && saved.player.encounterRates) || undefined),
       titles: Array.isArray(u.titles) ? u.titles.slice() : (saved.player && saved.player.titles) || [],
       pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (saved.player && saved.player.pendingTitles) || [],
@@ -24165,6 +24252,9 @@ async function adminSaveUser(){
         captchaFailCount: Number(u.captchaFailCount) || 0,
         macroBustsToday: Number(u.macroBustsToday) || 0,
         macroBustsDate: u.macroBustsDate || prevPlayer.macroBustsDate || null,
+        dailyActivityDate: u.dailyActivityDate || prevPlayer.dailyActivityDate || null,
+        dailyHuntCount: Math.max(0, Number(u.dailyHuntCount) || 0),
+        dailyRaidCount: Math.max(0, Number(u.dailyRaidCount) || 0),
         encounterRates: (u.encounterRates && typeof u.encounterRates === 'object') ? {...u.encounterRates} : (prevPlayer.encounterRates || undefined),
         titles: Array.isArray(u.titles) ? u.titles.slice() : (prevPlayer.titles || []),
         pendingTitles: Array.isArray(u.pendingTitles) ? u.pendingTitles.slice() : (prevPlayer.pendingTitles || []),
@@ -24862,6 +24952,16 @@ function adminQuickResetStats(){
   u.xpUp = (u.xpUp || 0) + Math.max(0, used);
   renderAdminEdit();
 }
+// 일일 수행/공격대 카운트 0 으로 (기준일도 오늘로)
+function adminQuickResetDailyActivity(){
+  const u = _adminUsers[_adminSelectedUser];
+  if (!u) return;
+  u.dailyHuntCount = 0;
+  u.dailyRaidCount = 0;
+  u.dailyActivityDate = _corridorTodayKstDate();
+  renderAdminEdit();
+  toast('⏰ 일일 수행/공격대 카운트 0 (저장 버튼 눌러야 반영)');
+}
 // adminAddUser는 더 이상 사용하지 않습니다 (실제 가입은 회원가입 페이지에서만)
 
 // 시스템 설정
@@ -24877,6 +24977,9 @@ function refreshAdminSystem(){
   if ($('adminSellRare'))   $('adminSellRare').value   = CARD_SELL_PRICE.rare;
   if ($('adminSellUnique')) $('adminSellUnique').value = CARD_SELL_PRICE.unique;
   if ($('adminSellHero'))   $('adminSellHero').value   = CARD_SELL_PRICE.hero;
+  // 일일 수행/공격대 한도 (현재 서버 config override 값)
+  if ($('adminDailyHuntLimit')) $('adminDailyHuntLimit').value = _DAILY_HUNT_LIMIT;
+  if ($('adminDailyRaidLimit')) $('adminDailyRaidLimit').value = _DAILY_RAID_LIMIT;
   // 공격대 정보 — dawn/mist/abyss 3종 모두
   const dawn  = GAME.raid.dawn  || {};
   const mist  = GAME.raid.mist  || {};
@@ -24979,6 +25082,31 @@ function adminApplySellPrice(){
   if (!isNaN(u)) CARD_SELL_PRICE.unique = u;
   if (!isNaN(h)) CARD_SELL_PRICE.hero   = h;
   alert('✔ 판매가 적용');
+}
+
+// 일일 수행/공격대 한도 즉시 반영 (game_settings upsert)
+async function adminApplyDailyLimits(){
+  const huntRaw = ($('adminDailyHuntLimit') && $('adminDailyHuntLimit').value || '').trim();
+  const raidRaw = ($('adminDailyRaidLimit') && $('adminDailyRaidLimit').value || '').trim();
+  const h = parseInt(huntRaw, 10);
+  const r = parseInt(raidRaw, 10);
+  if (isNaN(h) || h < 1 || h > 100000){ alert('수행 한도: 1~100,000 사이 정수'); return; }
+  if (isNaN(r) || r < 1 || r > 100000){ alert('공격대 한도: 1~100,000 사이 정수'); return; }
+  if (!sb){ alert('⚠ 클라우드 모드 필요'); return; }
+  try {
+    const nowIso = new Date().toISOString();
+    const { error } = await sb.from('game_settings').upsert([
+      { key: 'hunt.daily_limit', value_int: h, updated_at: nowIso },
+      { key: 'raid.daily_limit', value_int: r, updated_at: nowIso },
+    ], { onConflict: 'key' });
+    if (error){ alert('적용 실패: ' + (error.message || error)); return; }
+    _DAILY_HUNT_LIMIT = h;
+    _DAILY_RAID_LIMIT = r;
+    alert(`✔ 일일 한도 적용 · 수행 ${h.toLocaleString()} · 공격대 ${r.toLocaleString()} (다음 유저 로그인 시 반영)`);
+  } catch(e){
+    alert('적용 실패: ' + (e.message || e));
+    console.warn('[adminApplyDailyLimits]', e);
+  }
 }
 
 async function adminSetBoss(key){
@@ -25765,6 +25893,16 @@ setInterval(()=>{
     <div style="font-size:10px;color:#666;margin-top:3px;">유지보수 ON 시 운영자 이외 계정 로그인·재접속 차단</div>
   </div>
 
+  <div style="background:#fff8e0;border:1px solid #c98d1a;padding:5px;margin-bottom:6px;">
+    <div style="font-size:11px;color:#8a4a00;font-weight:bold;margin-bottom:4px;">⏰ 일일 수행/공격대 한도</div>
+    <div style="display:flex;gap:4px;align-items:center;margin-bottom:3px;">
+      <label style="font-size:11px;flex:1;">수행 <input type="number" id="opDailyHuntLimit" style="width:70px;font-size:11px;" min="1" max="100000"></label>
+      <label style="font-size:11px;flex:1;">공격대 <input type="number" id="opDailyRaidLimit" style="width:70px;font-size:11px;" min="1" max="100000"></label>
+    </div>
+    <button class="admin-btn small" onclick="opApplyDailyLimits()" style="width:100%;">적용 (game_settings 반영)</button>
+    <div style="font-size:10px;color:#666;margin-top:3px;">다음 유저 로그인 시 서버 fetch 로 반영 · KST 자정 리셋</div>
+  </div>
+
   <div style="border:1px solid #c9a26b;border-radius:4px;padding:6px;margin-bottom:6px;">
     <b>⛅ 새벽의 언덕</b> — 몹 <span id="opDawnMon">-</span>, 보스HP <span id="opDawnHp">-</span>
     <div style="margin-top:4px;">
@@ -25928,7 +26066,37 @@ async function toggleOperatorPanel(){
   }
   _opRefreshInfo();
   try { _updateMaintenanceBtn(); } catch(e){}
+  // 일일 한도 입력 필드 현재값 로드 (최신 서버 override 반영)
+  try {
+    await _fetchDailyLimits();
+    if (document.getElementById('opDailyHuntLimit')) document.getElementById('opDailyHuntLimit').value = _DAILY_HUNT_LIMIT;
+    if (document.getElementById('opDailyRaidLimit')) document.getElementById('opDailyRaidLimit').value = _DAILY_RAID_LIMIT;
+  } catch(e){ console.warn('[op panel daily limits]', e); }
   panel.style.display = 'block';
+}
+// 운영자 패널 — 일일 한도 적용 (어드민 페이지의 adminApplyDailyLimits 와 동일 동작)
+async function opApplyDailyLimits(){
+  const huntRaw = (document.getElementById('opDailyHuntLimit') || {}).value || '';
+  const raidRaw = (document.getElementById('opDailyRaidLimit') || {}).value || '';
+  const h = parseInt(huntRaw, 10);
+  const r = parseInt(raidRaw, 10);
+  if (isNaN(h) || h < 1 || h > 100000){ alert('수행 한도: 1~100,000 사이 정수'); return; }
+  if (isNaN(r) || r < 1 || r > 100000){ alert('공격대 한도: 1~100,000 사이 정수'); return; }
+  if (!sb){ alert('⚠ 클라우드 모드 필요'); return; }
+  try {
+    const nowIso = new Date().toISOString();
+    const { error } = await sb.from('game_settings').upsert([
+      { key: 'hunt.daily_limit', value_int: h, updated_at: nowIso },
+      { key: 'raid.daily_limit', value_int: r, updated_at: nowIso },
+    ], { onConflict: 'key' });
+    if (error){ alert('적용 실패: ' + (error.message || error)); return; }
+    _DAILY_HUNT_LIMIT = h;
+    _DAILY_RAID_LIMIT = r;
+    alert(`✔ 일일 한도 적용 · 수행 ${h.toLocaleString()} · 공격대 ${r.toLocaleString()}`);
+  } catch(e){
+    alert('적용 실패: ' + (e.message || e));
+    console.warn('[opApplyDailyLimits]', e);
+  }
 }
 function closeOperatorPanel(){
   const panel = document.getElementById('opPanel');
