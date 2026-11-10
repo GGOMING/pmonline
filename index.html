@@ -4937,21 +4937,37 @@ function refreshArmorShop(){
   $('armorList').innerHTML = html;
 }
 
-function buyWeapon(id){
+async function buyWeapon(id){
   const w = WEAPONS.find(x => x.id === id);
   if (!w) return;
   const p = GAME.player;
-  // 이미 장착 중이거나 보유 중인지 체크
   if ((p.weapon && p.weapon.id === w.id) || p.weapons.some(x => x.id === w.id)){
     toast(`이미 보유 중인 무기입니다.`);
     return;
   }
   if (p.level < w.reqLv){ toast(`Lv ${w.reqLv} 이상 필요`); return; }
   if (p.gold < w.price){ toast('골드 부족'); return; }
-  p.gold -= w.price;
+  if (!sb){ toast('⚠ 오프라인 상태 — 구매는 클라우드 연결 필요'); return; }
+
+  // ── 서버 RPC (가격/레벨/골드 전부 서버 검증 · weapons[] 반영) ──
+  let row;
+  try {
+    const { data, error } = await sb.rpc('shop_buy_weapon', { p_weapon_id: id });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    $('wshop_msg').textContent = '⚠ 구매 실패: ' + (e.message || e);
+    $('wshop_msg').className = 'heal-result err';
+    console.warn('[shop_buy_weapon]', e);
+    return;
+  }
+
+  // 로컬 state 동기화 (서버가 saves 반영 완료)
+  p.gold = row.gold_after;
+  p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
   try { _bumpWeeklyCounter('goldSpent', w.price, 'wq_gold_spent'); } catch(e){}
   try { bumpTitleCounter('total_gold_spent', w.price); } catch(e){}
-  p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
   renderSheet();
   refreshWeaponShop();
   $('wshop_msg').textContent = `✔ ${w.name} 구매 → 보관함에 추가 (-${w.price}G)`;
@@ -4993,7 +5009,7 @@ function unequipWeapon(){
   saveGame();
 }
 
-function buyArmor(id){
+async function buyArmor(id){
   const a = ARMORS.find(x => x.id === id);
   if (!a) return;
   const p = GAME.player;
@@ -5003,10 +5019,25 @@ function buyArmor(id){
   }
   if (p.level < a.reqLv){ toast(`Lv ${a.reqLv} 이상 필요`); return; }
   if (p.gold < a.price){ toast('골드 부족'); return; }
-  p.gold -= a.price;
+  if (!sb){ toast('⚠ 오프라인 상태 — 구매는 클라우드 연결 필요'); return; }
+
+  let row;
+  try {
+    const { data, error } = await sb.rpc('shop_buy_armor', { p_armor_id: id });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    $('ashop_msg').textContent = '⚠ 구매 실패: ' + (e.message || e);
+    $('ashop_msg').className = 'heal-result err';
+    console.warn('[shop_buy_armor]', e);
+    return;
+  }
+
+  p.gold = row.gold_after;
+  p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
   try { _bumpWeeklyCounter('goldSpent', a.price, 'wq_gold_spent'); } catch(e){}
   try { bumpTitleCounter('total_gold_spent', a.price); } catch(e){}
-  p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
   renderSheet();
   refreshArmorShop();
   $('ashop_msg').textContent = `✔ ${a.name} 구매 → 보관함에 추가 (-${a.price}G)`;
@@ -5032,7 +5063,7 @@ function equipArmor(id){
   $('ashop_msg').className = 'heal-result ok';
   saveGame();
 }
-function sellWeapon(id){
+async function sellWeapon(id){
   const p = GAME.player;
   const idx = p.weapons.findIndex(x => x.id === id);
   if (idx < 0) return;
@@ -5040,16 +5071,33 @@ function sellWeapon(id){
   if (!tpl) return;
   const price = Math.floor(tpl.price * 0.1);
   if (!confirm(`${tpl.name}을(를) ${price.toLocaleString()}G에 판매할까요?\n(구매가의 10%)`)) return;
+  if (!sb){ $('wshop_msg').textContent = '⚠ 오프라인 상태 — 판매는 클라우드 연결 필요'; return; }
+
+  // ── 서버 RPC (장착 중 거부 · 보유 리스트에서 제거 · 가격 반환) ──
+  let row;
+  try {
+    const { data, error } = await sb.rpc('sell_equipment', { p_kind: 'weapon', p_item_id: id });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    $('wshop_msg').textContent = '⚠ 판매 실패: ' + (e.message || e);
+    $('wshop_msg').className = 'heal-result err';
+    console.warn('[sell_equipment weapon]', e);
+    return;
+  }
+
+  // 로컬 state 동기화 (서버가 saves 반영 완료)
   p.weapons.splice(idx, 1);
-  p.gold += price;
-  $('wshop_msg').textContent = `✔ ${tpl.name} 판매 +${price.toLocaleString()}G`;
+  p.gold = row.gold_after;
+  $('wshop_msg').textContent = `✔ ${tpl.name} 판매 +${row.gold_gained.toLocaleString()}G`;
   $('wshop_msg').className = 'heal-result ok';
   chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`, { local: true });
   renderSheet();
   refreshWeaponShop();
   saveGame();
 }
-function sellArmor(id){
+async function sellArmor(id){
   const p = GAME.player;
   const idx = p.armors.findIndex(x => x.id === id);
   if (idx < 0) return;
@@ -5057,9 +5105,24 @@ function sellArmor(id){
   if (!tpl) return;
   const price = Math.floor(tpl.price * 0.1);
   if (!confirm(`${tpl.name}을(를) ${price.toLocaleString()}G에 판매할까요?\n(구매가의 10%)`)) return;
+  if (!sb){ $('ashop_msg').textContent = '⚠ 오프라인 상태 — 판매는 클라우드 연결 필요'; return; }
+
+  let row;
+  try {
+    const { data, error } = await sb.rpc('sell_equipment', { p_kind: 'armor', p_item_id: id });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    $('ashop_msg').textContent = '⚠ 판매 실패: ' + (e.message || e);
+    $('ashop_msg').className = 'heal-result err';
+    console.warn('[sell_equipment armor]', e);
+    return;
+  }
+
   p.armors.splice(idx, 1);
-  p.gold += price;
-  $('ashop_msg').textContent = `✔ ${tpl.name} 판매 +${price.toLocaleString()}G`;
+  p.gold = row.gold_after;
+  $('ashop_msg').textContent = `✔ ${tpl.name} 판매 +${row.gold_gained.toLocaleString()}G`;
   $('ashop_msg').className = 'heal-result ok';
   chatSys(`★ ${p.name}님이 ${tpl.name}을(를) 판매하셨습니다.`, { local: true });
   renderSheet();
@@ -5385,11 +5448,14 @@ function _rollExchangeTarget(sourceCard){
 async function _offerExchangeForResults(results){
   if (!Array.isArray(results) || !results.length) return;
   const p = GAME.player;
-  if (!p) return;
+  if (!p || !sb) return;
   for (let i = 0; i < results.length; i++){
     const c = results[i];
     if (!c) continue;
     if (c.grade !== 'unique' && c.grade !== 'hero') continue;
+    // draw_id/slot_idx 가 없으면 교환 불가 (뽑기 결과가 아니므로 — 예: 보상 지급 카드)
+    if (!c._draw_id || c._slot_idx === undefined) continue;
+
     const gradeName = c.grade === 'unique' ? '유니크' : '영웅';
     const emoji = c.grade === 'unique' ? '🔮' : '⭐';
     const cost = EXCHANGE_COST[c.grade];
@@ -5401,61 +5467,71 @@ async function _offerExchangeForResults(results){
     msg += `잠깐! 마음에 들지 않는다면 여신의 축복 ${cost}개를 소모하여 교환할 수 있습니다.\n`;
     msg += `다만, 동일 등급(${gradeName})으로 유지될 확률은 ${keepPct}%입니다.\n\n`;
     if (c.grade === 'unique'){
-      msg += `━ 교환 확률 ━\n`;
-      msg += ` • 25% : 다른 유니크 카드\n`;
-      msg += ` • 75% : 레어 카드로 하향\n`;
-      msg += `━━━━━━━━━━\n`;
+      msg += `━ 교환 확률 ━\n • 25% : 다른 유니크 카드\n • 75% : 레어 카드로 하향\n━━━━━━━━━━\n`;
     } else {
-      msg += `━ 교환 확률 ━\n`;
-      msg += ` • 10% : 다른 영웅 카드\n`;
-      msg += ` • 40% : 유니크 카드로 하향\n`;
-      msg += ` • 50% : 레어 카드로 하향\n`;
-      msg += `━━━━━━━━━━\n`;
+      msg += `━ 교환 확률 ━\n • 10% : 다른 영웅 카드\n • 40% : 유니크 카드로 하향\n • 50% : 레어 카드로 하향\n━━━━━━━━━━\n`;
     }
     msg += `\n보유 축복: ✨ ${held}개 (필요 ✨ ${cost}개)\n`;
     msg += `\n[교환] : 축복을 소모하여 재추첨\n[유지] : 원본 카드 그대로 보관 (교환 기회 소멸)`;
 
-    // 축복 부족 시 안내만 하고 넘어감
     if (held < cost){
       try { alert(msg + `\n\n⚠ 축복이 부족하여 교환 불가 — 원본 유지`); } catch(e){}
       continue;
     }
     let doExchange = false;
     try { doExchange = await _confirmExchange(msg); } catch(e){}
-    if (!doExchange) continue;   // 유지 → 다음 카드
-    // 교환 실행 — 축복 차감 후 재추첨
-    const newCard = _rollExchangeTarget(c);
-    if (!newCard){
-      try { alert('교환 실패 — 대체 가능한 카드가 없습니다. 축복 미차감 · 원본 유지.'); } catch(e){}
+    if (!doExchange) continue;
+
+    // ── 서버 RPC 호출 (축복 차감 + 재추첨 + inventory 교체 전부 서버가) ──
+    let row;
+    try {
+      const { data, error } = await sb.rpc('card_exchange', { p_draw_id: c._draw_id, p_slot_idx: c._slot_idx });
+      if (error) throw error;
+      row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('empty response');
+    } catch(e){
+      try { alert('교환 요청 실패: ' + (e.message || e)); } catch(ex){}
+      console.warn('[card_exchange]', e);
       continue;
     }
-    p.blessing = Math.max(0, held - cost);
-    try { bumpTitleCounter('total_blessing_spent', cost); } catch(e){}
-    // 칭호 카운터: 교환 도전/성공 트래킹
+
+    // 서버가 "교환 실패 (대체 카드 없음)" 반환 → 원본 유지
+    if (!row.exchanged){
+      try { alert(row.message || '교환 실패 — 원본 유지'); } catch(e){}
+      continue;
+    }
+
+    // ── 로컬 state 동기화 ──
+    p.blessing = row.blessing_after;
+    const newCard = CARDS.find(x => x.id === row.new_card_id);
+    if (!newCard){
+      console.warn('[card_exchange] unknown new_card_id:', row.new_card_id);
+      continue;
+    }
+    // inventory in-place 교체 (서버가 이미 saves 에 반영 완료)
+    const invIdx = GAME.inventory.lastIndexOf(c) >= 0
+      ? GAME.inventory.lastIndexOf(c)
+      : GAME.inventory.findLastIndex(x => x && x.id === c.id);
+    if (invIdx >= 0){
+      GAME.inventory[invIdx] = newCard;
+    }
+    results[i] = newCard;
+
+    // 칭호 카운터 (클라에서 유지)
     try {
-      // 유니크 이상 (유니크·영웅) 카드 교환 시도 카운트 → 야수의 심장
+      bumpTitleCounter('total_blessing_spent', cost);
       bumpTitleCounter('unique_plus_exchange_attempts', 1);
-      // 결과가 유니크 이상이면 성공 카운트 → 트레이더
       if (newCard.grade === 'unique' || newCard.grade === 'hero'){
         bumpTitleCounter('unique_plus_exchange_success', 1);
       }
-      // 영웅 교환 시도 카운트 → 야수의 뇌
       if (c.grade === 'hero'){
         bumpTitleCounter('hero_exchange_attempts', 1);
-        // 영웅 → 영웅 유지 시 성공 카운트 → 이걸 사네
         if (newCard.grade === 'hero'){
           bumpTitleCounter('hero_exchange_success', 1);
         }
       }
     } catch(e){}
-    // 인벤토리 in-place 교체
-    const invIdx = GAME.inventory.lastIndexOf(c);
-    if (invIdx >= 0){
-      GAME.inventory[invIdx] = newCard;
-    }
-    results[i] = newCard;
-    // 교환 결과 카드가 유니크+ 면 로그 (원본 카드는 이미 획득 시 로그됨)
-    try { _logCardAcquisition(newCard, 'card_exchange'); } catch(e){}
+
     const newGradeName = { unique:'유니크', hero:'영웅', rare:'레어', normal:'일반', legend:'전설' }[newCard.grade] || newCard.grade;
     try {
       chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`, { sticky: true });
@@ -5738,7 +5814,7 @@ function autoPickSynthesisCards(){
     }
   }
 }
-function executeSynthesis(){
+async function executeSynthesis(){
   const p = GAME.player;
   if (p.level < SYNTHESIS_MIN_LEVEL){ toast(`Lv ${SYNTHESIS_MIN_LEVEL} 이상만 합성 가능합니다.`); return; }
   const remain = SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p);
@@ -5747,7 +5823,7 @@ function executeSynthesis(){
   if (_synthesisPicks.size !== SYNTHESIS_COST_CARDS){
     toast(`합성 재료 ${SYNTHESIS_COST_CARDS}장을 선택하세요.`); return;
   }
-  // 선택된 카드 검증 — 모두 미장착 · 존재하는 인벤토리 인스턴스인지 재확인
+  // 선택된 카드 재검증 — 모두 미장착 · 유효 인벤토리 인스턴스인지
   const usableSet = new Set(_getUnequippedSynthIndices());
   for (const idx of _synthesisPicks){
     if (!usableSet.has(idx)){
@@ -5757,21 +5833,16 @@ function executeSynthesis(){
       return;
     }
   }
-  // 동적 등급 확률 테이블 (구체 수치는 유저에게 공개하지 않음)
-  const table = _computeSynthesisGradeTable(_synthesisPicks);
   const hi = _synthesisHighGradeCount(_synthesisPicks);
-  // 상위 등급 (유니크·영웅·전설) 포함 시 별도 경고 팝업
+  // 상위 등급 포함 시 경고 팝업
   if (hi.unique + hi.hero + hi.legend > 0){
     let warnMsg = '⚠ 상위 등급 카드가 재료로 포함되었습니다 ⚠\n\n';
     if (hi.unique) warnMsg += `• 유니크 ${hi.unique}장\n`;
     if (hi.hero)   warnMsg += `• 영웅 ${hi.hero}장\n`;
     if (hi.legend) warnMsg += `• 전설 ${hi.legend}장\n`;
-    warnMsg += `\n합성 시 소모되어 인벤토리에서 영구히 사라집니다.\n`;
-    warnMsg += `✨ 유니크 확률 UP\n\n`;
-    warnMsg += `정말 진행하시겠습니까?`;
+    warnMsg += `\n합성 시 소모되어 인벤토리에서 영구히 사라집니다.\n✨ 유니크 확률 UP\n\n정말 진행하시겠습니까?`;
     if (!confirm(warnMsg)) return;
   } else {
-    // 레어 재료 포함 여부에 따라 부스트 안내 문구만 추가
     let hasRareBoost = false;
     for (const idx of _synthesisPicks){
       const c = GAME.inventory[idx];
@@ -5780,42 +5851,48 @@ function executeSynthesis(){
     const boostLine = hasRareBoost ? `\n✨ 유니크 확률 UP\n` : '';
     if (!confirm(`재료 카드 30장 + 1,000G 를 소모하여\n뽑기 1회를 진행합니다.${boostLine}\n계속하시겠습니까?`)) return;
   }
+  if (!sb){ alert('⚠ 오프라인 상태 — 합성은 클라우드 연결 상태에서만 가능합니다.'); return; }
 
-  // 인벤토리에서 뒤쪽 index 부터 splice (앞쪽 index 유지)
-  const indices = Array.from(_synthesisPicks).sort((a, b) => b - a);
-  for (const idx of indices){
-    GAME.inventory.splice(idx, 1);
-  }
-  p.gold -= SYNTHESIS_COST_GOLD;
-  _incSynthesisCount(p);
-
-  // 동적 등급 테이블 기반 뽑기
-  const grade = pickGachaGradeForTable(table);
-  const gPool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
-  const card = gPool.length ? _pickWeightedCard(gPool, grade) : null;
-  if (!card){
-    alert('내부 오류: 뽑기 실패. 관리자에게 문의하세요.');
+  // ── 서버 RPC 호출 (재료 검증 + 소비 + 추첨 전부 서버) ──
+  const indices = Array.from(_synthesisPicks);
+  let row;
+  try {
+    const { data, error } = await sb.rpc('card_synthesis_draw', { p_indices: indices });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row || !row.result_card_id) throw new Error('invalid response');
+  } catch(e){
+    alert(`⚠ 합성 실패: ${e.message || e}`);
+    console.warn('[card_synthesis_draw]', e);
     return;
   }
-  GAME.inventory.push(card);
-  try { _markGradeAcquired([card]); } catch(e){}
-  try { _logCardAcquisition(card, 'card_synthesis'); } catch(e){}
-  try { _logCardDrawAttempt('card_synthesis', [card], { gold: SYNTHESIS_COST_GOLD }); } catch(e){}
 
-  // 결과 알림 — 유니크 등급 획득만 채팅에 공지 (일반/레어/영웅/전설은 개인 알림만)
-  const gradeName = gradeKr(grade);
-  const gradeColor = _GRADE_COLORS[grade] || '#000';
-  if (grade === 'unique'){
-    chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${card.name}을(를) 획득하셨습니다!`, { sticky: true });
+  // ── 서버 결과 → 로컬 state 동기화 ──
+  // 서버가 재료 카드 소비 + 결과 카드 추가 + 골드 차감 + 합성 카운터 전부 처리 완료
+  // 로컬 inventory 도 동일하게 재구성
+  const sortedIdxDesc = indices.slice().sort((a, b) => b - a);
+  for (const idx of sortedIdxDesc){
+    GAME.inventory.splice(idx, 1);
+  }
+  const newCard = CARDS.find(c => c.id === row.result_card_id);
+  if (newCard) GAME.inventory.push(newCard);
+  p.gold = row.gold_after;
+  // 합성 카운터는 서버 반환값과 동기화
+  const _synState = _getSynthesisState(p);
+  _synState.count = SYNTHESIS_DAILY_LIMIT - row.synthesis_remaining;
+
+  try { _markGradeAcquired([newCard]); } catch(e){}
+  const gradeName = gradeKr(row.result_grade);
+  if (row.result_grade === 'unique'){
+    chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${newCard.name}을(를) 획득하셨습니다!`, { sticky: true });
   }
   setTimeout(() => {
-    alert(`🔨 합성 완료!\n\n결과: [${gradeName}] ${card.name}\n\n남은 오늘 합성: ${SYNTHESIS_DAILY_LIMIT - _getSynthesisCount(p)}회`);
+    alert(`🔨 합성 완료!\n\n결과: [${gradeName}] ${newCard.name}\n\n남은 오늘 합성: ${row.synthesis_remaining}회`);
   }, 100);
 
-  // 상태 갱신
+  // 상태 갱신 — 서버가 재화/인벤 반영 완료 → 부수 필드만 저장
   _synthesisPicks.clear();
   saveGame();
-  cloudSaveNow().catch(()=>{});
   refreshShopUI();
   renderSynthesisModal();
   try { renderSheet(); } catch(e){}
@@ -5860,10 +5937,12 @@ function renderGachaShopGrid(){
   el.innerHTML = html;
 }
 
-function doGachaShop(shopId, n){
+async function doGachaShop(shopId, n){
   const s = GACHA_SHOPS[shopId];
   if (!s) return;
   const p = GAME.player;
+
+  // ── 클라이언트 측 사전 체크 (UX 개선 · 서버가 최종 판정) ──
   if (s.minLv && (p.level || 1) < s.minLv){
     setShopMsg(`⚠ ${s.label}는 Lv ${s.minLv}부터 이용 가능합니다.`, 'err');
     return;
@@ -5879,22 +5958,39 @@ function doGachaShop(shopId, n){
     setShopMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${limit}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다.`, 'err');
     return;
   }
-  p.gold -= cost;
+  if (!sb){
+    setShopMsg('⚠ 오프라인 상태 — 뽑기는 클라우드 연결 상태에서만 가능합니다.', 'err');
+    return;
+  }
+
+  // ── 서버 RPC 호출 (가격/확률/추첨 전부 서버가 결정) ──
+  let row;
+  try {
+    const { data, error } = await sb.rpc('gacha_shop_draw', { p_shop_id: shopId, p_count: n });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row || !Array.isArray(row.result_card_ids)) throw new Error('invalid response');
+  } catch(e){
+    setShopMsg(`⚠ 뽑기 실패: ${e.message || e}`, 'err');
+    console.warn('[gacha_shop_draw]', e);
+    return;
+  }
+
+  // ── 서버 결과를 로컬 state 로 반영 (saves 는 서버가 이미 UPDATE 완료) ──
+  p.gold = row.gold_after;
+  const results = [];
+  row.result_card_ids.forEach((cid, idx) => {
+    const base = CARDS.find(c => c.id === cid);
+    if (!base) return;
+    GAME.inventory.push(base);   // 원본 ref — 기존 로직 호환
+    // 교환 UI 용 사본 (draw_id/slot_idx 를 attach)
+    results.push(Object.assign({}, base, { _draw_id: row.draw_id, _slot_idx: idx }));
+  });
+
+  // ── 부수 효과 (quests/titles/UI) ──
   try { _bumpWeeklyCounter('goldSpent', cost, 'wq_gold_spent'); } catch(e){}
   try { bumpTitleCounter('total_gold_spent', cost); } catch(e){}
-  const pool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
-  const results = [];
-  for (let i = 0; i < n; i++){
-    const grade = pickGachaGradeFor(shopId);
-    const gPool = pool.filter(c => c.grade === grade);
-    if (gPool.length === 0) continue;
-    const card = _pickWeightedCard(gPool, grade);
-    GAME.inventory.push(card);
-    results.push(card);
-    try { _logCardAcquisition(card, 'gacha_shop_' + shopId); } catch(e){}
-  }
   _markGradeAcquired(results);
-  try { _logCardDrawAttempt('gacha_shop_' + shopId, results, { gold: cost }); } catch(e){}
   // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
   _offerExchangeForResults(results).catch(e => console.warn('[exchange]', e));
   // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
@@ -5928,27 +6024,23 @@ function doGachaShop(shopId, n){
   if (uniqueCards.length){
     chatSys(`★ ${p.name}님이 ${s.label}에서 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
   }
-  // 일일 퀘스트 진행
+  // 일일/주간 퀘스트 진행
   try {
     advanceDailyQuest('dq_gacha_3', n);
     if (n === 10) advanceDailyQuest('dq_gacha10', 1);
     const rarePlus = results.filter(c => c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
     if (rarePlus > 0) advanceDailyQuest('dq_rare_1', rarePlus);
-    // 주간 뽑기 카운트
-    //  · wq_gacha_normal — 획득한 '일반' 등급 카드 수 (기존 유지)
-    //  · wq_gacha_unique — '유니크·영웅·전설' shop 에서 뽑기 횟수 (결과 등급 무관)
-    //    이유: 등급별 실제 획득률이 낮아 카드 수 기반이면 사실상 달성 불가
     const normalCnt = results.filter(c => c.grade === 'normal').length;
     if (normalCnt > 0) advanceWeeklyQuest('wq_gacha_normal', normalCnt);
     if (shopId === 'unique' || shopId === 'hero' || shopId === 'legend'){
       advanceWeeklyQuest('wq_gacha_unique', n);
     }
-    // 칭호: 총 뽑기 횟수 + 유니크·영웅·전등급 조건 재검사 (인벤토리 변화로 언락 가능)
     bumpTitleCounter('total_gacha', n);
     checkTitleUnlocks();
   } catch(e){}
   renderSheet();
   refreshShopUI();
+  // 서버가 이미 inventory/gold 반영 완료 → saveGame 은 quests/titleCounters 등 부수 필드만 저장
   saveGame();
 }
 
@@ -6059,58 +6151,91 @@ function _markGradeAcquired(results){
 }
 
 // 공격대 보스 처치 보상 카드 즉시 판매 (일반·레어 인라인 버튼용)
-function _sellRaidRewardCard(cardId, price){
+// ─── 서버 카드 판매 공통 헬퍼 ───
+//   inventory index 배열을 받아 서버 RPC (sell_cards) 호출.
+//   성공 시 { sold_count, gold_gained, gold_after, message } 반환, 실패 시 null.
+async function _doServerSellCards(indicesToSell){
+  if (!sb){ toast('⚠ 오프라인 상태 — 판매는 클라우드 연결 상태에서만 가능합니다.'); return null; }
+  if (!Array.isArray(indicesToSell) || indicesToSell.length === 0) return null;
+  try {
+    const { data, error } = await sb.rpc('sell_cards', { p_indices: indicesToSell });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+    return row;
+  } catch(e){
+    toast('⚠ 판매 실패: ' + (e.message || e));
+    console.warn('[sell_cards]', e);
+    return null;
+  }
+}
+// 서버/클라 inventory 를 일치시키는 제거 헬퍼 (뒤쪽 index 부터)
+function _spliceLocalInventory(indices){
+  const sortedDesc = indices.slice().sort((a,b)=>b-a);
+  for (const idx of sortedDesc){
+    GAME.inventory.splice(idx, 1);
+  }
+}
+
+async function _sellRaidRewardCard(cardId, price){
   const p = GAME.player;
   if (!p) return;
-  // 인벤토리에서 해당 카드 마지막 1장 제거 (같은 카드 여러 장이면 방금 지급된 것 제거)
   const idx = GAME.inventory.map(c => c.id).lastIndexOf(cardId);
-  if (idx < 0){
-    toast('⚠ 판매할 카드가 없습니다.');
-    return;
-  }
+  if (idx < 0){ toast('⚠ 판매할 카드가 없습니다.'); return; }
   const soldCard = GAME.inventory[idx];
-  GAME.inventory.splice(idx, 1);
-  p.gold += price;
-  toast(`💰 카드 판매 +${price.toLocaleString()}G`);
+
+  const row = await _doServerSellCards([idx]);
+  if (!row) return;
+
+  _spliceLocalInventory([idx]);
+  p.gold = row.gold_after;
+  toast(`💰 카드 판매 +${row.gold_gained.toLocaleString()}G`);
   try { advanceDailyQuest('dq_sell_3', 1); } catch(e){}
   if (soldCard && (soldCard.grade === 'rare' || soldCard.grade === 'unique' || soldCard.grade === 'hero' || soldCard.grade === 'legend')){
     try { advanceDailyQuest('dq_sell_rare_1', 1); } catch(e){}
   }
   try { renderSheet(); } catch(e){}
   try { saveGame(); } catch(e){}
-  // 버튼을 판매 완료 라벨로 교체
   const btn = document.getElementById('raidCardSellBtn_' + cardId);
   if (btn){
     const span = document.createElement('span');
     span.style.cssText = 'margin-left:8px;font-size:11px;color:#7eff7e;font-weight:bold;';
-    span.textContent = `✔ 판매 완료 (+${price.toLocaleString()}G)`;
+    span.textContent = `✔ 판매 완료 (+${row.gold_gained.toLocaleString()}G)`;
     btn.parentNode.replaceChild(span, btn);
   }
 }
 
 // 가챠 직후 즉시 판매 — 결과 카드를 인벤토리에서 제거하고 골드 환급
-function _sellGachaResults(results){
+async function _sellGachaResults(results){
   const p = GAME.player;
   if (!Array.isArray(results) || results.length === 0) return;
-  // 유니크 이상 포함 시 한 번 더 확인
   const hasHigh = results.some(c => c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend');
   if (hasHigh){
     if (!confirm(`⚠ 유니크 이상 카드가 포함되어 있습니다.\n\n총 ${results.length}장을 즉시 판매하시겠습니까?`)) return;
   }
-  let total = 0;
-  // 참조 기반으로 마지막부터 splice — 동일 카드 중복도 안전하게 제거
+  // 각 결과 카드에 대응하는 inventory index 수집 (뒤쪽부터 중복 안되게)
+  const visited = new Set();
+  const indices = [];
   for (let i = results.length - 1; i >= 0; i--){
-    const card = results[i];
-    const idx = GAME.inventory.lastIndexOf(card);
-    if (idx >= 0){
-      GAME.inventory.splice(idx, 1);
-      total += CARD_SELL_PRICE[card.grade] || 1;
+    const c = results[i];
+    for (let j = GAME.inventory.length - 1; j >= 0; j--){
+      if (visited.has(j)) continue;
+      if (GAME.inventory[j] && GAME.inventory[j].id === c.id){
+        indices.push(j);
+        visited.add(j);
+        break;
+      }
     }
   }
-  p.gold += total;
-  toast(`💰 ${results.length}장 판매 +${total.toLocaleString()}G`);
-  // 일일 퀘스트 진행 — 가챠 즉시 판매도 판매 카운트
-  try { advanceDailyQuest('dq_sell_3', results.length); } catch(e){}
+  if (indices.length === 0){ toast('⚠ 판매할 카드를 찾을 수 없습니다.'); return; }
+
+  const row = await _doServerSellCards(indices);
+  if (!row) return;
+
+  _spliceLocalInventory(indices);
+  p.gold = row.gold_after;
+  toast(`💰 ${row.sold_count}장 판매 +${row.gold_gained.toLocaleString()}G`);
+  try { advanceDailyQuest('dq_sell_3', row.sold_count); } catch(e){}
   try {
     const rareSold = results.filter(c => c && (c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend')).length;
     if (rareSold > 0) advanceDailyQuest('dq_sell_rare_1', rareSold);
@@ -6119,9 +6244,8 @@ function _sellGachaResults(results){
   try { renderDeck(); } catch(e){}
   try { refreshShopUI(); } catch(e){}
   saveGame();
-  // 액션 영역 비우기 (중복 판매 방지)
   const act = $('gachaResultActions');
-  if (act) act.innerHTML = `<div style="color:#7eff7e;font-size:12px;">✔ 판매 완료 (+${total.toLocaleString()}G)</div>`;
+  if (act) act.innerHTML = `<div style="color:#7eff7e;font-size:12px;">✔ 판매 완료 (+${row.gold_gained.toLocaleString()}G)</div>`;
 }
 
 // 가챠 결과창 액션 영역 렌더링 (1뽑=판매, 다수=모두 판매)
@@ -6138,40 +6262,41 @@ function _renderGachaResultActions(results){
 }
 // CARD_SELL_PRICE는 const로 선언했지만 객체 내부 값은 변경 가능 (관리자 패널이 직접 변경)
 
-function sellAllByGrade(grade){
+async function sellAllByGrade(grade){
   const p = GAME.player;
-  // 덱 장착분은 판매 대상에서 제외 (장착 카드는 인벤토리에 그대로 유지)
   const equippedCounts = {};
   for (const dc of GAME.myDeck){
     if (!dc || dc.id === 'basic_atk') continue;
     if (dc.grade !== grade) continue;
     equippedCounts[dc.id] = (equippedCounts[dc.id]||0) + 1;
   }
-  const consumed = {};  // 인스턴스별로 장착분 1장씩 보존
-  const sellList = [];
-  const keepList = [];
-  for (const c of GAME.inventory){
-    if (c.grade !== grade){ keepList.push(c); continue; }
+  const consumed = {};
+  const sellIndices = [];
+  for (let i = 0; i < GAME.inventory.length; i++){
+    const c = GAME.inventory[i];
+    if (c.grade !== grade) continue;
     const need = equippedCounts[c.id] || 0;
     const used = consumed[c.id] || 0;
-    if (used < need){ consumed[c.id] = used + 1; keepList.push(c); }  // 장착분 유지
-    else { sellList.push(c); }
+    if (used < need){ consumed[c.id] = used + 1; continue; }  // 장착분 유지
+    sellIndices.push(i);
   }
-  if (sellList.length === 0){ toast('판매할 카드가 없습니다. (모두 장착 중이거나 보유 없음)'); return; }
+  if (sellIndices.length === 0){ toast('판매할 카드가 없습니다. (모두 장착 중이거나 보유 없음)'); return; }
   const price = CARD_SELL_PRICE[grade];
-  const total = price * sellList.length;
-  if (!confirm(`${gradeKr(grade)} 카드 ${sellList.length}장을 ${total.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
-  // 유니크 이상 — 한 번 더 확인
+  const total = price * sellIndices.length;
+  if (!confirm(`${gradeKr(grade)} 카드 ${sellIndices.length}장을 ${total.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
   if (grade === 'unique' || grade === 'hero'){
-    if (!confirm(`⚠ 높은 등급의 카드가 포함되어 있습니다.\n\n${gradeKr(grade)} 카드 ${sellList.length}장\n\n정말 판매하시겠습니까?`)) return;
+    if (!confirm(`⚠ 높은 등급의 카드가 포함되어 있습니다.\n\n${gradeKr(grade)} 카드 ${sellIndices.length}장\n\n정말 판매하시겠습니까?`)) return;
   }
-  GAME.inventory = keepList;
-  p.gold += total;
-  toast(`${gradeKr(grade)} 카드 ${sellList.length}장 판매 +${total.toLocaleString()}G`);
-  // 다중 판매는 채팅창에 안내하지 않음 (스팸 방지)
-  try { advanceDailyQuest('dq_sell_3', sellList.length); } catch(e){}
+
+  const row = await _doServerSellCards(sellIndices);
+  if (!row) return;
+
+  _spliceLocalInventory(sellIndices);
+  p.gold = row.gold_after;
+  toast(`${gradeKr(grade)} 카드 ${row.sold_count}장 판매 +${row.gold_gained.toLocaleString()}G`);
+  try { advanceDailyQuest('dq_sell_3', row.sold_count); } catch(e){}
   if (grade === 'rare' || grade === 'unique' || grade === 'hero' || grade === 'legend'){
-    try { advanceDailyQuest('dq_sell_rare_1', sellList.length); } catch(e){}
+    try { advanceDailyQuest('dq_sell_rare_1', row.sold_count); } catch(e){}
   }
   renderSheet();
   renderDeck();
@@ -6179,26 +6304,28 @@ function sellAllByGrade(grade){
   saveGame();
 }
 
-function sellOneCard(cardId){
+async function sellOneCard(cardId){
   const p = GAME.player;
-  const idx = GAME.inventory.findIndex(c => c.id === cardId);
-  if (idx < 0){ toast('보유하지 않은 카드'); return; }
-  // 장착분 보호 — 보유 중 장착 안 된 잉여분만 판매 가능
   const ownedTotal = GAME.inventory.filter(c => c.id === cardId).length;
   const equippedTotal = GAME.myDeck.filter(c => c && c.id === cardId).length;
   if (ownedTotal - equippedTotal <= 0){
     toast('장착 중인 카드는 판매할 수 없습니다.');
     return;
   }
+  // 장착 안 된 인스턴스 1개 — 뒤쪽부터 찾기 (최근 획득분 우선 판매)
+  const idx = GAME.inventory.map(c => c.id).lastIndexOf(cardId);
+  if (idx < 0){ toast('보유하지 않은 카드'); return; }
   const card = GAME.inventory[idx];
-  // 유니크 이상 — 한 번 더 확인
   if (card.grade === 'unique' || card.grade === 'hero'){
     if (!confirm(`⚠ 높은 등급의 카드입니다.\n\n「${card.name}」 [${gradeKr(card.grade)}]\n\n정말 판매하시겠습니까?`)) return;
   }
-  const price = CARD_SELL_PRICE[card.grade] || 1;
-  GAME.inventory.splice(idx, 1);
-  p.gold += price;
-  toast(`${card.name} 판매 +${price}G`);
+
+  const row = await _doServerSellCards([idx]);
+  if (!row) return;
+
+  _spliceLocalInventory([idx]);
+  p.gold = row.gold_after;
+  toast(`${card.name} 판매 +${row.gold_gained}G`);
   try { advanceDailyQuest('dq_sell_3', 1); } catch(e){}
   if (card.grade === 'rare' || card.grade === 'unique' || card.grade === 'hero' || card.grade === 'legend'){
     try { advanceDailyQuest('dq_sell_rare_1', 1); } catch(e){}
@@ -6331,9 +6458,8 @@ function sellSelectAll(on){
   }
   renderSellModal();
 }
-function sellSelectedCards(){
+async function sellSelectedCards(){
   const p = GAME.player;
-  // 카운트 + 확인
   let totalCount = 0, totalGold = 0;
   const planByGrade = {normal:0, rare:0, unique:0, hero:0};
   for (const id of Object.keys(_sellSelected)){
@@ -6349,42 +6475,43 @@ function sellSelectedCards(){
     .filter(g => planByGrade[g] > 0)
     .map(g => `${gradeKr(g)} ${planByGrade[g]}장`).join(', ');
   if (!confirm(`선택한 카드 ${totalCount}장 (${summary})을 ${totalGold.toLocaleString()}G에 판매할까요?\n(장착 중인 카드는 판매되지 않습니다)`)) return;
-  // 유니크 이상 포함 — 한 번 더 확인
   if ((planByGrade.unique||0) + (planByGrade.hero||0) > 0){
     const hi = [];
     if (planByGrade.unique) hi.push(`유니크 ${planByGrade.unique}장`);
     if (planByGrade.hero)   hi.push(`영웅 ${planByGrade.hero}장`);
     if (!confirm(`⚠ 높은 등급의 카드가 포함되어 있습니다.\n\n${hi.join(', ')}\n\n정말 판매하시겠습니까?`)) return;
   }
-  // 장착분 보호하며 인스턴스 단위로 제거
+
+  // 장착분 보호하며 판매 대상 index 수집 (ID 별 수량 소비)
   const equippedCounts = {};
   for (const dc of GAME.myDeck){
     if (!dc || dc.id === 'basic_atk') continue;
     equippedCounts[dc.id] = (equippedCounts[dc.id]||0) + 1;
   }
-  const consumed = {};   // id별 장착분 보존 카운터
-  const sellLeft = Object.assign({}, _sellSelected);  // id별 남은 판매 요청
-  const keepList = [];
-  let actualSold = 0, actualGold = 0;
-  for (const c of GAME.inventory){
+  const consumed = {};
+  const sellLeft = Object.assign({}, _sellSelected);
+  const sellIndices = [];
+  for (let i = 0; i < GAME.inventory.length; i++){
+    const c = GAME.inventory[i];
     const need = equippedCounts[c.id] || 0;
     const used = consumed[c.id] || 0;
-    if (used < need){ consumed[c.id] = used + 1; keepList.push(c); continue; }  // 장착분 보존
+    if (used < need){ consumed[c.id] = used + 1; continue; }
     const remain = sellLeft[c.id] || 0;
     if (remain > 0){
       sellLeft[c.id] = remain - 1;
-      actualSold++;
-      actualGold += CARD_SELL_PRICE[c.grade] || 1;
-    } else {
-      keepList.push(c);
+      sellIndices.push(i);
     }
   }
-  GAME.inventory = keepList;
-  p.gold += actualGold;
+  if (sellIndices.length === 0){ toast('판매 대상이 없습니다.'); return; }
+
+  const row = await _doServerSellCards(sellIndices);
+  if (!row) return;
+
+  _spliceLocalInventory(sellIndices);
+  p.gold = row.gold_after;
   _sellSelected = {};
-  toast(`✔ ${actualSold}장 판매 +${actualGold.toLocaleString()}G`);
-  // 다중 판매는 채팅창에 안내하지 않음 (스팸 방지)
-  try { advanceDailyQuest('dq_sell_3', actualSold); } catch(e){}
+  toast(`✔ ${row.sold_count}장 판매 +${row.gold_gained.toLocaleString()}G`);
+  try { advanceDailyQuest('dq_sell_3', row.sold_count); } catch(e){}
   try {
     const rareSold = (planByGrade.rare||0) + (planByGrade.unique||0) + (planByGrade.hero||0) + (planByGrade.legend||0);
     if (rareSold > 0) advanceDailyQuest('dq_sell_rare_1', rareSold);
@@ -6526,7 +6653,7 @@ function closeBlessGachaResult(){
   if (bg) bg.classList.remove('on');
 }
 
-function buyBlessItem(id, currency){
+async function buyBlessItem(id, currency){
   const p = GAME.player;
   const it = BLESS_SHOP_ITEMS.find(x => x.id === id);
   if (!p || !it) return;
@@ -6540,30 +6667,43 @@ function buyBlessItem(id, currency){
   }
   if (id === 'card1' || id === 'card11'){
     const n = id === 'card1' ? 1 : 11;
-    // 인벤토리 한도 검사
     const room = inventoryLimit() - GAME.inventory.length;
     if (room < n){
       setBlessMsg(`⚠ 보유 한도 초과 — 현재 ${GAME.inventory.length}/${inventoryLimit()}장. ${n}뽑은 남은 칸 ${Math.max(0,room)}장으로 불가합니다.`, 'err');
       return;
     }
     if (!confirm(`${curLabel} ${it.cost}개로 ${it.name}을(를) 진행할까요?`)) return;
-    p[curField] = (p[curField]||0) - it.cost;
-    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
-    // 가챠 풀 — 축복 상점은 영웅 뽑기 확률표 그대로 사용
-    const pool = CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly);
-    const results = [];
-    const blessSrc = id === 'card1' ? 'bless_gacha_1' : 'bless_gacha_10';
-    for (let i = 0; i < n; i++){
-      const grade = pickGachaGradeFor('hero');
-      const gPool = pool.filter(c => c.grade === grade);
-      if (gPool.length === 0) continue;
-      const card = _pickWeightedCard(gPool, grade);
-      GAME.inventory.push(card);
-      results.push(card);
-      try { _logCardAcquisition(card, blessSrc); } catch(e){}
+    if (!sb){
+      setBlessMsg('⚠ 오프라인 상태 — 뽑기는 클라우드 연결 상태에서만 가능합니다.', 'err');
+      return;
     }
+
+    // ── 서버 RPC 호출 (비용/추첨/인벤 전부 서버가 결정) ──
+    let row;
+    try {
+      const { data, error } = await sb.rpc('bless_gacha_draw', { p_count: n, p_currency: currency });
+      if (error) throw error;
+      row = Array.isArray(data) ? data[0] : data;
+      if (!row || !Array.isArray(row.result_card_ids)) throw new Error('invalid response');
+    } catch(e){
+      setBlessMsg(`⚠ 뽑기 실패: ${e.message || e}`, 'err');
+      console.warn('[bless_gacha_draw]', e);
+      return;
+    }
+
+    // ── 서버 결과 → 로컬 state 동기화 ──
+    p[curField] = row.currency_after;
+    const results = [];
+    row.result_card_ids.forEach((cid, idx) => {
+      const base = CARDS.find(c => c.id === cid);
+      if (!base) return;
+      GAME.inventory.push(base);
+      results.push(Object.assign({}, base, { _draw_id: row.draw_id, _slot_idx: idx }));
+    });
+
+    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
     _markGradeAcquired(results);
-    try { _logCardDrawAttempt(blessSrc, results, { bless: it.cost }); } catch(e){}
+
     const legends = results.filter(c => c.grade === 'legend').length;
     const heroes  = results.filter(c => c.grade === 'hero').length;
     const uniques = results.filter(c => c.grade === 'unique').length;
@@ -6585,172 +6725,95 @@ function buyBlessItem(id, currency){
     if (uniqueCards.length){
       chatSys(`★ ${p.name}님이 ${_cLabel}(으)로 🔮 유니크 카드 [${uniqueCards.map(c=>c.name).join(', ')}] 획득!`, { sticky: true });
     }
-    // 일일 퀘스트 진행 (축복 뽑기도 카드 획득으로 카운트)
+    // 일일/주간 퀘스트 + 칭호 카운터
     try {
       advanceDailyQuest('dq_gacha_3', n);
       if (n === 11) advanceDailyQuest('dq_gacha10', 1);
       const rarePlus = results.filter(c => c.grade === 'rare' || c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend').length;
       if (rarePlus > 0) advanceDailyQuest('dq_rare_1', rarePlus);
-      // 축복 뽑기는 영웅 확률표 기반 — wq_gacha_unique 카운트
       advanceWeeklyQuest('wq_gacha_unique', n);
       bumpTitleCounter('total_gacha', n);
       checkTitleUnlocks();
     } catch(e){}
     renderSheet();
     refreshBlessShop();
-    saveGame();
-    // 결과 팝업 띄우기
+    saveGame();   // 서버가 inventory/축복 반영 완료 → 부수 필드 (quests/titles) 만 저장
     showBlessGachaResult(it.name, results);
     return;
   }
   if (id === 'box'){
     if (!confirm(`${curLabel} ${it.cost}개로 축복의 랜덤 상자를 구매할까요?`)) return;
-    // 카드 보상 가능성에 대비해 인벤토리 한도 사전 검사 (스탯 P 보상은 한도 무관)
+    // 인벤 한도 경고 (서버가 카드 지급 시도 시 지급 누락 처리)
     if (GAME.inventory.length >= inventoryLimit()){
       if (!confirm(`⚠ 보유 카드 한도(${inventoryLimit()}장)에 도달했습니다.\n상자 결과가 카드일 경우 지급이 누락될 수 있습니다. 그래도 진행할까요?`)) return;
     }
-    p[curField] = (p[curField]||0) - it.cost;
-    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
-    // 가중 추첨 — BLESS_BOX_REWARDS (admin에서 조정 가능)
-    const totalW = BLESS_BOX_REWARDS.reduce((s, x) => s + (x.rate || 0), 0) || 1;
-    let pick = Math.random() * totalW;
-    let chosen = BLESS_BOX_REWARDS[BLESS_BOX_REWARDS.length - 1];
-    for (const rw of BLESS_BOX_REWARDS){
-      pick -= (rw.rate || 0);
-      if (pick <= 0){ chosen = rw; break; }
-    }
-    // ▷ Admin이 다음 보상을 미리 지정해 뒀다면 rigged trap 보정보다 우선 (1회 사용 후 자동 초기화)
-    let _riggedForcedCard = null;   // 카드 지급 케이스 (3·4) 표식
-    let _adminForcedReward = null;
-    let _adminForcedCardId = null;
-    if (p.nextBlessBoxReward){
-      _adminForcedReward = BLESS_BOX_REWARDS.find(rw => rw.id === p.nextBlessBoxReward) || null;
-      if (p.nextBlessBoxCardId) _adminForcedCardId = p.nextBlessBoxCardId;
-      delete p.nextBlessBoxReward;   // 지정값 1회 소진 → 기본치(랜덤)로 복구
-      delete p.nextBlessBoxCardId;
-    }
-    if (_adminForcedReward){
-      chosen = _adminForcedReward;
-    }
-    // ▷ 무음 보정: 강제 보정 티커 유저 페널티 (유저에겐 절대 노출 안 됨) — Admin 지정이 없을 때만 적용
-    //   1) 장착 무기 +20 이상 → +20 무기(saint_elaha·lord_requiem) 중 랜덤 지급
-    //   2) 장착 방어구 +20 이상 → +20 방어구(saint_cuirass·lord_cruor) 중 랜덤 지급
-    //   3) 유니크 카드 보유 → 보유 중인 유니크 카드 랜덤 지급 (교환 무조건 실패)
-    //   4) 그 외 → 어둠의 오브 (u07) 확정 지급 (교환 무조건 실패)
-    else if (p.riggedTrap){
-      const eqWpn = (p.weapon && p.weapon.id !== 'basic_club') ? (p.weapon.atkBonus|0) : 0;
-      const eqArm = (p.armor  && p.armor.id  !== 'basic_cloth') ? (p.armor.defBonus|0) : 0;
-      const _plus20Wpns = ['saint_elaha','lord_requiem'];
-      const _plus20Arms = ['saint_cuirass','lord_cruor'];
-      if (eqWpn >= 20){
-        const picked = _plus20Wpns[Math.floor(Math.random() * _plus20Wpns.length)];
-        const rw = BLESS_BOX_REWARDS.find(r => r.itemId === picked && r.kind === 'weapon');
-        if (rw) chosen = rw;
-      } else if (eqArm >= 20){
-        const picked = _plus20Arms[Math.floor(Math.random() * _plus20Arms.length)];
-        const rw = BLESS_BOX_REWARDS.find(r => r.itemId === picked && r.kind === 'armor');
-        if (rw) chosen = rw;
-      } else {
-        const ownedUniques = (GAME.inventory || []).filter(c => c && c.grade === 'unique');
-        if (ownedUniques.length > 0){
-          _riggedForcedCard = ownedUniques[Math.floor(Math.random() * ownedUniques.length)];
-        } else {
-          _riggedForcedCard = CARDS.find(c => c.id === 'u07') || null;   // 어둠의 오브
-        }
-      }
-    }
-    let resultMsg = '';
-    // rigged 유저의 카드 지급 케이스 (조건 3·4) — 정상 결과창처럼 표시, 교환 시도는 항상 실패
-    if (_riggedForcedCard){
-      const src = _riggedForcedCard;
-      // 원본 CARDS 참조 오염 방지 → 얕은 복사 + 교환 실패 마커
-      const card = Object.assign({}, src, { _riggedExchange: true });
-      if (GAME.inventory.length >= inventoryLimit()){
-        const emoji = card.grade === 'hero' ? '⭐' : '🔮';
-        resultMsg = `📦 ${emoji} ${gradeKr(card.grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(card.grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: true });
-      } else {
-        GAME.inventory.push(card);
-        try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
-        try { _logCardDrawAttempt('bless_box', [card], { bless: it.cost }); } catch(e){}
-        const exResults = [card];
-        _offerExchangeForResults(exResults).catch(e => console.warn('[bless box rigged exchange]', e));
-        const finalCard = exResults[0] || card;
-        // 교환 후 인벤에 남은 카드에서 마커 제거 (다음 세션 오염 방지)
-        try { delete finalCard._riggedExchange; } catch(e){}
-        const fg = finalCard.grade;
-        const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
-        resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
-        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: true });
-      }
-      setBlessMsg(resultMsg, 'ok');
-      setTimeout(() => alert(resultMsg), 200);
-      renderSheet();
-      refreshBlessShop();
-      try { checkTitleUnlocks(); } catch(e){}
-      saveGame();
+    if (!sb){
+      setBlessMsg('⚠ 오프라인 상태 — 축복 상자는 클라우드 연결 상태에서만 가능합니다.', 'err');
       return;
     }
-    if (chosen.id === 'unique_card' || chosen.id === 'hero_card'){
-      const grade = chosen.id === 'unique_card' ? 'unique' : 'hero';
-      const pool = CARDS.filter(c => c.grade === grade && c.id !== 'basic_atk' && !c.monsterOnly);
-      // Admin이 특정 카드까지 지정한 경우 → 그 카드 확정 (1회 사용 후 위에서 이미 초기화됨)
-      let card = null;
-      if (_adminForcedCardId){
-        const forced = CARDS.find(c => c.id === _adminForcedCardId && c.grade === grade);
-        if (forced) card = forced;
+
+    // ── 서버 RPC 호출 ──
+    //   서버가 riggedTrap / 운영자 지정 / 정상 추첨 전부 처리 + saves 반영
+    let row;
+    try {
+      const { data, error } = await sb.rpc('bless_box_draw', { p_currency: currency });
+      if (error) throw error;
+      row = Array.isArray(data) ? data[0] : data;
+      if (!row) throw new Error('empty response');
+    } catch(e){
+      setBlessMsg(`⚠ 축복 상자 실패: ${e.message || e}`, 'err');
+      console.warn('[bless_box_draw]', e);
+      return;
+    }
+
+    // ── 서버 결과 → 로컬 state 동기화 ──
+    p[curField] = row.currency_after;
+    if (!isSpirit) { try { bumpTitleCounter('total_blessing_spent', it.cost); } catch(e){} }
+
+    // 보상 종류별 로컬 반영
+    let resultMsg = row.message || '📦 보상 지급';
+    if (row.reward_kind === 'card' && row.reward_card_id){
+      const base = CARDS.find(c => c.id === row.reward_card_id);
+      if (base){
+        GAME.inventory.push(base);
+        _markGradeAcquired([base]);
+        const fEmoji = base.grade === 'hero' ? '⭐' : (base.grade === 'unique' ? '🔮' : (base.grade === 'rare' ? '🔵' : '⚪'));
+        resultMsg = `📦 ${fEmoji} ${gradeKr(base.grade)} 카드 획득 — ${base.name}`;
+        chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(base.grade)} 카드 [${base.name}]을(를) 획득하셨습니다!`, { sticky: true });
+        // 교환 기회 (card_exchange RPC 로 서버가 처리) — draw_id/slot_idx attach
+        const exResults = [Object.assign({}, base, { _draw_id: row.draw_id, _slot_idx: 0 })];
+        _offerExchangeForResults(exResults).catch(e => console.warn('[bless box exchange]', e));
       }
-      if (!card) card = pool[Math.floor(Math.random() * pool.length)];
-      if (card){
-        if (GAME.inventory.length >= inventoryLimit()){
-          const emoji = grade === 'hero' ? '⭐' : '🔮';
-          resultMsg = `📦 ${emoji} ${gradeKr(grade)} 카드 — ${card.name} · ⚠ 보유 한도 초과로 지급 누락`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${emoji} ${gradeKr(grade)} 카드 [${card.name}]을(를) 획득하셨습니다!`, { sticky: true });
-        } else {
-          GAME.inventory.push(card);
-          try { _logCardAcquisition(card, 'bless_box'); } catch(e){}
-          try { _logCardDrawAttempt('bless_box', [card], { bless: it.cost }); } catch(e){}
-          // 🔄 유니크·영웅 교환 기회 (카드샵 가챠와 동일 로직 · 1회 한정)
-          const exResults = [card];
-          _offerExchangeForResults(exResults).catch(e => console.warn('[bless box exchange]', e));
-          const finalCard = exResults[0] || card;
-          // 교환으로 카드가 바뀐 경우 최종 카드도 로그 (교환 결과)
-          if (finalCard && finalCard.id !== card.id){
-            try { _logCardAcquisition(finalCard, 'card_exchange'); } catch(e){}
-          }
-          const fg = finalCard.grade;
-          const fEmoji = fg === 'hero' ? '⭐' : (fg === 'unique' ? '🔮' : (fg === 'rare' ? '🔵' : '⚪'));
-          resultMsg = `📦 ${fEmoji} ${gradeKr(fg)} 카드 획득 — ${finalCard.name}`;
-          chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(fg)} 카드 [${finalCard.name}]을(를) 획득하셨습니다!`, { sticky: true });
-        }
-      }
-    } else if (chosen.id === 'stat_point'){
+    } else if (row.reward_kind === 'stat_point'){
       p.xpUp = (p.xpUp || 0) + 1;
       resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
       chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`, { sticky: true });
-    } else if (chosen.kind === 'weapon'){
-      const w = WEAPONS.find(x => x.id === chosen.itemId);
+    } else if (row.reward_kind === 'weapon' && row.reward_item){
+      const w = WEAPONS.find(x => x.id === row.reward_item);
       if (w){
         if (!p.weapons) p.weapons = [];
         p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
         resultMsg = `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ ${w.name} (+${w.atkBonus})을(를) 획득하셨습니다!`, { sticky: true });
       }
-    } else if (chosen.kind === 'armor'){
-      const a = ARMORS.find(x => x.id === chosen.itemId);
+    } else if (row.reward_kind === 'armor' && row.reward_item){
+      const a = ARMORS.find(x => x.id === row.reward_item);
       if (a){
         if (!p.armors) p.armors = [];
         p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
         resultMsg = `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 ${a.name} (+${a.defBonus})을(를) 획득하셨습니다!`, { sticky: true });
       }
+    } else if (row.reward_kind === 'none'){
+      // 인벤 한도 초과 등으로 지급 누락 — 서버 메시지 그대로
     }
+
     setBlessMsg(resultMsg, 'ok');
     setTimeout(() => alert(resultMsg), 200);
     renderSheet();
     refreshBlessShop();
     try { checkTitleUnlocks(); } catch(e){}
-    saveGame();
+    saveGame();   // 서버가 축복/inventory/weapons/armors/xpUp 반영 완료 → 부수 필드 저장만
     return;
   }
 }
@@ -7593,15 +7656,23 @@ function _rollReplacementQuestSlot(p, kind, excludeOldId){
   return { id: pick.id, progress: 0, target: pick.target, claimed: false };
 }
 // 퀘스트 보상 자동 수령
-function _claimQuestReward(slot, def){
+async function _claimQuestReward(slot, def){
   const p = GAME.player;
   slot.claimed = true;
   const parts = [];
+
+  // ── 재화 변경 추적 스냅샷 ──
+  const _preSnap = {
+    gold:     p.gold || 0,
+    xp:       p.xp || 0,
+    blessing: p.blessing || 0,
+    invLen:   (GAME.inventory || []).length,
+  };
+
   if (def.gold){  p.gold += def.gold; parts.push(`+${def.gold.toLocaleString()}G`); }
   if (def.xp){    p.xp   += def.xp;   parts.push(`+${def.xp.toLocaleString()} XP`); }
   if (def.bless){ p.blessing = (p.blessing||0) + def.bless; parts.push(`✨ 축복 +${def.bless}`); }
   if (def.card){
-    // card: 'normal' | 'rare' | 'unique' | 'hero' — 뽑기 확률표 이름
     const shop = GACHA_SHOPS[def.card];
     if (shop){
       const grade = pickGachaGradeForTable(shop.table);
@@ -7611,7 +7682,6 @@ function _claimQuestReward(slot, def){
         if (GAME.inventory.length < inventoryLimit()){
           GAME.inventory.push(card);
           _markGradeAcquired([card]);
-          try { _logCardAcquisition(card, 'quest_reward'); } catch(e){}
           parts.push(`🎁 ${gradeKr(card.grade)} 카드: ${card.name}`);
         } else {
           parts.push(`⚠ 카드 한도 초과`);
@@ -7619,6 +7689,26 @@ function _claimQuestReward(slot, def){
       }
     }
   }
+
+  // ── 서버 재화 동기화 ──
+  try {
+    const deltaGold  = (p.gold || 0)     - _preSnap.gold;
+    const deltaXp    = (p.xp || 0)       - _preSnap.xp;
+    const deltaBless = (p.blessing || 0) - _preSnap.blessing;
+    const newInvIds  = (GAME.inventory || []).slice(_preSnap.invLen).map(c => c && c.id).filter(Boolean);
+    if (sb && (deltaGold > 0 || deltaXp > 0 || deltaBless > 0 || newInvIds.length)){
+      await sb.rpc('grant_combat_reward', {
+        p_source: 'other',
+        p_rewards: {
+          gold:     Math.max(0, deltaGold),
+          xp:       Math.max(0, deltaXp),
+          blessing: Math.max(0, deltaBless),
+          cards:    newInvIds,
+        },
+      });
+    }
+  } catch(e){ console.warn('[claimQuestReward server sync]', e); }
+
   const msg = `✔ 「${def.name}」 완료! ${parts.join(', ')}`;
   try { toast(msg); } catch(e){}
   try { renderSheet(); } catch(e){}
@@ -9562,6 +9652,18 @@ async function raidEnd(result){
     return _handleMacroGuardRaid(result);
   }
 
+  // ── 재화 변경 추적 스냅샷 (서버 RPC 동기화용) ──
+  const _preSnap = {
+    gold:     p.gold || 0,
+    xp:       p.xp || 0,
+    xpUp:     p.xpUp || 0,
+    blessing: p.blessing || 0,
+    spirit:   p.spiritBlessing || 0,
+    invLen:   (GAME.inventory || []).length,
+    wpnLen:   (p.weapons || []).length,
+    armLen:   (p.armors || []).length,
+  };
+
   let outcome = result;
   let bodyHtml = '';
 
@@ -9951,6 +10053,36 @@ async function raidEnd(result){
     if (p.mp > p.mpMax) p.mp = p.mpMax;
   } catch(e){ console.warn('[raidEnd stat reset]', e); }
   renderSheet();
+
+  // ── 서버 재화 동기화 ──
+  //   공격대는 패배 패널티 없음 (gold/xp 차감 X) → 승리만 grant_combat_reward
+  try {
+    const deltaGold     = (p.gold || 0)           - _preSnap.gold;
+    const deltaXp       = (p.xp || 0)             - _preSnap.xp;
+    const deltaStat     = (p.xpUp || 0)           - _preSnap.xpUp;
+    const deltaBless    = (p.blessing || 0)       - _preSnap.blessing;
+    const deltaSpirit   = (p.spiritBlessing || 0) - _preSnap.spirit;
+    const newInv        = (GAME.inventory || []).slice(_preSnap.invLen).map(c => c && c.id).filter(Boolean);
+    const newWpnIds     = (p.weapons || []).slice(_preSnap.wpnLen).map(w => w && w.id).filter(Boolean);
+    const newArmIds     = (p.armors  || []).slice(_preSnap.armLen).map(a => a && a.id).filter(Boolean);
+    const sourceKind = (c.mode === 'boss') ? 'raid_boss' : 'raid_mob';
+    if (sb && (deltaGold > 0 || deltaXp > 0 || deltaStat > 0 || deltaBless > 0 || deltaSpirit > 0 || newInv.length || newWpnIds.length || newArmIds.length)){
+      await sb.rpc('grant_combat_reward', {
+        p_source: sourceKind,
+        p_rewards: {
+          gold:        Math.max(0, deltaGold),
+          xp:          Math.max(0, deltaXp),
+          stat_points: Math.max(0, deltaStat),
+          blessing:    Math.max(0, deltaBless),
+          spirit:      Math.max(0, deltaSpirit),
+          cards:       newInv,
+          weapons:     newWpnIds,
+          armors:      newArmIds,
+        },
+      });
+    }
+  } catch(e){ console.warn('[raidEnd server sync]', e); }
+
   // 공격대 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
   try { saveGame(); } catch(e){ console.warn('[raidEnd saveGame]', e); }
   cloudSaveNow().catch(e => console.warn('[raidEnd cloudSave]', e));
@@ -15589,7 +15721,7 @@ function _applySpiritRestore(kind, lostGold, lostXp){
   try { alert('✔ 손실 보전 완료\n\n' + msg + '\n\n(남은 정령의 축복: ' + (p.spiritBlessing|0) + '개)'); } catch(e){}
 }
 
-function huntEnd(result){
+async function huntEnd(result){
   const c = GAME.huntCombat;
   if (!c || c.finished) return;
   c.finished = true;
@@ -15604,6 +15736,18 @@ function huntEnd(result){
   if (m && m.id === 'ggoming'){
     return _handleGgomingHunt(result);
   }
+
+  // ── 재화 변경 추적 스냅샷 (서버 RPC 동기화용) ──
+  //   로컬 변경 (gold/xp/xpUp/weapons/armors/inventory) 을 전부 수행한 뒤
+  //   함수 끝에서 delta 를 서버로 전송 → saves trigger 통과
+  const _preSnap = {
+    gold:    p.gold || 0,
+    xp:      p.xp || 0,
+    xpUp:    p.xpUp || 0,
+    invLen:  (GAME.inventory || []).length,
+    wpnLen:  (p.weapons || []).length,
+    armLen:  (p.armors || []).length,
+  };
 
   // result: win / lose / time / flee
   let outcome = result;
@@ -15805,6 +15949,52 @@ function huntEnd(result){
   } catch(e){ console.warn('[huntEnd stat reset]', e); }
   renderSheet();
   renderDeck();
+
+  // ── 서버 재화 동기화 (trigger 보호 필드 반영) ──
+  //   로컬에서 변경된 gold/xp/xpUp/weapons/armors/inventory 을 서버에 반영
+  //   이후 saveGame() 은 서버 state 와 로컬 state 가 동일하므로 trigger 통과
+  try {
+    const deltaGold = (p.gold || 0) - _preSnap.gold;
+    const deltaXp   = (p.xp || 0)   - _preSnap.xp;
+    const deltaStat = (p.xpUp || 0) - _preSnap.xpUp;
+    const newWpnIds = (p.weapons || []).slice(_preSnap.wpnLen).map(w => w && w.id).filter(Boolean);
+    const newArmIds = (p.armors  || []).slice(_preSnap.armLen).map(a => a && a.id).filter(Boolean);
+
+    if (outcome === 'win' && (deltaGold > 0 || deltaXp > 0 || deltaStat > 0 || newWpnIds.length || newArmIds.length)){
+      if (sb){
+        await sb.rpc('grant_combat_reward', {
+          p_source: 'hunt',
+          p_rewards: {
+            gold: Math.max(0, deltaGold),
+            xp:   Math.max(0, deltaXp),
+            stat_points: Math.max(0, deltaStat),
+            weapons: newWpnIds,
+            armors:  newArmIds,
+          },
+        });
+      }
+    } else if (outcome === 'lose'){
+      const lossGold = Math.max(0, _preSnap.gold - (p.gold || 0));
+      const lossXp   = Math.max(0, _preSnap.xp   - (p.xp || 0));
+      let destroyedKind = null, destroyedId = null;
+      if (destroyed){
+        if (destroyed.kind === 'card' && destroyed.card){ destroyedKind = 'card'; destroyedId = destroyed.card.id; }
+        else if (destroyed.kind === 'weapon' && destroyed.item){ destroyedKind = 'weapon'; destroyedId = destroyed.item.id; }
+        else if (destroyed.kind === 'armor' && destroyed.item){ destroyedKind = 'armor'; destroyedId = destroyed.item.id; }
+      }
+      if (sb && (lossGold > 0 || lossXp > 0 || destroyedKind)){
+        await sb.rpc('apply_combat_loss', {
+          p_loss: {
+            gold_lost: lossGold,
+            xp_lost:   lossXp,
+            destroyed_kind: destroyedKind,
+            destroyed_id:   destroyedId,
+          },
+        });
+      }
+    }
+  } catch(e){ console.warn('[huntEnd server sync]', e); }
+
   // 수행 결과 즉시 저장 — 로컬 + 클라우드 flush (탭 즉시 종료 시 유실 방지)
   try { saveGame(); } catch(e){ console.warn('[huntEnd saveGame]', e); }
   cloudSaveNow().catch(e => console.warn('[huntEnd cloudSave]', e));
@@ -16910,12 +17100,61 @@ function _towerCheckAlive(){
 }
 
 // ── 전투 종료 판정 ──
-function towerBattleEnd(result){
+async function towerBattleEnd(result){
   const c = GAME.huntCombat;
   if (!c || c.finished) return;
   c.finished = true;
   const p = GAME.player;
   const m = c.monster;
+
+  // ── 재화 변경 추적 스냅샷 (서버 RPC 동기화용) ──
+  const _preSnap = {
+    gold:     p.gold || 0,
+    xp:       p.xp || 0,
+    xpUp:     p.xpUp || 0,
+    blessing: p.blessing || 0,
+    spirit:   p.spiritBlessing || 0,
+    invLen:   (GAME.inventory || []).length,
+    wpnLen:   (p.weapons || []).length,
+    armLen:   (p.armors || []).length,
+  };
+  const _syncTowerServer = async () => {
+    try {
+      const deltaGold   = (p.gold || 0)           - _preSnap.gold;
+      const deltaXp     = (p.xp || 0)             - _preSnap.xp;
+      const deltaStat   = (p.xpUp || 0)           - _preSnap.xpUp;
+      const deltaBless  = (p.blessing || 0)       - _preSnap.blessing;
+      const deltaSpirit = (p.spiritBlessing || 0) - _preSnap.spirit;
+      const newInv      = (GAME.inventory || []).slice(_preSnap.invLen).map(c => c && c.id).filter(Boolean);
+      const newWpnIds   = (p.weapons || []).slice(_preSnap.wpnLen).map(w => w && w.id).filter(Boolean);
+      const newArmIds   = (p.armors  || []).slice(_preSnap.armLen).map(a => a && a.id).filter(Boolean);
+      if (sb && (deltaGold > 0 || deltaXp > 0 || deltaStat > 0 || deltaBless > 0 || deltaSpirit > 0 || newInv.length || newWpnIds.length || newArmIds.length)){
+        await sb.rpc('grant_combat_reward', {
+          p_source: 'tower',
+          p_rewards: {
+            gold:        Math.max(0, deltaGold),
+            xp:          Math.max(0, deltaXp),
+            stat_points: Math.max(0, deltaStat),
+            blessing:    Math.max(0, deltaBless),
+            spirit:      Math.max(0, deltaSpirit),
+            cards:       newInv,
+            weapons:     newWpnIds,
+            armors:      newArmIds,
+          },
+        });
+        // 1회 호출 후 스냅샷 갱신 (같은 함수 안에서 또 호출될 수 있음)
+        _preSnap.gold = p.gold || 0;
+        _preSnap.xp = p.xp || 0;
+        _preSnap.xpUp = p.xpUp || 0;
+        _preSnap.blessing = p.blessing || 0;
+        _preSnap.spirit = p.spiritBlessing || 0;
+        _preSnap.invLen = (GAME.inventory || []).length;
+        _preSnap.wpnLen = (p.weapons || []).length;
+        _preSnap.armLen = (p.armors || []).length;
+      }
+    } catch(e){ console.warn('[towerBattleEnd server sync]', e); }
+  };
+
   let outcome = result;
   if (result === 'time'){
     // 시간초과: 몹 HP 남았으면 패배 (탑은 몬스터 처치 필수)
@@ -17002,12 +17241,14 @@ function towerBattleEnd(result){
         _endTowerRun(true);
       }, 700);
       _saveTowerRecordSafe();
+      await _syncTowerServer();
       try { saveGame(); } catch(e){}
       cloudSaveNow().catch(()=>{});
       return;
     }
     // 다음 층으로
     _saveTowerRecordSafe();
+    await _syncTowerServer();
     try { saveGame(); } catch(e){}
     cloudSaveNow().catch(()=>{});
     setTimeout(() => {
@@ -17037,6 +17278,7 @@ function towerBattleEnd(result){
     }
   }
   _saveTowerRecordSafe();
+  await _syncTowerServer();
   try { saveGame(); } catch(e){}
   cloudSaveNow().catch(()=>{});
   setTimeout(() => {
@@ -21527,19 +21769,34 @@ function renderSheet(){
 function maxDeckSlots(){
   return (GAME.player && GAME.player.level >= 26) ? 15 : 10;
 }
-function addStat(stat){
+async function addStat(stat){
   const p = GAME.player;
   if (!p) return;
   if (p.xpUp < 1){
     toast('스탯 포인트가 부족합니다. 사냥으로 레벨업하세요.');
     return;
   }
+  if (!sb){ toast('⚠ 오프라인 상태 — 스탯 사용은 클라우드 연결 필요'); return; }
+
+  // ── 서버 RPC (xpUp 차감 + 해당 스탯 증가) ──
+  let row;
+  try {
+    const { data, error } = await sb.rpc('use_stat_point', { p_stat: stat, p_amount: 1 });
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    toast('⚠ 스탯 추가 실패: ' + (e.message || e));
+    console.warn('[use_stat_point]', e);
+    return;
+  }
+
+  // 로컬 state 동기화
   const oldHpMax = p.hpMax || 0;
   const oldMpMax = p.mpMax || 0;
-  p[stat] += 1;
-  p.xpUp -= 1;
+  p[stat] = row.stat_value_after;
+  p.xpUp  = row.xp_up_after;
   calcDerived(p);
-  // 최대치 증가분만큼 현재치도 함께 증가 (버프 로직과 동일 정책)
   const hpDelta = (p.hpMax || 0) - oldHpMax;
   const mpDelta = (p.mpMax || 0) - oldMpMax;
   if (hpDelta > 0) p.hp = Math.min(p.hpMax, (p.hp || 0) + hpDelta);
@@ -21549,10 +21806,9 @@ function addStat(stat){
   saveGame();
 }
 
-function resetStats(){
+async function resetStats(){
   const p = GAME.player;
   if (!p) return;
-  // 최초 1회는 50,000G, 이후는 200,000G + 여신의 축복 10개
   const usedCount = p.statResetCount || 0;
   const isFirst = usedCount === 0;
   const COST = isFirst ? 50000 : 200000;
@@ -21573,31 +21829,42 @@ function resetStats(){
   if (!confirm(`스탯 초기화 (${label})\n\n${costLine}\n현재 스탯이 모두 5/5/5/5로 리셋됩니다.\n레벨업으로 얻은 스탯 포인트는 그대로 돌려받습니다.${noticeFirst}\n\n진행할까요?`)){
     return;
   }
-  // 현재까지 사용한 스탯 = (str-5) + (dex-5) + (int-5) + (con-5) + 남은 xpUp
-  const usedPoints = (p.str - 5) + (p.dex - 5) + (p.int - 5) + (p.con - 5);
-  p.gold -= COST;
-  try { _bumpWeeklyCounter('goldSpent', COST, 'wq_gold_spent'); } catch(e){}
-  try { bumpTitleCounter('total_gold_spent', COST); } catch(e){}
-  if (BLESS_COST > 0){
-    p.blessing = Math.max(0, (p.blessing || 0) - BLESS_COST);
-    try { bumpTitleCounter('total_blessing_spent', BLESS_COST); } catch(e){}
+  if (!sb){ toast('⚠ 오프라인 상태 — 초기화는 클라우드 연결 필요'); return; }
+
+  // ── 서버 RPC (statResetCount 기반 비용 자동 계산 + 모든 변경 반영) ──
+  let row;
+  try {
+    const { data, error } = await sb.rpc('reset_stats');
+    if (error) throw error;
+    row = Array.isArray(data) ? data[0] : data;
+    if (!row) throw new Error('empty response');
+  } catch(e){
+    toast('⚠ 스탯 초기화 실패: ' + (e.message || e));
+    console.warn('[reset_stats]', e);
+    return;
   }
+
+  // 로컬 state 동기화
+  p.gold     = row.gold_after;
+  p.blessing = row.blessing_after;
+  p.xpUp     = row.xp_up_after;
   p.str = 5; p.dex = 5; p.int = 5; p.con = 5;
-  // 사용한 포인트만큼 돌려받음
-  p.xpUp += Math.max(0, usedPoints);
   p.statResetCount = usedCount + 1;
+  try { _bumpWeeklyCounter('goldSpent', row.cost_gold, 'wq_gold_spent'); } catch(e){}
+  try { bumpTitleCounter('total_gold_spent', row.cost_gold); } catch(e){}
+  if (row.cost_blessing > 0){
+    try { bumpTitleCounter('total_blessing_spent', row.cost_blessing); } catch(e){}
+  }
   calcDerived(p);
-  // HP/MP 풀로 채워줌 (리셋 보상)
   p.hp = p.hpMax;
   p.mp = p.mpMax;
   renderSheet();
-  const costSummary = BLESS_COST > 0
-    ? `-${COST.toLocaleString()}G · -✨ ${BLESS_COST}`
-    : `-${COST.toLocaleString()}G`;
-  toast(`✔ 스탯 초기화 완료. ${costSummary}, 스탯 포인트 ${usedPoints} 환급`);
+  const costSummary = row.cost_blessing > 0
+    ? `-${row.cost_gold.toLocaleString()}G · -✨ ${row.cost_blessing}`
+    : `-${row.cost_gold.toLocaleString()}G`;
+  toast(`✔ 스탯 초기화 완료. ${costSummary}, 스탯 포인트 ${row.used_points_returned} 환급`);
   chatSys(`★ ${p.name}님이 스탯을 초기화하였습니다.`, { local: true });
   saveGame();
-  // 중요 액션 — 클라우드 즉시 flush (탭 즉시 종료 시 유실 방지)
   cloudSaveNow().catch(e => console.warn('[resetStats cloudSave]', e));
 }
 
