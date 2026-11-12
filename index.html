@@ -4021,9 +4021,11 @@ function nickToEmail(nick){
   return 'u' + hex + '@pmonline.local';
 }
 function buildSavePayload(){
+  // 기간제 override 중이면 원본 덱으로 저장 (전투 중 자동 저장 안전)
+  const _deckSrc = Array.isArray(GAME._timedOverrideBackup) ? GAME._timedOverrideBackup : GAME.myDeck;
   return {
     player:    GAME.player,
-    myDeck:    GAME.myDeck.map(c => c ? c.id : 'basic_atk'),
+    myDeck:    _deckSrc.map(c => c ? c.id : 'basic_atk'),
     inventory: GAME.inventory.map(c => c.id),
     ranking:   GAME.ranking,
     raid:      GAME.raid,
@@ -4277,9 +4279,10 @@ function saveGameLocalOnly(){
     if (!GAME.player) return;
     const key = currentSaveKey();
     if (!key) return;
+    const _deckSrc = Array.isArray(GAME._timedOverrideBackup) ? GAME._timedOverrideBackup : GAME.myDeck;
     const data = {
       player: GAME.player,
-      myDeck: GAME.myDeck.map(c => c ? c.id : 'basic_atk'),
+      myDeck: _deckSrc.map(c => c ? c.id : 'basic_atk'),
       inventory: GAME.inventory.map(c => c.id),
       ranking: GAME.ranking,
       raid: GAME.raid,
@@ -4449,9 +4452,10 @@ function saveGame(){
         localStorage.setItem(bkKeys[0], cur);
       }
     } catch(e){}
+    const _deckSrc = Array.isArray(GAME._timedOverrideBackup) ? GAME._timedOverrideBackup : GAME.myDeck;
     const data = {
       player: GAME.player,
-      myDeck: GAME.myDeck.map(c => c ? c.id : 'basic_atk'),
+      myDeck: _deckSrc.map(c => c ? c.id : 'basic_atk'),
       inventory: GAME.inventory.map(c => c.id),
       ranking: GAME.ranking,
       raid: GAME.raid,
@@ -7963,6 +7967,8 @@ const TITLE_POOL = [
   { id:'title_sponsor_partner',   name:'Partner',   tier:'전설',   color:'#ffd700', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_patron',    name:'Patron',    tier:'영웅',   color:'#FFBB2A', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   { id:'title_sponsor_sponsor',   name:'Sponsor',   tier:'유니크', color:'#a335ee', desc:"'RE: 여신전쟁' 설립의 후원자에게 지급되는 명예의 칭호", cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
+  // ── 사태 생존자 (관리자 지급 전용) ──
+  { id:'title_apocalypse_witness', name:'종말의 목격자', tier:'영웅', color:'#FFBB2A', desc:'2026년 11월 6일 사태를 겪은 생존자', cond:{type:'admin_only', target:1}, hiddenIfUnowned:true },
   // ── 영원의 회랑 (Corridor) — 31개 ──
   // 일반
   { id:'title_corridor_first_entry',    name:'회랑 입성',        tier:'일반', color:'#a8a8a8', desc:'영원의 회랑에 첫 등록',                     cond:{type:'corridor_registrations_total', target:1  } },
@@ -8848,6 +8854,8 @@ async function openRaid(raidKey){
     }, { text: '⚔ 공격대 준비 중...' });
     return;
   }
+  // 기간제 카드 만료 체크 (수행/공격대 시작 시점)
+  await _checkTimedCardsExpiryServer();
   // 보스 처치 쿨다운 — 마지막 보상 획득 후 5분간 동일 공격대 진입 차단 (raidKey 별 독립)
   const remainMs = getRaidBossCooldownRemain(raidKey);
   if (remainMs > 0){
@@ -12716,6 +12724,8 @@ function openHunt(tier){
   }
   _incHourlyActivity(p);
   _incDailyHunt(p);
+  // 기간제 카드 만료 체크 (fire-and-forget — 다음 전투 전 반영)
+  try { _checkTimedCardsExpiryServer(); } catch(e){}
   // tier 자동 결정 (Lv 1~25 → tier 1, Lv 26+ → tier 2)
   if (tier == null) tier = p.level >= 26 ? 2 : 1;
   setCombatMode(true);
@@ -16891,6 +16901,14 @@ function startTowerFloor(floorN){
     const c = CARDS.find(cc => cc.id === GAME.tower.currentDeck[i]);
     newDeck[i] = c || BASIC_ATTACK;
   }
+  // 기간제 카드 치환 (여신의 탑은 수행/공격대 외 — 자동 기본공격 치환)
+  try {
+    const _sub = _substituteTimedCardsInDeck(newDeck);
+    if (_sub.replaced > 0){
+      for (let i = 0; i < newDeck.length; i++) newDeck[i] = _sub.deck[i];
+      toast(`⏱ 기간제 카드 ${_sub.replaced}개는 수행·공격대 전용 — 탑에서는 기본공격으로 처리`);
+    }
+  } catch(e){ console.warn('[tower timed sub]', e); }
   GAME.myDeck = newDeck;
 
   // 몬스터 생성 — 덱 편성 화면에서 미리 생성한 previewMonster 재사용 (없거나 층 불일치 시 새로 생성)
@@ -19134,6 +19152,14 @@ async function startCorridorBattle(defenderId){
 
   // Step 2: 가상 캐릭터 조립 (방어자 = 서버 공개 값 기준)
   const virtA = _corridorBuildVirtual(myReg, myReg.nickname || p.name);
+  // 기간제 카드 치환 (회랑은 수행/공격대 외 — 자동 기본공격 치환)
+  try {
+    const _sub = _substituteTimedCardsInDeck(virtA.deck);
+    if (_sub.replaced > 0){
+      virtA.deck = _sub.deck;
+      toast(`⏱ 기간제 카드 ${_sub.replaced}개는 수행·공격대 전용 — 회랑에서는 기본공격으로 처리`);
+    }
+  } catch(e){ console.warn('[corridor timed sub]', e); }
   const defRegExpanded = {
     deck: revealed.defender_deck,
     atk_type: revealed.defender_atk_type,
@@ -19691,6 +19717,7 @@ function onOppEquipChange(){
 }
 function exitTrain(){
   GAME.trainCombat = null;
+  try { _releaseTimedOverrideOnMyDeck(); } catch(e){}
   showContent('main');
 }
 function showTrainStep(step){
@@ -19799,8 +19826,15 @@ function renderCardGrid(){
   let pool;
   if (_cardPickMode === 'my'){
     // 내 덱 슬롯: 보유분 - 다른 슬롯 장착분 = 사용 가능 수량. 0이면 목록에서 제외.
+    // 영구 (inventory) + 기간제 (timedCards, 만료 전) 합산.
     const owned = {};
     for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+    const _now = Date.now();
+    const validTimed = ((GAME.player && GAME.player.timedCards) || []).filter(t => {
+      const exp = Date.parse(t.expires_at);
+      return isFinite(exp) && exp > _now;
+    });
+    for (const t of validTimed){ owned[t.card_id] = (owned[t.card_id]||0) + 1; }
     const equipped = {};
     for (let i = 0; i < GAME.myDeck.length; i++){
       const dc = GAME.myDeck[i];
@@ -19809,7 +19843,14 @@ function renderCardGrid(){
     }
     const seen = new Set();
     pool = [BASIC_ATTACK];
-    for (const c of GAME.inventory){
+    const combined = GAME.inventory.slice();
+    for (const t of validTimed){
+      if (!combined.some(c => c.id === t.card_id)){
+        const base = CARDS.find(c => c.id === t.card_id);
+        if (base) combined.push(base);
+      }
+    }
+    for (const c of combined){
       if (seen.has(c.id)) continue;
       seen.add(c.id);
       const avail = (owned[c.id]||0) - (equipped[c.id]||0);
@@ -19838,6 +19879,25 @@ function renderCardGrid(){
         if (base) pool.push({...base, _isTrace: true, _traceCount: tcounts[id]});
       }
     }
+    // 기간제 카드 추가 (별도 row · 남은 시간 표시)
+    const _now2 = Date.now();
+    const validTimed2 = ((GAME.player && GAME.player.timedCards) || []).filter(t => {
+      const exp = Date.parse(t.expires_at);
+      return isFinite(exp) && exp > _now2;
+    });
+    if (validTimed2.length > 0){
+      const tgroup = {};
+      for (const t of validTimed2){
+        const exp = Date.parse(t.expires_at);
+        if (!tgroup[t.card_id]) tgroup[t.card_id] = { count:0, earliest:Infinity };
+        tgroup[t.card_id].count++;
+        if (exp < tgroup[t.card_id].earliest) tgroup[t.card_id].earliest = exp;
+      }
+      for (const id in tgroup){
+        const base = CARDS.find(c => c.id === id);
+        if (base) pool.push({...base, _isTimed:true, _timedCount:tgroup[id].count, _timedEarliest:tgroup[id].earliest});
+      }
+    }
   } else {
     // 'opp' (훈련소 상대 덱): 모든 카드 풀
     pool = CARDS.slice();
@@ -19853,8 +19913,9 @@ function renderCardGrid(){
     if (basicIdx >= 0) basic = list.splice(basicIdx, 1)[0];
     const gradeOrder = { normal:1, rare:2, unique:3, hero:4, legend:5 };
     list.sort((a, b) => {
-      // 흔적은 등급 상관없이 뒤로
-      const aT = a._isTrace ? 1 : 0, bT = b._isTrace ? 1 : 0;
+      // 영구(0) → 기간제(1) → 흔적(2) 순
+      const aT = a._isTrace ? 2 : (a._isTimed ? 1 : 0);
+      const bT = b._isTrace ? 2 : (b._isTimed ? 1 : 0);
       if (aT !== bT) return aT - bT;
       return ((gradeOrder[a.grade] || 9) - (gradeOrder[b.grade] || 9))
         || a.name.localeCompare(b.name, 'ko');
@@ -19884,6 +19945,21 @@ function renderCardGrid(){
         </div>
       </div>`;
     }
+    if (c._isTimed){
+      // 기간제: 녹색 뱃지 + 남은 시간 (view 모드에서만 별도 row · my 모드에서는 수량 합산)
+      const remainTxt = _formatTimedRemain(c._timedEarliest - Date.now());
+      const badge = `<span style="float:right;background:#2a5;color:#fff;padding:1px 4px;font-size:9px;">⏱ x${c._timedCount}</span>`;
+      return `<div class="cg-item ${c.grade}"
+        style="cursor:default;outline:1px dashed #2a5;outline-offset:-2px;"
+        title="기간제 임대 — ${remainTxt} 남음">
+        <div class="ico">${cardIcon(c)}</div>
+        <div class="info">
+          <div class="nm">${c.name} ${badge}</div>
+          <div class="gr">[${gradeKr(c.grade)}] · ⏱ ${remainTxt}</div>
+          <div class="ef">${c.text}</div>
+        </div>
+      </div>`;
+    }
     const clickHandler = (_cardPickMode==='view') ? '' : `onclick="selectCardForSlot('${c.id}')"`;
     const countBadge = c._count ? `<span style="float:right;background:#7E181E;color:#fff;padding:1px 4px;font-size:9px;">x${c._count}</span>` : '';
     return `<div class="cg-item ${c.grade}" ${clickHandler} style="${_cardPickMode==='view'?'cursor:default;':''}">
@@ -19897,6 +19973,71 @@ function renderCardGrid(){
   }).join('');
 }
 function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',hero:'영웅',legend:'전설'}[g]; }
+
+// 기간제 카드 남은 시간 포맷 (ms → "N일 Nh" / "Nh Nm" / "Nm")
+function _formatTimedRemain(ms){
+  if (!isFinite(ms) || ms <= 0) return '만료됨';
+  const s = Math.floor(ms / 1000);
+  const d = Math.floor(s / 86400);
+  const h = Math.floor((s % 86400) / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  if (d > 0) return `${d}일 ${h}시간`;
+  if (h > 0) return `${h}시간 ${m}분`;
+  return `${m}분`;
+}
+
+// 현재 "기간제 전용" 카드 ID 집합 (영구 inventory 에 없고 만료 전 timedCards 에 있는 것)
+// 수행/공격대 외 전투에서는 이 카드들이 BASIC_ATTACK 으로 치환됨.
+function _getTimedOnlyCardIds(){
+  const p = GAME.player;
+  if (!p || !Array.isArray(p.timedCards)) return new Set();
+  const perm = new Set((GAME.inventory || []).map(c => c.id));
+  const _now = Date.now();
+  const timed = new Set();
+  for (const t of p.timedCards){
+    const exp = Date.parse(t.expires_at);
+    if (isFinite(exp) && exp > _now && !perm.has(t.card_id)){
+      timed.add(t.card_id);
+    }
+  }
+  return timed;
+}
+
+// 주어진 덱 (CARDS 객체 배열) 복사본에서 기간제 전용 카드 자리를 BASIC_ATTACK 으로 치환.
+// 반환: { deck, replaced }. 덱 원본은 수정하지 않음.
+function _substituteTimedCardsInDeck(deckArr){
+  const timedOnly = _getTimedOnlyCardIds();
+  if (timedOnly.size === 0) return { deck: deckArr.slice(), replaced: 0 };
+  let replaced = 0;
+  const out = deckArr.map(entry => {
+    if (!entry) return entry;
+    const id = typeof entry === 'string' ? entry : entry.id;
+    if (id && timedOnly.has(id)){
+      replaced++;
+      return typeof entry === 'string' ? 'basic_atk' : BASIC_ATTACK;
+    }
+    return entry;
+  });
+  return { deck: out, replaced };
+}
+
+// 훈련소용: GAME.myDeck 을 직접 치환 (복원은 _releaseTimedOverrideOnMyDeck 또는 exitTrain 에서).
+// 전투 중 saveGame 이 호출돼도 buildSavePayload 가 _timedOverrideBackup 을 보고 원본 덱을 저장.
+function _applyTimedOverrideOnMyDeck(){
+  if (Array.isArray(GAME._timedOverrideBackup)) return 0;   // 중복 적용 방지
+  const { deck, replaced } = _substituteTimedCardsInDeck(GAME.myDeck);
+  if (replaced > 0){
+    GAME._timedOverrideBackup = GAME.myDeck.slice();
+    GAME.myDeck = deck;
+  }
+  return replaced;
+}
+function _releaseTimedOverrideOnMyDeck(){
+  if (!Array.isArray(GAME._timedOverrideBackup)) return;
+  GAME.myDeck = GAME._timedOverrideBackup;
+  GAME._timedOverrideBackup = null;
+  try { renderDeck(); } catch(e){}
+}
 
 // ─── 흔적 복구 팝업 ───────────────────────────────────────────────
 // 반투명 흔적 카드 클릭 시 호출.
@@ -20163,6 +20304,16 @@ function clearSlot(){
 // ─── Step 2: 전투 시작 ───
 function startTrainBattle(){
   const s = GAME.trainSetup;
+  // 기간제 카드는 수행/공격대 외 전투 (여기선 훈련소) 에서 자동 치환
+  //   · GAME.myDeck 백업 + 기간제 자리 BASIC_ATTACK 교체
+  //   · exitTrain / 메인 복귀 시 복원
+  //   · buildSavePayload 가 override 중이면 원본으로 저장
+  try {
+    const _replaced = _applyTimedOverrideOnMyDeck();
+    if (_replaced > 0){
+      toast(`⏱ 기간제 카드 ${_replaced}개는 수행·공격대 전용 — 훈련소에서는 기본공격으로 처리`);
+    }
+  } catch(e){ console.warn('[train timed override]', e); }
   // 훈련소는 가상 전투이므로 HP/MP 백업 (전투 종료 시 복구)
   GAME.trainSaved = { hp: GAME.player.hp, mp: GAME.player.mp };
   // 상대 무기/방어구 객체
@@ -22225,6 +22376,34 @@ function renderDeck(){
   try { renderDeckPresetLabels(); } catch(e){}
 }
 
+// ─── 기간제 카드 만료 체크 ─────────────────────────────────────
+// openHunt / openRaid 진입 시 호출. 서버가 만료 정리 후 expired_ids 반환 →
+// 클라 로컬 timedCards 제거 + 덱 슬롯에서도 비움 (영구 보유 있으면 유지).
+async function _checkTimedCardsExpiryServer(){
+  try {
+    if (typeof sb === 'undefined' || !sb) return;
+    const p = GAME.player;
+    if (!p || !Array.isArray(p.timedCards) || p.timedCards.length === 0) return;
+    const { data, error } = await sb.rpc('check_timed_cards_expiry');
+    if (error){ console.warn('[timed expiry rpc]', error.message); return; }
+    const res = Array.isArray(data) ? data[0] : data;
+    const expired = (res && Array.isArray(res.expired_ids)) ? res.expired_ids : [];
+    if (expired.length === 0) return;
+    // 로컬 timedCards 정리
+    p.timedCards = (p.timedCards || []).filter(t => !expired.includes(t.card_id));
+    // 덱 슬롯 중 만료 ID 자리 비우기 (영구 inventory 에 보유분 없으면)
+    const perm = new Set((GAME.inventory || []).map(c => c.id));
+    for (let i = 0; i < (GAME.myDeck || []).length; i++){
+      const c = GAME.myDeck[i];
+      if (c && expired.includes(c.id) && !perm.has(c.id)){
+        GAME.myDeck[i] = BASIC_ATTACK;
+      }
+    }
+    try { renderDeck(); } catch(e){}
+    try { toast(`⏱ 기간제 카드 ${expired.length}개 만료`); } catch(e){}
+  } catch(e){ console.warn('[timed cards expiry]', e); }
+}
+
 // ─── 메인 덱 영교(swap) 모드 ───────────────────────────────────
 // 짧게 클릭 = 선택/이동, 길게 누르기 = 피커 모달
 // 선택 → 다른 슬롯 클릭 시:
@@ -23599,6 +23778,7 @@ async function loadAdminUsers(){
             titles: Array.isArray(p.titles) ? p.titles.slice() : [],
             pendingTitles: Array.isArray(p.pendingTitles) ? p.pendingTitles.slice() : [],
             equippedTitle: p.equippedTitle || null,
+            timedCards: Array.isArray(p.timedCards) ? p.timedCards.slice() : [],
             myDeck: d.myDeck || [],
             inventory: d.inventory || [],
             updated_at: row.updated_at,
@@ -24042,6 +24222,45 @@ function renderAdminEdit(){
     </div>
 
     ${(u.source === 'cloud') ? `
+    <div class="edit-row" style="display:block;background:#eafaf1;border:1px solid #4a8;padding:8px 10px;margin:6px 0;border-radius:4px;">
+      <div style="font-weight:bold;color:#2a7;margin-bottom:6px;font-size:12px;">⏱ 기간제 카드 지급</div>
+      <div style="font-size:11px;color:#555;margin-bottom:6px;">
+        유니크 이상 카드를 지정 시간 동안만 사용 가능하도록 임대 지급합니다. 만료 시 흔적 없이 소멸.<br>
+        같은 카드 재지급 시 기존 만료 시각에 시간이 추가됩니다 (연장).
+      </div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:6px;">
+        <select id="ed_timedCardSel" style="width:260px;font-size:11px;">
+          <option value="">+ 카드 선택 (유니크 이상)...</option>
+          ${CARDS.filter(c => c.id !== 'basic_atk' && !c.monsterOnly && (c.grade==='unique'||c.grade==='hero'||c.grade==='legend'))
+            .slice().sort((a,b)=>{
+              const ord = {unique:1,hero:2,legend:3};
+              const oa = ord[a.grade]||9, ob = ord[b.grade]||9;
+              if (oa !== ob) return oa - ob;
+              return a.name.localeCompare(b.name,'ko');
+            }).map(c => `<option value="${c.id}">[${gradeKr(c.grade)}] ${c.name}</option>`).join('')}
+        </select>
+        <input id="ed_timedHours" type="number" min="1" max="9999" value="24" style="width:70px;font-size:11px;" placeholder="시간">
+        <span style="font-size:11px;color:#555;">시간</span>
+        <button class="admin-btn small" onclick="adminGrantTimedCard('${(u.name||'').replace(/'/g,"\\'")}')">⏱ 지급</button>
+      </div>
+      <div style="font-size:11px;color:#333;">
+        <b>현재 보유 기간제:</b>
+        ${(u.timedCards||[]).length === 0
+          ? '<span style="color:#aaa;">(없음)</span>'
+          : (u.timedCards||[]).map(t => {
+              const card = CARDS.find(c => c.id === t.card_id);
+              const nm = card ? card.name : t.card_id;
+              const exp = Date.parse(t.expires_at);
+              const remain = isFinite(exp) ? _formatTimedRemain(exp - Date.now()) : '?';
+              const expired = isFinite(exp) && exp <= Date.now();
+              return `<span style="display:inline-block;margin:2px 3px;padding:1px 6px;background:${expired?'#999':'#2a5'};color:#fff;border-radius:3px;font-size:10px;">
+                ${nm} · ${expired?'만료':remain}
+                <button onclick="adminRevokeTimedCard('${(u.name||'').replace(/'/g,"\\'")}', '${t.card_id}')"
+                  style="margin-left:4px;padding:0 4px;background:#722;color:#fff;border:0;cursor:pointer;font-size:9px;">회수</button>
+              </span>`;
+            }).join('')}
+      </div>
+    </div>
     <div class="edit-row" style="display:block;background:#f0f8ff;border:1px solid #4a7cc8;padding:8px 10px;margin:6px 0;border-radius:4px;">
       <div style="font-weight:bold;color:#2e53b2;margin-bottom:6px;font-size:12px;">📊 카드 획득 로그 (유니크·영웅·전설 획득 이력)</div>
       <div style="display:flex;gap:4px;align-items:center;flex-wrap:wrap;margin-bottom:6px;">
@@ -24110,6 +24329,57 @@ function adminRevokeTitle(){
   if (u.equippedTitle === id) u.equippedTitle = null;
   toast(`🗑 「${t ? t.name : id}」 회수 완료 (${u.name})`);
   renderAdminEdit();
+}
+
+// 관리자: 선택된 유저에게 기간제 카드 지급 (서버 RPC — 즉시 반영)
+async function adminGrantTimedCard(nickname){
+  if (!sb){ toast('서버 연결 필요'); return; }
+  const sel = $('ed_timedCardSel');
+  const hoursInput = $('ed_timedHours');
+  const cardId = sel ? sel.value : '';
+  const hours = parseInt((hoursInput||{}).value, 10);
+  if (!cardId){ toast('지급할 카드를 선택하세요.'); return; }
+  if (!isFinite(hours) || hours <= 0 || hours > 9999){ toast('시간은 1 ~ 9999 범위'); return; }
+  try {
+    const { data, error } = await sb.rpc('admin_grant_timed_card', {
+      p_nickname: nickname,
+      p_card_id: cardId,
+      p_hours: hours,
+    });
+    if (error){ toast('지급 실패: ' + (error.message || '?')); return; }
+    const res = Array.isArray(data) ? data[0] : data;
+    const card = CARDS.find(c => c.id === cardId);
+    toast(`⏱ [${card ? card.name : cardId}] ${hours}h 지급 완료`);
+    chatSys(`⏱ 관리자 지급: ${nickname}님에게 「${card ? card.name : cardId}」 기간제 카드 ${hours}시간 임대 지급`);
+    // 로컬 _adminUsers 반영 (재로드 없이 UI 갱신)
+    const u = _adminUsers[_adminSelectedUser];
+    if (u && res && res.expires_at){
+      if (!Array.isArray(u.timedCards)) u.timedCards = [];
+      const idx = u.timedCards.findIndex(t => t.card_id === cardId);
+      if (idx >= 0) u.timedCards[idx].expires_at = res.expires_at;
+      else u.timedCards.push({ card_id: cardId, expires_at: res.expires_at });
+    }
+    renderAdminEdit();
+  } catch(e){ toast('지급 실패: ' + (e.message || e)); }
+}
+
+// 관리자: 기간제 카드 회수 (해당 card_id 의 모든 기간제 삭제)
+async function adminRevokeTimedCard(nickname, cardId){
+  if (!sb){ toast('서버 연결 필요'); return; }
+  if (!confirm(`${nickname}님의 기간제 카드 [${cardId}] 를 회수합니다. 진행할까요?`)) return;
+  try {
+    const { data, error } = await sb.rpc('admin_revoke_timed_card', {
+      p_nickname: nickname,
+      p_card_id: cardId,
+    });
+    if (error){ toast('회수 실패: ' + (error.message || '?')); return; }
+    toast(`🗑 기간제 카드 회수 완료`);
+    const u = _adminUsers[_adminSelectedUser];
+    if (u && Array.isArray(u.timedCards)){
+      u.timedCards = u.timedCards.filter(t => t.card_id !== cardId);
+    }
+    renderAdminEdit();
+  } catch(e){ toast('회수 실패: ' + (e.message || e)); }
 }
 
 // admin edit 페이지에서 레벨·STR·DEX·INT·CON 입력 시 HP/MP Max 를 자동 계산 (calcDerived 공식과 동일)
