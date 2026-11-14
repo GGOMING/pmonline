@@ -3699,7 +3699,7 @@ const CARDS = [
   { id:'n40', name:'소형크래피티포션', grade:'normal', icon:'potion', text:'3턴 동안 시전자 MP 20씩 회복', fx:{type:'mot',turns:3,mp:20} },
   { id:'n41', name:'소환의식',       grade:'normal', icon:'spark',  text:'소환계 카드 사용에 필수 / MP 50 사용', fx:{type:'mpCost',amount:50} },
   { id:'n42', name:'스켈레톤마스터리', grade:'normal', icon:'skull', text:'매턴 10 ~ 20 랜덤 데미지 / [라이즈데드] 선행 필요', fx:{type:'dot',turns:15,min:10,max:20,summon:true}, requires:'n15' },
-  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10 감소 및 방어구 +17 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,def:17} },
+  { id:'n43', name:'스톤폼',         grade:'normal', icon:'stone',  text:'시전자의 STR -10, INT -10, DEX -10, 무기 -5 감소 및 방어구 +17 증가', fx:{type:'buff',str:-10,int:-10,dex:-10,atk:-5,def:17} },
   { id:'n44', name:'스톰해머',       grade:'normal', icon:'thunder',text:'(STR + 무기)로 2회 타격', fx:{type:'dmgStat',stats:['str'],mult:2,weaponBonus:true} },
   { id:'n45', name:'스피릿링크',     grade:'normal', icon:'spike',  text:'[5 ~ 상대방 CON] 랜덤 데미지로 2회 공격', fx:{type:'dmgHits',min:5,max:25,hits:2} },
   { id:'n46', name:'슬램',           grade:'normal', icon:'sword',  text:'시전자 (STR + CON)로 2회 타격', fx:{type:'dmgStat',stats:['str','con'],mult:2} },
@@ -3746,6 +3746,10 @@ const CARDS = [
   { id:'n85', name:'거인의 완력',    grade:'normal', icon:'lance',  iconPath:'assets/wc3_reforged_used/BTNGnollCommandAura-Reforged.png', text:'3턴 동안 STR +10, DEX -5', fx:{type:'buff',str:10,dex:-5,turns:4} },
   { id:'n86', name:'메디테이션',     grade:'normal', icon:'holy',   iconPath:'assets/wc3_reforged_used/BTNMassTeleport-Reforged.png', text:'3턴 동안 매턴 HP 10 회복 + 10턴 동안 매턴 STR +1 누적', fx:{type:'multi',effects:[{type:'hot',turns:3,heal:10},{type:'buffOverTime',stats:{str:1},turns:10}]} },
   { id:'n87', name:'인시너레이트',   grade:'normal', icon:'fire',   iconPath:'assets/wc3_reforged_used/BTNIncinerate-Reforged.png', text:'시전자 남은 체력의 80% 차감 / 다음 공격까지 STR +20, 방어구 +20 (기본공격 포함)', fx:{type:'multi',effects:[{type:'sacrifice',hpPct:0.80},{type:'nextAttackBuff',str:20,def:20}]} },
+  { id:'n88', name:'선스톤',         grade:'normal', icon:'spark',  iconPath:'assets/renew/n88.png', text:'시전자 MP 전량 소모, 소모량의 50%만큼 HP 회복', fx:{type:'mpToHp',ratio:0.5} },
+  { id:'n89', name:'버티기',         grade:'normal', icon:'shield', iconPath:'assets/renew/n89.png', text:'이번 턴에 받는 총 피해를 3등분하여 3턴에 걸쳐 분산 (중복 불가) / [STR 10 이상]', statReq:{str:10}, fx:{type:'endurance'} },
+  { id:'n90', name:'패링',           grade:'normal', icon:'shield', iconPath:'assets/renew/n90.png', text:'이번 턴 선공 강제 / 상대 공격 카드(유니크 이상 제외)로 받는 피해 무효 + 50% 반사 / 기본공격·지속 피해 제외', fx:{type:'parry'} },
+  { id:'n91', name:'스팀팩',         grade:'normal', icon:'spark',  iconPath:'assets/renew/n91.png', text:'다음 턴부터 3턴간 레어 카드 이하로는 기절하지 않음 (유니크 이상 카드로만 기절 가능)', fx:{type:'stunImmunity',turns:3,belowGrade:'unique'} },
 
   // ───── 레어 카드 30종 ─────
   { id:'r01', name:'데스팩',         grade:'rare', icon:'giant',    text:'소환수 흡수 후 HP 60 회복 (소환수 없으면 발동 실패)', requireSummon:true, fx:{type:'heal',hp:60} },
@@ -3797,6 +3801,7 @@ const CARDS = [
   { id:'h03', name:'벤전스',         grade:'hero', icon:'mantis',   iconPath:'assets/renew/h03.jpg', text:'시전 다음 턴부터 3턴 동안 받는 데미지 절반 감소 / 받은 데미지의 1.5배를 적에게 반사', fx:{type:'vengeance',turns:3,reflectMul:1.5,dmgReduce:0.5} },
   { id:'h04', name:'빅베드부두',     grade:'hero', icon:'demon',    iconPath:'assets/wc3_reforged_used/BTNBigBadVoodooSpell-Reforged.png', text:'시전 턴부터 3턴간 방어구 +20 증가, CON +20 증가 / 3턴 후 시전자 레벨 × 2.5 만큼 HP·MP 회복', fx:{type:'multi',effects:[{type:'buff',def:20,con:20,turns:3},{type:'delayedRestore',after:3,hpFromLevel:2.5,mpFromLevel:2.5}]} },
   { id:'h05', name:'아바타',         grade:'hero', icon:'star',     iconPath:'assets/renew/h05.jpg', text:'올스탯 +15 증가 / 무기 +10 증가 / 방어구 +10 증가', fx:{type:'buff',str:15,dex:15,int:15,con:15,atk:10,def:10} },
+  { id:'h06', name:'올 딜리트',      grade:'hero', icon:'sword',    iconPath:'assets/renew/h06.png', text:'[STR+DEX+INT+CON+무기+방어구] × 2.5 고정 데미지 (방어력 무시 · 버프 반영된 현재 스탯/장비 수치 기준)', fx:{type:'dmgStat',stats:['str','dex','int','con'],weaponBonus:true,armorBonus:true,mult:2.5,ignoreDef:true} },
   { id:'l01', name:'부활의 증표',    grade:'legend', icon:'star',   iconPath:'assets/wc3_reforged_used/BTNResurrection-Reforged.png', text:'10턴 내에 HP가 0이 될 경우 HP·MP를 모두 회복한 상태로 부활 / 부활 시 모든 버프·디버프 초기화 (전투 개시 상태)', fx:{type:'rebirth',turns:10} },
   { id:'l02', name:'데우스엑스마키나', grade:'legend', icon:'demon',  iconPath:'assets/wc3_reforged_used/BTNEssenceOfAszune.png', text:'시전 시점에 적의 모든 버프 강탈 / 다음 턴부터 3턴 동안 받는 데미지를 HP 회복으로 전환하고 받는 디버프를 적에게 반사', fx:{type:'multi',effects:[{type:'stealVengeance'},{type:'stealBuff'},{type:'voodoo',turns:3}]} },
   // ───── pmlist2 카드 #111~#118 영역 (레어) — 보강 8종 ─────
@@ -3819,6 +3824,9 @@ const CARDS = [
   { id:'r45', name:'홀리스피어',         grade:'rare', icon:'holy',    iconPath:'assets/wc3_reforged_used/BTNVorpalBlades-Reforged.png', text:'(STR + 무기 + 15) 데미지 + 상대 방어구 -5', fx:{type:'multi',effects:[{type:'dmgStat',stats:['str'],weaponBonus:true,bonus:15},{type:'debuff',def:-5}]} },
   { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.4 만큼 고정 데미지 (방어력 무시 · 최대 50)', fx:{type:'dmgLostHpPct',pct:0.4,ignoreDef:true,maxDmg:50} },
   { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
+  { id:'r48', name:'요정의 탄환',        grade:'rare', icon:'spark',    iconPath:'assets/renew/r48.png', text:'다음 턴부터 3턴간 선공·후공 교체 (상대도 발동 시 재교체)', fx:{type:'initiativeSwap',turns:3} },
+  { id:'r49', name:'홀리해츨링 소환',     grade:'rare', icon:'wings',    iconPath:'assets/renew/r49.png', text:'다음 턴부터 5턴간 받은 피해의 40%를 매 턴 HP 회복 / [소환의식] 선행 필요 / [시전자 INT 10 이상]', requires:'n41', statReq:{int:10}, fx:{type:'reactiveHeal',turns:5,pct:0.4} },
+  { id:'r50', name:'루나해츨링 소환',     grade:'rare', icon:'wings',    iconPath:'assets/renew/r50.png', text:'시전 즉시 HP 완전 회복 / 다음 턴부터 10턴간 받은 피해의 20% 반사 / [소환의식] 선행 필요 / [시전자 DEX 10 이상]', requires:'n41', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'instantFullHeal'},{type:'reactiveReflect',turns:10,pct:0.2}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
 
@@ -9617,7 +9625,9 @@ function raidNextTurn(){
   if (monCard && monCard.fx && monCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex >= mDex;
+  let playerFirst = pDex >= mDex;
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, m && m.deck);   // n90 패링 — 선공 강제
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   raidLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'보스 선공'}) ━━━`, 'sys');
 
@@ -10951,7 +10961,9 @@ function rankNextTurn(){
 
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex > mDex;   // 동률 시 방어자(상대) 선공
+  let playerFirst = pDex > mDex;   // 동률 시 방어자(상대) 선공
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, m && m.deck);   // n90 패링 — 선공 강제
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   rankLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
 
@@ -12958,7 +12970,9 @@ function huntNextTurn(){
   // DEX 비교 (동점은 사용자 선공)
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex >= mDex;
+  let playerFirst = pDex >= mDex;
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, m && m.deck);   // n90 패링 — 선공 강제
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
 
   huntLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
@@ -13135,6 +13149,12 @@ function _ensureCombatExt(c){
   c.myManaShield ||= null; c.monManaShield ||= null;   // 마나 쉴드 — {turns, absorb, pending}. 받는 데미지 pct MP 흡수
   c.myStatGrowth ||= []; c.monStatGrowth ||= [];       // 매턴 스탯 누적 buff (메디테이션 n86) — [{stats:{str,dex,int,con,atk,def}, turnsLeft, grade}]
   c.myNextAtkBuff ||= null; c.monNextAtkBuff ||= null; // 다음 공격까지 유지 buff (인시너레이트 n87) — {stats:{...}}. 시전자가 공격 카드 시전 시 소비
+  c.myStunImmunity ||= null; c.monStunImmunity ||= null;   // 스팀팩 n91 — {turns, belowGrade:'unique', pending}. 지정 등급 미만 카드의 cc 무효
+  c.myHolyHatch ||= null; c.monHolyHatch ||= null;         // 홀리해츨링 r49 — {turns, pct, pending}. 받는 데미지 pct 만큼 즉시 HP 회복
+  c.myLunarHatch ||= null; c.monLunarHatch ||= null;       // 루나해츨링 r50 — {turns, pct, pending}. 받는 데미지 pct 만큼 시전자에게 반사
+  c.myInitSwap ||= null; c.monInitSwap ||= null;           // 요정의탄환 r48 — {turns, pending}. 선공/후공 역전 토글
+  c.myParry ||= null; c.monParry ||= null;                 // 패링 n90 — {turn, consumed}. 시전 턴 1회 완전반사
+  c.myEndurance ||= null; c.monEndurance ||= null;         // 버티기 n89 — {activeTurn, defer:[0,n1,n2]}. 피해 3분산
   // 장비 기반 영구 buff (엔지니어링 업그레이드 등) — 버프 제거 효과(dispel/zeroStat/stealBuff)에 면역
   c.myLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
   c.monLockedBuffs ||= {str:0,dex:0,int:0,con:0,atk:0,def:0};
@@ -13184,6 +13204,29 @@ function recordCast(kind, caster, card){
   const list = caster === 'player' ? c.castedByMe : c.castedByMon;
   if (!list.includes(card.id)) list.push(card.id);
   _pushTransformIfNeeded(c, caster, card);
+}
+// r48 요정의탄환 — 선공/후공 교체 상태가 활성이면 playerFirst 뒤집기
+// 둘 다 활성(XOR 거짓) 이면 원복 (제자리). 한쪽만 활성이면 역전.
+function _applyInitSwap(playerFirst, c){
+  if (!c) return playerFirst;
+  const my = c.myInitSwap, mon = c.monInitSwap;
+  const myActive  = my  && my.turns  > 0 && !my.pending;
+  const monActive = mon && mon.turns > 0 && !mon.pending;
+  if (myActive !== monActive) return !playerFirst;
+  return playerFirst;
+}
+// n90 패링 — 이번 턴 덱 슬롯의 카드가 패링이면 선공 강제.
+// 둘 다 패링이면 DEX 로직 복원 (사용자 명시: 둘 다 사용 시 DEX 높은 쪽이 선공이나 공격 카드 아니라 둘 다 미발동)
+function _applyParryInitiative(playerFirst, c, myDeck, oppDeck){
+  if (!c || c.turn < 1) return playerFirst;
+  const idx = c.turn - 1;
+  const myC = myDeck && myDeck[idx];
+  const oppC = oppDeck && oppDeck[idx];
+  const myP = !!(myC && myC.id === 'n90');
+  const oppP = !!(oppC && oppC.id === 'n90');
+  if (myP && !oppP) return true;
+  if (!myP && oppP) return false;
+  return playerFirst;
 }
 function _buildCombatCtx(kind, caster){
   let c, opp, log;
@@ -13607,6 +13650,22 @@ function applyCardEffect(card, ctx){
         ctx.log(`  🌀 ${ctx.targName} 부두 → 데미지 ${heal} → 회복 +${got}`, 'heal');
         return;
       }
+      // ─── 패링(n90) ───
+      // 대상이 패링 활성 & 카드 유니크 미만 (normal/rare) & 기본공격 아님 → 피해 무효 + 방어 적용 전 raw × 50% 반사
+      // (multi 카드의 dmg/dmgStat hit 마다 발동. doDmg 를 안 거치는 dot 계열 · _dealIgnoreDef 는 자동 제외)
+      {
+        const isTgtP = ctx.targObj === GAME.player;
+        const parry = ctx.c && (isTgtP ? ctx.c.myParry : ctx.c.monParry);
+        const GRADES_P = {normal:0, rare:1, unique:2, hero:3, legend:4};
+        const parryable = card && card.id !== 'basic_atk' && (GRADES_P[card.grade] ?? 99) < 2;
+        if (parry && parry.turn === ctx.c.turn && parryable){
+          const r = Math.max(1, Math.floor(raw * 0.5));
+          ctx.castObj.hp = Math.max(0, ctx.castObj.hp - r);
+          ctx.addTargDmg(r);
+          ctx.log(`  ⚔ ${ctx.targName} 패링 → <b>${card.name}</b> 무효 · ${ctx.castName} -${r}`, ctx.targLogCls);
+          return;
+        }
+      }
       // 방어력 차감 — 방어구 본체 + buff 클램프. 플레이어가 대상이면 STR 유래 방어력 추가 (몬스터 미적용)
       const totalDefT = (ctx.targObj === GAME.player)
         ? _playerEffectiveDef(GAME.player, ctx.targBuffs)
@@ -13618,6 +13677,21 @@ function applyCardEffect(card, ctx){
       const _sgActive = _sgTurn && _sgTurn === _curTurn;
       if (_sgActive){
         dmg = Math.max(1, Math.floor(dmg * 0.5));
+      }
+      // ─── 버티기(n89) 분산 ───
+      // 활성 턴에 받는 피해의 1/3 만 즉시 입음. 나머지 2/3 는 다음 2턴에 1/3 씩 적립.
+      // 단, 활성 턴 이후 (다음 턴 · 다다음 턴) 에 추가로 받는 피해는 분산 적용 X — 그대로 입음.
+      {
+        const isTgtP = ctx.targObj === GAME.player;
+        const endst = ctx.c && (isTgtP ? ctx.c.myEndurance : ctx.c.monEndurance);
+        if (endst && endst.activeTurn === ctx.c.turn && dmg > 0){
+          const third = Math.max(1, Math.floor(dmg / 3));
+          const rem = dmg - 2 * third;   // 나머지 처리 — 전체 보존
+          endst.defer[1] = (endst.defer[1] || 0) + third;
+          endst.defer[2] = (endst.defer[2] || 0) + Math.max(0, rem);
+          ctx.log(`  🪨 ${ctx.targName} 버티기 — 원 피해 ${dmg} → 이번 턴 ${third} · 다음 턴 +${third} · 다다음 턴 +${Math.max(0,rem)}`, 'info');
+          dmg = third;
+        }
       }
       // 벤전스 — 대상이 벤전스 활성이면 받는 데미지 절반 + 시전자에게 1.5배 반사
       const vg = ctx.targVengeance && ctx.targVengeance();
@@ -13674,6 +13748,26 @@ function applyCardEffect(card, ctx){
           refl.hits--;
           if (refl.hits <= 0) ctx.clearTargReflect();
         }
+      }
+      // ─── 홀리해츨링(r49) / 루나해츨링(r50) 반응성 효과 ───
+      // 대상이 피해를 받은 직후에 즉시 발동. pending=true 인 시전 턴엔 미발동.
+      const isTgtPlayer2 = ctx.targObj === GAME.player;
+      const hhKey = isTgtPlayer2 ? 'myHolyHatch' : 'monHolyHatch';
+      const lhKey = isTgtPlayer2 ? 'myLunarHatch' : 'monLunarHatch';
+      const hh = ctx.c && ctx.c[hhKey];
+      if (hh && hh.turns > 0 && !hh.pending){
+        const heal = Math.max(1, Math.floor(dmg * (hh.pct || 0.4)));
+        const before = ctx.targObj.hp;
+        ctx.targObj.hp = Math.min(ctx.targObj.hpMax || (before + heal), before + heal);
+        const got = ctx.targObj.hp - before;
+        if (got > 0) ctx.log(`  🕊 홀리해츨링 → ${ctx.targName} HP +${got}`, 'heal');
+      }
+      const lh = ctx.c && ctx.c[lhKey];
+      if (lh && lh.turns > 0 && !lh.pending){
+        const r = Math.max(1, Math.floor(dmg * (lh.pct || 0.2)));
+        ctx.castObj.hp = Math.max(0, ctx.castObj.hp - r);
+        ctx.addTargDmg(r);
+        ctx.log(`  🌙 루나해츨링 반사 → ${ctx.castName} -${r}`, ctx.targLogCls);
       }
     }
     function statSum(stats, obj=ctx.castObj, buffs=ctx.castBuffs){
@@ -13901,6 +13995,10 @@ function applyCardEffect(card, ctx){
       if (fx.weaponBonus){
         base += _effWeapon(srcObj, srcBufs);
       }
+      // 방어구 보너스 — (armor.defBonus + 누적 def 버프) · h06 올 딜리트 수식용
+      if (fx.armorBonus){
+        base += _effArmor(srcObj, srcBufs);
+      }
       if (fx.bonus) base += fx.bonus;
       // 방어력 무시 여부 — ignoreDef:true 면 _dealIgnoreDef 헬퍼 재사용 (silent:true 시 로그에 "방어력 무시" 미표기)
       const dealFn = fx.ignoreDef ? (raw => _dealIgnoreDef(ctx, raw, { silent: !!fx.silentIgnoreDef })) : doDmg;
@@ -14044,6 +14142,79 @@ function applyCardEffect(card, ctx){
       const gained = ctx.castObj.hp - before;
       if (isPlayerCast && gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
       ctx.log(`  + HP +${heal}`, 'heal');
+      return;
+    }
+    // n88 선스톤 — 시전자 현재 MP 전량 소모, 소모량의 ratio 만큼 HP 회복
+    if (t === 'mpToHp'){
+      const isPlayerCast = ctx.castObj === GAME.player;
+      const consumed = Math.max(0, ctx.castObj.mp || 0);
+      ctx.castObj.mp = 0;
+      const heal = Math.floor(consumed * (fx.ratio || 0.5));
+      if (heal > 0){
+        const before = ctx.castObj.hp;
+        ctx.castObj.hp = Math.min(ctx.castObj.hpMax || (before + heal), before + heal);
+        const gained = ctx.castObj.hp - before;
+        if (isPlayerCast && gained > 0){ try { _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
+        ctx.log(`  ⚡ MP -${consumed} → HP +${gained}`, 'heal');
+      } else {
+        ctx.log(`  ⚡ MP 0 — 회복량 없음`, 'info');
+      }
+      return;
+    }
+    // r50 루나해츨링 소환 — 시전 즉시 시전자 HP 최대치로 회복
+    if (t === 'instantFullHeal'){
+      const before = ctx.castObj.hp;
+      ctx.castObj.hp = ctx.castObj.hpMax;
+      const gained = ctx.castObj.hp - before;
+      if (gained > 0){ try { if (ctx.castObj === GAME.player) _bumpDailyCounter('healing', gained, 'dq_heal_500'); } catch(e){} }
+      ctx.log(`  🌙 ${ctx.castName} HP 완전 회복 (+${gained})`, 'heal');
+      return;
+    }
+    // r49 홀리해츨링 — 다음 턴부터 N턴 받은 피해의 pct 만큼 즉시 HP 회복
+    if (t === 'reactiveHeal'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myHolyHatch' : 'monHolyHatch';
+      ctx.c[key] = { turns: (fx.turns|0) + 1, pct: fx.pct || 0.4, pending: true };
+      ctx.log(`  🕊 ${ctx.castName} ${fx.turns}턴간 받는 피해의 ${Math.floor((fx.pct||0.4)*100)}% HP 회복 (다음 턴부터)`, 'heal');
+      return;
+    }
+    // r50 루나해츨링 — 다음 턴부터 N턴 받은 피해의 pct 만큼 시전자에게 반사
+    if (t === 'reactiveReflect'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myLunarHatch' : 'monLunarHatch';
+      ctx.c[key] = { turns: (fx.turns|0) + 1, pct: fx.pct || 0.2, pending: true };
+      ctx.log(`  🌙 ${ctx.castName} ${fx.turns}턴간 받는 피해의 ${Math.floor((fx.pct||0.2)*100)}% 반사 (다음 턴부터)`, 'heal');
+      return;
+    }
+    // n91 스팀팩 — 다음 턴부터 N턴간 지정 등급 미만 카드의 cc 무효
+    if (t === 'stunImmunity'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myStunImmunity' : 'monStunImmunity';
+      ctx.c[key] = { turns: (fx.turns|0) + 1, belowGrade: fx.belowGrade || 'unique', pending: true };
+      ctx.log(`  💊 ${ctx.castName} ${fx.turns}턴간 ${fx.belowGrade||'유니크'} 미만 카드의 기절 무효 (다음 턴부터)`, 'heal');
+      return;
+    }
+    // r48 요정의탄환 — 다음 턴부터 N턴간 선공/후공 교체
+    if (t === 'initiativeSwap'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myInitSwap' : 'monInitSwap';
+      ctx.c[key] = { turns: (fx.turns|0) + 1, pending: true };
+      ctx.log(`  🔄 ${ctx.castName} ${fx.turns}턴간 선공/후공 교체 (다음 턴부터)`, 'heal');
+      return;
+    }
+    // n90 패링 — 이번 턴만 활성. 선공 강제는 턴 시작 시 선공 판정에서 체크 (덱 슬롯 조회)
+    if (t === 'parry'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myParry' : 'monParry';
+      ctx.c[key] = { turn: ctx.c.turn };
+      ctx.log(`  ⚔ ${ctx.castName} 패링 — 이번 턴 공격 카드 무효 + 50% 반사 (유니크 이상 제외)`, 'heal');
+      return;
+    }
+    // n89 버티기 — 이번 턴 받은 피해를 3등분 (1/3 즉시 · 1/3 다음 턴 · 1/3 다다음 턴). 중복 불가.
+    if (t === 'endurance'){
+      const key = (ctx.caster === 'player' || ctx.caster === 'me') ? 'myEndurance' : 'monEndurance';
+      // 이미 활성이면 재시전 무시 (사용자 명시: 중복 불가. 스피드스크롤 2회 발동도 1회만 적용)
+      if (ctx.c[key] && ctx.c[key].activeTurn === ctx.c.turn){
+        ctx.log(`  🪨 ${ctx.castName} 버티기 이미 발동 중 — 중복 적용 생략`, 'info');
+        return;
+      }
+      ctx.c[key] = { activeTurn: ctx.c.turn, defer: [0, 0, 0] };
+      ctx.log(`  🪨 ${ctx.castName} 버티기 — 이번 턴 받는 피해를 3턴에 걸쳐 분산`, 'heal');
       return;
     }
     if (t === 'maxHpBuff'){
@@ -14472,6 +14643,20 @@ function applyCardEffect(card, ctx){
     }
     if (t === 'cc'){
       const tgt = _debuffTarget();
+      // 스팀팩(n91) 면역 체크 — 대상이 유저이고 면역 활성 중이면 지정 등급 미만 카드의 cc 무효
+      // (train 측도 동일 — ctx.c 에 myStunImmunity/monStunImmunity 보관)
+      const isTgtPlayer = (ctx.targObj === GAME.player) || (ctx.caster === 'monster' || ctx.caster === 'opp');
+      const immKey = isTgtPlayer ? 'myStunImmunity' : 'monStunImmunity';
+      const imm = ctx.c && ctx.c[immKey];
+      if (imm && imm.turns > 0 && !imm.pending){
+        const GRADES = {normal:0, rare:1, unique:2, hero:3, legend:4};
+        const cardLvl = GRADES[card.grade] ?? 0;
+        const thrLvl = GRADES[imm.belowGrade || 'unique'] ?? 2;
+        if (cardLvl < thrLvl){
+          ctx.log(`  💊 ${tgt.name} 스팀팩 면역 — <b>${card.name}</b> 기절 무효`, 'heal');
+          return;
+        }
+      }
       tgt.stun(fx.turns);
       if (fx.frog && ctx.setTargFrog && !tgt.reflected){
         ctx.setTargFrog(fx.turns);
@@ -15030,6 +15215,34 @@ function processCombatTicks(kind){
   // 마나 쉴드 타이머 감소 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; log(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; log(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
+  // 스팀팩(n91) 스턴 면역 타이머
+  if (c.myStunImmunity){ if (c.myStunImmunity.pending) c.myStunImmunity.pending = false; c.myStunImmunity.turns--; if (c.myStunImmunity.turns <= 0){ c.myStunImmunity = null; log(`  · 스팀팩 효과 종료`, 'info'); } }
+  if (c.monStunImmunity){ if (c.monStunImmunity.pending) c.monStunImmunity.pending = false; c.monStunImmunity.turns--; if (c.monStunImmunity.turns <= 0){ c.monStunImmunity = null; log(`  · ${opp.name} 스팀팩 효과 종료`, 'info'); } }
+  // 홀리해츨링(r49) 반응성 회복 타이머
+  if (c.myHolyHatch){ if (c.myHolyHatch.pending) c.myHolyHatch.pending = false; c.myHolyHatch.turns--; if (c.myHolyHatch.turns <= 0){ c.myHolyHatch = null; log(`  · 홀리해츨링 소환 효과 종료`, 'info'); } }
+  if (c.monHolyHatch){ if (c.monHolyHatch.pending) c.monHolyHatch.pending = false; c.monHolyHatch.turns--; if (c.monHolyHatch.turns <= 0){ c.monHolyHatch = null; log(`  · ${opp.name} 홀리해츨링 효과 종료`, 'info'); } }
+  // 루나해츨링(r50) 반응성 반사 타이머
+  if (c.myLunarHatch){ if (c.myLunarHatch.pending) c.myLunarHatch.pending = false; c.myLunarHatch.turns--; if (c.myLunarHatch.turns <= 0){ c.myLunarHatch = null; log(`  · 루나해츨링 소환 효과 종료`, 'info'); } }
+  if (c.monLunarHatch){ if (c.monLunarHatch.pending) c.monLunarHatch.pending = false; c.monLunarHatch.turns--; if (c.monLunarHatch.turns <= 0){ c.monLunarHatch = null; log(`  · ${opp.name} 루나해츨링 효과 종료`, 'info'); } }
+  // 요정의탄환(r48) 선공/후공 교체 타이머
+  if (c.myInitSwap){ if (c.myInitSwap.pending) c.myInitSwap.pending = false; c.myInitSwap.turns--; if (c.myInitSwap.turns <= 0){ c.myInitSwap = null; log(`  · 요정의 탄환 효과 종료`, 'info'); } }
+  if (c.monInitSwap){ if (c.monInitSwap.pending) c.monInitSwap.pending = false; c.monInitSwap.turns--; if (c.monInitSwap.turns <= 0){ c.monInitSwap = null; log(`  · ${opp.name} 요정의 탄환 효과 종료`, 'info'); } }
+  // 패링(n90) — 시전 턴에만 활성. 턴 넘어가면 자동 소멸
+  if (c.myParry && c.myParry.turn !== c.turn){ c.myParry = null; }
+  if (c.monParry && c.monParry.turn !== c.turn){ c.monParry = null; }
+  // 버티기(n89) — defer 적용 (다음 턴 +1 offset · 다다음 턴 +2 offset)
+  function _tickEndurance(end, tgt, tgtName){
+    if (!end) return null;
+    const off = c.turn - end.activeTurn;
+    if (off >= 1 && (end.defer[off] || 0) > 0){
+      const dmg = end.defer[off];
+      tgt.hp = Math.max(0, tgt.hp - dmg);
+      log(`  🪨 ${tgtName} 버티기 분산 피해 -${dmg}`, 'info');
+    }
+    return (off >= 2) ? null : end;
+  }
+  c.myEndurance = _tickEndurance(c.myEndurance, me, '나');
+  c.monEndurance = _tickEndurance(c.monEndurance, opp, opp && opp.name);
   // 지연 회복 발동 — 이번 턴에 이미 flushed 됐으면 스킵 (checkAlive 조기 종료 시 선반영)
   if (!c._delayedRestoreTickedTurn || c._delayedRestoreTickedTurn !== c.turn){
     _flushDelayedRestoresForSide(c.myDelayedRestores, me, '나', log);
@@ -15302,6 +15515,31 @@ function processTrainTicks(){
   // 마나 쉴드 타이머 — 시전 턴 끝에 pending→false (다음 턴부터 활성)
   if (c.myManaShield){ if (c.myManaShield.pending) c.myManaShield.pending = false; c.myManaShield.turns--; if (c.myManaShield.turns <= 0){ c.myManaShield = null; trainLog(`  · 마나 쉴드 효과 만료`, 'info'); } }
   if (c.monManaShield){ if (c.monManaShield.pending) c.monManaShield.pending = false; c.monManaShield.turns--; if (c.monManaShield.turns <= 0){ c.monManaShield = null; trainLog(`  · ${opp.name} 마나 쉴드 효과 만료`, 'info'); } }
+  // 스팀팩/홀리/루나/요정의탄환 타이머
+  if (c.myStunImmunity){ if (c.myStunImmunity.pending) c.myStunImmunity.pending = false; c.myStunImmunity.turns--; if (c.myStunImmunity.turns <= 0){ c.myStunImmunity = null; trainLog(`  · 스팀팩 효과 종료`, 'info'); } }
+  if (c.monStunImmunity){ if (c.monStunImmunity.pending) c.monStunImmunity.pending = false; c.monStunImmunity.turns--; if (c.monStunImmunity.turns <= 0){ c.monStunImmunity = null; trainLog(`  · ${opp.name} 스팀팩 효과 종료`, 'info'); } }
+  if (c.myHolyHatch){ if (c.myHolyHatch.pending) c.myHolyHatch.pending = false; c.myHolyHatch.turns--; if (c.myHolyHatch.turns <= 0){ c.myHolyHatch = null; trainLog(`  · 홀리해츨링 효과 종료`, 'info'); } }
+  if (c.monHolyHatch){ if (c.monHolyHatch.pending) c.monHolyHatch.pending = false; c.monHolyHatch.turns--; if (c.monHolyHatch.turns <= 0){ c.monHolyHatch = null; trainLog(`  · ${opp.name} 홀리해츨링 효과 종료`, 'info'); } }
+  if (c.myLunarHatch){ if (c.myLunarHatch.pending) c.myLunarHatch.pending = false; c.myLunarHatch.turns--; if (c.myLunarHatch.turns <= 0){ c.myLunarHatch = null; trainLog(`  · 루나해츨링 효과 종료`, 'info'); } }
+  if (c.monLunarHatch){ if (c.monLunarHatch.pending) c.monLunarHatch.pending = false; c.monLunarHatch.turns--; if (c.monLunarHatch.turns <= 0){ c.monLunarHatch = null; trainLog(`  · ${opp.name} 루나해츨링 효과 종료`, 'info'); } }
+  if (c.myInitSwap){ if (c.myInitSwap.pending) c.myInitSwap.pending = false; c.myInitSwap.turns--; if (c.myInitSwap.turns <= 0){ c.myInitSwap = null; trainLog(`  · 요정의 탄환 효과 종료`, 'info'); } }
+  if (c.monInitSwap){ if (c.monInitSwap.pending) c.monInitSwap.pending = false; c.monInitSwap.turns--; if (c.monInitSwap.turns <= 0){ c.monInitSwap = null; trainLog(`  · ${opp.name} 요정의 탄환 효과 종료`, 'info'); } }
+  // 패링(n90) 턴 넘김 소멸
+  if (c.myParry && c.myParry.turn !== c.turn){ c.myParry = null; }
+  if (c.monParry && c.monParry.turn !== c.turn){ c.monParry = null; }
+  // 버티기(n89) defer 적용
+  function _trainTickEndurance(end, tgt, tgtName){
+    if (!end) return null;
+    const off = c.turn - end.activeTurn;
+    if (off >= 1 && (end.defer[off] || 0) > 0){
+      const dmg = end.defer[off];
+      tgt.hp = Math.max(0, tgt.hp - dmg);
+      trainLog(`  🪨 ${tgtName} 버티기 분산 피해 -${dmg}`, 'info');
+    }
+    return (off >= 2) ? null : end;
+  }
+  c.myEndurance = _trainTickEndurance(c.myEndurance, me, '나');
+  c.monEndurance = _trainTickEndurance(c.monEndurance, opp, opp && opp.name);
   // 지연 회복 발동
   function _trainTickDelayed(list, tgt, tgtName){
     if (!Array.isArray(list)) return;
@@ -17167,7 +17405,9 @@ function towerNextTurn(){
   if (monsterCard && monsterCard.fx && monsterCard.fx.type === 'doubleCastNext') c.monScrollGuardTurn = c.turn;
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex >= mDex;
+  let playerFirst = pDex >= mDex;
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, m && m.deck);   // n90 패링 — 선공 강제
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   towerLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'몬스터 선공'}) ━━━`, 'sys');
   c._currentTurnCards = { playerCard, monsterCard };
@@ -19002,7 +19242,9 @@ function _corridorTurnNoUI(){
   // 선공 판정 (DEX · 동률 시 방어자 선공)
   const pDex = p.dex + c.myBuffs.dex;
   const mDex = m.dex + c.monBuffs.dex;
-  const playerFirst = pDex > mDex;
+  let playerFirst = pDex > mDex;
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, m && m.deck);   // n90 패링 — 선공 강제
   c._playerFirstThisTurn = playerFirst;
   c._currentTurnCards = { playerCard, monsterCard: monCard };
   // 카드 시전 (rankCast 재사용 — 내부적으로 applyCardEffect 호출)
@@ -20432,7 +20674,9 @@ function trainNextTurn(){
   if (oppCard && oppCard.fx && oppCard.fx.type === 'doubleCastNext') opp.scrollGuardTurn = c.turn;
   const myDex = me.dex + c.myBuffs.dex;
   const oppDex = opp.dex + opp.buffs.dex;
-  const playerFirst = myDex >= oppDex;
+  let playerFirst = myDex >= oppDex;
+  playerFirst = _applyInitSwap(playerFirst, c);   // r48 요정의탄환 — 교체 효과 반영
+  playerFirst = _applyParryInitiative(playerFirst, c, GAME.myDeck, opp && opp.deck);   // n90 패링 — 선공 강제 (train 은 opp.deck 사용)
   c._playerFirstThisTurn = playerFirst;   // evadeBuff 후공 pending 판정용
   trainLog(`━━━ ${c.turn}턴 (${playerFirst?'나 선공':'상대 선공'}) ━━━`, 'sys');
   function castMe(){ if (isTrainStunned('me')) trainLog('  ✱ 나 행동불능', 'sys'); else { trainLog(`🃏 <b>${myCard.name}</b> 발동`, 'info'); trainApplyCard(myCard, 'me'); c.statsMyCards++; } }
