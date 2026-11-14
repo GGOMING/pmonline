@@ -12089,23 +12089,28 @@ function refreshHourlyLimitUI(){
   const badge = document.getElementById('hourlyLimitBadge');
   if (badge){
     const cnt = _hourlyActivityCount(p);
+    const dhCnt = p.dailyHuntCount || 0;
+    const drCnt = p.dailyRaidCount || 0;
+    const huntFull = dhCnt >= _DAILY_HUNT_LIMIT;
+    const raidFull = drCnt >= _DAILY_RAID_LIMIT;
+    const huntPart = `<span style="color:${huntFull?'#c00':'#666'};font-weight:${huntFull?'900':'400'};">🗡 수행 ${dhCnt}/${_DAILY_HUNT_LIMIT}</span>`;
+    const raidPart = `<span style="color:${raidFull?'#c00':'#666'};font-weight:${raidFull?'900':'400'};">🛡 공격대 ${drCnt}/${_DAILY_RAID_LIMIT}</span>`;
+    // badge 전체 inline 스타일 리셋 (innerHTML 안 개별 span 스타일만 사용)
+    badge.style.color = '';
+    badge.style.fontWeight = '';
     if (banned){
-      badge.textContent = `🚫 진입 차단 (남은 ${_banRemainStr(p)})`;
-      badge.style.color = '#c00';
-      badge.style.fontWeight = '900';
+      badge.innerHTML = `<span style="color:#c00;font-weight:900;">🚫 진입 차단 (남은 ${_banRemainStr(p)})</span> · ${huntPart} · ${raidPart}`;
     } else if (!_canDoHourlyActivity(p)){
       const remainMs = _hourlyResetRemainMs();
       const totalSec = Math.max(0, Math.ceil(remainMs / 1000));
       const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
       const ss = String(totalSec % 60).padStart(2, '0');
-      badge.textContent = `⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}`;
-      badge.style.color = '#c00';
-      badge.style.fontWeight = '900';
+      badge.innerHTML = `<span style="color:#c00;font-weight:900;">⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}</span> · ${huntPart} · ${raidPart}`;
     } else {
-      badge.textContent = `⏱ 이번 시간 ${cnt}/${HOURLY_ACTIVITY_LIMIT}`;
-      badge.style.color = '#666';
-      badge.style.fontWeight = '400';
+      const hourlyPart = `<span style="color:#666;font-weight:400;">⏱ 이번 시간 ${cnt}/${HOURLY_ACTIVITY_LIMIT}</span>`;
+      badge.innerHTML = `${hourlyPart} · ${huntPart} · ${raidPart}`;
     }
+    badge.title = '시간당 수행/공격대/랭킹전 참여 횟수 (정각 리셋) · 일일 수행/공격대 횟수 (KST 자정 리셋)';
   }
 }
 // 자정 넘김·정각 리셋을 위해 30초마다 UI 재평가
