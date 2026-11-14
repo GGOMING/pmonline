@@ -4162,6 +4162,17 @@ async function _doCloudSave(){
         if (Array.isArray(sp.lvRewardsClaimed)) pp.lvRewardsClaimed = sp.lvRewardsClaimed;
       }
       if (Array.isArray(srvRow.data.inventory)) payload.data.inventory = srvRow.data.inventory;
+      // ── 로컬 메모리도 서버 기준으로 동기화 ──
+      // 서버 트리거 (inventory 추가 시 timedCards 자동 소비, 레벨업 RPC 등) 가
+      // 처리한 변경을 클라 GAME.player 에 즉시 반영. UI 가 옛 값을 보지 않도록.
+      if (GAME.player){
+        if (Array.isArray(sp.timedCards))       GAME.player.timedCards = sp.timedCards.slice();
+        if (Array.isArray(sp.cardTraces))       GAME.player.cardTraces = sp.cardTraces.slice();
+        if (Array.isArray(sp.lvRewardsClaimed)) GAME.player.lvRewardsClaimed = sp.lvRewardsClaimed.slice();
+        // UI 갱신 (덱 슬롯 툴팁·시트 등)
+        try { renderDeck(); } catch(e){}
+        try { renderSheet(); } catch(e){}
+      }
     }
   } catch(e){ console.warn('[cloudSave protect-overlay]', e); }
   // ── 1) 낙관적 잠금 UPDATE 시도 — data_version 매칭 조건 ──
