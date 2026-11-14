@@ -1076,9 +1076,6 @@
   /* 수행 버튼 — 파스텔 살구 톤 */
   .menubar td.menu-hunt { background:#FFCC99; color:#000; }
   .menubar td.menu-hunt:hover { background:#FFE0B8; }
-  /* 시간당 활동 한도 도달 시 시각적 비활성화 (수행·공격대·랭킹전 버튼) */
-  .menubar td.hourly-limited { opacity:0.35 !important; filter:grayscale(0.8); background:#ccc !important; color:#666 !important; cursor:not-allowed !important; }
-  .menubar td.hourly-limited:hover { background:#ccc !important; }
   #hourlyLimitBadge { font-size:11px; padding:2px 6px; border-radius:3px; background:#fff; border:1px solid #ccc; margin-left:6px; }
 
   /* 하단 정보 */
@@ -8920,7 +8917,6 @@ async function openRaid(raidKey){
   }
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
-  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   if (!_canDoDailyRaid(p)){ _dailyRaidBlockToast(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
@@ -9208,7 +9204,6 @@ function startRaidMobBattle(){
   const r = GAME.raid[raidKey];
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
-  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   // 이번 세션 보스 보상 이미 수령한 유저는 재입장 차단 (보스가 살아있으면 claim 자동 해제)
   const cs = r ? (Number(r.sessionStart) || 0) : 0;
   const bossAliveMob = r && (!r.bossDefeated || (Number(r.bossHp) || 0) > 0);
@@ -9222,7 +9217,6 @@ function startRaidMobBattle(){
     toast(`${nm} 보스 보상을 이미 수령하셨습니다. 세션 리셋 후 재입장 가능합니다.`);
     return;
   }
-  _incHourlyActivity(p);
   _incDailyRaid(p);
   let monster;
   const pending = p.pendingRaidMob;
@@ -9305,7 +9299,6 @@ async function startRaidBossBattle(){
   const raidKey = GAME.currentRaid;
   const _p0 = GAME.player;
   if (_isBanned(_p0)){ _blockedByBanToast(_p0); return; }
-  if (!_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   // 진입 직전에 클라우드 최신 boss_hp를 한 번 더 fetch (다른 사용자 누적 데미지 반영)
   // 병렬 클라우드 모드에선 abyss도 포함
   if (sb){
@@ -9328,7 +9321,6 @@ async function startRaidBossBattle(){
       return;
     }
   }
-  _incHourlyActivity(_p0);
   const bossDef = RAID_BOSSES[raidKey].find(b => b.id === r.bossId);
   console.log('[raid boss] start with hp', r.bossHp, '/', r.bossHpMax, 'defeated:', r.bossDefeated);
   // 보스는 누적 HP 유지 (r.bossHp 사용)
@@ -10620,7 +10612,6 @@ async function openRank(){
   if (RANKING_DISABLED){ toast('랭킹전은 현재 운영이 중단되었습니다.'); return; }
   const _p0 = GAME.player;
   if (_p0 && _isBanned(_p0)){ _blockedByBanToast(_p0); return; }
-  if (_p0 && !_canDoHourlyActivity(_p0)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   // 레벨 제한 — Lv 20 미만 랭킹전 진입 차단
   if (_p0 && (_p0.level|0) < RANK_MIN_LEVEL){
     toast(`랭킹전은 Lv ${RANK_MIN_LEVEL} 이상부터 참여 가능합니다.`);
@@ -10718,9 +10709,6 @@ async function challengeRank(targetRank){
   if (GAME.player && (GAME.player.level|0) < RANK_MIN_LEVEL){
     toast(`랭킹전은 Lv ${RANK_MIN_LEVEL} 이상부터 참여 가능합니다.`);
     return;
-  }
-  if (GAME.player && !_canDoHourlyActivity(GAME.player)){
-    _hourlyBlockToast(); refreshHourlyLimitUI(); return;
   }
   if (GAME.player && GAME.player.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 도전하세요.');
@@ -11983,29 +11971,6 @@ function _btlUpload(c, result, extras){
 
 // ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
 // 봇/매크로 억제 — 한 시간 내 1000회 초과 시 모든 전투 진입 차단.
-const HOURLY_ACTIVITY_LIMIT = 1000;
-function _currentHourKey(){
-  const d = new Date();
-  return `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}-${d.getHours()}`;
-}
-function _getHourlyActivity(p){
-  if (!p) return { hourKey: _currentHourKey(), count: 0 };
-  const cur = _currentHourKey();
-  if (!p.hourlyActivity || p.hourlyActivity.hourKey !== cur){
-    p.hourlyActivity = { hourKey: cur, count: 0 };
-  }
-  return p.hourlyActivity;
-}
-function _hourlyActivityCount(p){ return _getHourlyActivity(p).count || 0; }
-function _hourlyRemaining(p){ return Math.max(0, HOURLY_ACTIVITY_LIMIT - _hourlyActivityCount(p)); }
-function _canDoHourlyActivity(p){ return _hourlyRemaining(p) > 0; }
-function _incHourlyActivity(p){
-  const a = _getHourlyActivity(p);
-  a.count = (a.count || 0) + 1;
-  try { refreshHourlyLimitUI(); } catch(e){}
-  try { saveGame(); } catch(e){}
-}
-
 // ─── 일일 수행/공격대 한도 (KST 자정 리셋) ───
 //   서버 game_settings 로 override 가능 (기본: 3000 / 1000)
 //   매크로 방지 / 꼬밍 이벤트도 카운트됨 (예외 없음)
@@ -12063,54 +12028,30 @@ function _dailyHuntBlockToast(){
 function _dailyRaidBlockToast(){
   try { toast(`⛔ 오늘 공격대 한도 도달 (${_DAILY_RAID_LIMIT}회) · KST 자정에 리셋됩니다.`); } catch(e){}
 }
-function _hourlyResetRemainMs(){
-  const d = new Date();
-  return (60 - d.getMinutes()) * 60000 - d.getSeconds() * 1000;
-}
-function _hourlyBlockToast(){
-  const remainMs = _hourlyResetRemainMs();
-  const totalSec = Math.max(0, Math.ceil(remainMs / 1000));
-  const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
-  const ss = String(totalSec % 60).padStart(2, '0');
-  try { toast(`⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}`); } catch(e){}
-}
-// 메인 메뉴 버튼 (수행·공격대·랭킹전) 시각적 비활성화 토글 + 차단 상태 반영
+// 메인 메뉴 버튼 (수행·공격대·랭킹전) 상단 badge 에 일일 한도 표시.
+// 함수 이름은 호출부 호환성 유지를 위해 refreshHourlyLimitUI 그대로 사용.
 function refreshHourlyLimitUI(){
   const p = GAME && GAME.player;
   if (!p) return;
   const banned = _isBanned(p);
-  const limited = banned || !_canDoHourlyActivity(p);
-  const ids = ['m-hunt','m-rank','m-raid-dawn','m-raid-mist','m-raid-abyss'];
-  for (const id of ids){
-    const el = document.getElementById(id);
-    if (!el) continue;
-    el.classList.toggle('hourly-limited', limited);
-  }
   const badge = document.getElementById('hourlyLimitBadge');
   if (badge){
-    const cnt = _hourlyActivityCount(p);
     const dhCnt = p.dailyHuntCount || 0;
     const drCnt = p.dailyRaidCount || 0;
     const huntFull = dhCnt >= _DAILY_HUNT_LIMIT;
     const raidFull = drCnt >= _DAILY_RAID_LIMIT;
-    const huntPart = `<span style="color:${huntFull?'#c00':'#666'};font-weight:${huntFull?'900':'400'};">🗡 수행 ${dhCnt}/${_DAILY_HUNT_LIMIT}</span>`;
-    const raidPart = `<span style="color:${raidFull?'#c00':'#666'};font-weight:${raidFull?'900':'400'};">🛡 공격대 ${drCnt}/${_DAILY_RAID_LIMIT}</span>`;
+    const fmt = (n) => (n || 0).toLocaleString();
+    const huntPart = `<span style="color:${huntFull?'#c00':'#666'};font-weight:${huntFull?'900':'400'};">🗡 수행 ${fmt(dhCnt)}/${fmt(_DAILY_HUNT_LIMIT)}</span>`;
+    const raidPart = `<span style="color:${raidFull?'#c00':'#666'};font-weight:${raidFull?'900':'400'};">🛡 공격대 ${fmt(drCnt)}/${fmt(_DAILY_RAID_LIMIT)}</span>`;
     // badge 전체 inline 스타일 리셋 (innerHTML 안 개별 span 스타일만 사용)
     badge.style.color = '';
     badge.style.fontWeight = '';
     if (banned){
       badge.innerHTML = `<span style="color:#c00;font-weight:900;">🚫 진입 차단 (남은 ${_banRemainStr(p)})</span> · ${huntPart} · ${raidPart}`;
-    } else if (!_canDoHourlyActivity(p)){
-      const remainMs = _hourlyResetRemainMs();
-      const totalSec = Math.max(0, Math.ceil(remainMs / 1000));
-      const mm = String(Math.floor(totalSec / 60)).padStart(2, '0');
-      const ss = String(totalSec % 60).padStart(2, '0');
-      badge.innerHTML = `<span style="color:#c00;font-weight:900;">⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${mm}:${ss}</span> · ${huntPart} · ${raidPart}`;
     } else {
-      const hourlyPart = `<span style="color:#666;font-weight:400;">⏱ 이번 시간 ${cnt}/${HOURLY_ACTIVITY_LIMIT}</span>`;
-      badge.innerHTML = `${hourlyPart} · ${huntPart} · ${raidPart}`;
+      badge.innerHTML = `${huntPart} · ${raidPart}`;
     }
-    badge.title = '시간당 수행/공격대/랭킹전 참여 횟수 (정각 리셋) · 일일 수행/공격대 횟수 (KST 자정 리셋)';
+    badge.title = '일일 수행/공격대 횟수 (KST 자정 리셋)';
   }
 }
 // 자정 넘김·정각 리셋을 위해 30초마다 UI 재평가
@@ -12796,7 +12737,6 @@ function openHunt(tier){
   }
   const p = GAME.player;
   if (_isBanned(p)){ _blockedByBanToast(p); return; }
-  if (!_canDoHourlyActivity(p)){ _hourlyBlockToast(); refreshHourlyLimitUI(); return; }
   if (!_canDoDailyHunt(p)){ _dailyHuntBlockToast(); return; }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
@@ -12811,7 +12751,6 @@ function openHunt(tier){
     }, { text: '⚔ 수행 준비 중...' });
     return;
   }
-  _incHourlyActivity(p);
   _incDailyHunt(p);
   // 기간제 카드 만료 체크 (fire-and-forget — 다음 전투 전 반영)
   try { _checkTimedCardsExpiryServer(); } catch(e){}
@@ -12988,17 +12927,6 @@ function huntNextTurn(){
   if (_isBanned(GAME.player)){
     huntLog(`🚫 진입 차단 상태 — 남은 시간 ${_banRemainStr(GAME.player)}. 카드 발동 차단.`, 'sys');
     _blockedByBanToast(GAME.player);
-    return huntEnd('time');
-  }
-  // 시간당 활동 한도 초과 상태에서 카드 발동 차단 (safety net — 진입은 이미 openHunt에서 막힘)
-  if (!_canDoHourlyActivity(GAME.player)){
-    const _rm = _hourlyResetRemainMs();
-    const _s  = Math.max(0, Math.ceil(_rm / 1000));
-    const _mm = String(Math.floor(_s / 60)).padStart(2, '0');
-    const _ss = String(_s % 60).padStart(2, '0');
-    huntLog(`⛔ 수행 횟수 초과(${HOURLY_ACTIVITY_LIMIT}회/1시간), 남은 시간: ${_mm}:${_ss}`, 'sys');
-    _hourlyBlockToast();
-    refreshHourlyLimitUI();
     return huntEnd('time');
   }
   c.turn++;
@@ -16521,10 +16449,6 @@ function startTowerRun(startFloor){
   const p = GAME.player;
   if (!p) return;
   if ((p.level|0) < 21){ toast('Lv 21+ 전용'); return; }
-  if (typeof _canDoHourlyActivity === 'function' && !_canDoHourlyActivity(p)){
-    try { _hourlyBlockToast(); refreshHourlyLimitUI(); } catch(e){}
-    return;
-  }
   if (p.hp <= 0){
     toast('체력이 0입니다. 회복의 샘물에서 회복 후 진입하세요.');
     return;
@@ -16534,7 +16458,6 @@ function startTowerRun(startFloor){
   const sf = Math.max(1, parseInt(startFloor, 10) || 1);
   const maxSkip = _towerSkipStartFloor(p.dojo.bestFloor|0);
   if (sf > maxSkip){ toast(`아직 ${sf}층부터 시작할 수 없습니다. 최대 ${maxSkip}층부터 가능`); return; }
-  try { _incHourlyActivity(p); } catch(e){}
   // 도전 카운터(attempts / tower_attempted / tower_attempts_total) 는 첫 전투 완료 시 증가 (towerBattleEnd)
   GAME.tower.active = true;
   GAME.tower.currentFloor = sf;
