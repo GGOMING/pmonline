@@ -4383,6 +4383,9 @@ async function cloudLoad(){
 
   // 로컬 캐시가 클라우드보다 신선하면 로컬 우선 (탭 unload 시 클라우드 flush 실패 케이스 복구)
   //  - 조건: 동일 닉네임의 로컬 저장의 savedAt이 클라우드보다 뒤(더 큰 값)
+  //  - 단, "서버 전용 보호 필드" (gold/blessing/inventory/weapons/armors/xpUp/cardTraces/
+  //    timedCards/lvRewardsClaimed) 는 서버에서만 변경되므로 로컬 적용 시에도 서버값 유지.
+  //    → 어드민의 admin_grant_* RPC 가 서버에만 반영된 지급분을 로컬 우선 로직이 덮지 않게.
   try {
     const localName = row.nickname || (row.data.player && row.data.player.name);
     if (localName){
@@ -4392,7 +4395,24 @@ async function cloudLoad(){
         const localAt = localData && localData.savedAt || 0;
         const cloudAt = row.data && row.data.savedAt || 0;
         if (localAt > cloudAt){
-          console.log(`[cloudLoad] 로컬(${new Date(localAt).toLocaleString()})이 클라우드(${new Date(cloudAt).toLocaleString()})보다 신선 — 로컬 우선 적용 후 클라우드 재업로드`);
+          // 서버 보호 필드를 로컬 데이터에 머지 (로컬이 더 신선하지만 보호 필드는 서버가 진실)
+          try {
+            const srvPlayer = row.data.player || {};
+            const srvInv    = row.data.inventory;
+            if (localData.player){
+              if (srvPlayer.gold           !== undefined) localData.player.gold = srvPlayer.gold;
+              if (srvPlayer.blessing       !== undefined) localData.player.blessing = srvPlayer.blessing;
+              if (srvPlayer.spiritBlessing !== undefined) localData.player.spiritBlessing = srvPlayer.spiritBlessing;
+              if (srvPlayer.xpUp           !== undefined) localData.player.xpUp = srvPlayer.xpUp;
+              if (Array.isArray(srvPlayer.weapons))      localData.player.weapons = srvPlayer.weapons.slice();
+              if (Array.isArray(srvPlayer.armors))       localData.player.armors  = srvPlayer.armors.slice();
+              if (Array.isArray(srvPlayer.cardTraces))   localData.player.cardTraces = srvPlayer.cardTraces.slice();
+              if (Array.isArray(srvPlayer.timedCards))   localData.player.timedCards = srvPlayer.timedCards.slice();
+              if (Array.isArray(srvPlayer.lvRewardsClaimed)) localData.player.lvRewardsClaimed = srvPlayer.lvRewardsClaimed.slice();
+            }
+            if (Array.isArray(srvInv)) localData.inventory = srvInv.slice();
+          } catch(e){ console.warn('[cloudLoad merge protected]', e); }
+          console.log(`[cloudLoad] 로컬(${new Date(localAt).toLocaleString()})이 클라우드(${new Date(cloudAt).toLocaleString()})보다 신선 — 로컬 우선 적용 (보호 필드는 서버값 머지) 후 클라우드 재업로드`);
           const ok = applySavePayload(localData);
           if (ok){
             // 신선 로컬을 클라우드로 밀어넣기 (비동기, 실패해도 진행)
