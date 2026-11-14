@@ -4140,6 +4140,33 @@ async function _doCloudSave(){
     data: buildSavePayload(),
     data_version: nextVersion,
   };
+  // ── 보호 필드 overlay ──────────────────────────────────────────────
+  // 서버만 변경할 수 있는 필드 (gold/blessing/inventory/weapons/armors/xpUp/
+  // cardTraces/timedCards/lvRewardsClaimed) 는 서버의 최신값으로 덮어씀.
+  // 이유: 서버 트리거 (예: inventory 추가 시 timedCards 자동 소비) 로 서버 측에만
+  //      반영된 변경이 있을 수 있는데, 클라 로컬에 아직 반영 안 돼 이대로 저장하면
+  //      보호 트리거의 IS DISTINCT 감지로 UPDATE 전체가 거부되거나 (유저 세션),
+  //      서버 측 자동 변경이 되돌려지는 문제 발생.
+  //      매 저장마다 서버 현재값을 가져와 overlay 함으로써 일관성 보장.
+  try {
+    const { data: srvRow } = await sb.from('saves').select('data').eq('user_id', uid).maybeSingle();
+    if (srvRow && srvRow.data && payload.data){
+      const sp = srvRow.data.player || {};
+      const pp = payload.data.player;
+      if (pp){
+        if (sp.gold !== undefined)              pp.gold = sp.gold;
+        if (sp.blessing !== undefined)          pp.blessing = sp.blessing;
+        if (sp.spiritBlessing !== undefined)    pp.spiritBlessing = sp.spiritBlessing;
+        if (sp.xpUp !== undefined)              pp.xpUp = sp.xpUp;
+        if (Array.isArray(sp.weapons))          pp.weapons = sp.weapons;
+        if (Array.isArray(sp.armors))           pp.armors  = sp.armors;
+        if (Array.isArray(sp.cardTraces))       pp.cardTraces = sp.cardTraces;
+        if (Array.isArray(sp.timedCards))       pp.timedCards = sp.timedCards;
+        if (Array.isArray(sp.lvRewardsClaimed)) pp.lvRewardsClaimed = sp.lvRewardsClaimed;
+      }
+      if (Array.isArray(srvRow.data.inventory)) payload.data.inventory = srvRow.data.inventory;
+    }
+  } catch(e){ console.warn('[cloudSave protect-overlay]', e); }
   // ── 1) 낙관적 잠금 UPDATE 시도 — data_version 매칭 조건 ──
   const { data: updated, error } = await sb.from('saves')
     .update(payload)
@@ -20032,16 +20059,14 @@ function renderCardGrid(){
 }
 function gradeKr(g){ return {normal:'일반',rare:'레어',unique:'유니크',hero:'영웅',legend:'전설'}[g]; }
 
-// 기간제 카드 남은 시간 포맷 (ms → "N일 Nh" / "Nh Nm" / "Nm")
+// 기간제 카드 남은 시간 포맷 — "N시간 남음" (올림 · 시간 단위만)
+//   · 1분 ~ 59분 : "1시간 남음"
+//   · 1시간 1분 ~ 2시간 : "2시간 남음"
+//   · 1일 = 24시간 "24시간 남음"
 function _formatTimedRemain(ms){
   if (!isFinite(ms) || ms <= 0) return '만료됨';
-  const s = Math.floor(ms / 1000);
-  const d = Math.floor(s / 86400);
-  const h = Math.floor((s % 86400) / 3600);
-  const m = Math.floor((s % 3600) / 60);
-  if (d > 0) return `${d}일 ${h}시간`;
-  if (h > 0) return `${h}시간 ${m}분`;
-  return `${m}분`;
+  const h = Math.ceil(ms / 3600000);
+  return `${h}시간 남음`;
 }
 
 // 현재 "기간제 전용" 카드 ID 집합 (영구 inventory 에 없고 만료 전 timedCards 에 있는 것)
@@ -22354,8 +22379,15 @@ function loadDeckPreset(slot){
   }
   if (!confirm(`프리셋 ${slot+1}번을 현재 덱에 적용할까요?\n(현재 덱은 덮어써집니다)`)) return;
   // 보유 카드 검증 — 카드별 보유 수량을 초과해서 장착하지 않도록
+  //   영구 (inventory) + 기간제 (timedCards, 만료 전) 합산.
+  //   기간제 만료된 카드가 프리셋에 포함된 경우 자동으로 BASIC_ATTACK 대체 (아래 cap 체크).
   const owned = {};
   for (const c of GAME.inventory){ owned[c.id] = (owned[c.id]||0) + 1; }
+  const _nowTs = Date.now();
+  for (const t of ((GAME.player && GAME.player.timedCards) || [])){
+    const exp = Date.parse(t.expires_at);
+    if (isFinite(exp) && exp > _nowTs) owned[t.card_id] = (owned[t.card_id]||0) + 1;
+  }
   const used = {};
   const newDeck = ids.slice(0, 15).map(id => {
     if (id === 'basic_atk' || !id) return BASIC_ATTACK;
