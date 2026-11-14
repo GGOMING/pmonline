@@ -2136,7 +2136,7 @@
       </div>
 
       <div class="infoline">
-        랭킹전 순위 : <b id="myRank">미등록</b> <span id="hourlyLimitBadge" title="한 시간 이내 수행+공격대+랭킹전 참여 횟수. 정각마다 리셋">⏱ 이번 시간 0/500</span><br>
+        랭킹전 순위 : <b id="myRank">미등록</b> <span id="hourlyLimitBadge" title="일일 수행/공격대 횟수 (KST 자정 리셋)">🗡 수행 0/3,000 · 🛡 공격대 0/1,000</span><br>
         전체 유저 랭킹 : <b id="myOverallRank">-</b> 위 <span style="font-size:10px;color:#666;">(레벨·경험치 기준)</span><br>
         <div id="raid-status-summary" style="font-size:11px;color:#333;margin-top:6px;padding:6px 8px;background:#fff8e0;border:1px solid #c9a26b;border-radius:4px;">
           <div id="raid-status-time"  style="line-height:1.6;text-align:center;font-weight:bold;color:#7E181E;border-bottom:1px dashed #c9a26b;padding-bottom:3px;margin-bottom:3px;">공격대 남은 시간 --:--:--</div>
@@ -11969,8 +11969,6 @@ function _btlUpload(c, result, extras){
   } catch(e){ console.warn('[battle-log build]', e); }
 }
 
-// ─── 시간당 활동 한도 (수행·공격대·랭킹전 통합, 매 정각 리셋) ───
-// 봇/매크로 억제 — 한 시간 내 1000회 초과 시 모든 전투 진입 차단.
 // ─── 일일 수행/공격대 한도 (KST 자정 리셋) ───
 //   서버 game_settings 로 override 가능 (기본: 3000 / 1000)
 //   매크로 방지 / 꼬밍 이벤트도 카운트됨 (예외 없음)
@@ -19975,12 +19973,29 @@ function renderCardGrid(){
     }
     const clickHandler = (_cardPickMode==='view') ? '' : `onclick="selectCardForSlot('${c.id}')"`;
     const countBadge = c._count ? `<span style="float:right;background:#7E181E;color:#fff;padding:1px 4px;font-size:9px;">x${c._count}</span>` : '';
-    return `<div class="cg-item ${c.grade}" ${clickHandler} style="${_cardPickMode==='view'?'cursor:default;':''}">
+    // 기간제 카드 정보 — 가장 빨리 만료되는 남은 시간을 설명 밑과 title(호버)에 표시
+    let timedLine = '', timedTitle = '';
+    try {
+      const timedList = ((GAME.player && GAME.player.timedCards) || [])
+        .filter(tc => tc.card_id === c.id);
+      if (timedList.length > 0){
+        const earliest = Math.min(...timedList
+          .map(tc => Date.parse(tc.expires_at))
+          .filter(v => isFinite(v)));
+        if (isFinite(earliest) && earliest > Date.now()){
+          const remainTxt = _formatTimedRemain(earliest - Date.now());
+          timedLine = `<div style="color:#2a7;font-size:10px;font-weight:bold;">⏱ ${remainTxt} (기간제 ${timedList.length}장)</div>`;
+          timedTitle = ` title="⏱ ${remainTxt} · 기간제 ${timedList.length}장 포함"`;
+        }
+      }
+    } catch(e){}
+    return `<div class="cg-item ${c.grade}" ${clickHandler}${timedTitle} style="${_cardPickMode==='view'?'cursor:default;':''}">
       <div class="ico">${cardIcon(c)}</div>
       <div class="info">
         <div class="nm">${c.name} ${countBadge}</div>
         <div class="gr">[${gradeKr(c.grade)}]</div>
         <div class="ef">${c.text}</div>
+        ${timedLine}
       </div>
     </div>`;
   }).join('');
@@ -22373,8 +22388,22 @@ function renderDeck(){
       const c = GAME.myDeck[i] || BASIC_ATTACK;
       td.classList.remove('locked');
       td.classList.add('grade-' + (c.grade || 'normal'));
+      // 기간제 카드라면 가장 빨리 만료되는 시간을 툴팁에 표시
+      let timedTip = '';
+      try {
+        const timedList = ((GAME.player && GAME.player.timedCards) || [])
+          .filter(t => t.card_id === c.id);
+        if (timedList.length > 0){
+          const earliest = Math.min(...timedList
+            .map(t => Date.parse(t.expires_at))
+            .filter(v => isFinite(v)));
+          if (isFinite(earliest) && earliest > Date.now()){
+            timedTip = `<br><span style="color:#2a5;font-weight:bold;">⏱ ${_formatTimedRemain(earliest - Date.now())}</span>`;
+          }
+        }
+      } catch(e){}
       td.innerHTML = `<div class="card-ico">${cardIcon(c)}</div>
-        <div class="ctip"><b>${c.name}</b> [${gradeKr(c.grade)}]<br>${c.text}</div>`;
+        <div class="ctip"><b>${c.name}</b> [${gradeKr(c.grade)}]<br>${c.text}${timedTip}</div>`;
       if (lblRow){
         const lblCell = lblRow.children[i%5];
         lblCell.textContent = c.name;
@@ -26300,7 +26329,7 @@ setInterval(() => {
       // checkRankingReset 안에서 리셋 시 chatSys/render/save 처리까지 완료됨
       checkRankingReset();
     }
-  } catch(e){ console.warn('[hourly reset tick]', e); }
+  } catch(e){ console.warn('[rank reset tick]', e); }
 }, 30 * 1000);
 // 1) 구버전 단일 슬롯 → 신버전 계정별 슬롯 마이그레이션
 migrateLegacySave();
