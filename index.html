@@ -20295,7 +20295,15 @@ function selectCardForSlot(cardId){
       }
       // 기본공격은 무한 사용 가능
       if (cardId !== 'basic_atk'){
-        const owned = GAME.inventory.filter(c => c.id === cardId).length;
+        const invCount = GAME.inventory.filter(c => c.id === cardId).length;
+        // 기간제 카드도 보유분에 합산 (만료 전 · 영구 보유와 중복 소유 허용)
+        const _nowTs = Date.now();
+        const timedCount = ((GAME.player && GAME.player.timedCards) || []).filter(t => {
+          if (t.card_id !== cardId) return false;
+          const exp = Date.parse(t.expires_at);
+          return isFinite(exp) && exp > _nowTs;
+        }).length;
+        const owned = invCount + timedCount;
         const equipped = GAME.myDeck.filter((c, i) => c && c.id === cardId && i !== _cardPickSlot).length;
         if (owned <= equipped){
           toast(`「${card.name}」 보유 ${owned}장 / 장착 ${equipped}장 — 보유분 초과`);
