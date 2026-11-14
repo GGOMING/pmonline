@@ -1782,7 +1782,12 @@
   <div class="admin-body">
     <!-- 좌측: 유저 목록 -->
     <div class="admin-userlist">
-      <div class="admin-section-title">유저 목록 <span style="font-size:10px;color:#888;float:right;">서버 연동 전 (로컬)</span></div>
+      <div class="admin-section-title">
+        유저 목록
+        <button id="adminRefreshBtn" onclick="refreshAdminUsers()"
+          style="float:right;padding:2px 8px;font-size:10px;background:#5a7cc8;color:#fff;border:0;cursor:pointer;border-radius:3px;font-weight:bold;"
+          title="서버에서 유저 데이터를 다시 불러옵니다">🔄 새로고침</button>
+      </div>
       <div id="adminUserList"></div>
       <div style="padding:8px;text-align:center;">
       </div>
@@ -5238,6 +5243,35 @@ function gachaCost1For(level){
 function gachaCost10For(level){
   // 10뽑은 1뽑×9 (정상가의 10% 할인 비율 유지)
   return gachaCost1For(level) * 9;
+}
+
+// 서버 측 레벨업 보너스 수령 (중복방지 · xpUp/gold 는 보호 필드이므로 RPC 로만).
+//
+// 호출 패턴: 레벨업 while 루프 안에서 p.xpUp += 1; _grantLvBonusGold(p, p.level); 직후
+// fire-and-forget 으로 호출. 응답 받으면 로컬 xpUp/gold 를 서버값으로 덮어씀.
+//
+// 신규 레벨 수령 시: 서버값 = 로컬값 과 일치 → 변화 없음.
+// 중복 (다른 브라우저에서 이미 수령) 시: 서버값 = 로컬값 - 1 → 로컬 보정됨.
+// 이로써 다중 브라우저 로그인 시 재레벨업으로 인한 xpUp 누적을 제거.
+function _serverClaimLvBonus(level){
+  if (!sb) return;
+  if (level < 2) return;
+  sb.rpc('claim_level_up_bonus', { p_level: level })
+    .then(({ data, error }) => {
+      if (error){ console.warn('[claim_level_up_bonus]', level, error); return; }
+      const res = Array.isArray(data) ? data[0] : data;
+      if (!res) return;
+      const p = GAME.player;
+      if (!p) return;
+      // 서버 최종값으로 로컬 덮어쓰기 → 중복 수령 시 자동 교정
+      if (typeof res.xp_up_after === 'number') p.xpUp = res.xp_up_after;
+      if (typeof res.gold_after === 'number') p.gold = res.gold_after;
+      if (res.already_claimed){
+        console.warn('[claim_level_up_bonus] already claimed · 로컬값을 서버값으로 교정', level, {xpUp: p.xpUp, gold: p.gold});
+      }
+      try { renderSheet(); } catch(e){}
+    })
+    .catch(e => console.warn('[claim_level_up_bonus]', level, e));
 }
 
 // Lv 2~10 도달 시 골드 축하 보너스 (Lv2=600 ~ Lv9=2,700G, Lv10=30,000G 졸업 보너스)
@@ -9760,6 +9794,7 @@ async function raidEnd(result){
         p.level++;
         p.xpUp += 1;
         raidMobBonus += _grantLvBonusGold(p, p.level);
+        try { _serverClaimLvBonus(p.level); } catch(e){}
         raidMobLvUp = true;
       }
       if (raidMobLvUp){
@@ -10040,6 +10075,7 @@ async function raidEnd(result){
         p.level++;
         p.xpUp += 1;
         raidBossBonus += _grantLvBonusGold(p, p.level);
+        try { _serverClaimLvBonus(p.level); } catch(e){}
         raidBossLvUp = true;
       }
       if (raidBossLvUp){
@@ -11031,6 +11067,7 @@ async function rankEnd(result){
       p.level++;
       p.xpUp += 1;
       rankLvBonus += _grantLvBonusGold(p, p.level);
+      try { _serverClaimLvBonus(p.level); } catch(e){}
       rankLvUp = true;
       // 저레벨 레벨업은 로컬만 (Supabase Realtime 절감). 주요 마일스톤(10·20·25·30·40·50) 만 전체 방송.
       // 저레벨은 로컬만, 마일스톤 (10·20·25·30·40·50) 은 전체 방송 + sticky 유지
@@ -15878,6 +15915,7 @@ async function huntEnd(result){
       lvUp = true;
       const bonusG = _grantLvBonusGold(p, p.level);
       lvBonus += bonusG;
+      try { _serverClaimLvBonus(p.level); } catch(e){}
       huntLog(`🌟 레벨업! Lv ${p.level} / 스탯 포인트 +1 · HP·MP 완전 회복` + (bonusG ? ` · 🎁 +${bonusG}G` : ''), 'sys');
       // Lv 26 도달 시 슬롯 11~15 해금 안내 + 축하금 30,000G (1회)
       if (p.level === 26 && !p.lv26BonusClaimed){
@@ -21529,6 +21567,7 @@ function checkLevelUp(){
     leveled = true;
     chatSys(`★ ${p.name}님이 Lv ${p.level}로 레벨업! 스탯 포인트 +1`, { local: !( [10,20,25,30,40,50].includes(p.level) ) });
     _grantLvBonusGold(p, p.level);
+    try { _serverClaimLvBonus(p.level); } catch(e){}
     if (p.level === 26 && !p.lv26BonusClaimed){
       p.lv26BonusClaimed = true;
       p.gold += 30000;
@@ -23700,6 +23739,29 @@ async function enterAdmin(){
   showPage('admin');
   renderAdminUserList();
   refreshAdminSystem();
+}
+
+// 유저 목록 수동 새로고침 — 메모리 캐시된 _adminUsers 를 서버에서 다시 fetch.
+// 선택 중이던 유저가 있으면 nickname 기준으로 재선택해 편집 화면도 최신화.
+async function refreshAdminUsers(){
+  const btn = document.getElementById('adminRefreshBtn');
+  const prevNick = (_adminSelectedUser != null && _adminUsers[_adminSelectedUser])
+    ? _adminUsers[_adminSelectedUser].name : null;
+  if (btn){ btn.disabled = true; btn.textContent = '불러오는 중...'; }
+  try {
+    await loadAdminUsers();
+    if (prevNick){
+      const idx = _adminUsers.findIndex(u => u.name === prevNick);
+      _adminSelectedUser = idx >= 0 ? idx : null;
+    }
+    renderAdminUserList();
+    if (_adminSelectedUser != null) renderAdminEdit();
+    toast('🔄 유저 목록 새로고침 완료');
+  } catch(e){
+    toast('새로고침 실패: ' + (e.message || e));
+  } finally {
+    if (btn){ btn.disabled = false; btn.textContent = '🔄 새로고침'; }
+  }
 }
 
 async function exitAdmin(){
