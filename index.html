@@ -5337,14 +5337,20 @@ const GACHA_SHOPS = {
   },
 };
 
-// 저레벨 가챠 할인표 — Lv N = N×100G, Lv10+ = 정상가 1,000G
+// 저레벨 가챠 할인표 — Lv N = N×100G (Lv1~5 할인), Lv6+ = 정상가 500G (일반 뽑기 기준)
+// 과거 GACHA.cost1=1000 기준으로 설계됐으나 샵 정상가가 500G 로 변경되면서 Lv6~9 가 오히려
+// 할증되는 버그 발생. 정상가로 clamp 하도록 수정.
 const GACHA_LV_COST1 = {
   1: 100, 2: 200, 3: 300, 4: 400, 5: 500,
-  6: 600, 7: 700, 8: 800, 9: 900,
 };
+function _gachaNormalCost1(){
+  return (typeof GACHA_SHOPS !== 'undefined' && GACHA_SHOPS.normal && GACHA_SHOPS.normal.cost1) || 500;
+}
 function gachaCost1For(level){
-  if (level >= 10) return GACHA.cost1;
-  return GACHA_LV_COST1[level] || GACHA.cost1;
+  const normalCost = _gachaNormalCost1();
+  if (level >= 10) return normalCost;
+  // 저레벨 할인: Lv N = N × 100G, 단 정상가를 초과하지 않음
+  return Math.min(GACHA_LV_COST1[level] || normalCost, normalCost);
 }
 function gachaCost10For(level){
   // 10뽑은 1뽑×9 (정상가의 10% 할인 비율 유지)
@@ -24580,7 +24586,13 @@ function renderAdminEdit(){
     <div class="edit-row" style="display:block;">
       <div style="margin:6px 0;font-weight:bold;color:#7E181E;">🗡 보유 무기 (${u.weapons.length}종)</div>
       <div style="font-size:11px;">
-        ${u.weapons.length === 0 ? '<span style="color:#888;">(없음)</span>' : u.weapons.map((w,i) => `<span style="display:inline-block;margin:2px 4px;padding:2px 6px;background:#eef;border:1px solid #aab;">${w.name} (+${w.atkBonus}) <button onclick="adminRemoveWeapon(${i})" class="admin-btn small" style="padding:1px 6px;">×</button></span>`).join('')}
+        ${u.weapons.length === 0 ? '<span style="color:#888;">(없음)</span>' : u.weapons.map((w,i) => {
+          // 서버는 {id} 만 저장 → WEAPONS 카탈로그에서 name/atkBonus 매핑
+          const def = WEAPONS.find(x => x.id === w.id) || {};
+          const nm = def.name || w.name || w.id || '?';
+          const atkB = def.atkBonus ?? w.atkBonus ?? 0;
+          return `<span style="display:inline-block;margin:2px 4px;padding:2px 6px;background:#eef;border:1px solid #aab;">${nm} (+${atkB}) <button onclick="adminRemoveWeapon(${i})" class="admin-btn small" style="padding:1px 6px;">×</button></span>`;
+        }).join('')}
       </div>
       <div style="margin:4px 0;">
         <select id="ed_addWeaponSel" style="width:200px;">
@@ -24592,7 +24604,12 @@ function renderAdminEdit(){
 
       <div style="margin:6px 0;font-weight:bold;color:#7E181E;">🛡 보유 방어구 (${u.armors.length}종)</div>
       <div style="font-size:11px;">
-        ${u.armors.length === 0 ? '<span style="color:#888;">(없음)</span>' : u.armors.map((a,i) => `<span style="display:inline-block;margin:2px 4px;padding:2px 6px;background:#efe;border:1px solid #aba;">${a.name} (+${a.defBonus}) <button onclick="adminRemoveArmor(${i})" class="admin-btn small" style="padding:1px 6px;">×</button></span>`).join('')}
+        ${u.armors.length === 0 ? '<span style="color:#888;">(없음)</span>' : u.armors.map((a,i) => {
+          const def = ARMORS.find(x => x.id === a.id) || {};
+          const nm = def.name || a.name || a.id || '?';
+          const defB = def.defBonus ?? a.defBonus ?? 0;
+          return `<span style="display:inline-block;margin:2px 4px;padding:2px 6px;background:#efe;border:1px solid #aba;">${nm} (+${defB}) <button onclick="adminRemoveArmor(${i})" class="admin-btn small" style="padding:1px 6px;">×</button></span>`;
+        }).join('')}
       </div>
       <div style="margin:4px 0;">
         <select id="ed_addArmorSel" style="width:200px;">
