@@ -20208,6 +20208,16 @@ function renderCardGrid(){
       if (avail <= 0) continue;
       pool.push({...c, _count: avail});
     }
+    // 흔적 추가 — 반투명 표시 · 덱 장착 불가 · 클릭 시 복구 팝업
+    const traces = (GAME.player && GAME.player.cardTraces) || [];
+    if (traces.length > 0){
+      const tcounts = {};
+      for (const id of traces){ tcounts[id] = (tcounts[id]||0) + 1; }
+      for (const id in tcounts){
+        const base = CARDS.find(c => c.id === id);
+        if (base) pool.push({...base, _isTrace: true, _traceCount: tcounts[id]});
+      }
+    }
   } else if (_cardPickMode === 'view'){
     // 보유 카드 도감 보기 (중복 제거, 보유 수량 표시)
     const counts = {};
@@ -24815,10 +24825,25 @@ async function adminRevokeTimedCard(nickname, cardId){
       p_card_id: cardId,
     });
     if (error){ toast('회수 실패: ' + (error.message || '?')); return; }
-    toast(`🗑 기간제 카드 회수 완료`);
+    const res = Array.isArray(data) ? data[0] : data;
+    const deckCleared = (res && res.deck_cleared_count) || 0;
+    toast(`🗑 기간제 카드 회수 완료${deckCleared > 0 ? ` · 덱 슬롯 ${deckCleared}개 비움` : ''}`);
     const u = _adminUsers[_adminSelectedUser];
-    if (u && Array.isArray(u.timedCards)){
-      u.timedCards = u.timedCards.filter(t => t.card_id !== cardId);
+    if (u){
+      // 로컬 캐시 timedCards 정리
+      if (Array.isArray(u.timedCards)){
+        u.timedCards = u.timedCards.filter(t => t.card_id !== cardId);
+      }
+      // 영구 보유 없으면 덱 슬롯에서도 해당 카드 제거 (서버와 동일 로직)
+      const hasPerm = Array.isArray(u.inventory)
+        && u.inventory.some(entry => (typeof entry === 'string' ? entry : (entry && entry.id)) === cardId);
+      if (!hasPerm && Array.isArray(u.myDeck)){
+        u.myDeck = u.myDeck.map(slot => {
+          if (!slot) return slot;
+          const sid = typeof slot === 'string' ? slot : slot.id;
+          return (sid === cardId) ? null : slot;
+        });
+      }
     }
     renderAdminEdit();
   } catch(e){ toast('회수 실패: ' + (e.message || e)); }
