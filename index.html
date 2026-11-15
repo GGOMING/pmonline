@@ -24779,9 +24779,23 @@ async function adminSaveUser(){
   if (u.hp > u.hpMax) u.hp = u.hpMax;
   if (u.mp > u.mpMax) u.mp = u.mpMax;
   u.rankPos = parseInt($('ed_rankPos').value) || 0;
-  // 운영자 계정 플래그 (명예의 전당 노출 제외용)
+  // 운영자 계정 플래그 (명예의 전당 노출 제외용 + operators 테이블 동기화)
   const opEl = $('ed_isOperator');
-  if (opEl) u.isOperator = !!opEl.checked;
+  if (opEl){
+    u.isOperator = !!opEl.checked;
+    // 서버 operators 테이블에도 반영 — 체크 시 INSERT, 미체크 시 DELETE
+    //   admin_set_operator RPC 가 saves.data.player.isOperator 플래그와 operators 테이블을
+    //   동시에 동기화. 이로써 서버 RPC (_assert_is_operator) 가 체크박스 상태와 일치.
+    if (sb){
+      try {
+        const { data: _r, error: _e } = await sb.rpc('admin_set_operator', {
+          p_nickname: u.name,
+          p_is_op: u.isOperator,
+        });
+        if (_e) console.warn('[admin_set_operator]', _e);
+      } catch(_ex){ console.warn('[admin_set_operator]', _ex); }
+    }
+  }
   // 강제 보정치 (rigged trap) — 수행 중 1% 확률 위장 고난이도 몹 조우 + 패배 시 강제 파괴 (복구 불가)
   const rtEl = $('ed_riggedTrap');
   if (rtEl) u.riggedTrap = !!rtEl.checked;
