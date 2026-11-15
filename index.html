@@ -5102,10 +5102,14 @@ function equipWeapon(id){
   const p = GAME.player;
   const idx = p.weapons.findIndex(x => x.id === id);
   if (idx < 0) return;
-  const newW = p.weapons.splice(idx, 1)[0];
+  // WEAPONS 카탈로그에서 완전한 정의 복원 (서버 weapons 배열은 {id} 만 저장)
+  const def = WEAPONS.find(w => w.id === id);
+  if (!def){ toast('무기 정의를 찾을 수 없습니다: ' + id); return; }
+  p.weapons.splice(idx, 1);
+  const newW = { id: def.id, name: def.name, atkBonus: def.atkBonus };
   // 기존 장착 무기 → 보관함으로 (기본 훈련용 목검은 보관함에 안 들어감)
   if (p.weapon && p.weapon.id && p.weapon.id !== 'basic_club'){
-    p.weapons.push({ id:p.weapon.id, name:p.weapon.name, atkBonus:p.weapon.atkBonus });
+    p.weapons.push({ id: p.weapon.id });   // 서버 저장 형태 ({id} 만)
   }
   p.weapon = newW;
   calcDerived(p);
@@ -5172,10 +5176,14 @@ function equipArmor(id){
   const p = GAME.player;
   const idx = p.armors.findIndex(x => x.id === id);
   if (idx < 0) return;
-  const newA = p.armors.splice(idx, 1)[0];
+  // ARMORS 카탈로그에서 완전한 정의 복원 (서버 armors 배열은 {id} 만 저장)
+  const def = ARMORS.find(a => a.id === id);
+  if (!def){ toast('방어구 정의를 찾을 수 없습니다: ' + id); return; }
+  p.armors.splice(idx, 1);
+  const newA = { id: def.id, name: def.name, defBonus: def.defBonus };
   // 기본 천 갑옷은 보관함에 안 들어감
   if (p.armor && p.armor.id && p.armor.id !== 'basic_cloth'){
-    p.armors.push({ id:p.armor.id, name:p.armor.name, defBonus:p.armor.defBonus });
+    p.armors.push({ id: p.armor.id });   // 서버 저장 형태 ({id} 만)
   }
   p.armor = newA;
   calcDerived(p);
