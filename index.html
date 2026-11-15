@@ -16409,7 +16409,9 @@ async function huntEnd(result){
           p_rewards: {
             gold: Math.max(0, deltaGold),
             xp:   Math.max(0, deltaXp),
-            stat_points: Math.max(0, deltaStat),
+            // stat_points 제거 — 레벨업 보너스는 _serverClaimLvBonus (claim_level_up_bonus RPC) 가 전담.
+            // 과거 여기도 함께 지급했으나 중복 지급 버그 유발 → 완전 제거.
+            // stat_points: Math.max(0, deltaStat),
             weapons: newWpnIds,
             armors:  newArmIds,
           },
@@ -17581,7 +17583,9 @@ async function towerBattleEnd(result){
           p_rewards: {
             gold:        Math.max(0, deltaGold),
             xp:          Math.max(0, deltaXp),
-            stat_points: Math.max(0, deltaStat),
+            // stat_points 제거 — 레벨업 보너스는 _serverClaimLvBonus (claim_level_up_bonus RPC) 가 전담.
+            // 과거 여기도 함께 지급했으나 중복 지급 버그 유발 → 완전 제거.
+            // stat_points: Math.max(0, deltaStat),
             blessing:    Math.max(0, deltaBless),
             spirit:      Math.max(0, deltaSpirit),
             cards:       newInv,
