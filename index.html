@@ -7091,39 +7091,39 @@ function renderVisionaryCircle(){
   el.innerHTML = html + footer;
 }
 async function _loadHonorRankers(){
-  // 클라우드 우선: saves 전체에서 level+xp 상위 추출. 운영자 권한이 없으면 saves 전체 select가 막힐 수 있음
+  // 공개 뷰 honor_rankers 에서 조회 (saves 테이블 RLS 우회).
+  // 뷰 정의: honor_rankers_expand.sql — level, xp, 스탯, 장비, 덱 등 공개 가능 필드만.
+  //   · gold / blessing / inventory 등 민감 필드는 뷰에서 제외되어 자동 보호.
   if (sb){
     try {
-      const { data, error } = await sb.from('saves').select('user_id, nickname, data');
-      if (!error && Array.isArray(data) && data.length > 0){
+      const { data, error } = await sb.from('honor_rankers').select('*');
+      if (error){ console.warn('[honor_rankers view]', error); }
+      else if (Array.isArray(data) && data.length > 0){
         const list = data
-          .filter(row => !((row.data && row.data.player) || {}).isOperator)   // 운영자 계정 제외
-          .map(row => {
-          const d = row.data || {};
-          const p = d.player || {};
-          return {
+          .filter(row => !row.is_operator)   // 운영자 계정 제외
+          .map(row => ({
             user_id: row.user_id,
-            name: row.nickname || p.name || '?',
-            level: p.level || 1,
-            xp: p.xp || 0,
-            xpUp: p.xpUp || 0,
-            hp: p.hp || 0, hpMax: p.hpMax || 0,
-            mp: p.mp || 0, mpMax: p.mpMax || 0,
-            str: p.str || 5, dex: p.dex || 5, int: p.int || 5, con: p.con || 5,
-            atk: p.atk || [0,0], def: p.def || 0,
-            weapon: p.weapon || null,
-            armor:  p.armor  || null,
-            avatar: p.avatar || null,
-            blessing: p.blessing || 0,
-            spiritBlessing: p.spiritBlessing || 0,
-            comment: p.comment || '',
-            equippedTitle: p.equippedTitle || null,
-            sponsorAmount: p.sponsorAmount || 0,
-            myDeck: (d.myDeck || []).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
-          };
-        });
+            name: row.nickname || '?',
+            level: row.level || 1,
+            xp: row.xp || 0,
+            xpUp: row.xp_up || 0,
+            hp: row.hp || 0, hpMax: row.hp_max || 0,
+            mp: row.mp || 0, mpMax: row.mp_max || 0,
+            str: row.str || 5, dex: row.dex || 5, int: row.int_ || 5, con: row.con || 5,
+            atk: row.atk || [0,0],
+            def: row.def_ || 0,
+            weapon: row.weapon || null,
+            armor:  row.armor  || null,
+            avatar: row.avatar || null,
+            blessing: 0,         // 뷰에서 노출 X (민감 정보)
+            spiritBlessing: 0,
+            comment: row.comment || '',
+            equippedTitle: row.equipped_title || null,
+            sponsorAmount: row.sponsor_amount || 0,
+            myDeck: (row.my_deck || []).map(id => CARDS.find(c => c.id === id) || BASIC_ATTACK),
+          }));
         list.sort((a,b) => (b.level - a.level) || (b.xp - a.xp));
-        return list;   // 전체 반환. renderHonorList 는 top 100 만 표시, Visionary Circle 은 전 인원 사용
+        return list;
       }
     } catch(e){ console.warn('[honor cloud]', e); }
   }
