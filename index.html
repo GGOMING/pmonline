@@ -3825,7 +3825,7 @@ const CARDS = [
   { id:'r46', name:'데스트레이드',       grade:'rare', icon:'cross',   iconPath:'assets/wc3_reforged_used/PASBTNCriticalStrike-NoViolence.png', text:'지금까지 잃은 HP × 0.4 만큼 고정 데미지 (방어력 무시 · 최대 50)', fx:{type:'dmgLostHpPct',pct:0.4,ignoreDef:true,maxDmg:50} },
   { id:'r47', name:'트랜스뮤트',         grade:'rare', icon:'gear',    iconPath:'assets/wc3_reforged_used/BTNTransmute-Reforged.png', text:'상대 방어구 -10 / [시전자 STR이 15 이상일 경우에만 발동]', statReq:{str:15}, fx:{type:'debuff',def:-10} },
   { id:'r48', name:'요정의 탄환',        grade:'rare', icon:'spark',    iconPath:'assets/renew/r48.png', text:'다음 턴부터 3턴간 선공·후공 교체 (상대도 발동 시 재교체)', fx:{type:'initiativeSwap',turns:3} },
-  { id:'r49', name:'홀리해츨링 소환',     grade:'rare', icon:'wings',    iconPath:'assets/renew/r49.png', text:'다음 턴부터 5턴간 받은 피해의 40%를 매 턴 HP 회복 / [소환의식] 선행 필요 / [시전자 INT 10 이상]', requires:'n41', statReq:{int:10}, fx:{type:'reactiveHeal',turns:5,pct:0.4} },
+  { id:'r49', name:'홀리해츨링 소환',     grade:'rare', icon:'wings',    iconPath:'assets/renew/r49.png', text:'다음 턴부터 10턴간 받은 피해의 40%를 매 턴 HP 회복 / [소환의식] 선행 필요 / [시전자 INT 10 이상]', requires:'n41', statReq:{int:10}, fx:{type:'reactiveHeal',turns:10,pct:0.4} },
   { id:'r50', name:'루나해츨링 소환',     grade:'rare', icon:'wings',    iconPath:'assets/renew/r50.png', text:'시전 즉시 HP 완전 회복 / 다음 턴부터 10턴간 받은 피해의 20% 반사 / [소환의식] 선행 필요 / [시전자 DEX 10 이상]', requires:'n41', statReq:{dex:10}, fx:{type:'multi',effects:[{type:'instantFullHeal'},{type:'reactiveReflect',turns:10,pct:0.2}]} },
 ];
 const BASIC_ATTACK = CARDS[0]; // id='basic_atk'
@@ -13478,6 +13478,42 @@ function _isOffensiveCard(card){
   }
   return check(card && card.fx);
 }
+// n90 패링 — 카드 발동 전 "추정 피해량" 계산용. 실제 doDmg 호출 없이 fx 트리를
+// 돌아 dmg/dmgStat/dmgHits 의 평균 raw 를 합산. 반사량 계산 전용 (방어력 적용 전 raw 기준).
+function _estimateCardRawDmg(card, ctx){
+  function est(fx){
+    if (!fx) return 0;
+    if (fx.type === 'multi' && Array.isArray(fx.effects)){
+      let s = 0; for (const sub of fx.effects) s += est(sub); return s;
+    }
+    const hits = Math.max(1, fx.hits || 1);
+    if (fx.type === 'dmg'){
+      const avg = (((fx.min|0) + (fx.max|0)) / 2) || 0;
+      return avg * hits;
+    }
+    if (fx.type === 'dmgHits'){
+      const avg = (((fx.min|0) + (fx.max|0)) / 2) || 0;
+      return avg * hits;
+    }
+    if (fx.type === 'dmgStat'){
+      const useTgt = !!fx.useTarget;
+      const srcObj  = useTgt ? ctx.targObj  : ctx.castObj;
+      const srcBufs = useTgt ? ctx.targBuffs : ctx.castBuffs;
+      let base = 0;
+      for (const k of (fx.stats||[])) base += (srcObj[k]||0) + (srcBufs[k]||0);
+      if (fx.weaponBonus && typeof _effWeapon === 'function') base += _effWeapon(srcObj, srcBufs);
+      if (fx.armorBonus  && typeof _effArmor  === 'function') base += _effArmor(srcObj, srcBufs);
+      if (fx.bonus) base += fx.bonus;
+      const mult = fx.mult || 1;
+      // multMin/multMax (랜덤 배율) 은 평균 사용
+      const multAvg = (fx.multMin != null && fx.multMax != null)
+        ? ((fx.multMin + fx.multMax) / 2) : mult;
+      return Math.max(0, base) * multAvg * hits;
+    }
+    return 0;
+  }
+  return Math.max(0, Math.floor(est(card && card.fx)));
+}
 function _hasDirectDamage(card){
   function check(fx){
     if (!fx) return false;
@@ -13657,6 +13693,26 @@ function applyCardEffect(card, ctx){
     ctx.log(`  ✱ ${ctx.castName} MP 부족 (필요 ${mpNeed} / 보유 ${ctx.castObj.mp|0}) — 카드 발동 실패`, 'info');
     return false;
   }
+  // ─── n90 패링 체크 (dispatch 진입 전) ───
+  // 대상이 패링 활성 & 카드 유니크 미만 & 공격 카드(dmg/dmgStat 포함) & 기본공격 아님:
+  //   → 카드 전체 발동 생략 (cc·debuff·dot 등 부가 효과도 모두 무효) + 추정 raw × 50% 반사
+  //   · 추정 raw = fx 트리를 돌며 dmg/dmgStat/dmgHits 의 평균값 합산 (방어력 적용 전)
+  {
+    const _isTgtP = ctx.targObj === GAME.player;
+    const _parry = ctx.c && (_isTgtP ? ctx.c.myParry : ctx.c.monParry);
+    const _GRADES_P = {normal:0, rare:1, unique:2, hero:3, legend:4};
+    const _parryable = card.id !== 'basic_atk'
+      && ((_GRADES_P[card.grade] ?? 99) < 2)
+      && _isOffensiveCard(card);
+    if (_parry && _parry.turn === ctx.c.turn && _parryable){
+      const _estRaw = _estimateCardRawDmg(card, ctx);
+      const _r = Math.max(1, Math.floor(_estRaw * 0.5));
+      ctx.castObj.hp = Math.max(0, ctx.castObj.hp - _r);
+      ctx.addTargDmg(_r);
+      ctx.log(`  ⚔ ${ctx.targName} 패링 → <b>${card.name}</b> 전체 무효 (부가 효과 포함) · ${ctx.castName} -${_r}`, ctx.targLogCls);
+      return true;   // 카드 발동 처리 완료 — dispatch 전체 skip
+    }
+  }
   function dispatch(fx){
     if (!fx) return;
     // 확률 발동 — fx.chance (고정) 또는 fx.chanceStat ('str'|'dex'|'int'|'con') 시전자 스탯% 확률
@@ -13695,22 +13751,8 @@ function applyCardEffect(card, ctx){
         ctx.log(`  🌀 ${ctx.targName} 부두 → 데미지 ${heal} → 회복 +${got}`, 'heal');
         return;
       }
-      // ─── 패링(n90) ───
-      // 대상이 패링 활성 & 카드 유니크 미만 (normal/rare) & 기본공격 아님 → 피해 무효 + 방어 적용 전 raw × 50% 반사
-      // (multi 카드의 dmg/dmgStat hit 마다 발동. doDmg 를 안 거치는 dot 계열 · _dealIgnoreDef 는 자동 제외)
-      {
-        const isTgtP = ctx.targObj === GAME.player;
-        const parry = ctx.c && (isTgtP ? ctx.c.myParry : ctx.c.monParry);
-        const GRADES_P = {normal:0, rare:1, unique:2, hero:3, legend:4};
-        const parryable = card && card.id !== 'basic_atk' && (GRADES_P[card.grade] ?? 99) < 2;
-        if (parry && parry.turn === ctx.c.turn && parryable){
-          const r = Math.max(1, Math.floor(raw * 0.5));
-          ctx.castObj.hp = Math.max(0, ctx.castObj.hp - r);
-          ctx.addTargDmg(r);
-          ctx.log(`  ⚔ ${ctx.targName} 패링 → <b>${card.name}</b> 무효 · ${ctx.castName} -${r}`, ctx.targLogCls);
-          return;
-        }
-      }
+      // (패링 체크는 applyCardEffect 진입점에서 처리 — 카드 전체를 발동 전에 가로채
+      //  부가 효과까지 무효화. 여기 doDmg 는 이미 패링 통과한 데미지만 다룸.)
       // 방어력 차감 — 방어구 본체 + buff 클램프. 플레이어가 대상이면 STR 유래 방어력 추가 (몬스터 미적용)
       const totalDefT = (ctx.targObj === GAME.player)
         ? _playerEffectiveDef(GAME.player, ctx.targBuffs)
@@ -26736,7 +26778,7 @@ setInterval(()=>{
 </div>
 
 <div id="opPanel"
-     style="position:fixed;bottom:82px;right:20px;z-index:9998;display:none;width:360px;background:#fff;border:2px solid #7E181E;border-radius:8px;padding:12px;box-shadow:0 4px 16px rgba(0,0,0,.35);font-size:12px;">
+     style="position:fixed;bottom:82px;right:20px;z-index:9998;display:none;width:360px;max-height:calc(100vh - 140px);overflow-y:auto;background:#fff;border:2px solid #7E181E;border-radius:8px;padding:12px;box-shadow:0 4px 16px rgba(0,0,0,.35);font-size:12px;">
   <div style="display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid #c9a26b;padding-bottom:6px;margin-bottom:8px;">
     <b style="color:#7E181E;">🛡 운영자 도구 — 공격대</b>
     <button onclick="closeOperatorPanel()" style="background:#eee;border:1px solid #999;padding:2px 8px;font-size:11px;cursor:pointer;">✕</button>
