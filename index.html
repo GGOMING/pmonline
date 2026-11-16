@@ -23025,7 +23025,7 @@ async function doLogin(){
       // 서버 상태와 로컬 캐시 동기화
       if (_mtSvr === true) localStorage.setItem(MAINTENANCE_LS_KEY, '1');
       else if (_mtSvr === false) localStorage.removeItem(MAINTENANCE_LS_KEY);
-      // 중복 로그인 체크 — 다른 기기에서 이미 활성 세션이면 차단 (운영자 예외는 서버에서 처리)
+      // 중복 로그인 체크 — 다른 기기에서 이미 활성 세션이면 차단 (운영자는 서버에서 예외 처리)
       try {
         const _sessionId = (crypto && crypto.randomUUID) ? crypto.randomUUID() : (Date.now() + '-' + Math.random());
         const { data: _sRes, error: _sErr } = await sb.rpc('claim_session', { p_session_id: _sessionId });
@@ -23042,8 +23042,15 @@ async function doLogin(){
             GAME.inventory = [];
             return;
           }
-          GAME._sessionId = _sessionId;
-          _startSessionHeartbeat();
+          // 운영자는 세션 잠금 예외 → active_sessions 테이블에 등록 안 돼 있으므로
+          // 하트비트 돌리면 "세션 가로챔"으로 오인되어 강제 로그아웃됨. 하트비트 스킵.
+          if (_res && _res.is_operator){
+            GAME._sessionId = null;
+            console.log('[session] 운영자 계정 — 세션 잠금 예외, 하트비트 미작동');
+          } else {
+            GAME._sessionId = _sessionId;
+            _startSessionHeartbeat();
+          }
         }
       } catch(e){ console.warn('[claim_session]', e); }
       // 로컬 캐시에도 저장 (오프라인 대비)
