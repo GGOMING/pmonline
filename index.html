@@ -5351,24 +5351,15 @@ const GACHA_SHOPS = {
   },
 };
 
-// 저레벨 가챠 할인표 — Lv N = N×100G (Lv1~5 할인), Lv6+ = 정상가 500G (일반 뽑기 기준)
-// 과거 GACHA.cost1=1000 기준으로 설계됐으나 샵 정상가가 500G 로 변경되면서 Lv6~9 가 오히려
-// 할증되는 버그 발생. 정상가로 clamp 하도록 수정.
-const GACHA_LV_COST1 = {
-  1: 100, 2: 200, 3: 300, 4: 400, 5: 500,
-};
+// 일반 뽑기 가격 — 레벨 관계없이 고정 (1뽑 500G · 10뽑 4,500G)
 function _gachaNormalCost1(){
   return (typeof GACHA_SHOPS !== 'undefined' && GACHA_SHOPS.normal && GACHA_SHOPS.normal.cost1) || 500;
 }
 function gachaCost1For(level){
-  const normalCost = _gachaNormalCost1();
-  if (level >= 10) return normalCost;
-  // 저레벨 할인: Lv N = N × 100G, 단 정상가를 초과하지 않음
-  return Math.min(GACHA_LV_COST1[level] || normalCost, normalCost);
+  return _gachaNormalCost1();
 }
 function gachaCost10For(level){
-  // 10뽑은 1뽑×9 (정상가의 10% 할인 비율 유지)
-  return gachaCost1For(level) * 9;
+  return _gachaNormalCost1() * 9;
 }
 
 // 서버 측 레벨업 보너스 수령 (중복방지 · xpUp/gold 는 보호 필드이므로 RPC 로만).
