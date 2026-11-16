@@ -5118,6 +5118,8 @@ function equipWeapon(id){
   $('wshop_msg').textContent = `✔ ${newW.name} 장착 완료`;
   $('wshop_msg').className = 'heal-result ok';
   saveGame();
+  // 서버 즉시 flush — 바로 판매 시도 시 "장착 중" 거부 방지 (디바운스 우회)
+  try { cloudSaveNow().catch(err => console.warn('[equipWeapon cloudSave]', err)); } catch(e){}
 }
 function unequipWeapon(){
   const p = GAME.player;
@@ -5125,7 +5127,7 @@ function unequipWeapon(){
     toast('기본 훈련용 목검은 해제할 수 없습니다.');
     return;
   }
-  p.weapons.push({ id:p.weapon.id, name:p.weapon.name, atkBonus:p.weapon.atkBonus });
+  p.weapons.push({ id: p.weapon.id });   // 서버 저장 형태 ({id} 만)
   p.weapon = { name:'훈련용 목검', atkBonus:1, id:'basic_club' };
   calcDerived(p);
   renderSheet();
@@ -5133,6 +5135,7 @@ function unequipWeapon(){
   $('wshop_msg').textContent = `✔ 무기 보관 — 기본 훈련용 목검 장착`;
   $('wshop_msg').className = 'heal-result warn';
   saveGame();
+  try { cloudSaveNow().catch(err => console.warn('[unequipWeapon cloudSave]', err)); } catch(e){}
 }
 
 async function buyArmor(id){
@@ -5192,6 +5195,8 @@ function equipArmor(id){
   $('ashop_msg').textContent = `✔ ${newA.name} 장착 완료`;
   $('ashop_msg').className = 'heal-result ok';
   saveGame();
+  // 서버 즉시 flush — 바로 판매 시도 시 "장착 중" 거부 방지
+  try { cloudSaveNow().catch(err => console.warn('[equipArmor cloudSave]', err)); } catch(e){}
 }
 async function sellWeapon(id){
   const p = GAME.player;
@@ -5266,7 +5271,7 @@ function unequipArmor(){
     toast('기본 천 갑옷은 해제할 수 없습니다.');
     return;
   }
-  p.armors.push({ id:p.armor.id, name:p.armor.name, defBonus:p.armor.defBonus });
+  p.armors.push({ id: p.armor.id });   // 서버 저장 형태 ({id} 만)
   p.armor = { name:'천 갑옷', defBonus:1, id:'basic_cloth' };
   calcDerived(p);
   renderSheet();
@@ -5274,6 +5279,7 @@ function unequipArmor(){
   $('ashop_msg').textContent = `✔ 방어구 보관 — 기본 천 갑옷 장착`;
   $('ashop_msg').className = 'heal-result warn';
   saveGame();
+  try { cloudSaveNow().catch(err => console.warn('[unequipArmor cloudSave]', err)); } catch(e){}
 }
 
 // ============================================================
@@ -23053,6 +23059,20 @@ async function doLogin(){
           }
         }
       } catch(e){ console.warn('[claim_session]', e); }
+      // '종말의 목격자' 칭호 자동 지급 — 2026-11-22 23:59 KST 이전 가입자 1회 지급 (멱등)
+      try {
+        const { data: _awRes } = await sb.rpc('grant_apocalypse_witness_if_eligible');
+        const _awR = Array.isArray(_awRes) ? _awRes[0] : _awRes;
+        if (_awR && _awR.granted){
+          if (!Array.isArray(GAME.player.titles)) GAME.player.titles = [];
+          if (!GAME.player.titles.includes('title_apocalypse_witness')){
+            GAME.player.titles.push('title_apocalypse_witness');
+          }
+          setTimeout(() => {
+            try { alert('🎖 신규 칭호 획득: 종말의 목격자\n(2026년 11월 6일 사태를 겪은 생존자 전용)'); } catch(e){}
+          }, 400);
+        }
+      } catch(e){ console.warn('[apocalypse_witness]', e); }
       // 로컬 캐시에도 저장 (오프라인 대비)
       addAccount(GAME.player.name);
       saveGame();
@@ -25234,6 +25254,21 @@ async function adminSaveUser(){
       raid:      undefined,
       savedAt:   Date.now(),
     };
+    // ─── 보호 필드 overlay ───────────────────────────────────────
+    // payloadData 에 빠진 timedCards·cardTraces·lvRewardsClaimed 를 서버에서 재조회해 복원.
+    // 어드민 저장 시 payload 재조립 과정에서 이 필드들이 누락 → 서버에 undefined 로 덮어
+    // 쓰이는 문제 방지. admin_grant_timed_card 등으로 지급된 보호 필드가 유지되도록.
+    try {
+      const { data: srvRow } = await sb.from('saves').select('data').eq('user_id', u.user_id).maybeSingle();
+      if (srvRow && srvRow.data && payloadData.player){
+        const sp = srvRow.data.player || {};
+        const pp = payloadData.player;
+        if (Array.isArray(sp.timedCards)       && !Array.isArray(pp.timedCards))       pp.timedCards = sp.timedCards;
+        if (Array.isArray(sp.cardTraces)       && !Array.isArray(pp.cardTraces))       pp.cardTraces = sp.cardTraces;
+        if (Array.isArray(sp.lvRewardsClaimed) && !Array.isArray(pp.lvRewardsClaimed)) pp.lvRewardsClaimed = sp.lvRewardsClaimed;
+      }
+    } catch(e){ console.warn('[adminSaveUser overlay]', e); }
+
     // RLS 우회 SECURITY DEFINER RPC 로 저장 (admin 이 남의 saves 를 update 못하는 문제 회피)
     // 닉네임까지 갱신해야 하는 경우 대비 · nickname 이 바뀌면 별도 update 로 처리
     let updateOk = false;
