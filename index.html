@@ -6959,6 +6959,8 @@ async function buyBlessItem(id, currency){
 
     // 보상 종류별 로컬 반영
     let resultMsg = row.message || '📦 보상 지급';
+    let _effectCard = null;      // 가챠 연출용 임시 카드
+    let _exchangeCard = null;    // 교환 UI 대상 (유니크/영웅 카드일 때만)
     if (row.reward_kind === 'card' && row.reward_card_id){
       const base = CARDS.find(c => c.id === row.reward_card_id);
       if (base){
@@ -6967,14 +6969,16 @@ async function buyBlessItem(id, currency){
         const fEmoji = base.grade === 'hero' ? '⭐' : (base.grade === 'unique' ? '🔮' : (base.grade === 'rare' ? '🔵' : '⚪'));
         resultMsg = `📦 ${fEmoji} ${gradeKr(base.grade)} 카드 획득 — ${base.name}`;
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ${fEmoji} ${gradeKr(base.grade)} 카드 [${base.name}]을(를) 획득하셨습니다!`, { sticky: true });
-        // 교환 기회 (card_exchange RPC 로 서버가 처리) — draw_id/slot_idx attach
-        const exResults = [Object.assign({}, base, { _draw_id: row.draw_id, _slot_idx: 0 })];
-        _offerExchangeForResults(exResults).catch(e => console.warn('[bless box exchange]', e));
+        _effectCard = base;
+        if (base.grade === 'unique' || base.grade === 'hero'){
+          _exchangeCard = Object.assign({}, base, { _draw_id: row.draw_id, _slot_idx: 0 });
+        }
       }
     } else if (row.reward_kind === 'stat_point'){
       p.xpUp = (p.xpUp || 0) + 1;
       resultMsg = `📦 ✨ 스탯 포인트 +1 획득!`;
       chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ✨ 스탯 포인트를 획득하셨습니다!`, { sticky: true });
+      _effectCard = { id:'bless_box_stat', name:'스탯 포인트 +1', grade:'legend', icon:'✨' };
     } else if (row.reward_kind === 'weapon' && row.reward_item){
       const w = WEAPONS.find(x => x.id === row.reward_item);
       if (w){
@@ -6982,6 +6986,12 @@ async function buyBlessItem(id, currency){
         p.weapons.push({ id:w.id, name:w.name, atkBonus:w.atkBonus });
         resultMsg = `📦 ⚔ 무기 획득 — ${w.name} (+${w.atkBonus})`;
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 ⚔ ${w.name} (+${w.atkBonus})을(를) 획득하셨습니다!`, { sticky: true });
+        _effectCard = {
+          id:'bless_box_w_'+w.id,
+          name:`⚔ ${w.name} +${w.atkBonus}`,
+          grade: (w.id.startsWith('divine_') ? 'legend' : 'hero'),
+          iconPath: w.icon,
+        };
       }
     } else if (row.reward_kind === 'armor' && row.reward_item){
       const a = ARMORS.find(x => x.id === row.reward_item);
@@ -6990,13 +7000,28 @@ async function buyBlessItem(id, currency){
         p.armors.push({ id:a.id, name:a.name, defBonus:a.defBonus });
         resultMsg = `📦 🛡 방어구 획득 — ${a.name} (+${a.defBonus})`;
         chatSys(`★ ${p.name}님이 축복의 랜덤 상자에서 🛡 ${a.name} (+${a.defBonus})을(를) 획득하셨습니다!`, { sticky: true });
+        _effectCard = {
+          id:'bless_box_a_'+a.id,
+          name:`🛡 ${a.name} +${a.defBonus}`,
+          grade: (a.id.startsWith('divine_') ? 'legend' : 'hero'),
+          iconPath: a.icon,
+        };
       }
     } else if (row.reward_kind === 'none'){
       // 인벤 한도 초과 등으로 지급 누락 — 서버 메시지 그대로
     }
 
+    // ★ 가챠 연출 (베타 플래그 ON + 보상이 있을 때만)
+    if (_effectCard && shouldPlayGachaEffect() && window.gachaEffect && window.gachaEffect.play){
+      try { await window.gachaEffect.play([_effectCard]); } catch(e){ console.warn('[gacha-effect]', e); }
+    }
+
     setBlessMsg(resultMsg, 'ok');
     setTimeout(() => alert(resultMsg), 200);
+    // 교환 UI (유니크/영웅 카드일 때만) — 연출/alert 이후에 호출
+    if (_exchangeCard){
+      _offerExchangeForResults([_exchangeCard]).catch(e => console.warn('[bless box exchange]', e));
+    }
     renderSheet();
     refreshBlessShop();
     try { checkTitleUnlocks(); } catch(e){}
