@@ -758,8 +758,9 @@ async function playGacha(results) {
             el.classList.add('flipped');
           }
         });
-        flippedCount = total;
-        checkDone();
+        // 스킵은 7초 대기 없이 즉시 종료
+        resolved = true;
+        resolve();
       }
     }, 100);
   });
