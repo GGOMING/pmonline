@@ -238,37 +238,31 @@
   -webkit-user-drag: none;
 }
 
+/* 결과 그리드 (.gacha-result-grid .gc .ico) 와 동일한 구조 */
 .fx-icon {
-  font-size: 44px; z-index: 2;
+  position: relative;
+  z-index: 2;
   flex: 1;
   width: 100%;
   min-height: 0;
-  display: flex; align-items: center; justify-content: center;
+  margin: 0;
+  line-height: 0;
   overflow: hidden;
   border-radius: 6px;
   border: 1px solid rgba(0,0,0,0.6);
-  margin: 0;
-}
-/* 결과 그리드 (.gc .ico img) 와 동일한 렌더 — cardIcon() 의 인라인 object-fit:cover 를 override */
-.fx-icon img {
-  width: 100% !important;
-  height: 100% !important;
-  object-fit: contain !important;
-  image-rendering: auto;
   display: block;
-  user-select: none; -webkit-user-drag: none;
 }
-/* renew-icon 은 원래 cover 로 디자인된 정사각 아트 — renew 만 cover 유지 */
-.fx-icon img.renew-icon {
-  object-fit: cover !important;
+.fx-icon img,
+.fx-icon svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  user-select: none;
+  -webkit-user-drag: none;
 }
-/* cardIcon() 의 fallback div(legacy SVG) 가 뜰 때도 꽉 채움 */
 .fx-icon > div {
   width: 100%;
   height: 100%;
-}
-.fx-icon svg {
-  width: 100%; height: 100%;
 }
 .fx-name { font-size: 14px; font-weight: 700; z-index: 2; flex-shrink: 0; line-height: 1.2; }
 .fx-grade { font-size: 10px; letter-spacing: 1px; opacity: 0.9; z-index: 2; flex-shrink: 0; }
