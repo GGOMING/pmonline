@@ -549,9 +549,17 @@ function highestGrade(res) {
 }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function buildCardHTML(r, i) {
-  const iconHTML = r.iconPath
-    ? `<img src="${r.iconPath}" alt="${escapeHtml(r.name)}" draggable="false">`
-    : (r.icon || '❓');
+  // 호스트(index.html)의 cardIcon() 사용 — renew/pmcards/wc3_icons/iconPath/SVG 5단계 폴백
+  let iconHTML;
+  if (typeof window.cardIcon === 'function') {
+    try { iconHTML = window.cardIcon(r); }
+    catch(e) { iconHTML = null; }
+  }
+  if (!iconHTML) {
+    iconHTML = r.iconPath
+      ? `<img src="${r.iconPath}" alt="${escapeHtml(r.name)}" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;">`
+      : (r.icon || '❓');
+  }
   return `
     <div class="fx-card" data-i="${i}" data-grade="${r.grade}">
       <div class="fx-card-inner">

@@ -6168,23 +6168,29 @@ async function doGachaShop(shopId, n){
   try { _bumpWeeklyCounter('goldSpent', cost, 'wq_gold_spent'); } catch(e){}
   try { bumpTitleCounter('total_gold_spent', cost); } catch(e){}
   _markGradeAcquired(results);
-  // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
-  _offerExchangeForResults(results).catch(e => console.warn('[exchange]', e));
   // ★ 가챠 연출 재생 (베타 플래그 ON 일 때만 · 결과 렌더 전에 await)
   if (shouldPlayGachaEffect() && window.gachaEffect && window.gachaEffect.play) {
     try { await window.gachaEffect.play(results); } catch(e) { console.warn('[gacha-effect]', e); }
   }
   // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
+  const _renderGachaGrid = () => {
+    $('gachaResultGrid').innerHTML = results.map(c => `
+      <div class="gc ${c.grade}">
+        <div class="ico">${cardIcon(c)}</div>
+        <div class="nm">${c.name}</div>
+        <div class="gr">[${gradeKr(c.grade)}]</div>
+        <div class="ef">${c.text||''}</div>
+      </div>
+    `).join('');
+  };
   $('gachaResult').hidden = false;
-  $('gachaResultGrid').innerHTML = results.map(c => `
-    <div class="gc ${c.grade}">
-      <div class="ico">${cardIcon(c)}</div>
-      <div class="nm">${c.name}</div>
-      <div class="gr">[${gradeKr(c.grade)}]</div>
-      <div class="ef">${c.text||''}</div>
-    </div>
-  `).join('');
+  _renderGachaGrid();
   _renderGachaResultActions(results);
+  // 🔄 유니크·영웅 카드 교환 기회 — 결과창 뜬 후에 (await), 교환 성공 시 연출 + 재렌더
+  _offerExchangeForResults(results, (idx, newCard) => {
+    _renderGachaGrid();
+    _renderGachaResultActions(results);
+  }).catch(e => console.warn('[exchange]', e));
   const legends = results.filter(c => c.grade === 'legend').length;
   const heroes  = results.filter(c => c.grade === 'hero').length;
   const uniques = results.filter(c => c.grade === 'unique').length;
@@ -21402,18 +21408,39 @@ const RENEW_ICON_MAP = (function(){
     basic_atk:  'basic.jpg',
     arrest:     'arrest.jpg',
     gold_throw: 'goldthrow.jpg',
+    // 확장자 예외 (순환 규칙 바깥)
+    r34: 'r34.jpg',
+    h06: 'h06.png',
+    h08: 'h08.png',
+    h09: 'h09.png',
   };
   const pad = n => (n < 10 ? '0' : '') + n;
-  // n01~n87 → .png
-  for (let i = 1; i <= 87; i++) m['n' + pad(i)] = 'n' + pad(i) + '.png';
-  // r01~r47 → .png (r34 만 .jpg 예외)
-  for (let i = 1; i <= 47; i++) m['r' + pad(i)] = 'r' + pad(i) + (i === 34 ? '.jpg' : '.png');
+  // n01~n91 → .png (최근 n88~n91 선스톤/버티기/패링/스팀팩 포함)
+  for (let i = 1; i <= 91; i++) {
+    const k = 'n' + pad(i);
+    if (!m[k]) m[k] = k + '.png';
+  }
+  // r01~r50 → .png (r34 예외는 위에 명시 · r48~r50 요정의탄환/홀리/루나해츨링)
+  for (let i = 1; i <= 50; i++) {
+    const k = 'r' + pad(i);
+    if (!m[k]) m[k] = k + '.png';
+  }
   // u01~u10 → .jpg
-  for (let i = 1; i <= 10; i++) m['u' + pad(i)] = 'u' + pad(i) + '.jpg';
-  // h01~h05 → .jpg
-  for (let i = 1; i <= 5;  i++) m['h' + pad(i)] = 'h' + pad(i) + '.jpg';
+  for (let i = 1; i <= 10; i++) {
+    const k = 'u' + pad(i);
+    if (!m[k]) m[k] = k + '.jpg';
+  }
+  // h01~h09 → .jpg (h06/h08/h09 .png 는 위에 명시 · h07 결번)
+  for (let i = 1; i <= 9;  i++) {
+    if (i === 7) continue;
+    const k = 'h' + pad(i);
+    if (!m[k]) m[k] = k + '.jpg';
+  }
   // l01~l02 → .jpg
-  for (let i = 1; i <= 2;  i++) m['l' + pad(i)] = 'l' + pad(i) + '.jpg';
+  for (let i = 1; i <= 2;  i++) {
+    const k = 'l' + pad(i);
+    if (!m[k]) m[k] = k + '.jpg';
+  }
   return m;
 })();
 
