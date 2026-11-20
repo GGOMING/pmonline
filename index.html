@@ -1665,6 +1665,7 @@
   @keyframes fadeOut { 0%,80%{opacity:1;} 100%{opacity:0;} }
 </style>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="gacha_effect.css">
 </head>
 <body>
 
@@ -6155,6 +6156,10 @@ async function doGachaShop(shopId, n){
   _markGradeAcquired(results);
   // 🔄 유니크·영웅 카드 교환 기회 (카드당 1회, 결과창 즉시 결정, 거절 시 소멸)
   _offerExchangeForResults(results).catch(e => console.warn('[exchange]', e));
+  // ★ 가챠 연출 재생 (베타 플래그 ON 일 때만 · 결과 렌더 전에 await)
+  if (shouldPlayGachaEffect() && window.gachaEffect && window.gachaEffect.play) {
+    try { await window.gachaEffect.play(results); } catch(e) { console.warn('[gacha-effect]', e); }
+  }
   // 결과 렌더링 — 교환된 카드는 신규 카드로 표시됨
   $('gachaResult').hidden = false;
   $('gachaResultGrid').innerHTML = results.map(c => `
@@ -27508,6 +27513,37 @@ async function opSetBoss(k){
   } catch(e){ alert('보스 교체 실패: ' + (e.message||e)); }
   finally { _opRefreshInfo(); }
 }
+
+// ═══════════════════════════════════════════════════════════
+// 가챠 연출 — 베타 플래그
+// 운영자는 자동 ON · 일반 유저는 localStorage.gachaEffectBeta='1' 설정 시 ON
+// ═══════════════════════════════════════════════════════════
+function shouldPlayGachaEffect(){
+  try {
+    if (GAME && GAME.player && GAME.player.isOperator) return true;
+    return localStorage.getItem('gachaEffectBeta') === '1';
+  } catch(e){ return false; }
+}
+window.shouldPlayGachaEffect = shouldPlayGachaEffect;
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════
+     가챠 연출 — Three.js 3D (별도 파일)
+     ═══════════════════════════════════════════════════════════ -->
+<canvas id="gachaCanvas"></canvas>
+<div class="ge-card-overlay" id="gachaCardOverlay">
+  <div class="ge-card-overlay-inner" id="gachaCardOverlayInner"></div>
+</div>
+<button id="gachaSkipBtn" onclick="window.gachaEffect && window.gachaEffect.skip()">스킵 ▶▶</button>
+
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module" src="gacha_effect.js"></script>
 </body>
 </html>
