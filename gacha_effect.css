@@ -18,20 +18,23 @@
   --ge-speed: 1;
 }
 
-/* Three.js 캔버스 */
+/* Three.js 캔버스 — fixed + 100% 로 스크롤바 포함 X */
 #gachaCanvas {
   position: fixed;
   left: 0;
   top: 0;
-  width: 100vw;
-  height: 100vh;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   z-index: 9990;
   display: none;
   pointer-events: none;
 }
 #gachaCanvas.active { display: block; }
 
-/* 연출 중에는 스크롤바 제거 — 100vw 가 스크롤바 폭만큼 넘쳐서 중심이 어긋나는 현상 방지 */
+/* 연출 중 스크롤바 숨김 + 레이아웃 시프트 방지 */
+html.ge-active,
 body.ge-active {
   overflow: hidden !important;
 }
@@ -39,7 +42,12 @@ body.ge-active {
 /* 카드 DOM 오버레이 */
 .ge-card-overlay {
   position: fixed;
-  inset: 0;
+  left: 0;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 100%;
+  height: 100%;
   z-index: 9991;
   display: none;
   align-items: center;
@@ -296,6 +304,15 @@ body.ge-active {
   height: auto;
 }
 .ge-card-overlay.ten .fx-name { font-size: 13px; }
+
+/* 11연 레이아웃 (축복 뽑기 — 5+6 데스크톱 / 4+4+3 모바일) */
+.ge-card-overlay.eleven .fx-card {
+  width: clamp(68px, calc((100vw - 120px) / 6), 118px);
+  aspect-ratio: 118 / 160;
+  height: auto;
+}
+.ge-card-overlay.eleven .fx-name { font-size: 12px; }
+
 @media (max-width:600px) {
   .fx-card {
     width: clamp(90px, 60vw, 115px);
@@ -309,6 +326,14 @@ body.ge-active {
   }
   .ge-card-overlay.ten .fx-name { font-size: 11px; }
   .ge-card-overlay.ten .fx-grade { font-size: 9px; }
+  /* 11연 모바일 — 4열 기준 (마지막 줄 3개) */
+  .ge-card-overlay.eleven .fx-card {
+    width: clamp(58px, calc((100vw - 40px) / 4), 82px);
+    aspect-ratio: 82 / 112;
+    height: auto;
+  }
+  .ge-card-overlay.eleven .fx-name { font-size: 10px; }
+  .ge-card-overlay.eleven .fx-grade { font-size: 9px; }
 }
 
 /* 스킵 버튼 */

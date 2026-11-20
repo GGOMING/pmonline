@@ -578,18 +578,23 @@ function escapeHtml(s) {
 }
 function renderCardLayout(inner, results) {
   const count = results.length;
+  const isMobile = window.innerWidth <= 600;
+  let rows;
   if (count === 10) {
-    const isMobile = window.innerWidth <= 600;
-    const rows = isMobile
+    rows = isMobile
       ? [results.slice(0,3), results.slice(3,6), results.slice(6,10)]
       : [results.slice(0,5), results.slice(5,10)];
-    let idx = 0;
-    inner.innerHTML = rows.map(row =>
-      `<div class="ge-card-row">${row.map(r => buildCardHTML(r, idx++)).join('')}</div>`
-    ).join('');
+  } else if (count === 11) {
+    rows = isMobile
+      ? [results.slice(0,4), results.slice(4,8), results.slice(8,11)]  // 4+4+3
+      : [results.slice(0,5), results.slice(5,11)];                      // 5+6
   } else {
-    inner.innerHTML = `<div class="ge-card-row">${results.map((r,i) => buildCardHTML(r, i)).join('')}</div>`;
+    rows = [results.slice()];
   }
+  let idx = 0;
+  inner.innerHTML = rows.map(row =>
+    `<div class="ge-card-row">${row.map(r => buildCardHTML(r, idx++)).join('')}</div>`
+  ).join('');
 }
 
 // 메인 시퀀스 ─────────────────────────────────────────────
@@ -683,7 +688,8 @@ async function playGacha(results) {
 
   // 6. 카드 리빌
   const inner = document.getElementById('gachaCardOverlayInner');
-  cardOverlay.className = 'ge-card-overlay active' + (count > 1 ? ' ten' : '');
+  const layoutClass = count === 11 ? ' eleven' : (count > 1 ? ' ten' : '');
+  cardOverlay.className = 'ge-card-overlay active' + layoutClass;
   renderCardLayout(inner, results);
 
   await sleep(50);

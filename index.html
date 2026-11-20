@@ -6063,6 +6063,10 @@ async function executeSynthesis(){
   if (row.result_grade === 'unique'){
     chatSys(`🔨 ${p.name}님이 카드 합성으로 [유니크] ${newCard.name}을(를) 획득하셨습니다!`, { sticky: true });
   }
+  // ★ 가챠 연출 재생 (베타 플래그 ON 일 때)
+  if (newCard && shouldPlayGachaEffect() && window.gachaEffect && window.gachaEffect.play) {
+    try { await window.gachaEffect.play([newCard]); } catch(e) { console.warn('[gacha-effect]', e); }
+  }
   setTimeout(() => {
     alert(`🔨 합성 완료!\n\n결과: [${gradeName}] ${newCard.name}\n\n남은 오늘 합성: ${row.synthesis_remaining}회`);
   }, 100);
@@ -6925,6 +6929,10 @@ async function buyBlessItem(id, currency){
     renderSheet();
     refreshBlessShop();
     saveGame();   // 서버가 inventory/축복 반영 완료 → 부수 필드 (quests/titles) 만 저장
+    // ★ 가챠 연출 재생 (베타 플래그 ON 일 때)
+    if (shouldPlayGachaEffect() && window.gachaEffect && window.gachaEffect.play) {
+      try { await window.gachaEffect.play(results); } catch(e) { console.warn('[gacha-effect]', e); }
+    }
     showBlessGachaResult(it.name, results);
     return;
   }
@@ -24645,22 +24653,27 @@ function renderAdminEdit(){
         <select id="ed_nextBlessBoxReward" style="flex:1;min-width:220px;" onchange="_syncNextBlessBoxCardPicker()">
           <option value="">기본 (랜덤 · 미지정)</option>
           ${BLESS_BOX_REWARDS.map(r => `<option value="${r.id}" ${u.nextBlessBoxReward === r.id ? 'selected' : ''}>${r.label} · 기본 확률 ${(r.rate*100).toFixed(1)}%</option>`).join('')}
+          <option value="legend_card" ${u.nextBlessBoxReward === 'legend_card' ? 'selected' : ''}>👑 전설 카드 (랜덤 1장) · 기본 확률 0.0% · 어드민 지정 전용</option>
         </select>
         ${(function(){
-          const initGrade = u.nextBlessBoxReward === 'unique_card' ? 'unique' : (u.nextBlessBoxReward === 'hero_card' ? 'hero' : null);
+          const _nbrInit = u.nextBlessBoxReward;
+          const initGrade = _nbrInit === 'unique_card' ? 'unique'
+                          : _nbrInit === 'hero_card'   ? 'hero'
+                          : _nbrInit === 'legend_card' ? 'legend' : null;
           const initDisplay = initGrade ? '' : 'display:none;';
           // 등급 순 → 가나다 순 정렬
           const _nbcGradeOrd = { normal:1, rare:2, unique:3, hero:4, legend:5 };
-          const _sorted = CARDS.filter(c => (c.grade === 'unique' || c.grade === 'hero') && !c.monsterOnly && c.id !== 'basic_atk')
+          const _sorted = CARDS.filter(c => (c.grade === 'unique' || c.grade === 'hero' || c.grade === 'legend') && !c.monsterOnly && c.id !== 'basic_atk')
             .slice()
             .sort((a, b) =>
               ((_nbcGradeOrd[a.grade] || 9) - (_nbcGradeOrd[b.grade] || 9))
               || a.name.localeCompare(b.name, 'ko')
             );
+          const gradeEmoji = { unique:'🔮', hero:'⭐', legend:'👑' };
           const cardOpts = _sorted.map(c => {
             const hide = initGrade && c.grade !== initGrade ? ' hidden' : '';
             const sel  = u.nextBlessBoxCardId === c.id ? ' selected' : '';
-            return `<option value="${c.id}" data-grade="${c.grade}"${hide}${sel}>${c.grade === 'hero' ? '⭐' : '🔮'} ${c.name}</option>`;
+            return `<option value="${c.id}" data-grade="${c.grade}"${hide}${sel}>${gradeEmoji[c.grade] || ''} ${c.name}</option>`;
           }).join('');
           return `<select id="ed_nextBlessBoxCardId" style="flex:1;min-width:200px;${initDisplay}"><option value="">해당 등급 중 랜덤</option>${cardOpts}</select>`;
         })()}
@@ -25071,10 +25084,12 @@ async function adminSaveUser(){
   const nbEl = $('ed_nextBlessBoxReward');
   const nbVal = nbEl ? (nbEl.value || '').trim() : '';
   if (nbEl){
-    if (nbVal && BLESS_BOX_REWARDS.some(r => r.id === nbVal)) u.nextBlessBoxReward = nbVal;
+    // legend_card 는 BLESS_BOX_REWARDS 배열에는 없지만 어드민 지정용으로 허용 (서버 bless_box_rewards 테이블에는 존재)
+    const isValid = nbVal && (BLESS_BOX_REWARDS.some(r => r.id === nbVal) || nbVal === 'legend_card');
+    if (isValid) u.nextBlessBoxReward = nbVal;
     else delete u.nextBlessBoxReward;
   }
-  // 유니크·영웅 카드 선택 시에만 특정 카드 강제 지정 (미선택 시 해당 등급 중 랜덤)
+  // 유니크·영웅·전설 카드 선택 시에만 특정 카드 강제 지정 (미선택 시 해당 등급 중 랜덤)
   const ncEl = $('ed_nextBlessBoxCardId');
   if (ncEl){
     const cid = (ncEl.value || '').trim();
@@ -25805,13 +25820,15 @@ function _syncRiggedRateEnabled(){
   }
 }
 
-// 축복 상자 다음 보상 = 유니크·영웅 카드일 때만 카드 선택 드롭다운 노출
+// 축복 상자 다음 보상 = 유니크·영웅·전설 카드일 때만 카드 선택 드롭다운 노출
 function _syncNextBlessBoxCardPicker(){
   const rewardEl = document.getElementById('ed_nextBlessBoxReward');
   const cardEl   = document.getElementById('ed_nextBlessBoxCardId');
   if (!rewardEl || !cardEl) return;
   const rv = rewardEl.value;
-  const needGrade = rv === 'unique_card' ? 'unique' : (rv === 'hero_card' ? 'hero' : null);
+  const needGrade = rv === 'unique_card' ? 'unique'
+                 : rv === 'hero_card'   ? 'hero'
+                 : rv === 'legend_card' ? 'legend' : null;
   if (!needGrade){
     cardEl.style.display = 'none';
     cardEl.value = '';
