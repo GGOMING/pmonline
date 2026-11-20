@@ -7120,8 +7120,8 @@ async function _loadHonorRankers(){
             weapon: row.weapon || null,
             armor:  row.armor  || null,
             avatar: row.avatar || null,
-            blessing: 0,         // 뷰에서 노출 X (민감 정보)
-            spiritBlessing: 0,
+            blessing: row.blessing || 0,
+            spiritBlessing: row.spirit_blessing || 0,
             comment: row.comment || '',
             equippedTitle: row.equipped_title || null,
             sponsorAmount: row.sponsor_amount || 0,
