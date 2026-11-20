@@ -5608,7 +5608,7 @@ function _rollExchangeTarget(sourceCard){
   if (!pool.length) return null;
   return pool[Math.floor(Math.random() * pool.length)];
 }
-async function _offerExchangeForResults(results){
+async function _offerExchangeForResults(results, onCardChanged){
   if (!Array.isArray(results) || !results.length) return;
   const p = GAME.player;
   if (!p || !sb) return;
@@ -5699,9 +5699,23 @@ async function _offerExchangeForResults(results){
     try {
       chatSys(`🔄 ${p.name}님이 ✨${cost}개로 ${gradeName} [${c.name}]을(를) 교환하여 ${newGradeName} [${newCard.name}] 획득!`, { sticky: true });
     } catch(e){}
-    try {
-      alert(`🔄 교환 완료! (✨ -${cost} · 잔여 ${p.blessing})\n\n[${c.name}] (${gradeName})\n       ↓\n[${newCard.name}] (${newGradeName})`);
-    } catch(e){}
+    // ★ 교환된 카드로 가챠 연출 재생 (베타 플래그 ON)
+    const _effectOn = (typeof shouldPlayGachaEffect === 'function')
+                   && shouldPlayGachaEffect()
+                   && window.gachaEffect && window.gachaEffect.play;
+    if (_effectOn){
+      try { await window.gachaEffect.play([newCard]); } catch(e){ console.warn('[gacha-effect]', e); }
+    }
+    // UI 콜백 (결과 그리드 재렌더 등)
+    if (typeof onCardChanged === 'function'){
+      try { onCardChanged(i, newCard); } catch(e){}
+    }
+    // 연출 OFF 유저만 기존 alert 사용 (연출 ON 이면 이미 새 카드가 리빌됨)
+    if (!_effectOn){
+      try {
+        alert(`🔄 교환 완료! (✨ -${cost} · 잔여 ${p.blessing})\n\n[${c.name}] (${gradeName})\n       ↓\n[${newCard.name}] (${newGradeName})`);
+      } catch(e){}
+    }
   }
 }
 
