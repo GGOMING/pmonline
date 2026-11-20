@@ -21,7 +21,8 @@
 /* Three.js 캔버스 */
 #gachaCanvas {
   position: fixed;
-  inset: 0;
+  left: 0;
+  top: 0;
   width: 100vw;
   height: 100vh;
   z-index: 9990;
@@ -29,6 +30,11 @@
   pointer-events: none;
 }
 #gachaCanvas.active { display: block; }
+
+/* 연출 중에는 스크롤바 제거 — 100vw 가 스크롤바 폭만큼 넘쳐서 중심이 어긋나는 현상 방지 */
+body.ge-active {
+  overflow: hidden !important;
+}
 
 /* 카드 DOM 오버레이 */
 .ge-card-overlay {

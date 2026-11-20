@@ -616,6 +616,14 @@ async function playGacha(results) {
   canvasEl.classList.add('active');
   cardOverlay.classList.remove('active');
   skipBtn.classList.add('active');
+  document.body.classList.add('ge-active');
+  // 창 사이즈 재측정 (스크롤바 제거로 viewport 가 바뀜) + 다음 프레임에서 renderer 재조정
+  requestAnimationFrame(() => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    composer.setSize(window.innerWidth, window.innerHeight);
+  });
 
   // 1. 성운 배경
   if (top === 'legend')      { nebulaMaterial.uniforms.uColor1.value.setHex(0xa07020); nebulaMaterial.uniforms.uColor2.value.setHex(0x604010); }
@@ -776,6 +784,7 @@ function endGacha() {
   if (canvasEl) canvasEl.classList.remove('active');
   if (cardOverlay) cardOverlay.classList.remove('active');
   if (skipBtn) skipBtn.classList.remove('active');
+  document.body.classList.remove('ge-active');
 }
 
 function skipGacha() { skipRequested = true; }
