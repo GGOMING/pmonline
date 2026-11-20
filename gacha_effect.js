@@ -617,13 +617,16 @@ async function playGacha(results) {
   cardOverlay.classList.remove('active');
   skipBtn.classList.add('active');
   document.body.classList.add('ge-active');
-  // 창 사이즈 재측정 (스크롤바 제거로 viewport 가 바뀜) + 다음 프레임에서 renderer 재조정
-  requestAnimationFrame(() => {
-    camera.aspect = window.innerWidth / window.innerHeight;
+  document.documentElement.classList.add('ge-active');
+  // 스크롤바 제거된 viewport 기준으로 renderer 재측정 (2프레임 뒤 — 레이아웃 반영 보장)
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    const w = canvasEl.clientWidth || window.innerWidth;
+    const h = canvasEl.clientHeight || window.innerHeight;
+    camera.aspect = w / h;
     camera.updateProjectionMatrix();
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    composer.setSize(window.innerWidth, window.innerHeight);
-  });
+    renderer.setSize(w, h, false);
+    composer.setSize(w, h);
+  }));
 
   // 1. 성운 배경
   if (top === 'legend')      { nebulaMaterial.uniforms.uColor1.value.setHex(0xa07020); nebulaMaterial.uniforms.uColor2.value.setHex(0x604010); }
@@ -706,7 +709,7 @@ async function playGacha(results) {
         resolved = true;
         clearInterval(skipPoll);
         cardOverlay.removeEventListener('click', bgClickHandler);
-        setTimeout(resolve, 1500);
+        setTimeout(resolve, 7000);
       }
     };
     flipCards.forEach((el, i) => {
@@ -785,6 +788,7 @@ function endGacha() {
   if (cardOverlay) cardOverlay.classList.remove('active');
   if (skipBtn) skipBtn.classList.remove('active');
   document.body.classList.remove('ge-active');
+  document.documentElement.classList.remove('ge-active');
 }
 
 function skipGacha() { skipRequested = true; }
