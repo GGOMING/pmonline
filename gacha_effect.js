@@ -557,7 +557,7 @@ function buildCardHTML(r, i) {
   }
   if (!iconHTML) {
     iconHTML = r.iconPath
-      ? `<img src="${r.iconPath}" alt="${escapeHtml(r.name)}" draggable="false" style="width:100%;height:100%;object-fit:cover;display:block;">`
+      ? `<img src="${r.iconPath}" alt="${escapeHtml(r.name)}" draggable="false" style="width:100%;height:100%;object-fit:contain;display:block;">`
       : (r.icon || '❓');
   }
   return `
