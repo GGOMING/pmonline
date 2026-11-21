@@ -12317,17 +12317,40 @@ function _towerFloorGoldBonusPct(p){
 }
 
 // ─── 몬스터 생성 ───
-// 강제 보정치 (rigged trap) 몬스터 — 위장 고난이도 몹
+// 강제 보정치 (rigged trap) 몬스터 — 위장 고난이도 몹 (3종: DEX / STR / INT)
 // 이름·아이콘·race 는 일반 몹에서 랜덤 (완전 위장)
-// STR/INT/CON = 5, DEX = mLv+5. HP = 일반 몹 평균 × 1.5
-// 덱: 슬롯 0 은신 · 1~2 팬오브나이프/기습 셔플 · 3 데스트레이드 · 4 시어링애로우/자폭 · 5~9 랜덤
-// 강제 보정치 (rigged trap) 조우 확률 — 유저별 override 지원. 기본 1%.
+// 메인 스탯 = mLv + 13, 나머지 스탯 = 9. HP = 일반 몹 평균 × 1.5
+// 덱 구성: 슬롯 0~3 핵심 콤보 (4턴 안에 유저 사망 의도) · 4~ 위장 필러
+//   • DEX: 임페일(100%기절) → 블랙애로우(방무) → 팬오브나이프(방무) → 자폭
+//   • STR: 스톰볼트(100%기절) → 드렁큰브라우어(방무) → 브로큰(자해제거,방무) → 자폭
+//   • INT: 프리징브레스(100%얼림,방무) → 레인오브파이어(방무,MP제거) → 사령로드(INT×2고정,MP50) → 체인라이트닝(방무,MP제거)
+// 강제 보정치 조우 확률 — 유저별 override 지원. 기본 1%.
 const RIGGED_TRAP_ENCOUNTER_RATE = 0.01;
 function getRiggedTrapEncounterRate(){
   const p = GAME.player;
   const overr = p && p.encounterRates && p.encounterRates.riggedTrap;
   if (typeof overr === 'number' && isFinite(overr)) return Math.max(0, Math.min(1, overr));
   return RIGGED_TRAP_ENCOUNTER_RATE;
+}
+
+// 유저 메인 스탯 판정 — 최고값 기준.
+//   • con 이 str/dex/int 보다 엄격히 높으면 'con' 반환 (탱커 유저)
+//   • 그 외는 str/dex/int 중 최고. 동률 시 dex > str > int 우선 (dex 암살몹이 기본/안전)
+function _getPlayerMainStat(p){
+  if (!p) return 'dex';
+  const s = p.str || 0, d = p.dex || 0, i = p.int || 0, co = p.con || 0;
+  if (co > s && co > d && co > i) return 'con';
+  if (d >= s && d >= i) return 'dex';
+  if (s >= i) return 'str';
+  return 'int';
+}
+
+// CON 메인 유저용 암살몹 랜덤 선택 — INT 50% / DEX 25% / STR 25%
+function _pickRiggedTypeForCon(){
+  const r = Math.random();
+  if (r < 0.50) return 'int';
+  if (r < 0.75) return 'dex';
+  return 'str';
 }
 
 function makeRiggedTrapMonster(playerLv, tier){
@@ -12411,6 +12434,158 @@ function makeRiggedTrapMonster(playerLv, tier){
   };
 }
 
+// ── STR 암살몹 — 힘캐 유저 대응 ──
+//   1턴 스톰볼트(100% 1턴 기절) · 2턴 드렁큰브라우어(방무) · 3턴 브로큰(자해 제거, 방무) · 4턴 자폭(50 고정 방무)
+function makeRiggedTrapMonsterStr(playerLv, tier){
+  const mLv = playerLv;
+  const deckSlots = (tier === 1) ? 10 : 15;
+  const pool = MONSTERS.filter(m => m.lvRange[0] <= mLv && m.lvRange[1] >= mLv);
+  const tpl = pool.length ? pool[Math.floor(Math.random() * pool.length)] : MONSTERS[0];
+  const normalHp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.75));
+  const hp = Math.max(1, Math.round(normalHp * 1.5));
+  const wBonus = 14;
+  const aBonus = 8;
+  const baseAtkLo = Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * 0.75));
+  const baseAtkHi = Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * 0.75));
+  const atk = [baseAtkLo + wBonus, baseAtkHi + wBonus];
+  const def = 3 + aBonus;
+
+  const stormboltBase = CARDS.find(c => c.id === 'r16');
+  const drunkenBase   = CARDS.find(c => c.id === 'u01');
+  const brokenBase    = CARDS.find(c => c.id === 'r44');
+  const suicideBase   = CARDS.find(c => c.id === 'n58');
+
+  // 1턴: 스톰볼트 — STR+무기 공격 + 100% 1턴 기절 (일반은 30%)
+  const stormboltRigged = stormboltBase ? Object.assign({}, stormboltBase, {
+    fx: { type:'multi', effects:[
+      { type:'dmgStat', stats:['str'], weaponBonus:true },
+      { type:'cc', turns:1, chance:1 }
+    ]}
+  }) : null;
+
+  // 2턴: 드렁큰브라우어 — STR+무기 3회 타격 + 방어무시 (silent)
+  const drunkenRigged = drunkenBase ? Object.assign({}, drunkenBase, {
+    fx: { type:'dmgStat', stats:['str'], mult:3, weaponBonus:true, ignoreDef:true, silentIgnoreDef:true }
+  }) : null;
+
+  // 3턴: 브로큰 — STR×3 방어무시 (silent). 몹 자해(HP 30%) 제거.
+  const brokenRigged = brokenBase ? Object.assign({}, brokenBase, {
+    fx: { type:'dmgStat', stats:['str'], mult:3, ignoreDef:true, silentIgnoreDef:true }
+  }) : null;
+
+  // 4턴: 자폭 — 50 고정 데미지 + 방어무시 (silent). 자해 최소화.
+  const suicideRigged = suicideBase ? Object.assign({}, suicideBase, {
+    fx: { type:'dmg', min:50, max:50, ignoreDef:true, silentIgnoreDef:true }
+  }) : null;
+
+  const deck = new Array(deckSlots).fill(null);
+  if (stormboltRigged) deck[0] = stormboltRigged;
+  if (drunkenRigged)   deck[1] = drunkenRigged;
+  if (brokenRigged)    deck[2] = brokenRigged;
+  if (suicideRigged)   deck[3] = suicideRigged;
+  const used = new Set(deck.filter(Boolean).map(c => c.id));
+  const filler = CARDS.filter(c =>
+    c.id !== 'basic_atk' && !c.monsterOnly &&
+    (c.grade === 'normal' || c.grade === 'rare') &&
+    !used.has(c.id)
+  );
+  for (let i = 4; i < deckSlots; i++){
+    const avail = filler.filter(c => !used.has(c.id));
+    if (!avail.length){ deck[i] = BASIC_ATTACK; continue; }
+    const pick = avail[Math.floor(Math.random() * avail.length)];
+    deck[i] = pick;
+    used.add(pick.id);
+  }
+  return {
+    id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
+    str: mLv + 13, dex: 9, int: 9, con: 9,
+    hp, hpMax: hp, mp: 100, mpMax: 100,
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
+    deck: deck.filter(Boolean),
+    gold: 0, xp: 0,
+    icon: tpl.icon || null,
+    _riggedTrap: true,
+  };
+}
+
+// ── INT 암살몹 — 인트캐 유저 대응 ──
+//   1턴 프리징브레스(100% 1턴 얼림, 방무) · 2턴 레인오브파이어(방무, MP제거)
+//   3턴 사령의 로드(INT×2.0 고정 2회, MP50 유지) · 4턴 체인라이트닝(방무, MP제거)
+function makeRiggedTrapMonsterInt(playerLv, tier){
+  const mLv = playerLv;
+  const deckSlots = (tier === 1) ? 10 : 15;
+  const pool = MONSTERS.filter(m => m.lvRange[0] <= mLv && m.lvRange[1] >= mLv);
+  const tpl = pool.length ? pool[Math.floor(Math.random() * pool.length)] : MONSTERS[0];
+  const normalHp = Math.max(1, Math.round(tpl.baseHp * (1 + (mLv - 1) * 0.25) * 0.75));
+  const hp = Math.max(1, Math.round(normalHp * 1.5));
+  const wBonus = 14;
+  const aBonus = 8;
+  const baseAtkLo = Math.max(1, Math.round((tpl.baseAtk[0] + Math.floor(mLv * 0.3)) * 0.75));
+  const baseAtkHi = Math.max(2, Math.round((tpl.baseAtk[1] + Math.floor(mLv * 0.6)) * 0.75));
+  const atk = [baseAtkLo + wBonus, baseAtkHi + wBonus];
+  const def = 3 + aBonus;
+
+  const freezingBase = CARDS.find(c => c.id === 'r39');
+  const rainBase     = CARDS.find(c => c.id === 'u03');
+  const wandBase     = CARDS.find(c => c.id === 'r41');
+  const chainBase    = CARDS.find(c => c.id === 'r26');
+
+  // 1턴: 프리징브레스 — INT×2 + 100% 1턴 얼림 + 방어무시 (silent). 몹 MP 소모 제거.
+  const freezingRigged = freezingBase ? Object.assign({}, freezingBase, {
+    fx: { type:'multi', effects:[
+      { type:'dmgStat', stats:['int'], mult:2, ignoreDef:true, silentIgnoreDef:true },
+      { type:'cc', turns:1, chance:1 }
+    ]}
+  }) : null;
+
+  // 2턴: 레인오브파이어 — INT+무기 3회 + 방어무시 (silent). MP 소모 제거.
+  const rainRigged = rainBase ? Object.assign({}, rainBase, {
+    fx: { type:'dmgStat', stats:['int'], mult:3, weaponBonus:true, ignoreDef:true, silentIgnoreDef:true }
+  }) : null;
+
+  // 3턴: 사령의 로드 — INT×2.0 고정 2회 타격 + 방어무시 (silent) + MP50 소모 유지
+  const wandRigged = wandBase ? Object.assign({}, wandBase, {
+    fx: { type:'multi', effects:[
+      { type:'dmgStat', stats:['int'], mult:2, hits:2, ignoreDef:true, silentIgnoreDef:true },
+      { type:'mpCost', amount:50 }
+    ]}
+  }) : null;
+
+  // 4턴: 체인라이트닝 — INT×3 + 방어무시 (silent). MP 소모 제거.
+  const chainRigged = chainBase ? Object.assign({}, chainBase, {
+    fx: { type:'dmgStat', stats:['int'], mult:3, ignoreDef:true, silentIgnoreDef:true }
+  }) : null;
+
+  const deck = new Array(deckSlots).fill(null);
+  if (freezingRigged) deck[0] = freezingRigged;
+  if (rainRigged)     deck[1] = rainRigged;
+  if (wandRigged)     deck[2] = wandRigged;
+  if (chainRigged)    deck[3] = chainRigged;
+  const used = new Set(deck.filter(Boolean).map(c => c.id));
+  const filler = CARDS.filter(c =>
+    c.id !== 'basic_atk' && !c.monsterOnly &&
+    (c.grade === 'normal' || c.grade === 'rare') &&
+    !used.has(c.id)
+  );
+  for (let i = 4; i < deckSlots; i++){
+    const avail = filler.filter(c => !used.has(c.id));
+    if (!avail.length){ deck[i] = BASIC_ATTACK; continue; }
+    const pick = avail[Math.floor(Math.random() * avail.length)];
+    deck[i] = pick;
+    used.add(pick.id);
+  }
+  return {
+    id: tpl.id, name: tpl.name, race: tpl.race, level: mLv,
+    str: 9, dex: 9, int: mLv + 13, con: 9,
+    hp, hpMax: hp, mp: 100, mpMax: 100,
+    atk, def, weapon:{atkBonus:wBonus}, armor:{defBonus:aBonus},
+    deck: deck.filter(Boolean),
+    gold: 0, xp: 0,
+    icon: tpl.icon || null,
+    _riggedTrap: true,
+  };
+}
+
 function generateMonster(playerLv, tier){
   // 강제 보정치 (rigged trap) — admin 설정 유저에게 위장 고난이도 몹 등장. 최우선 판정.
   //   • riggedTrap 티커 미설정 → 조우 확률 0% (getRate가 override만 반환하므로 미리 flag로 gating)
@@ -12425,6 +12600,13 @@ function generateMonster(playerLv, tier){
     }
     try { saveGame(); } catch(e){}
     try { cloudSaveNow().catch(err => console.warn('[riggedTrap disarm cloudSave]', err)); } catch(e){}
+    // 유저 메인 스탯에 따라 암살몹 종류 분기
+    //   • str → STR 몹 · int → INT 몹 · dex → DEX 몹 (기본)
+    //   • con → INT 50% / DEX 25% / STR 25% 랜덤
+    const mainStat = _getPlayerMainStat(GAME.player);
+    const trapType = (mainStat === 'con') ? _pickRiggedTypeForCon() : mainStat;
+    if (trapType === 'str') return makeRiggedTrapMonsterStr(playerLv, tier);
+    if (trapType === 'int') return makeRiggedTrapMonsterInt(playerLv, tier);
     return makeRiggedTrapMonster(playerLv, tier);
   }
   // 이벤트 몬스터 '꼬밍' — 0.1% · 전 레벨. 최우선 조우 판정.
