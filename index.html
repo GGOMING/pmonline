@@ -27598,14 +27598,13 @@ async function opSetBoss(k){
 }
 
 // ═══════════════════════════════════════════════════════════
-// 가챠 연출 — 베타 플래그
-// 운영자는 자동 ON · 일반 유저는 localStorage.gachaEffectBeta='1' 설정 시 ON
+// 가챠 연출 — 전원 공개
+// 기본 ON (전 유저). 원치 않는 유저는 localStorage.gachaEffectBeta='0' 로 opt-out.
 // ═══════════════════════════════════════════════════════════
 function shouldPlayGachaEffect(){
   try {
-    if (GAME && GAME.player && GAME.player.isOperator) return true;
-    return localStorage.getItem('gachaEffectBeta') === '1';
-  } catch(e){ return false; }
+    return localStorage.getItem('gachaEffectBeta') !== '0';
+  } catch(e){ return true; }
 }
 window.shouldPlayGachaEffect = shouldPlayGachaEffect;
 </script>
